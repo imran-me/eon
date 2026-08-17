@@ -1,0 +1,17 @@
+{
+  "name": "epal/eon-server",
+  "description": "EON — One Brain, Multi Decision Layer for the Epal ERP. PHP backend (Hostinger).",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.2",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-curl": "*",
+    "anthropic-ai/sdk": "*"
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}

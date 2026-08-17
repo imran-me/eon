@@ -16,3 +16,11 @@ Thumbs.db
 ai-companion/assets/.state/
 ai-companion/assets/models/*.glb
 
+
+# server runtime
+server/vendor/
+server/composer.lock
+server/storage/data/*.json
+!server/storage/data/demo-dataset.json
+server/storage/logs/*.log
+tools/node_modules/

@@ -1,0 +1,129 @@
+<?php
+declare(strict_types=1);
+
+/* ============================================================
+   Brain — the language-model agent. Claude (official PHP SDK)
+   with tool use over the ERP data: EON reasons, calls tools,
+   answers in the boss's language, and records instructions.
+   Falls back to a rule-based answerer when no key/SDK is present,
+   so the API always answers.
+   ============================================================ */
+final class Brain
+{
+    public const MODE_LLM = 'llm';
+    public const MODE_OFFLINE = 'offline';
+
+    /** ERP knowledge the model must hold — mirrors ai-companion/eon-brain/domains/erp/knowledge.js systemContext() */
+    public static function knowledge(): string
+    {
+        return <<<TXT
+EPAL ERP — Laravel 12 / MySQL, twelve companies in one database (Epal Group holding; Epal Travels & Consultancy = company 2; Epal It Solutions; Epal Constructions & Interiors; Epal Online Shop = 5; Wood Art Interiors = 6 (isolated module); Epal Manufacturing; Epal Properties …). URLs /{role}/{resource}. Roles: super admin, admin, accountant, agent, vendor, customer, employee. Roles/permissions are developer-maintained.
+CHART OF ACCOUNTS (live numbering): 10xx cash (1011 Petty Cash pool, 1013 Office Cash, 1015 Petty Cash Float); 11xx bank leaves (banks.account_id); 13xx receivables (1311 Customer Receivable, 1351 Director's Current A/C); 14xx inventory/prepaid/staff loans (1400, 1455-1457 Employee Loan, 1470 Prepaid); 21xx payables (2111 Supplier Payable); 22xx accrued/statutory (2210 Salaries Payable, 2240 Employee Expense Reimbursement Payable, 2270 Income Tax Payable, 2280 TDS/VDS Payable); 24xx-25xx borrowings (2410 ST loan, 2440 credit card, 2510 bank loan LT, 2520 party loan LT, 2560 vehicle loan); 3xxx equity (3110 Owner Investment, 3210 Drawings, 3310 Retained Earnings, 3400 Opening Balance Equity); 4xxx income (4110 Air Ticket Sales, 4120 Visa Service Income, 4150 Contract Flight & File Revenue, 4160 Travel Commission, 4610 Product Sales); 5xxx direct cost (5110 ticket cost, 5120 visa cost, 5150 contract cost, 5610 Purchase/COGS); 6xxx-7xxx opex (6110 Salary Expense, 7400 Miscellaneous fallback); 8xxx finance (8110 Interest Income — typed expense in the chart, known bug; 8520 Interest Expense; 8530 Loan Processing Fee). Assets & expenses carry debit balances; liabilities, equity, income carry credit balances.
+GENERAL LEDGER: journal_entries (company_id, date, reference, source: sale|purchase|expense|salary|employee_ledger|ticket_sale|visa_sale|financing, description) + journal_items (account_id, debit, credit, party_type customer|supplier|agent|vendor|employee, party_id). Corrections are reversals (reversed_journal_entry_id), never edits. Shared posting accounts must have company_id NULL — reports filter accounts by company but items by entry, otherwise a company's trial balance silently breaks.
+POSTING RULES: Expense — created pending, no journal; on approval Dr the category's account (fallback 7400), Cr: reimburse-to-employee → 2240; petty-cash float → float account (over-float to 2240 with custodian as party); bank → that bank's leaf; else petty-cash pool 1011. Salary — Dr 6110; Cr bank leaf if paid, else 2210 Salaries Payable and a payment schedule (type pay, party employee) opens. Sale — Dr 1311/bank, Cr 4xxx; direct cost 5xxx. Purchase — Dr 5610/inventory, Cr 2111/bank. Opening balances against 3400.
+PAYROLL (PayrollService, run on the 1st at 01:00 for the previous month): base = employee_profiles.salary; daily = salary/days in month; hourly = daily/9; per-minute = hourly/60. absent deduction = daily × absent days; leave deduction = daily × unpaid leave days; late deduction = late minutes × per-minute ONLY when the month's late minutes reach 120 (2-hour grace); early-out deduction = early minutes × per-minute (early = >10 min before shift end; waived if approved leave covers the day); overtime counts from 60 min after shift end, paid only if overtime_eligible; minus running-loan EMI and approved advances; net = gross − deductions + overtime. No income tax, PF or gratuity computed. Leave balance = leave type entitlement − approved days this year. Attendance status present/absent/leave/holiday from device punches or manual selfie check-in; weekends from the shift; online = seen within 5 minutes.
+WORKFLOWS: payment schedules pending → approve/reject/reschedule (logged) → mark paid; auto overdue daily 00:05. Expenses pending → approve (journal) / reverse. Leaves apply → approve/reject. Employee requests pending → under review → approved/rejected → fulfilled/disbursed (cash, bank, cheque, payroll deduction) → recovered by payslip instalments → closed. Leads new → contacted → qualified → proposal_sent → negotiation → won/lost; types air_ticket, visa, software, interior, other; won interior leads convert to projects. Tasks: workspace = company; boards → columns → tasks (priority low/medium/high, due dates, assignees, comments); office_todos per department.
+REPORTS the ERP prints: General Ledger, Trial Balance, P&L, Balance Sheet, Account Ledger/Statement, Journal Entries, Account Balances, Monthly Attendance, Task Report, Payroll Overview, Monthly Profit, Petty Cash, Expense, Party Statement, Bank Statement, Loan Statement, Payslip Statement. Not yet: AR/AP aging, cash-flow statement, opening-balance UI, Bangladesh VAT/TDS (Mushak 6.3/9.1) — EON computes aging and cash position itself.
+Currency BDT (৳; Bangladeshi grouping 12,34,567; L = lakh 1e5, Cr = crore 1e7). Dates ISO. Weekend Friday–Saturday.
+TXT;
+    }
+
+    private static function system(array $D, ?int $company, bool $voice): array
+    {
+        $boss = Config::get('boss'); $co = Config::get('company');
+        $persona = "You are EON — the one brain over the Epal ERP: the executive intelligence for {$boss['name']} ({$boss['title']}, {$co['name']}). You are addressing the boss directly.\n"
+            . "How you answer: lead with the number and the answer, then the reason (which rule or data produced it), then what to do — one recommended action. Use the tools to ground EVERY figure; never invent numbers. Format money as BDT with L/Cr where large (৳12.5 L, ৳3.4 Cr) and exact where small. When a person is named, use find_employee. For broad questions use get_brief. If a tool returns an error, say what is missing plainly. Be concise: 2–6 sentences for a spoken answer" . ($voice ? ' — this reply WILL BE READ ALOUD by text-to-speech: no markdown, no bullet symbols, no tables, spell numbers naturally.' : '; markdown lists/tables are fine on screen.') . "\n"
+            . "You are advisory: you recommend and you log the boss's instructions with record_action; the ERP remains the system of record — say 'queued for the ERP' rather than claiming you changed anything.\n"
+            . "Company scope: " . ($company ? 'company id ' . $company : 'the whole group') . ". Data source: " . ($D['meta']['source'] ?? 'unknown') . " (demo = synthetic mirror of the ERP schema; erp = live). Today: " . ($D['meta']['today'] ?? date('Y-m-d')) . '.';
+        return [
+            ['type' => 'text', 'text' => $persona . "\n\n" . self::knowledge(), 'cacheControl' => ['type' => 'ephemeral']],
+        ];
+    }
+
+    /** Ask EON. Returns ['mode','text','speak','tools_used','usage','conversation_id'] */
+    public static function ask(string $question, ?string $conversationId = null, ?int $company = null, bool $voice = false, array $clientFacts = []): array
+    {
+        $D = Dataset::current($company);
+        $conv = Memory::conversation($conversationId, $voice ? 'voice' : 'text');
+        Memory::addMessage($conv['id'], 'user', $question, ['voice' => $voice, 'company' => $company]);
+        $tools = new Tools($D, $company);
+        $out = null;
+        if (Config::llmEnabled()) { try { $out = self::askLlm($question, $conv['id'], $D, $company, $voice, $tools, $clientFacts); } catch (Throwable $e) { Log::error('llm failed: ' . $e->getMessage()); $out = null; $llmError = $e->getMessage(); } }
+        if (!$out) { $out = self::askOffline($question, $D, $company, $tools); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
+        Memory::addMessage($conv['id'], 'assistant', $out['text'], ['mode' => $out['mode'], 'tools' => $out['tools_used'] ?? []]);
+        $out['conversation_id'] = $conv['id'];
+        return $out;
+    }
+
+    private static function askLlm(string $q, string $convId, array $D, ?int $company, bool $voice, Tools $tools, array $facts): array
+    {
+        $client = new \Anthropic\Client(apiKey: (string) Config::get('anthropic.api_key'));
+        $model = (string) Config::get('anthropic.model', 'claude-opus-5'); $maxTokens = (int) Config::get('anthropic.max_tokens', 4096); $effort = (string) Config::get('anthropic.effort', 'high');
+        $messages = Memory::history($convId, 12);
+        // the current question is already the last user turn in history; if not (empty history), add it
+        if (!$messages || end($messages)['role'] !== 'user') $messages[] = ['role' => 'user', 'content' => $q];
+        if ($facts) $messages[count($messages) - 1]['content'] .= "\n\n[Screen facts the boss is looking at, JSON — trust the tools over these if they disagree]\n" . json_encode($facts, JSON_UNESCAPED_UNICODE);
+        $defs = $tools->definitions(); $used = []; $usage = ['input' => 0, 'output' => 0, 'cache_read' => 0];
+        $create = function (array $msgs) use ($client, $model, $maxTokens, $effort, $D, $company, $voice, $defs) {
+            $args = ['model' => $model, 'maxTokens' => $maxTokens, 'system' => self::system($D, $company, $voice), 'tools' => $defs, 'messages' => $msgs];
+            try { return $client->messages->create(...$args, outputConfig: ['effort' => $effort]); }
+            catch (\Error $e) { if (stripos($e->getMessage(), 'outputConfig') !== false || stripos($e->getMessage(), 'named parameter') !== false) return $client->messages->create(...$args); throw $e; }
+        };
+        $response = $create($messages); $text = '';
+        for ($i = 0; $i < 8; $i++) {
+            $usage['input'] += (int) ($response->usage->inputTokens ?? 0); $usage['output'] += (int) ($response->usage->outputTokens ?? 0); $usage['cache_read'] += (int) ($response->usage->cacheReadInputTokens ?? 0);
+            if ($response->stopReason === 'refusal') { $text = 'I can’t help with that one.'; break; }
+            $results = []; $textParts = [];
+            foreach ($response->content as $block) {
+                if ($block->type === 'text') $textParts[] = $block->text;
+                elseif ($block instanceof \Anthropic\Messages\ToolUseBlock || $block->type === 'tool_use') {
+                    $name = $block->name; $input = is_array($block->input) ? $block->input : (array) $block->input; $used[] = $name;
+                    $res = $tools->run($name, $input);
+                    $payload = is_string($res) ? $res : json_encode($res, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+                    if (strlen($payload) > 60000) $payload = substr($payload, 0, 60000) . '…(truncated)';
+                    $results[] = ['type' => 'tool_result', 'toolUseID' => $block->id, 'content' => $payload, 'isError' => is_array($res) && isset($res['error'])];
+                }
+            }
+            if ($response->stopReason !== 'tool_use' || !$results) { $text = implode("\n", $textParts); break; }
+            $messages[] = ['role' => 'assistant', 'content' => $response->content];
+            $messages[] = ['role' => 'user', 'content' => $results];
+            $response = $create($messages);
+        }
+        if ($text === '') $text = 'I gathered the data but ran out of room to answer — ask me again more narrowly.';
+        return ['mode' => self::MODE_LLM, 'model' => $model, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => array_values(array_unique($used)), 'usage' => $usage];
+    }
+
+    /** rule-based fallback — a compact port of the JS answerer's most-used intents */
+    public static function askOffline(string $q, array $D, ?int $company, Tools $tools): array
+    {
+        $s = mb_strtolower($q); $A = new Analytics($D, $company); $k = fn(float $n) => Analytics::bdtk($n); $used = []; $text = null;
+        $try = function (string $re, string $tool, callable $fmt) use ($s, $tools, &$used, &$text) { if ($text !== null || !preg_match($re, $s)) return; $used[] = $tool; $r = $tools->run($tool, []); $text = is_array($r) ? $fmt($r) : (string) $r; };
+        $try('/\b(brief|briefing|morning|status|how are things|what should i (do|focus)|update me)\b/', 'get_brief', fn($r) => $r['speak']);
+        $try('/approv|waiting (on|for) me|pending sign/', 'get_approvals', fn($r) => $r['count'] ? "{$r['count']} approvals are waiting — " . $k((float) $r['amount']) . ' in total. Biggest: ' . $r['items'][0]['title'] . ($r['items'][0]['amount'] ? ' for ' . Analytics::bdt((float) $r['items'][0]['amount']) : '') . '.' : 'Your approval queue is empty.');
+        $try('/cash|bank balance|liquidity/', 'get_cash_position', fn($r) => 'Cash and bank: ' . $k((float) $r['total']) . ' across ' . count($r['accounts']) . ' accounts. Largest: ' . ($r['accounts'][0]['name'] ?? '—') . ' ' . $k((float) ($r['accounts'][0]['balance'] ?? 0)) . '.');
+        $try('/receivable|who owes|debtor|collect|\bar\b/', 'get_receivables', fn($r) => 'Receivables: ' . $k((float) $r['total']) . ' open, ' . $k((float) $r['overdue_total']) . " overdue across {$r['overdue_count']} dues. " . (isset($r['by_party'][0]) ? "{$r['by_party'][0]['party_name']} owes the most — " . $k((float) $r['by_party'][0]['due']) . '.' : ''));
+        $try('/payable|what do we owe|creditor|bills? (to pay|due)|\bap\b/', 'get_payables', fn($r) => 'Payables: ' . $k((float) $r['total']) . ' open, ' . $k((float) $r['overdue_total']) . " overdue ({$r['overdue_count']} items); due in 7 days " . $k((float) $r['due_in_7_days']) . '.');
+        $try('/trial balance/', 'get_trial_balance', fn($r) => 'Trial balance ' . ($r['balanced'] ? 'balances' : 'does NOT balance') . ': debits ' . $k((float) $r['total_debit']) . ', credits ' . $k((float) $r['total_credit']) . '.');
+        $try('/profit|revenue|sales|margin|income statement|p&l/', 'get_profit_and_loss', fn($r) => 'Month to date: revenue ' . $k((float) $r['income']) . ', direct cost ' . $k((float) $r['direct_cost']) . ', opex ' . $k((float) $r['opex']) . ' — net ' . ($r['net_profit'] >= 0 ? 'profit ' : 'loss ') . $k(abs((float) $r['net_profit'])) . " ({$r['margin_pct']}% margin).");
+        $try('/balance sheet|net worth/', 'get_balance_sheet', fn($r) => 'Assets ' . $k((float) $r['total_assets']) . ', liabilities ' . $k((float) $r['total_liabilities']) . ', equity ' . $k((float) $r['total_equity']) . ($r['balanced'] ? ' — it balances.' : ' — it does not balance.'));
+        $try('/budget|expense|spending|opex|overspend/', 'get_expenses_vs_budget', fn($r) => "Expenses {$r['month']}: " . $k((float) $r['total_spent']) . ($r['total_budget'] ? ' against ' . $k((float) $r['total_budget']) . ' budget' : '') . '. ' . ($r['over'] ? 'Over budget: ' . implode(', ', array_map(fn($x) => "{$x['category']} {$x['pct']}%", $r['over'])) . '.' : 'Nothing over budget.'));
+        $try('/absent|attendance|who is (in|here|present)|late (today|comers)|present today/', 'get_attendance_today', fn($r) => $r['weekend'] ? 'It is the weekend — no attendance expected.' : "Today: {$r['present']} of {$r['total']} present ({$r['present_pct']}%), {$r['absent']} absent, {$r['late']} late, {$r['on_leave']} on leave." . ($r['absent_list'] ? ' Absent: ' . implode(', ', array_map(fn($a) => $a['name'], array_slice($r['absent_list'], 0, 5))) . '.' : ''));
+        $try('/chronic|habitual|always late|punctual|late pattern/', 'get_attendance_patterns', fn($r) => count($r['chronic_late']) . ' people are late on 30%+ of days' . ($r['chronic_late'] ? '; worst ' . $r['chronic_late'][0]['name'] . " ({$r['chronic_late'][0]['late_days']} days, {$r['chronic_late'][0]['late_minutes']} min)" : '') . '.');
+        $try('/payroll|salar|payslip|wage/', 'get_payroll', fn($r) => "Payroll {$r['month']}: {$r['heads']} payslips, gross " . $k((float) $r['gross']) . ', deductions ' . $k((float) $r['deductions']) . ', net ' . $k((float) $r['net']) . '. ' . ($r['pending_count'] ? "{$r['pending_count']} unpaid — " . $k((float) $r['pending_net']) . '.' : 'All paid.'));
+        $try('/pipeline|leads?\b|prospect|crm|conversion|follow[- ]?up/', 'get_pipeline', fn($r) => "Pipeline: {$r['open']} open leads worth " . $k((float) $r['open_value']) . "; {$r['won']} won, {$r['lost']} lost" . ($r['conversion_pct'] !== null ? " ({$r['conversion_pct']}% conversion)" : '') . ". {$r['stale_count']} have gone cold; {$r['followups_today']} follow-ups due today.");
+        $try('/task|overdue work|workload/', 'get_tasks', fn($r) => "{$r['overdue']} tasks are overdue ({$r['overdue_high']} high priority) out of {$r['open']} open; {$r['closed_last_7_days']} closed this week." . ($r['overloaded'] ? " {$r['overloaded'][0]['name']} is overloaded ({$r['overloaded'][0]['open']} open)." : ''));
+        $try('/project|delivery|at risk|milestone/', 'get_projects', fn($r) => "{$r['active']} active projects, " . count($r['at_risk']) . ' at risk' . ($r['at_risk'] ? " — worst {$r['at_risk'][0]['name']} ({$r['at_risk'][0]['risk_label']}: {$r['at_risk'][0]['progress']}% done at {$r['at_risk'][0]['elapsed_pct']}% of time)" : '') . '.');
+        $try('/decision|priorit|attention|urgent|critical|risk|problem/', 'get_decisions', fn($r) => $r ? count($r) . ' decisions in priority order. First: ' . $r[0]['title'] . ' — ' . $r[0]['recommend'] : 'Nothing needs you right now.');
+        if ($text === null && preg_match('/evaluat|who is|tell me about|performance of|salary of|profile of/', $s)) { $e = $A->findEmployee($q); if ($e) { $used[] = 'find_employee'; $ev = $A->evaluate((int) $e['id']); $text = $ev['narrative'] ?? null; } }
+        if ($text === null && preg_match('/\b(\d{4})\b/', $s, $m) && preg_match('/code|account|ledger|what is|explain/', $s)) { $used[] = 'get_account_ledger'; $r = $tools->run('get_account_ledger', ['code' => $m[1]]); $text = "Account {$m[1]}: {$r['postings']} postings, closing balance " . Analytics::bdt((float) $r['closing_balance']) . '.'; }
+        if ($text === null) { $b = $A->kpis(); $text = "I did not match that to a report yet (offline mode). Right now: cash " . $k((float) $b['cash']) . ', receivables overdue ' . $k((float) $b['receivables_overdue']) . ", {$b['absent_today']} absent today, {$b['tasks_overdue']} tasks overdue. Ask me about cash, receivables, payables, profit, budget, attendance, payroll, pipeline, tasks, projects, approvals, or a person by name."; }
+        return ['mode' => self::MODE_OFFLINE, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => $used, 'usage' => null];
+    }
+
+    /** strip markdown for text-to-speech */
+    public static function plain(string $md): string
+    {
+        $t = preg_replace('/```[\s\S]*?```/', '', $md); $t = preg_replace('/^[\s]*[#>*\-]+\s?/m', '', $t); $t = preg_replace('/\*\*|__|`|\|/', '', $t); $t = preg_replace('/\[(.*?)\]\((.*?)\)/', '$1', $t);
+        return trim(preg_replace('/\s+/', ' ', $t));
+    }
+}

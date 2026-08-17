@@ -1,0 +1,10 @@
+# EON server — Apache / LiteSpeed (Hostinger). Only api/ is web-reachable.
+Options -Indexes
+<FilesMatch "^(config\.local\.php|config\.example\.php|bootstrap\.php|composer\.(json|lock))$">
+  Require all denied
+</FilesMatch>
+RewriteEngine On
+RewriteRule ^(lib|cron|install|storage|vendor|py)(/|$) - [F,L]
+# pass the Authorization header through to PHP (needed for Bearer tokens on some hosts)
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
