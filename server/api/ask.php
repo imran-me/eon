@@ -11,7 +11,7 @@ Http::run(function () {
     if (mb_strlen($q) > 4000) $q = mb_substr($q, 0, 4000);
     $company = (isset($b['company']) && $b['company'] !== '' && $b['company'] !== null) ? (int) $b['company'] : null;
     $t0 = microtime(true);
-    $out = Brain::ask($q, isset($b['conversation_id']) ? (string) $b['conversation_id'] : null, $company, (bool) ($b['voice'] ?? false), is_array($b['facts'] ?? null) ? $b['facts'] : []);
+    $out = Brain::ask($q, isset($b['conversation_id']) ? (string) $b['conversation_id'] : null, $company, (bool) ($b['voice'] ?? false), is_array($b['facts'] ?? null) ? $b['facts'] : [], isset($b['lang']) ? (string) $b['lang'] : null);
     $out['ok'] = true; $out['ms'] = (int) round((microtime(true) - $t0) * 1000); $out['source'] = Dataset::source();
     Http::json($out);
 });

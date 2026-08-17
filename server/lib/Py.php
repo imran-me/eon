@@ -15,7 +15,7 @@ final class Py
         $r = self::exec(['health'], null); return $ok = (bool) ($r['ok'] ?? false);
     }
 
-    /** run: Py::run('forecast', $D, ['--company' => 2, '--months' => 3]) */
+    /** run: Py::run('forecast', $D, ['--company' => 2, '--months' => 3]);  plug-ins: Py::run('scenario', $D, ['--json' => json_encode($params)]) */
     public static function run(string $cmd, ?array $D, array $args = []): array
     {
         $argv = [$cmd];

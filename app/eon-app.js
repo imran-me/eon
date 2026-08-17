@@ -67,7 +67,7 @@ function decisionItem(d) {
   return `<div class="item"><span class="sev ${sevClass(d.severity)}"></span><div><div class="t"><span class="tag ${d.layer}">${esc(d.layerLabel || d.layer)}</span>${esc(d.title)}</div>${(d.why || []).length ? `<div class="why">${d.why.slice(0, 3).map(esc).join(' · ')}</div>` : ''}<div class="rec">${esc(d.recommend || '')}</div>${(d.actions || []).length ? `<div class="chips">${d.actions.map((a) => `<span class="chip" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</span>`).join('')}</div>` : ''}</div><div class="meta">${esc(d.severityLabel || '')}${d.amount ? '<br>' + k(d.amount) : ''}</div></div>`;
 }
 function rBrief() {
-  const b = EonErp.brief(); const K = b.kpis;
+  const b0 = EonErp.brief(); const b = (state.lang === 'bn-BD' && window.EonBangla && window.EonBangla.brief) ? Object.assign({}, b0, window.EonBangla.brief(b0)) : b0; const K = b.kpis;
   const top = b.decisions.slice(0, 6);
   return `<div class="card hero"><div class="greet">${esc(b.lines[0].split('.')[0])}.</div><p id="briefText">${esc(b.lines[0].split('. ').slice(1).join('. ') + ' ' + b.lines.slice(1).join(' '))}</p><div class="chips"><span class="chip" data-q="What should I focus on today?">What should I focus on?</span><span class="chip" data-q="Who owes us money?">Who owes us?</span><span class="chip" data-q="Who is absent today?">Who is absent?</span><span class="chip" data-q="Forecast the next quarter">Forecast</span><span class="chip" data-q="Any spending anomalies?">Anomalies</span></div></div>
   <div class="grid g4" style="margin-top:14px">${['cash', 'receivables', 'payables', 'revenue', 'profit', 'headcount', 'attendance', 'payroll', 'pipeline', 'tasks', 'projects', 'expenses'].map((key) => tile(K[key], key)).join('')}</div>
@@ -175,7 +175,7 @@ async function ask(q, { voice = false } = {}) {
   const t0 = Date.now(); let out = null;
   const e = env();
   if (e.serverOk) {
-    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
+    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: state.lang, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
   }
   if (!out) {
@@ -227,11 +227,12 @@ function boot() {
     V.onTranscript((text, meta) => { const h = $('#heard'); if (h) h.textContent = meta.final ? '' : '🎙 ' + text; if (meta.final && text) ask(text, { voice: true }); });
   }
   $('#btnMic').onclick = toggleMic;
-  $('#btnSpeakBrief').onclick = () => { const b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (V) V.say(b.speak, { lang: state.lang }); if (state.section !== 'brief') location.hash = '#brief'; };
+  $('#btnSpeakBrief').onclick = () => { let b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (state.lang === 'bn-BD' && window.EonBangla && window.EonBangla.brief) b = Object.assign({}, b, window.EonBangla.brief(b)); if (V) V.say(b.speak, { lang: state.lang }); if (state.section !== 'brief') location.hash = '#brief'; };
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
-  window.EonApp = { ask, act, render, state, api, toast, esc, k, money, registerPanel, panels: PANELS, env, server };
+  window.EonApp = { ask, act, render, state, api, toast, esc, k, money, registerPanel, panels: PANELS, env, server, prefs: () => window.EON_PREFS || {} };
+  try { window.dispatchEvent(new CustomEvent('eon:app-ready')); } catch {}
   render();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

@@ -70,7 +70,8 @@ export function firstName(full) { const parts = String(full || '').trim().split(
 export function brief(D, { company = null, name = null } = {}) {
   const t = T(D); const k = kpis(D, { company }); const list = all(D, { company }); const ap = approvals(D, { company });
   const critical = list.filter((d) => d.severity >= 4), medium = list.filter((d) => d.severity === 3);
-  const who = name || firstName(D.meta && D.meta.boss && D.meta.boss.name) || 'Boss';
+  const prefs = (typeof window !== 'undefined' && window.EON_PREFS) || {};
+  const who = name || prefs.name || firstName(D.meta && D.meta.boss && D.meta.boss.name) || 'Boss';
   const hour = new Date().getHours(); const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const dt = new Date(t + 'T00:00:00'); const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dt.getDay()];
   const lines = [];

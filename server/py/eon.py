@@ -324,7 +324,8 @@ def main(argv=None) -> int:
     except Exception:
         pass
     ap = argparse.ArgumentParser(description='EON analytics service')
-    ap.add_argument('command', choices=['forecast', 'anomalies', 'evaluate', 'report', 'health'])
+    ap.add_argument('command')   # built-ins below, or a plug-in in plugins/<command>.py exposing run(d, args) -> dict
+    ap.add_argument('--json', default='{}', help='JSON parameters for plug-in commands')
     ap.add_argument('--dataset', default='-'); ap.add_argument('--company', type=int); ap.add_argument('--months', type=int, default=3)
     ap.add_argument('--employee', type=int); ap.add_argument('--all', action='store_true'); ap.add_argument('--kind', default='receivables'); ap.add_argument('--out', default='report.xlsx')
     a = ap.parse_args(argv)
@@ -333,7 +334,18 @@ def main(argv=None) -> int:
             res = {'ok': True, 'python': sys.version.split()[0], 'numpy': bool(np), 'openpyxl': bool(openpyxl)}
         else:
             d = load_dataset(a.dataset)
-            res = {'forecast': lambda: cmd_forecast(d, a.company, a.months), 'anomalies': lambda: cmd_anomalies(d, a.company), 'evaluate': lambda: cmd_evaluate(d, a.company, a.employee, a.all), 'report': lambda: cmd_report(d, a.company, a.kind, a.out)}[a.command]()
+            builtins = {'forecast': lambda: cmd_forecast(d, a.company, a.months), 'anomalies': lambda: cmd_anomalies(d, a.company), 'evaluate': lambda: cmd_evaluate(d, a.company, a.employee, a.all), 'report': lambda: cmd_report(d, a.company, a.kind, a.out)}
+            if a.command in builtins:
+                res = builtins[a.command]()
+            else:
+                import importlib
+                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                mod = importlib.import_module('plugins.' + a.command)
+                try:
+                    a.params = json.loads(a.json or '{}')
+                except Exception:
+                    a.params = {}
+                res = mod.run(d, a)
     except Exception as ex:  # always answer with JSON
         res = {'ok': False, 'error': f'{type(ex).__name__}: {ex}'}
     sys.stdout.write(json.dumps(res, ensure_ascii=False))
