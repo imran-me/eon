@@ -11,3 +11,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+
+# Companion runtime state and local model binaries
+ai-companion/assets/.state/
+ai-companion/assets/models/*.glb
