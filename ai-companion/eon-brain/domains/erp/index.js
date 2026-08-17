@@ -49,5 +49,11 @@ export const EonErp = {
   source() { return _D && _D.meta ? _D.meta.source : null; },
 };
 
-if (typeof window !== 'undefined') window.EonErp = Object.assign(window.EonErp || {}, EonErp);
+if (typeof window !== 'undefined') {
+  window.EonErp = Object.assign(window.EonErp || {}, EonErp);
+  // the adapter may have published before this module loaded
+  if (window.__EON_ERP_PENDING) { try { EonErp.setDataset(window.__EON_ERP_PENDING); } catch {} delete window.__EON_ERP_PENDING; }
+  // no adapter on the page at all → demo dataset after a short grace period
+  setTimeout(() => { if (!_D && !window.EonErpAdapter) { console.info('[EON erp] no adapter — using the demo dataset'); EonErp.demo(); } }, 1500);
+}
 export default EonErp;
