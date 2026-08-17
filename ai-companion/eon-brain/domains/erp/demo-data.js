@@ -138,7 +138,7 @@ export function generateDemo(opts = {}) {
       if (status === 'present') {
         const ss = t2m(e.shift_start), se = t2m(e.shift_end);
         const late = chance(tr.late) ? RI(6, 75) : RI(-12, 4);
-        const inM = ss + late; row.check_in = m2t(inM); row.late_minutes = Math.max(0, late);
+        const inM = ss + late; row.check_in = m2t(inM); row.late_minutes = late > 5 ? late : 0;
         if (back === 0 && nowMin < se) { /* today: still in the office */ if (inM > nowMin) { row.status = 'absent'; row.check_in = null; row.late_minutes = 0; if (chance(0.5)) { row.status = 'present'; row.check_in = m2t(ss + RI(0, 10)); } } }
         else {
           const early = chance(tr.early) ? RI(15, 90) : 0; const ot = tr.ot && chance(tr.ot) ? RI(60, 180) : RI(-8, 20);
@@ -168,7 +168,8 @@ export function generateDemo(opts = {}) {
 
   /* ---------- payroll: last 3 closed months + current (pending) ---------- */
   const monthStats = (uid, mk) => { const rows = D.attendances.filter((a) => a.user_id === uid && a.date.slice(0, 7) === mk); return { absent: rows.filter((a) => a.status === 'absent').length, leave: rows.filter((a) => a.status === 'leave').length, late: rows.reduce((n, a) => n + a.late_minutes, 0), early: rows.reduce((n, a) => n + a.early_minutes, 0), ot: rows.reduce((n, a) => n + a.overtime_minutes, 0), present: rows.filter((a) => a.status === 'present').length }; };
-  for (let mb = 3; mb >= 0; mb--) {
+  const PENDING_PAYROLL_COMPANIES = [4, 7];   // last month’s run still unpaid here (approval demo)
+  for (let mb = 3; mb >= 1; mb--) {
     const md = new Date(today.getFullYear(), today.getMonth() - mb, 1); const mk = monthKey(md); const dim = daysInMonth(md);
     D.employees.forEach((e) => {
       if (e.joining_date > iso(new Date(md.getFullYear(), md.getMonth() + 1, 0))) return;
@@ -177,11 +178,11 @@ export function generateDemo(opts = {}) {
       const absent_deduction = Math.round(daily * st.absent), leave_deduction = Math.round(daily * Math.max(0, st.leave - 1));
       const late_deduction = st.late >= 120 ? Math.round(st.late * minute) : 0, early_leave_deduction = Math.round(st.early * minute);
       const loan = D.loans.find((l) => l.user_id === e.id && l.status === 'Running'); const loan_deduction = loan ? loan.monthly_deduction : 0;
-      const adv = mb === 0 ? D.advance_salaries.find((a) => a.user_id === e.id && a.status === 'Approved') : null; const advance_salary_deduction = adv ? adv.amount : 0;
+      const adv = mb === 1 ? D.advance_salaries.find((a) => a.user_id === e.id && a.status === 'Approved') : null; const advance_salary_deduction = adv ? adv.amount : 0;
       const overtime_salary = e.overtime_eligible ? Math.round(st.ot * minute) : 0;
       const total_deductions = absent_deduction + leave_deduction + late_deduction + early_leave_deduction + loan_deduction + advance_salary_deduction;
       const net = e.salary - total_deductions + overtime_salary;
-      const paid = mb > 0; const payDate = iso(new Date(md.getFullYear(), md.getMonth() + 1, RI(1, 5)));
+      const paid = !(mb === 1 && PENDING_PAYROLL_COMPANIES.includes(e.company_id)); const payDate = iso(new Date(md.getFullYear(), md.getMonth() + 1, RI(1, 5)));
       D.payroll.push({ id: ids.pay++, user_id: e.id, company_id: e.company_id, month: MONTHS[md.getMonth()], year: md.getFullYear(), month_key: mk, gross_salary: e.salary, absent_deduction, leave_deduction, late_deduction, early_leave_deduction, loan_deduction, advance_salary_deduction, overtime_salary, total_deductions, net_salary: Math.round(net), status: paid ? 'Paid' : 'Pending', payment_date: paid ? payDate : null, absent_days: st.absent, leave_days: st.leave, late_minutes: st.late, overtime_minutes: st.ot });
     });
   }
@@ -227,7 +228,7 @@ export function generateDemo(opts = {}) {
       const cid = c.id; const bank = bankOf(cid);
       // ---- sales
       const nSales = c.kind === 'holding' ? 0 : c.kind === 'ecommerce' ? RI(18, 26) : RI(6, 12);
-      const target = c.rev * seasonal * (mb === 0 ? lastDay / dim : 1);
+      const target = c.rev * 1.3 * seasonal * (mb === 0 ? lastDay / dim : 1);
       for (let i = 0; i < nSales; i++) {
         const day = RI(1, lastDay); const date = iso(new Date(md.getFullYear(), md.getMonth(), day));
         const total = Math.round(target / nSales * R(0.5, 1.6) / 100) * 100; const cust = custOf(cid);
@@ -236,16 +237,17 @@ export function generateDemo(opts = {}) {
         const s = { id: ids.sale++, company_id: cid, invoice_no: `INV-${c.short_name.slice(0, 3)}-${mk.replace('-', '')}-${String(i + 1).padStart(3, '0')}`, customer_id: cust.id, customer: cust.name, date, total, paid_amount: paidNow, due_amount: due, payment_status: due === 0 ? 'paid' : paidNow ? 'partial' : 'due', due_date: dueDate };
         D.sales.push(s);
         const inc = pick(incomeCode[c.kind]);
-        const lines = []; if (paidNow) lines.push([bank.account_code, paidNow, 0]); if (due) lines.push(['1311', due, 0, 'customer', cust.id]); lines.push([inc, 0, total]);
+        const recvBank = (c.kind === 'ecommerce' ? chance(0.45) : chance(0.25)) ? bankOf(cid, 'mobile') : bank;
+        const lines = []; if (paidNow) lines.push([recvBank.account_code, paidNow, 0]); if (due) lines.push(['1311', due, 0, 'customer', cust.id]); lines.push([inc, 0, total]);
         post(cid, date, 'sale', `Sale ${s.invoice_no} — ${cust.name}`, lines, s.id, s.invoice_no);
         // direct cost 55–75%
-        const cost = Math.round(total * R(0.5, 0.75) / 100) * 100; const sup = supOf(cid); const costPaid = chance(0.5) ? cost : Math.round(cost * R(0, 0.5) / 100) * 100;
+        const cost = Math.round(total * R(0.42, 0.62) / 100) * 100; const sup = supOf(cid); const costPaid = chance(0.5) ? cost : Math.round(cost * R(0, 0.5) / 100) * 100;
         const p = { id: ids.pur++, company_id: cid, supplier_id: sup.id, supplier: sup.name, date, total: cost, paid_amount: costPaid, due_amount: cost - costPaid, payment_status: cost === costPaid ? 'paid' : costPaid ? 'partial' : 'due', due_date: iso(addDays(date, RI(10, 40))) };
         D.purchases.push(p);
         const pl = [[pick(costCode[c.kind]), cost, 0]]; if (costPaid) pl.push([bank.account_code, 0, costPaid]); if (cost - costPaid) pl.push(['2111', 0, cost - costPaid, 'supplier', sup.id]);
         post(cid, date, 'purchase', `Purchase — ${sup.name}`, pl, p.id);
         // schedules
-        if (due) { const settled = Date.parse(dueDate) < today.getTime() - 86400000 * 3 && chance(0.7); const overdue = !settled && Date.parse(dueDate) < today.getTime(); const paidAmt = settled ? due : (chance(0.2) ? Math.round(due * R(0.2, 0.6) / 100) * 100 : 0); D.payment_schedules.push({ id: ids.ps++, company_id: cid, type: 'receive', party_type: 'customer', party_id: cust.id, party_name: cust.name, source_label: s.invoice_no, amount: due, paid_amount: paidAmt, scheduled_date: dueDate, original_scheduled_date: dueDate, reschedule_count: chance(0.15) ? RI(1, 2) : 0, status: settled ? 'paid' : overdue ? 'overdue' : 'pending', priority: due > target / nSales ? 'high' : chance(0.5) ? 'medium' : 'low', paid_date: settled ? iso(addDays(dueDate, RI(-5, 12))) : null }); if (settled) post(cid, iso(addDays(dueDate, RI(-5, 12))), 'receipt', `Receipt against ${s.invoice_no}`, [[bank.account_code, due, 0], ['1311', 0, due, 'customer', cust.id]]); }
+        if (due) { const settled = Date.parse(dueDate) < today.getTime() - 86400000 * 3 && chance(0.8); const overdue = !settled && Date.parse(dueDate) < today.getTime(); const paidAmt = settled ? due : (chance(0.2) ? Math.round(due * R(0.2, 0.6) / 100) * 100 : 0); D.payment_schedules.push({ id: ids.ps++, company_id: cid, type: 'receive', party_type: 'customer', party_id: cust.id, party_name: cust.name, source_label: s.invoice_no, amount: due, paid_amount: paidAmt, scheduled_date: dueDate, original_scheduled_date: dueDate, reschedule_count: chance(0.15) ? RI(1, 2) : 0, status: settled ? 'paid' : overdue ? 'overdue' : 'pending', priority: due > target / nSales ? 'high' : chance(0.5) ? 'medium' : 'low', paid_date: settled ? iso(addDays(dueDate, RI(-5, 12))) : null }); if (settled) post(cid, iso(addDays(dueDate, RI(-5, 12))), 'receipt', `Receipt against ${s.invoice_no}`, [[bank.account_code, due, 0], ['1311', 0, due, 'customer', cust.id]]); }
         if (cost - costPaid) { const dd = p.due_date; const settled = Date.parse(dd) < today.getTime() - 86400000 * 3 && chance(0.85); const overdue = !settled && Date.parse(dd) < today.getTime(); D.payment_schedules.push({ id: ids.ps++, company_id: cid, type: 'pay', party_type: 'supplier', party_id: sup.id, party_name: sup.name, source_label: `PO-${p.id}`, amount: cost - costPaid, paid_amount: settled ? cost - costPaid : 0, scheduled_date: dd, original_scheduled_date: dd, reschedule_count: chance(0.1) ? 1 : 0, status: settled ? 'paid' : overdue ? 'overdue' : 'pending', priority: chance(0.3) ? 'high' : 'medium', paid_date: settled ? iso(addDays(dd, RI(-3, 10))) : null }); if (settled) post(cid, iso(addDays(dd, RI(-3, 10))), 'payment', `Payment to ${sup.name}`, [['2111', cost - costPaid, 0, 'supplier', sup.id], [bank.account_code, 0, cost - costPaid]]); }
       }
       // ---- expenses (approved → posted; a few pending this month)
@@ -260,7 +262,7 @@ export function generateDemo(opts = {}) {
           const amount = Math.round(base * scale * spike / nItems * R(0.7, 1.35) / 100) * 100;
           const who = staff.length ? pick(staff) : boss;
           const pending = mb === 0 && day >= lastDay - 6 && chance(0.55);
-          const mode = cat === 'Office Rent' ? 'bank_transfer' : pick(['cash', 'bank_transfer', 'mobile_banking', 'cash']);
+          const mode = cat === 'Office Rent' ? 'bank_transfer' : pick(['cash', 'bank_transfer', 'bank_transfer', 'cash', 'mobile_banking']);
           const e = { id: ids.exp++, company_id: cid, title: `${cat}${nItems > 1 ? ' — ' + pick(['bill', 'invoice', 'voucher', 'receipt']) + ' ' + (k + 1) : ''}`, amount, expense_date: date, category: cat, category_id: ci + 1, account_code: code, department: who.department, payment_mode: mode, approval_status: pending ? 'pending' : 'approved', user_id: who.id, user_name: who.name, bank_id: mode === 'bank_transfer' ? bank.id : null };
           D.expenses.push(e);
           if (!pending) post(cid, date, 'expense', `${cat} — ${e.title}`, [[code, amount, 0], [mode === 'bank_transfer' ? bank.account_code : mode === 'mobile_banking' ? bankOf(cid, 'mobile').account_code : '1011', 0, amount]], e.id);
@@ -272,7 +274,7 @@ export function generateDemo(opts = {}) {
       if (rows.length) {
         const net = rows.reduce((n, r) => n + r.net_salary, 0); const gross = rows.reduce((n, r) => n + r.gross_salary, 0); const paid = rows[0].status === 'Paid';
         const date = paid ? rows[0].payment_date : iso(new Date(md.getFullYear(), md.getMonth() + 1, 0));
-        if (paid || mb === 0) post(cid, date > T ? T : date, 'salary', `Salary — ${MONTHS[md.getMonth()]} ${md.getFullYear()}`, [['6110', gross, 0], paid ? [bank.account_code, 0, net] : ['2210', 0, net], ['1455', 0, gross - net, null, null, 'deductions & recoveries']], null, `SAL-${mk}`);
+        if (paid || mb === 1) post(cid, date > T ? T : date, 'salary', `Salary — ${MONTHS[md.getMonth()]} ${md.getFullYear()}`, [['6110', gross, 0], paid ? [bank.account_code, 0, net] : ['2210', 0, net], ['1455', 0, gross - net, null, null, 'deductions & recoveries']], null, `SAL-${mk}`);
         if (!paid) rows.forEach((r) => D.payment_schedules.push({ id: ids.ps++, company_id: cid, type: 'pay', party_type: 'employee', party_id: r.user_id, party_name: (D.employees.find((e) => e.id === r.user_id) || {}).name, source_label: `Salary ${r.month}`, amount: r.net_salary, paid_amount: 0, scheduled_date: iso(new Date(md.getFullYear(), md.getMonth() + 1, 5)), original_scheduled_date: iso(new Date(md.getFullYear(), md.getMonth() + 1, 5)), reschedule_count: 0, status: 'pending', priority: 'high', paid_date: null }));
       }
     });
@@ -280,8 +282,15 @@ export function generateDemo(opts = {}) {
   // holding-company recurring: rent for HQ, professional fees, and management fee income from subsidiaries
   for (let mb = monthsBack; mb >= 0; mb--) { const md = new Date(today.getFullYear(), today.getMonth() - mb, 1); const date = iso(new Date(md.getFullYear(), md.getMonth(), Math.min(10, mb === 0 ? today.getDate() : 10))); if (Date.parse(date) > today.getTime()) continue; const bank = bankOf(1); post(1, date, 'sale', 'Management fee — subsidiaries', [[bank.account_code, 350000, 0], ['4130', 0, 350000]]); }
 
-  /* ---------- bank balances from the ledger ---------- */
-  D.banks.forEach((b) => { let bal = 0; D.journal_entries.forEach((je) => je.items.forEach((it) => { if (it.account_code === b.account_code) bal += it.debit - it.credit; })); b.balance = bal; });
+  /* ---------- bank balances from the ledger (+ treasury sweeps so no account is left overdrawn) ---------- */
+  const computeBankBalances = () => D.banks.forEach((b) => { let bal = 0; D.journal_entries.forEach((je) => je.items.forEach((it) => { if (it.account_code === b.account_code) bal += it.debit - it.credit; })); b.balance = bal; });
+  computeBankBalances();
+  D.banks.filter((b) => b.balance < 0).forEach((b) => {
+    const src = D.banks.filter((x) => x.company_id === b.company_id && x.id !== b.id).sort((x, y) => y.balance - x.balance)[0]; if (!src) return;
+    const amt = Math.ceil((-b.balance + 150000) / 10000) * 10000;
+    post(b.company_id, iso(addDays(today, -1)), 'transfer', `Fund transfer ${src.name} → ${b.name}`, [[b.account_code, amt, 0], [src.account_code, 0, amt]]);
+  });
+  computeBankBalances();
 
   /* ---------- CRM ---------- */
   const salesPeople = D.employees.filter((e) => /Sales/.test(e.designation) || /Sales/.test(e.department));
@@ -290,10 +299,11 @@ export function generateDemo(opts = {}) {
     if (c.kind === 'holding') return;
     const n = RI(9, 16);
     for (let i = 0; i < n; i++) {
-      const created = addDays(today, -RI(1, 90)); const status = pick(LEAD_STATUS.concat(['new', 'contacted', 'qualified'])); const lastF = status === 'new' ? null : addDays(created, RI(0, Math.max(1, Math.min(60, -Math.round((created - today) / 86400000)))));
-      const stale = status !== 'won' && status !== 'lost' && lastF && (today - lastF) / 86400000 > 12;
+      const created = addDays(today, -RI(1, 90)); const status = pick(LEAD_STATUS.concat(['new', 'contacted', 'qualified']));
+      const closed = status === 'won' || status === 'lost'; const stale = !closed && status !== 'new' && chance(0.28);
+      const lastF = status === 'new' ? null : (stale ? addDays(today, -RI(13, 40)) : addDays(today, -RI(0, 8)));
       const owner = salesPeople.filter((s) => s.company_id === c.id); const asg = owner.length ? pick(owner) : (empsOf(c.id)[0] || boss);
-      D.leads.push({ id: ids.lead++, company_id: c.id, name: chance(0.6) ? pick(CUSTOMER_NAMES) : mkName(), phone: '01' + RI(3, 9) + String(RI(10000000, 99999999)), lead_type: pick(leadTypeFor[c.kind]), source: pick(SOURCES), status, assigned_to: asg.id, assigned_name: asg.name, value: Math.round(c.rev / 12 * R(0.05, 0.6) / 1000) * 1000, created_at: iso(created), last_followup_at: lastF ? iso(lastF) : null, next_followup_at: (status === 'won' || status === 'lost') ? null : iso(addDays(lastF || created, stale ? RI(-10, -1) : RI(-2, 7))) });
+      D.leads.push({ id: ids.lead++, company_id: c.id, name: chance(0.6) ? pick(CUSTOMER_NAMES) : mkName(), phone: '01' + RI(3, 9) + String(RI(10000000, 99999999)), lead_type: pick(leadTypeFor[c.kind]), source: pick(SOURCES), status, assigned_to: asg.id, assigned_name: asg.name, value: Math.round(c.rev / 12 * R(0.05, 0.6) / 1000) * 1000, created_at: iso(created), last_followup_at: lastF ? iso(lastF) : null, next_followup_at: closed ? null : (stale ? iso(addDays(lastF, RI(2, 5))) : iso(addDays(today, chance(0.15) ? -RI(1, 3) : RI(0, 10)))) });
     }
   });
   D.leads.filter((l) => ['proposal_sent', 'negotiation', 'won', 'lost'].includes(l.status)).forEach((l) => D.deals.push({ id: ids.deal++, company_id: l.company_id, lead_id: l.id, title: `${l.name} — ${l.lead_type.replace('_', ' ')}`, stage: l.status === 'won' ? 'closed_won' : l.status === 'lost' ? 'closed_lost' : l.status, amount: l.value, closing_date: iso(addDays(today, l.status === 'won' || l.status === 'lost' ? -RI(1, 30) : RI(-5, 30))), status: l.status === 'won' ? 'won' : l.status === 'lost' ? 'lost' : 'open', agent_id: l.assigned_to }));
