@@ -65,15 +65,16 @@ eon/
 | **PHP server**: Config/Log/Http/Db/Dataset/Erp/Analytics/Memory/Tools/Brain/Notify, endpoints, cron, schema, composer.json, .htaccess | done, linted + self-tested with portable PHP 8.2 (offline mode; live LLM/DB paths untested until deployed) |
 | Demo dataset JSON for the server (`tools/make-demo-dataset.mjs`) | done |
 | Python analytics service (`server/py/eon.py`: forecast, anomalies + duplicates, evaluation model, xlsx/csv reports) + PHP bridge (`lib/Py.php`, `api/py.php`, `api/file.php`) + 4 LLM tools | done, tested locally through PHP |
-| Laravel module shim for the ERP | todo |
+| Laravel module shim (`laravel/`: provider, routes, controller, README) | done (untested inside the ERP) |
 | Voice (`ai-companion/eon-brain/voice.js`: SpeechRecognition push-to-talk + hands-free wake word, speechSynthesis with voice pick, en-US/bn-BD) | done |
 | Command Center (`index.html` + `app/eon.css` + `app/eon-app.js`: brief, decisions, approvals, finance, people, CRM, ops, ask; server LLM answers with client fallback; headless-Chrome render verified) | done |
-| Deploy guide (Hostinger + inside ERP public/eon) + summit demo script | todo |
+| Deploy guide (`docs/deploy.md`) + summit script (`docs/summit-demo.md`) | done |
 
 ## Next steps (in order)
 
-1. Multi-agent adversarial review of everything (ultracode) → fix → commit.
-2. Laravel module shim + deploy docs + summit script → commit.
+1. Multi-agent adversarial review (22 agents) → 14 confirmed findings fixed (bdtk rounding, fail-closed auth, ERP column drift with schema-guard, payroll month parsing, sql tool hardening, prompt-injection framing, memory locking, adapter token, voice chain abort, intent order, company scope) → committed.
+2. Next: deploy to Hostinger for real (owner), live-mode test with a key; Bangla voice polish; optional server STT/TTS.
+3. Laravel module shim + deploy docs + summit script → commit.
 
 ## Owner preferences learned
 

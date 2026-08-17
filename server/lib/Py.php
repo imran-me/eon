@@ -27,7 +27,7 @@ final class Py
     {
         $script = EON_ROOT . '/py/eon.py'; if (!is_file($script)) return ['ok' => false, 'error' => 'py/eon.py missing'];
         $tmp = null;
-        if ($D !== null) { $tmp = tempnam(sys_get_temp_dir(), 'eon-ds-'); file_put_contents($tmp, json_encode($D, JSON_UNESCAPED_UNICODE)); $argv[] = '--dataset'; $argv[] = $tmp; }
+        if ($D !== null) { $dir = EON_ROOT . '/storage/cache'; $tmp = $dir . '/py-' . bin2hex(random_bytes(8)) . '.json'; file_put_contents($tmp, json_encode($D, JSON_UNESCAPED_UNICODE), LOCK_EX); @chmod($tmp, 0600); $argv[] = '--dataset'; $argv[] = $tmp; }
         $cmd = escapeshellarg(self::bin()) . ' ' . escapeshellarg($script) . ' ' . implode(' ', array_map('escapeshellarg', $argv));
         $desc = [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
         $env = $_ENV + ['PYTHONIOENCODING' => 'utf-8', 'PYTHONUTF8' => '1', 'PATH' => getenv('PATH') ?: '/usr/local/bin:/usr/bin:/bin'];

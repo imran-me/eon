@@ -195,6 +195,7 @@ export function generateDemo(opts = {}) {
 
   /* ---------- journal engine ---------- */
   const post = (company_id, date, source, description, lines, source_id = null, reference = null) => {
+    if (date > T) date = T;   // the ledger never runs ahead of today
     const items = lines.map(([code, debit, credit, party_type, party_id, note]) => { const a = byCode(code); return { account_id: a ? a.id : null, account_code: code, debit: Math.round(debit || 0), credit: Math.round(credit || 0), party_type: party_type || null, party_id: party_id || null, note: note || null }; });
     const dr = items.reduce((n, i) => n + i.debit, 0), cr = items.reduce((n, i) => n + i.credit, 0);
     if (Math.abs(dr - cr) > 1) { const diff = dr - cr; if (diff > 0) items[items.length - 1].credit += diff; else items[items.length - 1].debit -= diff; }

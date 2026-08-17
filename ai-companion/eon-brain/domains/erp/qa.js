@@ -128,14 +128,14 @@ const INTENTS = [
     return { speak: `${code} ${lg.name}: ${lg.rows.length} postings, closing balance ${money(lg.closing)}.`, detail: lg.rows.slice(-6).map((r) => `${r.date} ${r.reference} ${r.description.slice(0, 40)}: Dr ${money(r.debit)} Cr ${money(r.credit)} → ${money(r.balance)}`), view: 'ledger', data: lg };
   } },
   // ---- expenses & budgets
-  { re: /budget|over ?spend|expense(s)? (this|last) month|where (is|does) (the )?money go|spending|opex|cost breakdown|biggest expenses?/, a(q, D, c) {
-    const mk = monthIn(D, q); const bud = F.expensesVsBudget(D, { month: mk, company: c && c.id }); const an = F.expenseAnomalies(D, { company: c && c.id });
-    return { speak: `${monthName(mk)} expenses${scopeLabel(c)}: ${k(bud.totalSpent)}${bud.totalBudget ? ` against a budget of ${k(bud.totalBudget)} (${Math.round(bud.totalSpent / bud.totalBudget * 100)}%)` : ''}. ${bud.over.length ? `Over budget: ${bud.over.map((r) => `${r.category} ${r.pct}%`).join(', ')}.` : 'Nothing over budget.'}${an.length ? ` Unusual: ${an[0].category} at ${an[0].company} is ${an[0].ratio}× normal.` : ''}`, detail: bud.rows.slice(0, 8).map((r) => `${r.category}: ${money(r.spent)}${r.budget ? ` of ${money(r.budget)} (${r.pct}%)` : ''}${r.pending ? ` · ${money(r.pending)} pending` : ''}`), view: 'budgets', data: bud };
-  } },
   { re: /anomal|unusual|spike|suspicious|leak|abnormal|out of (pattern|line)/, a(q, D, c) {
     const an = F.expenseAnomalies(D, { company: c && c.id });
     if (!an.length) return { speak: `No spending anomalies${scopeLabel(c)} — every category is inside its normal band.`, detail: [] };
     return { speak: `${an.length} spending anomal${an.length > 1 ? 'ies' : 'y'}${scopeLabel(c)}. Biggest: ${an[0].category} at ${an[0].company} — ${k(an[0].amount)} in ${monthName(an[0].month)}, ${an[0].ratio}× its usual ${k(an[0].mean)}.`, detail: an.slice(0, 6).map((a) => `${a.company} · ${a.category} · ${monthName(a.month)}: ${money(a.amount)} vs normal ${money(a.mean)} (${a.ratio}×)`), view: 'expenses', data: an };
+  } },
+  { re: /budget|over ?spend|expense(s)? (this|last) month|where (is|does) (the )?money go|spending|opex|cost breakdown|biggest expenses?/, a(q, D, c) {
+    const mk = monthIn(D, q); const bud = F.expensesVsBudget(D, { month: mk, company: c && c.id }); const an = F.expenseAnomalies(D, { company: c && c.id });
+    return { speak: `${monthName(mk)} expenses${scopeLabel(c)}: ${k(bud.totalSpent)}${bud.totalBudget ? ` against a budget of ${k(bud.totalBudget)} (${Math.round(bud.totalSpent / bud.totalBudget * 100)}%)` : ''}. ${bud.over.length ? `Over budget: ${bud.over.map((r) => `${r.category} ${r.pct}%`).join(', ')}.` : 'Nothing over budget.'}${an.length ? ` Unusual: ${an[0].category} at ${an[0].company} is ${an[0].ratio}× normal.` : ''}`, detail: bud.rows.slice(0, 8).map((r) => `${r.category}: ${money(r.spent)}${r.budget ? ` of ${money(r.budget)} (${r.pct}%)` : ''}${r.pending ? ` · ${money(r.pending)} pending` : ''}`), view: 'budgets', data: bud };
   } },
   { re: /runway|burn|how long (will|does) (the )?cash last|survive|months? of (cash|cover)/, a(q, D, c) {
     const rw = F.runway(D, { company: c && c.id });
@@ -251,7 +251,9 @@ const INTENTS = [
 export function answer(q, ctx = {}) {
   const D = store.get(); if (!D) return null;
   const s = String(q || '').trim(); const nq = s.toLowerCase();
-  const c = companyIn(D, nq);
+  let c = companyIn(D, nq);
+  if (!c && !/across the group|whole group|all compan/.test(nq) && ctx && ctx.company != null) c = (D.companies || []).find((x) => x.id === +ctx.company) || null;
+  if (!c && !/across the group|whole group|all compan/.test(nq) && typeof window !== 'undefined' && window.EonErp && window.EonErp.company && window.EonErp.company() != null) c = (D.companies || []).find((x) => x.id === +window.EonErp.company()) || null;
   for (const it of INTENTS) {
     if (!it.re.test(nq)) continue;
     try { const r = it.a(nq, D, c); if (r) return Object.assign({ company: c ? c.name : null }, r); } catch (e) { console.warn('[EON erp] intent failed:', e); }

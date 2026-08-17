@@ -7,7 +7,10 @@
 return [
     // ---- who may talk to EON -------------------------------------------
     // Shared secret the app sends as  Authorization: Bearer <token>  (or ?token=).
-    // Leave empty to allow same-origin requests without a token (demo / intranet).
+    // Leave empty ONLY for the pure demo (no db, no api_key). Once a database or a model key is
+    // configured the API refuses to serve without a token. Generate one with:
+    //     php -r "echo bin2hex(random_bytes(32));"
+    // and paste the same value in the browser: localStorage.setItem('eon_token', '...') (or ?token=… once; the app remembers it).
     'token' => '',
     // Allowed browser origins for CORS (the ERP host, GitHub Pages, localhost…). '*' = any.
     'origins' => ['*'],
@@ -31,8 +34,8 @@ return [
         'api_key' => getenv('ANTHROPIC_API_KEY') ?: '',
         'model'   => 'claude-opus-5',
         'effort'  => 'high',           // low | medium | high | xhigh | max
-        'max_tokens' => 4096,
-        'allow_sql_tool' => true,      // let the model run SELECT-only queries (read-only DB user!)
+        'max_tokens' => 8192,
+        'allow_sql_tool' => false,     // let the model run guarded SELECT-only queries (needs a READ-ONLY DB user; credential tables/columns are blocked)
     ],
 
     // ---- the boss --------------------------------------------------------

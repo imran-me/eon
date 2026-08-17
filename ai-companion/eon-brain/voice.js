@@ -25,7 +25,7 @@
 const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 const SS = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
-const state = { lang: 'en-US', listening: false, continuous: false, wake: false, rec: null, voices: [], speaking: false, status: 'idle', muted: false, rate: 1.0, pitch: 1.0 };
+const state = { lang: 'en-US', listening: false, continuous: false, wake: false, rec: null, voices: [], speaking: false, status: 'idle', muted: false, rate: 1.0, pitch: 1.0, sayId: 0 };
 const listeners = { transcript: new Set(), state: new Set() };
 const emit = (k, ...a) => listeners[k].forEach((fn) => { try { fn(...a); } catch (e) { console.warn('[EON voice] listener', e); } });
 const setStatus = (s, detail) => { state.status = s; emit('state', s, detail); };
@@ -85,18 +85,20 @@ export const EonVoice = {
   stop() { state.continuous = false; const r = state.rec; state.rec = null; if (r) { try { r.stop(); } catch {} } state.listening = false; setStatus(state.speaking ? 'speaking' : 'idle'); },
   toggle(opts) { return state.listening ? (this.stop(), false) : this.listen(opts); },
 
-  hush() { if (SS && SS.speaking) { try { SS.cancel(); } catch {} } state.speaking = false; },
+  hush() { state.sayId++; if (SS && (SS.speaking || SS.pending)) { try { SS.cancel(); } catch {} } state.speaking = false; },
   say(text, { lang, rate, pitch } = {}) {
     text = String(text || '').replace(/\s+/g, ' ').trim();
     if (!SS || !text || state.muted) return Promise.resolve(false);
     this.hush();
     // pause recognition while speaking so EON doesn't hear itself
-    const wasContinuous = state.continuous; const rec = state.rec; if (rec) { try { rec.stop(); } catch {} }
+    const rec = state.rec; if (rec) { try { rec.stop(); } catch {} }
+    const myId = ++state.sayId;
     return new Promise((resolve) => {
       const chunks = text.length > 240 ? text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text] : [text];
       let i = 0; state.speaking = true; setStatus('speaking');
       const next = () => {
-        if (i >= chunks.length) { state.speaking = false; if (wasContinuous && rec) { state.rec = rec; try { rec.start(); state.listening = true; setStatus('listening'); } catch { setStatus('idle'); } } else setStatus('idle'); resolve(true); return; }
+        if (state.sayId !== myId) { resolve(false); return; }   // hushed / superseded — stop the chain
+        if (i >= chunks.length) { state.speaking = false; if (state.continuous && state.rec === rec && rec) { try { rec.start(); state.listening = true; setStatus('listening'); } catch { setStatus('idle'); } } else setStatus('idle'); resolve(true); return; }
         const u = new SpeechSynthesisUtterance(chunks[i++].trim());
         u.lang = lang || state.lang; u.rate = rate || state.rate; u.pitch = pitch || state.pitch;
         const v = pickVoice(u.lang); if (v) u.voice = v;

@@ -1,0 +1,72 @@
+﻿Party,Reference,Due date,Amount due,Days overdue,Status,Priority
+Ha-Meem Group,INV-PRO-202602-002,2026-03-10,54800,161,overdue,low
+Green Delta Traders,INV-EPA-202602-002,2026-03-24,366700,147,overdue,medium
+DBL Ceramics,INV-TRA-202603-001,2026-03-24,301900,147,overdue,low
+Uttara University,INV-MFG-202603-005,2026-03-29,372100,142,overdue,low
+Walton Plaza,INV-WOO-202603-006,2026-03-29,151300,142,overdue,medium
+DBL Ceramics,INV-TRA-202602-004,2026-04-08,180200,132,overdue,medium
+Bengal Agro,INV-TRA-202603-009,2026-04-08,160700,132,overdue,low
+Otobi Interiors,INV-PRO-202603-003,2026-04-17,131600,123,overdue,low
+Nova Textiles Ltd,INV-TRA-202604-001,2026-04-19,467500,121,overdue,medium
+Uttara University,INV-MFG-202603-004,2026-04-21,163300,119,overdue,medium
+Uttara University,INV-MFG-202604-007,2026-04-26,202000,114,overdue,medium
+BRAC Enterprises,INV-ECI-202604-005,2026-04-29,435400,111,overdue,medium
+Ha-Meem Group,INV-PRO-202604-001,2026-04-29,74500,111,overdue,low
+Green Delta Traders,INV-EPA-202604-007,2026-05-06,197200,104,overdue,medium
+Viyellatex,INV-MFG-202604-003,2026-05-12,176200,98,overdue,medium
+Fair Electronics,INV-ECI-202604-001,2026-05-19,430900,91,overdue,low
+Sena Kalyan Sangstha,INV-WOO-202604-002,2026-05-21,239800,89,overdue,medium
+Otobi Interiors,INV-PRO-202605-004,2026-05-23,227700,87,overdue,high
+Pran Dairy,INV-PRO-202605-010,2026-06-05,101000,74,overdue,medium
+Navana Furniture,INV-MFG-202605-006,2026-06-08,156400,71,overdue,high
+Fair Electronics,INV-ECI-202605-001,2026-06-13,680800,66,overdue,medium
+Bengal Agro,INV-TRA-202605-006,2026-06-21,319600,58,overdue,low
+United Hospital,INV-WOO-202605-005,2026-06-25,340700,54,overdue,medium
+DBL Ceramics,INV-TRA-202605-008,2026-06-27,167100,52,overdue,low
+Square Pharma (Uttara),INV-EPA-202606-002,2026-07-11,485300,38,overdue,low
+Labaid Diagnostics,INV-WOO-202606-004,2026-07-15,161800,34,overdue,low
+DBL Ceramics,INV-TRA-202607-003,2026-07-16,324800,33,overdue,medium
+Fair Electronics,INV-ECI-202607-007,2026-07-21,186900,28,overdue,low
+Padma Ceramics,INV-PRO-202606-004,2026-07-22,120900,27,overdue,low
+Square Pharma (Uttara),INV-EPA-202607-005,2026-07-27,249200,22,overdue,high
+Walton Plaza,INV-WOO-202607-001,2026-07-27,66000,22,overdue,low
+Walton Plaza,INV-WOO-202606-010,2026-07-29,319500,20,overdue,high
+Zaman Traders,INV-TRA-202606-006,2026-07-31,970700,18,overdue,high
+Fair Electronics,INV-ECI-202607-010,2026-08-01,186100,17,overdue,high
+Ha-Meem Group,INV-PRO-202607-003,2026-08-01,88800,17,overdue,low
+Otobi Interiors,INV-PRO-202607-005,2026-08-05,191300,13,overdue,high
+Shwapno,INV-ECI-202607-008,2026-08-10,498800,8,overdue,high
+DBL Ceramics,INV-TRA-202607-007,2026-08-13,583700,5,overdue,high
+United Hospital,INV-WOO-202607-007,2026-08-13,226400,5,overdue,high
+Green Delta Traders,INV-EPA-202607-008,2026-08-14,369500,4,overdue,low
+Aarong Gulshan,INV-MFG-202607-010,2026-08-16,224000,2,overdue,medium
+Bashundhara Housing,INV-WOO-202608-007,2026-08-16,133100,2,overdue,high
+DBL Ceramics,INV-TRA-202607-002,2026-08-21,512400,0,pending,high
+Zaman Traders,INV-TRA-202608-010,2026-08-22,414100,0,pending,high
+Partex Star,INV-TRA-202608-011,2026-09-19,333900,0,pending,high
+Bengal Agro,INV-TRA-202608-003,2026-09-14,267600,0,pending,medium
+DBL Ceramics,INV-TRA-202608-005,2026-09-13,244000,0,pending,medium
+Aarong Gulshan,INV-MFG-202607-009,2026-08-25,224600,0,pending,medium
+Zaman Traders,INV-TRA-202608-008,2026-09-02,223100,0,pending,low
+Fair Electronics,INV-ECI-202607-009,2026-08-23,217800,0,pending,low
+Padma Ceramics,INV-PRO-202607-009,2026-09-09,197500,0,pending,high
+Uttara University,INV-MFG-202607-003,2026-08-19,186600,0,pending,medium
+Summit Power,INV-EPA-202608-009,2026-08-25,180100,0,pending,high
+Fair Electronics,INV-ECI-202608-007,2026-08-20,172700,0,pending,medium
+ACI Logistics,INV-MFG-202608-005,2026-09-06,161900,0,pending,low
+Yellow by Beximco,INV-PRO-202607-008,2026-08-23,137100,0,pending,low
+Uttara University,INV-MFG-202608-002,2026-08-25,133100,0,pending,medium
+Daffodil Int. University,INV-EPA-202607-004,2026-08-21,128400,0,pending,low
+Daffodil Int. University,INV-EPA-202608-003,2026-09-29,113000,0,pending,low
+Square Pharma (Uttara),INV-EPA-202608-011,2026-09-14,99600,0,pending,low
+Pran Dairy,INV-PRO-202608-010,2026-09-02,87300,0,pending,high
+Square Pharma (Uttara),INV-EPA-202608-001,2026-09-09,86000,0,pending,medium
+Sena Kalyan Sangstha,INV-WOO-202608-004,2026-08-26,85500,0,pending,medium
+City Hospital Dhaka,INV-WOO-202607-006,2026-08-21,78700,0,pending,low
+Pran Dairy,INV-PRO-202608-011,2026-09-28,78400,0,pending,medium
+Bengal Agro,INV-TRA-202608-001,2026-09-21,76300,0,pending,low
+Green Delta Traders,INV-EPA-202608-005,2026-09-01,76300,0,pending,medium
+Sena Kalyan Sangstha,INV-WOO-202608-006,2026-08-23,74300,0,pending,low
+Sena Kalyan Sangstha,INV-WOO-202608-009,2026-09-18,74300,0,pending,medium
+Yellow by Beximco,INV-PRO-202608-009,2026-09-05,38700,0,pending,low
+Padma Ceramics,INV-PRO-202608-004,2026-08-29,25700,0,pending,medium

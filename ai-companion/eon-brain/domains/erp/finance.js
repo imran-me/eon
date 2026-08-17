@@ -110,7 +110,7 @@ export function expenseAnomalies(D, { company = null } = {}) {
   const key = (e) => e.company_id + '|' + e.category;
   const byKey = groupBy(rows, key); const out = [];
   const months = [...new Set(rows.map((e) => e.expense_date.slice(0, 7)))].sort();
-  const cur = monthKey(T(D)); const dayNow = new Date(T(D)).getDate();
+  const cur = monthKey(T(D)); const dayNow = new Date(T(D) + 'T00:00:00').getDate();
   const flag = (cid, cat, month, v, prior, projected) => {
     if (prior.length < 2) return;
     const mean = prior.reduce((a, b) => a + b, 0) / prior.length; const sd = Math.sqrt(prior.reduce((a, b) => a + (b - mean) ** 2, 0) / prior.length) || mean * 0.1;
@@ -132,7 +132,7 @@ export function expenseAnomalies(D, { company = null } = {}) {
 
 /* ---------- 5. revenue & runway ---------- */
 export function revenueTrend(D, { company = null, months = 6 } = {}) {
-  const today = new Date(T(D)); const out = [];
+  const today = new Date(T(D) + 'T00:00:00'); const out = [];
   for (let i = months - 1; i >= 0; i--) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1); const mk = monthKey(d);
     const pl = profitAndLoss(D, { from: mk + '-01', to: iso(new Date(d.getFullYear(), d.getMonth() + 1, 0)), company });
@@ -183,7 +183,7 @@ export function decisions(D, { company = null } = {}) {
   if (rw.burning && rw.monthsToZero != null && rw.monthsToZero < 6) push({ id: 'runway', severity: rw.monthsToZero < 3 ? 5 : 4, title: `At the current burn, cash lasts ${rw.monthsToZero} months`, why: [`Average monthly net: ${fmtBDTk(rw.avgMonthlyNet)}`, `Cash today: ${fmtBDTk(rw.cash)}`], recommend: 'Cut the two fastest-growing expense categories and pull receivables forward.', amount: rw.cash });
   cash.low.forEach((b) => push({ id: 'bank-low-' + b.id, severity: b.balance < 0 ? 5 : 2, title: `${b.name} (${b.company}) is ${b.balance < 0 ? 'overdrawn' : 'low'}: ${fmtBDT(b.balance)}`, why: [`Other accounts hold ${fmtBDTk(cash.total - b.balance)}`], recommend: `Transfer a float into ${b.name} before the next scheduled payment.`, amount: b.balance, actions: [{ label: 'Open banks', kind: 'navigate', href: 'finance.html#cash' }] }));
   bud.over.forEach((r) => push({ id: 'budget-over-' + r.category, severity: r.pct >= 150 ? 4 : 3, title: `${r.category} is ${r.pct}% of budget this month (${fmtBDTk(r.spent)} of ${fmtBDTk(r.budget)})`, why: [`${r.count} expense lines${r.pending ? `, ${fmtBDTk(r.pending)} still pending approval` : ''}`], recommend: r.pending ? `Hold the pending ${r.category} approvals until the owner justifies the overrun.` : `Freeze discretionary ${r.category} spend for the rest of the month.`, amount: r.spent - r.budget, actions: [{ label: 'Open budgets', kind: 'navigate', href: 'finance.html#budgets' }] }));
-  bud.warn.slice(0, 3).forEach((r) => push({ id: 'budget-warn-' + r.category, severity: 2, title: `${r.category} at ${r.pct}% of budget with ${new Date(T(D)).getDate() < 20 ? 'a third of the month left' : 'days to go'}`, why: [`${fmtBDTk(r.spent)} of ${fmtBDTk(r.budget)}`], recommend: 'Watch it — no action yet.', amount: r.spent }));
+  bud.warn.slice(0, 3).forEach((r) => push({ id: 'budget-warn-' + r.category, severity: 2, title: `${r.category} at ${r.pct}% of budget with ${new Date(T(D) + 'T00:00:00').getDate() < 20 ? 'a third of the month left' : 'days to go'}`, why: [`${fmtBDTk(r.spent)} of ${fmtBDTk(r.budget)}`], recommend: 'Watch it — no action yet.', amount: r.spent }));
   anom.slice(0, 4).forEach((a) => push({ id: `anomaly-${a.company_id}-${a.category}`, severity: a.ratio >= 2 ? 4 : 3, title: `${a.category} at ${a.company} is running ${a.ratio}× its usual month`, why: [`${a.month}: ${fmtBDTk(a.amount)}${a.projected !== a.amount ? ` (projects to ${fmtBDTk(a.projected)})` : ''} vs a normal ${fmtBDTk(a.mean)}`, `z-score ${a.z}`], recommend: `Ask ${a.company}'s admin what changed in ${a.category} — one-off or new run-rate?`, amount: a.amount, actions: [{ label: 'Open expenses', kind: 'navigate', href: 'finance.html#expenses' }] }));
   if (pend.count) push({ id: 'expenses-pending', severity: pend.total > 200000 ? 3 : 2, title: `${pend.count} expenses (${fmtBDTk(pend.total)}) are waiting for approval`, why: [`Largest: ${pend.rows[0].title} — ${fmtBDT(pend.rows[0].amount)} (${cid(pend.rows[0].company_id)}, ${pend.rows[0].user_name})`], recommend: 'Approve the routine ones in one pass; question anything above budget.', amount: pend.total, actions: [{ label: 'Open approvals', kind: 'navigate', href: 'index.html#approvals' }], approval: true });
   if (tr.vsPrev <= -15) push({ id: 'revenue-dip', severity: 3, title: `Revenue is tracking ${Math.abs(tr.vsPrev)}% below last month`, why: [`MTD ${fmtBDTk(tr.mtd.income)} → run-rate ${fmtBDTk(tr.runRate)} vs ${fmtBDTk(tr.prev.income)} last month`], recommend: 'Check the pipeline: which won deals have not been invoiced yet?', amount: tr.prev.income - tr.runRate });

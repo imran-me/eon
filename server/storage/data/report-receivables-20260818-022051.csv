@@ -1,0 +1,17 @@
+﻿Party,Reference,Due date,Amount due,Days overdue,Status,Priority
+DBL Ceramics,INV-TRA-202603-001,2026-03-24,301900,147,overdue,low
+DBL Ceramics,INV-TRA-202602-004,2026-04-08,180200,132,overdue,medium
+Bengal Agro,INV-TRA-202603-009,2026-04-08,160700,132,overdue,low
+Nova Textiles Ltd,INV-TRA-202604-001,2026-04-19,467500,121,overdue,medium
+Bengal Agro,INV-TRA-202605-006,2026-06-21,319600,58,overdue,low
+DBL Ceramics,INV-TRA-202605-008,2026-06-27,167100,52,overdue,low
+DBL Ceramics,INV-TRA-202607-003,2026-07-16,324800,33,overdue,medium
+Zaman Traders,INV-TRA-202606-006,2026-07-31,970700,18,overdue,high
+DBL Ceramics,INV-TRA-202607-007,2026-08-13,583700,5,overdue,high
+DBL Ceramics,INV-TRA-202607-002,2026-08-21,512400,0,pending,high
+Zaman Traders,INV-TRA-202608-010,2026-08-22,414100,0,pending,high
+Partex Star,INV-TRA-202608-011,2026-09-19,333900,0,pending,high
+Bengal Agro,INV-TRA-202608-003,2026-09-14,267600,0,pending,medium
+DBL Ceramics,INV-TRA-202608-005,2026-09-13,244000,0,pending,medium
+Zaman Traders,INV-TRA-202608-008,2026-09-02,223100,0,pending,low
+Bengal Agro,INV-TRA-202608-001,2026-09-21,76300,0,pending,low

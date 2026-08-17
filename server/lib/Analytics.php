@@ -19,13 +19,24 @@ final class Analytics
 
     // ---------- helpers ----------
     private function inCo(array $r, bool $sharedOk = false): bool { if ($this->co === null) return true; $c = $r['company_id'] ?? null; return ($sharedOk && $c === null) || (int) $c === $this->co; }
-    private function rows(string $t, bool $sharedOk = false): array { return array_values(array_filter($this->D[$t] ?? [], fn($r) => $this->inCo($r, $sharedOk))); }
+    private function rows(string $t, bool $sharedOk = false): array
+    {
+        $viaEmp = in_array($t, ['advance_salaries', 'employee_requests', 'loans'], true);
+        return array_values(array_filter($this->D[$t] ?? [], function ($r) use ($sharedOk, $viaEmp) {
+            if ($this->co !== null && $viaEmp && !isset($r['company_id'])) { $e = $this->emp($r['user_id'] ?? null); return $e ? (int) $e['company_id'] === $this->co : $sharedOk; }
+            return $this->inCo($r, $sharedOk);
+        }));
+    }
+    private function emp(int|string|null $id): ?array { foreach ($this->D['employees'] ?? [] as $e) if ((int) $e['id'] === (int) $id) return $e; return null; }
+    /** employees / attendances / tasks / leads under the current company scope */
+    private function scoped(string $t): array { return $this->co === null ? ($this->D[$t] ?? []) : array_values(array_filter($this->D[$t] ?? [], fn($r) => $this->inCo($r))); }
     private static function sum(array $a, string $k): float { $s = 0.0; foreach ($a as $r) $s += (float) ($r[$k] ?? 0); return $s; }
     private function days(string $a, string $b): int { return (int) round((strtotime($b) - strtotime($a)) / 86400); }
     private function coName(int|string|null $id): string { foreach ($this->D['companies'] ?? [] as $c) if ((int) $c['id'] === (int) $id) return (string) ($c['short_name'] ?: $c['name']); return '#' . $id; }
     private function empName(int|string|null $id): string { foreach ($this->D['employees'] ?? [] as $e) if ((int) $e['id'] === (int) $id) return (string) $e['name']; return '#' . $id; }
     public static function bdt(float $n): string { $neg = $n < 0; $n = abs(round($n)); $s = (string) (int) $n; if (strlen($s) > 3) { $last3 = substr($s, -3); $rest = substr($s, 0, -3); $rest = preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', $rest); $s = $rest . ',' . $last3; } return ($neg ? '−' : '') . '৳' . $s; }
-    public static function bdtk(float $n): string { $a = abs($n); $s = $n < 0 ? '−' : ''; if ($a >= 1e7) return $s . '৳' . rtrim(rtrim(number_format($a / 1e7, $a >= 1e8 ? 0 : 1, '.', ''), '0'), '.') . ' Cr'; if ($a >= 1e5) return $s . '৳' . rtrim(rtrim(number_format($a / 1e5, $a >= 1e6 ? 0 : 1, '.', ''), '0'), '.') . ' L'; if ($a >= 1e3) return $s . '৳' . rtrim(rtrim(number_format($a / 1e3, 1, '.', ''), '0'), '.') . 'k'; return self::bdt($n); }
+    private static function trimZeros(string $s): string { return str_contains($s, '.') ? rtrim(rtrim($s, '0'), '.') : $s; }
+    public static function bdtk(float $n): string { $a = abs($n); $s = $n < 0 ? '−' : ''; if ($a >= 1e7) return $s . '৳' . self::trimZeros(number_format($a / 1e7, $a >= 1e8 ? 0 : 1, '.', '')) . ' Cr'; if ($a >= 1e5) return $s . '৳' . self::trimZeros(number_format($a / 1e5, $a >= 1e6 ? 0 : 1, '.', '')) . ' L'; if ($a >= 1e3) return $s . '৳' . self::trimZeros(number_format($a / 1e3, 1, '.', '')) . 'k'; return self::bdt($n); }
     private static function acctType(string $code): string { $c = (int) substr($code, 0, 1); return match ($c) { 1 => 'asset', 2 => 'liability', 3 => 'equity', 4 => 'income', default => 'expense' }; }
 
     // ---------- finance ----------
@@ -135,12 +146,12 @@ final class Analytics
     public function findEmployee(string $q): ?array
     {
         $q = strtolower(preg_replace('/[^a-z\s]/i', ' ', $q)); $toks = array_filter(explode(' ', $q), fn($t) => strlen($t) >= 3); $best = null; $bs = 0;
-        foreach ($this->D['employees'] ?? [] as $e) { $n = strtolower((string) $e['name']); $s = 0; if ($n && str_contains($q, $n)) $s = 100; else foreach ($toks as $t) { if (in_array($t, explode(' ', $n), true)) $s += 10; elseif (str_contains($n, $t)) $s += 4; } if ($s > $bs) { $bs = $s; $best = $e; } }
+        foreach ($this->scoped('employees') as $e) { $n = strtolower((string) $e['name']); $s = 0; if ($n && str_contains($q, $n)) $s = 100; else foreach ($toks as $t) { if (in_array($t, explode(' ', $n), true)) $s += 10; elseif (str_contains($n, $t)) $s += 4; } if ($s > $bs) { $bs = $s; $best = $e; } }
         return $bs >= 8 ? $best : null;
     }
     public function evaluate(int $uid, int $days = 30): ?array
     {
-        $e = null; foreach ($this->D['employees'] ?? [] as $x) if ((int) $x['id'] === $uid) { $e = $x; break; } if (!$e) return null;
+        $e = null; foreach ($this->scoped('employees') as $x) if ((int) $x['id'] === $uid) { $e = $x; break; } if (!$e) return null;
         $from = date('Y-m-d', strtotime("-$days days", strtotime($this->today)));
         $att = array_filter($this->D['attendances'] ?? [], fn($a) => (int) $a['user_id'] === $uid && $a['date'] >= $from && $a['date'] <= $this->today);
         $present = array_filter($att, fn($a) => $a['status'] === 'present'); $attPct = count($att) ? count($present) / count($att) : 1; $lateDays = count(array_filter($present, fn($a) => (int) $a['late_minutes'] > 0)); $punct = count($present) ? 1 - $lateDays / count($present) : 1;

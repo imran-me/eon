@@ -19,7 +19,7 @@ export function kpis(D, { company = null } = {}) {
   const cash = F.cashPosition(D, { company }), ar = F.receivables(D, { company }), ap = F.payables(D, { company });
   const pl = F.profitAndLoss(D, { from: mk + '-01', to: t, company }), tr = F.revenueTrend(D, { company });
   const lastMk = (() => { const d = new Date(mk + '-01T00:00:00'); d.setMonth(d.getMonth() - 1); return monthKey(d); })();
-  const plLast = F.profitAndLoss(D, { from: lastMk + '-01', to: lastMk + '-31', company });
+  const plLast = F.profitAndLoss(D, { from: lastMk + '-01', to: lastMk + '-31', company });   // '-31' is a safe upper bound: dates compare as ISO strings
   const hc = P.headcount(D, { company }), td = P.today(D, { company }), pr = P.payroll(D, { company });
   const pipe = C.pipeline(D, { company }), tk = O.tasks(D, { company }), pj = O.projects(D, { company }), bud = F.expensesVsBudget(D, { company });
   return {

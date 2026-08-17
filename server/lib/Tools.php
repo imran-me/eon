@@ -13,7 +13,7 @@ final class Tools
 
     public function __construct(array $D, ?int $company = null) { $this->D = $D; $this->company = $company; $this->A = new Analytics($D, $company); }
 
-    private static function obj(array $props, array $required = []): array { return ['type' => 'object', 'properties' => $props ?: new stdClass(), 'required' => $required]; }
+    private static function obj(array $props, array $required = []): array { $o = ['type' => 'object']; if ($props) { $o['properties'] = $props; if ($required) $o['required'] = $required; } return $o; }
 
     public function definitions(): array
     {
@@ -74,7 +74,7 @@ final class Tools
                 'get_approvals' => $this->A->approvals(),
                 'get_decisions' => $this->A->decisions(),
                 'search_records' => $this->search((string) ($in['query'] ?? ''), (int) ($in['limit'] ?? 15)),
-                'record_action' => Memory::logAction((string) ($in['kind'] ?? 'note'), ['summary' => $in['summary'] ?? '', 'detail' => $in['payload'] ?? []], 'queued'),
+                'record_action' => Memory::logAction((string) ($in['kind'] ?? 'note'), ['summary' => $in['summary'] ?? '', 'detail' => $in['payload'] ?? [], 'via' => 'model'], 'proposed'),
                 'forecast' => Py::run('forecast', $this->D, ['--company' => $this->company, '--months' => (int) ($in['months'] ?? 3)]),
                 'spending_anomalies' => Py::run('anomalies', $this->D, ['--company' => $this->company]),
                 'evaluate_all_staff' => Py::run('evaluate', $this->D, ['--company' => $this->company, '--all' => true]),
@@ -88,7 +88,7 @@ final class Tools
     private function ledger(string $code, int $limit): array
     {
         $rows = []; $run = 0.0; $type = (int) substr($code, 0, 1); $isDr = in_array($type, [1, 5, 6, 7, 8], true);
-        $je = $this->D['journal_entries'] ?? []; usort($je, fn($a, $b) => strcmp($a['date'], $b['date']) ?: $a['id'] <=> $b['id']);
+        $je = array_values(array_filter($this->D['journal_entries'] ?? [], fn($e) => $this->company === null || (int) $e['company_id'] === $this->company)); usort($je, fn($a, $b) => strcmp($a['date'], $b['date']) ?: $a['id'] <=> $b['id']);
         foreach ($je as $e) foreach ($e['items'] as $it) { if ((string) $it['account_code'] !== $code) continue; $run += $isDr ? $it['debit'] - $it['credit'] : $it['credit'] - $it['debit']; $rows[] = ['date' => $e['date'], 'ref' => $e['reference'], 'description' => $e['description'], 'debit' => round((float) $it['debit']), 'credit' => round((float) $it['credit']), 'balance' => round($run)]; }
         return ['code' => $code, 'postings' => count($rows), 'closing_balance' => round($run), 'last' => array_slice($rows, -$limit)];
     }
@@ -96,7 +96,7 @@ final class Tools
     {
         $q = mb_strtolower(trim($q)); if ($q === '') return []; $hits = [];
         $tables = ['employees' => ['name', 'email', 'designation', 'department'], 'customers' => ['name', 'phone'], 'suppliers' => ['name'], 'leads' => ['name', 'phone', 'assigned_name'], 'projects' => ['project_name', 'customer'], 'tasks' => ['title', 'project'], 'expenses' => ['title', 'category', 'user_name'], 'payment_schedules' => ['party_name', 'source_label']];
-        foreach ($tables as $t => $cols) foreach ($this->D[$t] ?? [] as $r) { foreach ($cols as $c) { if (isset($r[$c]) && is_string($r[$c]) && str_contains(mb_strtolower($r[$c]), $q)) { $hits[] = ['table' => $t] + array_intersect_key($r, array_flip(array_merge(['id', 'company_id', 'status', 'amount', 'due_date', 'scheduled_date', 'salary'], $cols))); break; } } if (count($hits) >= $limit) break 2; }
+        foreach ($tables as $t => $cols) foreach ($this->D[$t] ?? [] as $r) { if ($this->company !== null && isset($r['company_id']) && (int) $r['company_id'] !== $this->company) continue; foreach ($cols as $c) { if (isset($r[$c]) && is_string($r[$c]) && str_contains(mb_strtolower($r[$c]), $q)) { $hits[] = ['table' => $t] + array_intersect_key($r, array_flip(array_merge(['id', 'company_id', 'status', 'amount', 'due_date', 'scheduled_date', 'salary'], $cols))); break; } } if (count($hits) >= $limit) break 2; }
         return $hits;
     }
 }

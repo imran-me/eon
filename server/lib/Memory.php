@@ -20,6 +20,13 @@ final class Memory
     private static function file(string $name): string { return EON_ROOT . '/storage/data/' . preg_replace('/[^a-z0-9\-_.]/i', '_', $name) . '.json'; }
     private static function readJson(string $name, mixed $default = []): mixed { $f = self::file($name); if (!is_file($f)) return $default; $d = json_decode((string) file_get_contents($f), true); return $d === null ? $default : $d; }
     private static function writeJson(string $name, mixed $data): void { @file_put_contents(self::file($name), json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX); }
+    /** read-modify-write under an exclusive lock (file backend) */
+    private static function update(string $name, callable $fn, mixed $default = []): mixed
+    {
+        $lock = fopen(self::file($name) . '.lock', 'c'); if ($lock) flock($lock, LOCK_EX);
+        try { $cur = self::readJson($name, $default); $next = $fn($cur); self::writeJson($name, $next); return $next; }
+        finally { if ($lock) { flock($lock, LOCK_UN); fclose($lock); } }
+    }
     private static function deepMerge(array $dst, array $src): array { foreach ($src as $k => $v) { if (is_array($v) && isset($dst[$k]) && is_array($dst[$k]) && !array_is_list($v)) $dst[$k] = self::deepMerge($dst[$k], $v); else $dst[$k] = $v; } return $dst; }
 
     // ---- document store (col/doc) ----
@@ -32,22 +39,23 @@ final class Memory
     {
         $cur = $merge ? (self::docGet($key) ?? []) : []; $next = $merge ? self::deepMerge($cur, $data) : $data;
         if ($pdo = self::db()) { $pdo->prepare('INSERT INTO eon_docs (doc_key, data, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE data = VALUES(data), updated_at = NOW()')->execute([$key, json_encode($next, JSON_UNESCAPED_UNICODE)]); return $next; }
-        $all = self::readJson('docs'); $all[$key] = $next; self::writeJson('docs', $all); return $next;
+        self::update('docs', function ($all) use ($key, $next) { $all[$key] = $next; return $all; }); return $next;
     }
 
     // ---- conversations ----
     public static function conversation(?string $id, string $channel = 'text'): array
     {
+        if ($id !== null && $id !== '' && !preg_match('/^[a-f0-9]{16}$/', $id)) $id = null;   // ids are server-issued
         if ($id) { if ($pdo = self::db()) { $c = Db::one($pdo, 'SELECT * FROM eon_conversations WHERE id = ?', [$id]); if ($c) return $c; } else { $all = self::readJson('conversations'); if (isset($all[$id])) return $all[$id]; } }
         $id = $id ?: bin2hex(random_bytes(8)); $c = ['id' => $id, 'channel' => $channel, 'started_at' => date('c'), 'title' => null];
         if ($pdo = self::db()) $pdo->prepare('INSERT IGNORE INTO eon_conversations (id, channel, started_at) VALUES (?, ?, NOW())')->execute([$id, $channel]);
-        else { $all = self::readJson('conversations'); $all[$id] = $c; self::writeJson('conversations', $all); }
+        else self::update('conversations', function ($all) use ($id, $c) { $all[$id] = $c; return $all; });
         return $c;
     }
     public static function addMessage(string $conv, string $role, string $text, array $meta = []): void
     {
         if ($pdo = self::db()) { $pdo->prepare('INSERT INTO eon_messages (conversation_id, role, text, meta, created_at) VALUES (?, ?, ?, ?, NOW())')->execute([$conv, $role, $text, json_encode($meta, JSON_UNESCAPED_UNICODE)]); return; }
-        $all = self::readJson('messages'); $all[$conv][] = ['role' => $role, 'text' => $text, 'meta' => $meta, 'at' => date('c')]; $all[$conv] = array_slice($all[$conv], -200); self::writeJson('messages', $all);
+        self::update('messages', function ($all) use ($conv, $role, $text, $meta) { $all[$conv][] = ['role' => $role, 'text' => $text, 'meta' => $meta, 'at' => date('c')]; $all[$conv] = array_slice($all[$conv], -200); return $all; });
     }
     /** last N turns as Anthropic-shaped messages */
     public static function history(string $conv, int $limit = 12): array
@@ -69,7 +77,7 @@ final class Memory
     {
         $day = date('Y-m-d');
         if ($pdo = self::db()) { $pdo->prepare('INSERT INTO eon_decisions (day, company_id, payload, created_at) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE payload = VALUES(payload), created_at = NOW()')->execute([$day, $company, json_encode($decisions, JSON_UNESCAPED_UNICODE)]); return; }
-        $all = self::readJson('decisions'); $all[$day . ':' . ($company ?? 'all')] = ['day' => $day, 'company_id' => $company, 'payload' => $decisions, 'at' => date('c')]; self::writeJson('decisions', array_slice($all, -60, null, true));
+        self::update('decisions', function ($all) use ($day, $company, $decisions) { $all[$day . ':' . ($company ?? 'all')] = ['day' => $day, 'company_id' => $company, 'payload' => $decisions, 'at' => date('c')]; return array_slice($all, -60, null, true); });
     }
     public static function decisionsOn(string $day, ?int $company = null): ?array
     {
@@ -81,7 +89,7 @@ final class Memory
     {
         $a = ['id' => bin2hex(random_bytes(6)), 'kind' => $kind, 'payload' => $payload, 'status' => $status, 'by' => $by ?: Config::get('boss.name'), 'at' => date('c')];
         if ($pdo = self::db()) { $pdo->prepare('INSERT INTO eon_actions (id, kind, payload, status, actor, created_at) VALUES (?, ?, ?, ?, ?, NOW())')->execute([$a['id'], $kind, json_encode($payload, JSON_UNESCAPED_UNICODE), $status, $a['by']]); return $a; }
-        $all = self::readJson('actions'); $all[] = $a; self::writeJson('actions', array_slice($all, -500)); return $a;
+        self::update('actions', function ($all) use ($a) { $all[] = $a; return array_slice($all, -500); }); return $a;
     }
     public static function actions(int $limit = 50): array
     {
@@ -96,7 +104,7 @@ final class Memory
     public static function setSetting(string $key, mixed $value): void
     {
         if ($pdo = self::db()) { $pdo->prepare('INSERT INTO eon_settings (`key`, value, updated_at) VALUES (?, ?, NOW()) ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = NOW()')->execute([$key, json_encode($value, JSON_UNESCAPED_UNICODE)]); return; }
-        $s = self::readJson('settings'); $s[$key] = $value; self::writeJson('settings', $s);
+        self::update('settings', function ($s) use ($key, $value) { $s[$key] = $value; return $s; });
     }
     public static function backend(): string { return self::db() ? 'mysql' : 'files'; }
 }

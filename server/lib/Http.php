@@ -8,10 +8,10 @@ final class Http
     {
         $origins = Config::get('origins', ['*']);
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-        if (in_array('*', $origins, true)) header('Access-Control-Allow-Origin: ' . ($origin ?: '*'));
-        elseif ($origin && in_array($origin, $origins, true)) header('Access-Control-Allow-Origin: ' . $origin);
+        $any = in_array('*', $origins, true);
+        if ($any) header('Access-Control-Allow-Origin: *');
+        elseif ($origin && in_array($origin, $origins, true)) { header('Access-Control-Allow-Origin: ' . $origin); header('Access-Control-Allow-Credentials: true'); }
         header('Vary: Origin');
-        header('Access-Control-Allow-Credentials: true');
         header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
         header('Access-Control-Allow-Headers: Content-Type, Authorization, X-EON-Token');
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') { http_response_code(204); exit; }
@@ -21,7 +21,14 @@ final class Http
     public static function auth(bool $required = true): bool
     {
         $token = (string) Config::get('token', '');
-        if ($token === '') return true;
+        if ($token === '') {
+            // open mode is only safe for a pure demo (no ERP database, no model key) or loopback
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            $loopback = in_array($ip, ['127.0.0.1', '::1'], true);
+            if ($loopback || (!Config::dbEnabled() && !Config::llmKeyPresent())) return true;
+            if ($required) self::fail(503, 'EON token not configured — set "token" in server/config.local.php (generate: php -r "echo bin2hex(random_bytes(32));")');
+            return false;
+        }
         $given = '';
         $auth = $_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '';
         if (preg_match('/Bearer\s+(.+)/i', $auth, $m)) $given = trim($m[1]);
@@ -56,7 +63,7 @@ final class Http
 
     public static function method(): string { return strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'); }
     public static function q(string $k, mixed $d = null): mixed { return $_GET[$k] ?? $d; }
-    public static function intq(string $k, ?int $d = null): ?int { $v = $_GET[$k] ?? null; return ($v === null || $v === '') ? $d : (int) $v; }
+    public static function intq(string $k, ?int $d = null): ?int { $v = $_GET[$k] ?? null; return ($v === null || $v === '' || !is_numeric($v)) ? $d : (int) $v; }
 
     /** run an endpoint with uniform error handling */
     public static function run(callable $fn): void

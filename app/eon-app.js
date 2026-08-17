@@ -33,7 +33,7 @@ function paintEnv() {
   const mode = e.serverOk ? (e.llm ? 'live' : 'server') : 'demo';
   pill.className = 'pill ' + mode;
   $('#envText').textContent = mode === 'live' ? 'Live · ERP + language model' : mode === 'server' ? (e.db ? 'Server · ERP data · offline brain' : 'Server · demo data') : (src === 'demo' ? 'Static · demo data · offline brain' : 'Static');
-  $('#footEnv').textContent = `${src || '—'} · ${e.serverOk ? 'server ok' : 'no server'} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'on' : 'off'}`;
+  $('#footEnv').textContent = `${src || '—'} · ${e.serverOk ? 'server ok' : 'no server'}${e.authError ? ' · ⚠ token needed (localStorage eon_token)' : ''} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'on' : 'off'}`;
 }
 function paintCompanies() {
   const sel = $('#companySel'); const cur = sel.value;
@@ -89,7 +89,7 @@ function rDecisions() {
 }
 function approvalsTable(items) {
   if (!items.length) return '<div class="empty">Queue is empty.</div>';
-  return `<table><thead><tr><th>Item</th><th>Who</th><th class="r">Amount</th><th></th></tr></thead><tbody>${items.map((a) => { const key = a.kind + ':' + a.id; const done = state.approved[key]; return `<tr><td><span class="tag">${esc(a.kind)}</span>${esc(a.title)}${a.flag ? ` <span class="tag" style="color:var(--red)">${esc(a.flag)}</span>` : ''}<div class="hint">${esc(a.note || '')} ${a.company ? '· ' + esc(a.company) : ''}</div></td><td>${esc(a.who || '')}</td><td class="r num">${a.amount ? money(a.amount) : '—'}</td><td style="white-space:nowrap">${done ? `<span class="tag" style="color:${done === 'approve' ? 'var(--green)' : 'var(--red)'}">${done}d</span>` : `<button class="btn sm ok" data-approve="approve" data-key="${esc(key)}" data-title="${esc(a.title)}" data-amount="${a.amount || ''}">Approve</button> <button class="btn sm no" data-approve="reject" data-key="${esc(key)}" data-title="${esc(a.title)}">Reject</button>`}</td></tr>`; }).join('')}</tbody></table>`;
+  return `<table><thead><tr><th>Item</th><th>Who</th><th class="r">Amount</th><th></th></tr></thead><tbody>${items.map((a) => { const key = (EonErp.source() || 'demo') + ':' + a.kind + ':' + a.id; const done = state.approved[key]; return `<tr><td><span class="tag">${esc(a.kind)}</span>${esc(a.title)}${a.flag ? ` <span class="tag" style="color:var(--red)">${esc(a.flag)}</span>` : ''}<div class="hint">${esc(a.note || '')} ${a.company ? '· ' + esc(a.company) : ''}</div></td><td>${esc(a.who || '')}</td><td class="r num">${a.amount ? money(a.amount) : '—'}</td><td style="white-space:nowrap">${done ? `<span class="tag" style="color:${done === 'approve' ? 'var(--green)' : 'var(--red)'}">${done}d</span>` : `<button class="btn sm ok" data-approve="approve" data-key="${esc(key)}" data-title="${esc(a.title)}" data-amount="${a.amount || ''}">Approve</button> <button class="btn sm no" data-approve="reject" data-key="${esc(key)}" data-title="${esc(a.title)}">Reject</button>`}</td></tr>`; }).join('')}</tbody></table>`;
 }
 function rApprovals() { const ap = EonErp.approvals(); return `<div class="grid g4" style="margin-bottom:14px">${ap.byKind.map((x) => `<div class="card tile"><div class="lbl">${esc(x.kind)}</div><div class="val num">${x.count}</div><div class="sub">${x.amount ? k(x.amount) : ''}</div></div>`).join('')}</div><div class="card"><h3>${ap.count} waiting · ${k(ap.amount)}<span class="spacer"></span><span class="hint">decisions are logged as EON actions; the ERP executes them</span></h3>${approvalsTable(ap.items)}</div>`; }
 function bucketBars(b) { const max = Math.max(1, ...b.map((x) => x.amount)); return b.map((x) => `<div style="display:flex;align-items:center;gap:10px;margin:6px 0"><span style="width:52px;font-size:12px;color:var(--muted)">${x.bucket}</span><div class="bar ${x.bucket === '90+' || x.bucket === '61–90' ? 'red' : ''}" style="flex:1"><i style="width:${Math.round(x.amount / max * 100)}%"></i></div><span class="num" style="width:80px;text-align:right;font-size:12px">${k(x.amount)}</span></div>`).join(''); }
@@ -218,7 +218,7 @@ function boot() {
     V.onTranscript((text, meta) => { const h = $('#heard'); if (h) h.textContent = meta.final ? '' : '🎙 ' + text; if (meta.final && text) ask(text, { voice: true }); });
   }
   $('#btnMic').onclick = toggleMic;
-  $('#btnSpeakBrief').onclick = () => { const b = EonErp.brief(); if (V) V.say(b.speak, { lang: state.lang }); if (state.section !== 'brief') location.hash = '#brief'; };
+  $('#btnSpeakBrief').onclick = () => { const b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (V) V.say(b.speak, { lang: state.lang }); if (state.section !== 'brief') location.hash = '#brief'; };
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
