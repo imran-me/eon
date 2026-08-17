@@ -1,11 +1,14 @@
 /* ============================================================
-   EON Brain (Firebase edition) — configuration.
-   Runs 100% in the browser on your existing Firebase. No server,
-   no SQL, no localStorage. EON reads your data and stores his own
-   brain in Firestore.
+   EON Brain — configuration.
+   One shared core serves several spaces (personal, teacher, ERP).
+   The defaults below are the personal space; a space overrides
+   what it needs by setting window.EON_BRAIN_CONFIG *before* the
+   brain module loads (see ai-companion/adapters/*). Overrides are
+   shallow-merged, except linkPatterns/overrides which are merged
+   key by key.
    ============================================================ */
 
-export const BRAIN_CONFIG = {
+const DEFAULTS = {
   // ── Where YOUR data lives (read-only). The whole dataset is one doc. ──
   sourceCollection: 'opptrack',
   sourceDoc: 'data',
@@ -65,3 +68,12 @@ export const BRAIN_CONFIG = {
     // opportunities: { deadlineField: 'deadline', labelField: 'name' },
   },
 };
+
+function spaceOverrides() {
+  try { return (typeof window !== 'undefined' && window.EON_BRAIN_CONFIG) || {}; } catch { return {}; }
+}
+const O = spaceOverrides();
+export const BRAIN_CONFIG = Object.assign({}, DEFAULTS, O, {
+  linkPatterns: Object.assign({}, DEFAULTS.linkPatterns, O.linkPatterns || {}),
+  overrides:    Object.assign({}, DEFAULTS.overrides,    O.overrides    || {}),
+});
