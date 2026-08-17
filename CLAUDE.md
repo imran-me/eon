@@ -50,7 +50,7 @@ eon/
 │   ├── api/{health,dataset,ask,brief,memory,actions,py,file}.php
 │   ├── cron/{morning-brief,watch}.php · install/schema.sql · storage/{cache,logs,data}
 │   └── py/eon.py, requirements.txt   Python analytics service (forecast, anomalies, evaluate, report)
-├── app/                          Command Center screens (planned)
+├── index.html + app/{eon.css,eon-app.js}   Command Center (single page, hash routing)
 └── docs/                         erp-domain-map.md, lineage-and-architecture.md, deploy.md (planned), summit script (planned)
 ```
 
@@ -66,13 +66,13 @@ eon/
 | Demo dataset JSON for the server (`tools/make-demo-dataset.mjs`) | done |
 | Python analytics service (`server/py/eon.py`: forecast, anomalies + duplicates, evaluation model, xlsx/csv reports) + PHP bridge (`lib/Py.php`, `api/py.php`, `api/file.php`) + 4 LLM tools | done, tested locally through PHP |
 | Laravel module shim for the ERP | todo |
-| Voice (Web Speech: listen + speak; server STT/TTS optional) | todo |
-| Command Center screens (`app/`) | todo |
+| Voice (`ai-companion/eon-brain/voice.js`: SpeechRecognition push-to-talk + hands-free wake word, speechSynthesis with voice pick, en-US/bn-BD) | done |
+| Command Center (`index.html` + `app/eon.css` + `app/eon-app.js`: brief, decisions, approvals, finance, people, CRM, ops, ask; server LLM answers with client fallback; headless-Chrome render verified) | done |
 | Deploy guide (Hostinger + inside ERP public/eon) + summit demo script | todo |
 
 ## Next steps (in order)
 
-1. Voice layer + Command Center screens → commit.
+1. Multi-agent adversarial review of everything (ultracode) → fix → commit.
 2. Laravel module shim + deploy docs + summit script → commit.
 
 ## Owner preferences learned

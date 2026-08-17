@@ -236,7 +236,7 @@ final class Analytics
     public function brief(): array
     {
         $k = $this->kpis(); $dec = $this->decisions(); $ap = $this->approvals(); $td = $this->attendanceToday();
-        $boss = Config::get('boss.name', 'Boss'); $who = explode(' ', trim((string) $boss)); $who = end($who) ?: 'Boss';
+        $who = 'Boss'; foreach (preg_split('/\s+/', trim((string) Config::get('boss.name', 'Boss'))) as $part) { if ($part !== '' && !preg_match('/^(md\.?|mohammad|muhammad|mohammed|mst\.?|mrs?\.?|ms\.?|dr\.?)$/i', $part)) { $who = $part; break; } }
         $h = (int) date('G'); $greet = $h < 12 ? 'Good morning' : ($h < 17 ? 'Good afternoon' : 'Good evening');
         $lines = [];
         $lines[] = sprintf('%s, %s. %s. Cash stands at %s; revenue this month %s, tracking %s %d%% on last month, which closed at a net %s of %s.', $greet, $who, date('l j F', strtotime($this->today)), self::bdtk($k['cash']), self::bdtk($k['revenue_mtd']), $k['revenue_vs_prev_pct'] >= 0 ? 'up' : 'down', abs($k['revenue_vs_prev_pct']), $k['net_profit_last_month'] >= 0 ? 'profit' : 'loss', self::bdtk(abs($k['net_profit_last_month'])));
