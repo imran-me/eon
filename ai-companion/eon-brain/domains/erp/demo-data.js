@@ -212,7 +212,7 @@ export function generateDemo(opts = {}) {
     if (c.kind === 'holding') return;
     const banks = D.banks.filter((b) => b.company_id === c.id);
     const lines = banks.map((b) => [b.account_code, Math.round(c.rev * R(0.5, 1.2) / (banks.length)), 0]);
-    lines.push(['1311', Math.round(c.rev * R(0.4, 0.8)), 0]); lines.push(['2111', 0, Math.round(c.rev * R(0.2, 0.5))]);
+    lines.push(['1311', Math.round(c.rev * R(0.4, 0.8)), 0]); lines.push(['2111', 0, Math.round(c.rev * R(0.2, 0.5))]); lines.push(['1011', 250000, 0]);
     const total = lines.reduce((n, l) => n + l[1] - l[2], 0); lines.push(['3400', 0, total]);
     post(c.id, iso(start), 'opening', 'Opening balances', lines);
   });
@@ -226,6 +226,8 @@ export function generateDemo(opts = {}) {
     const seasonal = 1 + 0.12 * Math.sin((md.getMonth() / 12) * Math.PI * 2) + R(-0.08, 0.08);
     COMPANIES.forEach((c) => {
       const cid = c.id; const bank = bankOf(cid);
+      // ---- petty cash replenishment on the 1st (Dr 1011 / Cr main bank) sized to the month's expected cash spend
+      { const scale = c.kind === 'holding' ? 0.6 : (plan[cid] / 10); const need = Math.round(EXPENSE_CATS.reduce((n, x) => n + x[3], 0) * scale * 0.42 / 1000) * 1000; const d1 = iso(new Date(md.getFullYear(), md.getMonth(), 1)); if (Date.parse(d1) <= today.getTime()) post(cid, d1, 'transfer', 'Petty cash replenishment', [['1011', need, 0], [bank.account_code, 0, need]]); }
       // ---- sales
       const nSales = c.kind === 'holding' ? 0 : c.kind === 'ecommerce' ? RI(18, 26) : RI(6, 12);
       const target = c.rev * 1.3 * seasonal * (mb === 0 ? lastDay / dim : 1);
@@ -256,10 +258,10 @@ export function generateDemo(opts = {}) {
         const scale = c.kind === 'holding' ? 0.6 : (plan[cid] / 10);
         const nItems = cat === 'Office Rent' ? 1 : RI(1, 2);
         for (let k = 0; k < nItems; k++) {
-          const day = cat === 'Office Rent' ? 3 : RI(1, lastDay); if (day > lastDay) continue;
+          const day = cat === 'Office Rent' ? 3 : RI(1, dim); if (day > lastDay) continue;
           const date = iso(new Date(md.getFullYear(), md.getMonth(), day));
           const spike = (mb === 0 && cat === 'Marketing & Advertising' && cid === 5) ? 2.1 : (mb === 1 && cat === 'Fuel & Vehicle' && cid === 7) ? 1.6 : 1;
-          const amount = Math.round(base * scale * spike / nItems * R(0.7, 1.35) / 100) * 100;
+          const amount = Math.round(base * scale * spike / nItems * R(0.6, 1.15) / 100) * 100;
           const who = staff.length ? pick(staff) : boss;
           const pending = mb === 0 && day >= lastDay - 6 && chance(0.55);
           const mode = cat === 'Office Rent' ? 'bank_transfer' : pick(['cash', 'bank_transfer', 'bank_transfer', 'cash', 'mobile_banking']);

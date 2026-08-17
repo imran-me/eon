@@ -103,23 +103,29 @@ export function pendingExpenses(D, { company = null } = {}) {
   return { rows, count: rows.length, total: sum(rows, 'amount') };
 }
 export function expenseAnomalies(D, { company = null } = {}) {
-  // month-over-month by (company, category): flag current or last month if > mean + 1.5σ of prior months and > 25% above mean
+  // Compare each (company, category) against its own history. For the running
+  // month the comparison is like-for-like: spend up to today's day-of-month vs
+  // the same day-of-month in prior months (so rent paid on the 3rd is not a spike).
   const rows = (D.expenses || []).filter((e) => e.approval_status !== 'rejected' && inCompany(e, company));
   const key = (e) => e.company_id + '|' + e.category;
   const byKey = groupBy(rows, key); const out = [];
   const months = [...new Set(rows.map((e) => e.expense_date.slice(0, 7)))].sort();
-  const cur = monthKey(T(D));
+  const cur = monthKey(T(D)); const dayNow = new Date(T(D)).getDate();
+  const flag = (cid, cat, month, v, prior, projected) => {
+    if (prior.length < 2) return;
+    const mean = prior.reduce((a, b) => a + b, 0) / prior.length; const sd = Math.sqrt(prior.reduce((a, b) => a + (b - mean) ** 2, 0) / prior.length) || mean * 0.1;
+    if (v > mean * 1.5 && v > mean + 2 * sd && v > 5000) out.push({ company_id: +cid, company: (D.companies.find((c) => c.id === +cid) || {}).short_name, category: cat, month, amount: v, projected: Math.round(projected), mean: Math.round(mean), ratio: +(v / mean).toFixed(2), z: +((v - mean) / sd).toFixed(1) });
+  };
   byKey.forEach((arr, k) => {
     const [cid, cat] = k.split('|');
-    const m = new Map(); arr.forEach((e) => m.set(e.expense_date.slice(0, 7), (m.get(e.expense_date.slice(0, 7)) || 0) + +e.amount));
-    const series = months.map((mo) => m.get(mo) || 0);
-    for (let i = 2; i < series.length; i++) {
-      const prior = series.slice(0, i).filter((x) => x > 0); if (prior.length < 2) continue;
-      const mean = prior.reduce((a, b) => a + b, 0) / prior.length; const sd = Math.sqrt(prior.reduce((a, b) => a + (b - mean) ** 2, 0) / prior.length) || mean * 0.1;
-      const v = series[i]; const isCur = months[i] === cur;
-      const scaled = isCur ? v * (30 / Math.max(1, new Date(T(D)).getDate())) : v;  // project the running month
-      if (scaled > mean + 1.5 * sd && scaled > mean * 1.25 && v > 5000) out.push({ company_id: +cid, company: (D.companies.find((c) => c.id === +cid) || {}).short_name, category: cat, month: months[i], amount: v, projected: Math.round(scaled), mean: Math.round(mean), ratio: +(scaled / mean).toFixed(2), z: +((scaled - mean) / sd).toFixed(1) });
-    }
+    const full = new Map(), partial = new Map();
+    arr.forEach((e) => { const mo = e.expense_date.slice(0, 7); const d = +e.expense_date.slice(8, 10); full.set(mo, (full.get(mo) || 0) + +e.amount); if (d <= dayNow) partial.set(mo, (partial.get(mo) || 0) + +e.amount); });
+    const idx = months.indexOf(cur);
+    // running month: like-for-like to today's day
+    if (idx >= 2 && full.has(cur)) { const v = partial.get(cur) || 0; const prior = months.slice(0, idx).map((m) => partial.get(m) || 0).filter((x) => x > 0); flag(cid, cat, cur, v, prior, (full.get(cur) || 0) * (30 / Math.max(1, dayNow))); }
+    // last full month vs the ones before it
+    const li = idx >= 0 ? idx - 1 : months.length - 1;
+    if (li >= 2) { const m = months[li]; const v = full.get(m) || 0; const prior = months.slice(0, li).map((x) => full.get(x) || 0).filter((x) => x > 0); flag(cid, cat, m, v, prior, v); }
   });
   return out.sort((a, b) => b.ratio - a.ratio);
 }
