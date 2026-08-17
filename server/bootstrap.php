@@ -27,6 +27,7 @@ require_once EON_ROOT . '/lib/Memory.php';
 require_once EON_ROOT . '/lib/Tools.php';
 require_once EON_ROOT . '/lib/Brain.php';
 require_once EON_ROOT . '/lib/Notify.php';
+require_once EON_ROOT . '/lib/Py.php';
 
 // mbstring is standard on Hostinger; keep working if a host lacks it
 if (!function_exists('mb_strtolower')) { function mb_strtolower(string $s): string { return strtolower($s); } }

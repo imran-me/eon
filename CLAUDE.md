@@ -47,9 +47,9 @@ eon/
 ├── server/                       PHP backend (Hostinger)
 │   ├── config.example.php → config.local.php (git-ignored)
 │   ├── bootstrap.php, lib/{Config,Log,Http,Db,Dataset,Erp,Analytics,Memory,Tools,Brain,Notify}.php
-│   ├── api/{health,dataset,ask,brief,memory,actions}.php
+│   ├── api/{health,dataset,ask,brief,memory,actions,py,file}.php
 │   ├── cron/{morning-brief,watch}.php · install/schema.sql · storage/{cache,logs,data}
-│   └── py/                       Python analytics service (planned)
+│   └── py/eon.py, requirements.txt   Python analytics service (forecast, anomalies, evaluate, report)
 ├── app/                          Command Center screens (planned)
 └── docs/                         erp-domain-map.md, lineage-and-architecture.md, deploy.md (planned), summit script (planned)
 ```
@@ -64,7 +64,7 @@ eon/
 | Docs: ERP domain map, lineage | done, pushed |
 | **PHP server**: Config/Log/Http/Db/Dataset/Erp/Analytics/Memory/Tools/Brain/Notify, endpoints, cron, schema, composer.json, .htaccess | done, linted + self-tested with portable PHP 8.2 (offline mode; live LLM/DB paths untested until deployed) |
 | Demo dataset JSON for the server (`tools/make-demo-dataset.mjs`) | done |
-| Python analytics service (`server/py/`) | todo |
+| Python analytics service (`server/py/eon.py`: forecast, anomalies + duplicates, evaluation model, xlsx/csv reports) + PHP bridge (`lib/Py.php`, `api/py.php`, `api/file.php`) + 4 LLM tools | done, tested locally through PHP |
 | Laravel module shim for the ERP | todo |
 | Voice (Web Speech: listen + speak; server STT/TTS optional) | todo |
 | Command Center screens (`app/`) | todo |
@@ -72,9 +72,8 @@ eon/
 
 ## Next steps (in order)
 
-1. Python service: forecasting, anomalies, evaluation model, report export → commit.
-3. Voice layer + Command Center screens → commit.
-4. Laravel module shim + deploy docs + summit script → commit.
+1. Voice layer + Command Center screens → commit.
+2. Laravel module shim + deploy docs + summit script → commit.
 
 ## Owner preferences learned
 

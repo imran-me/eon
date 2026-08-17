@@ -46,6 +46,9 @@ return [
         'webhook'    => '',                 // optional POST hook (WhatsApp/SMS gateway, Slack…) — receives {title, text}
     ],
 
+    // ---- Python analytics service (server/py/eon.py) ----------------------
+    'python' => ['bin' => null],   // null = auto (python3 on Linux/Hostinger, python on Windows); or e.g. '/usr/bin/python3'
+
     // ---- misc ------------------------------------------------------------
     'cache_ttl' => 300,                     // seconds the dataset is cached
     'demo_dataset' => __DIR__ . '/storage/data/demo-dataset.json',

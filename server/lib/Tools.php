@@ -9,9 +9,9 @@ declare(strict_types=1);
    ============================================================ */
 final class Tools
 {
-    private Analytics $A; private array $D;
+    private Analytics $A; private array $D; private ?int $company;
 
-    public function __construct(array $D, ?int $company = null) { $this->D = $D; $this->A = new Analytics($D, $company); }
+    public function __construct(array $D, ?int $company = null) { $this->D = $D; $this->company = $company; $this->A = new Analytics($D, $company); }
 
     private static function obj(array $props, array $required = []): array { return ['type' => 'object', 'properties' => $props ?: new stdClass(), 'required' => $required]; }
 
@@ -40,6 +40,12 @@ final class Tools
             ['name' => 'search_records', 'description' => 'Full-text search across employees, customers, suppliers, leads, projects, tasks, expenses and payment schedules by a word or name. Call when a name or reference is mentioned that no other tool covers.', 'inputSchema' => self::obj(['query' => ['type' => 'string'], 'limit' => ['type' => 'integer']], ['query'])],
             ['name' => 'record_action', 'description' => 'Record an instruction the boss gives through EON — an approval decision, a reminder to set, a draft to send, a note. EON is advisory: this logs the intent for the ERP/staff to execute; say so in your reply. kind: approve | reject | remind | send_draft | note. payload: free JSON describing the target.', 'inputSchema' => self::obj(['kind' => ['type' => 'string', 'enum' => ['approve', 'reject', 'remind', 'send_draft', 'note']], 'payload' => ['type' => 'object', 'description' => 'what/who/amount/when'], 'summary' => ['type' => 'string']], ['kind', 'summary'])],
         ];
+        if (Py::available()) {
+            $t[] = ['name' => 'forecast', 'description' => 'Python forecast of income, outflow, net and month-end cash for the next N months (default 3) from the ledger history, with an 80% band, growth per month and runway. Call for forecast, projection, next month/quarter, runway, will we have cash, trend questions.', 'inputSchema' => self::obj(['months' => ['type' => 'integer']])];
+            $t[] = ['name' => 'spending_anomalies', 'description' => 'Python anomaly detection on expenses: categories running far above their usual level (like-for-like by day of month) and possible duplicate charges. Call for anomalies, unusual spending, leaks, duplicates, "anything suspicious".', 'inputSchema' => self::obj([])];
+            $t[] = ['name' => 'evaluate_all_staff', 'description' => 'Python evaluation model over every active employee: score/grade, department averages, grade distribution, attrition-risk list, top and bottom performers. Call for rankings, best/worst performers, who is at risk of leaving, team quality by department.', 'inputSchema' => self::obj([])];
+            $t[] = ['name' => 'export_report', 'description' => 'Generate a downloadable report file (xlsx if openpyxl is installed, else csv): kind = receivables | payables | payroll | pnl | attendance. Returns the file path/URL. Call when the boss asks to export, download, send as Excel, or "give me the sheet".', 'inputSchema' => self::obj(['kind' => ['type' => 'string', 'enum' => ['receivables', 'payables', 'payroll', 'pnl', 'attendance']]], ['kind'])];
+        }
         if (Config::get('anthropic.allow_sql_tool') && Config::dbEnabled()) $t[] = ['name' => 'sql_readonly', 'description' => 'Run a single read-only SELECT against the live ERP MySQL database when the prepared tools cannot answer (a specific record, an unusual grouping, a report the tools do not cover). Tables follow the Epal ERP schema (journal_entries, journal_items, accounts, payment_schedules, expenses, users, employee_profiles, attendances, leaves, employee_salaries, loans, leads, deals, projects, tasks, sales, purchases, banks, companies…). Always LIMIT; never write. Prefer the prepared tools first.', 'inputSchema' => self::obj(['sql' => ['type' => 'string'], 'purpose' => ['type' => 'string']], ['sql'])];
         return $t;
     }
@@ -69,6 +75,10 @@ final class Tools
                 'get_decisions' => $this->A->decisions(),
                 'search_records' => $this->search((string) ($in['query'] ?? ''), (int) ($in['limit'] ?? 15)),
                 'record_action' => Memory::logAction((string) ($in['kind'] ?? 'note'), ['summary' => $in['summary'] ?? '', 'detail' => $in['payload'] ?? []], 'queued'),
+                'forecast' => Py::run('forecast', $this->D, ['--company' => $this->company, '--months' => (int) ($in['months'] ?? 3)]),
+                'spending_anomalies' => Py::run('anomalies', $this->D, ['--company' => $this->company]),
+                'evaluate_all_staff' => Py::run('evaluate', $this->D, ['--company' => $this->company, '--all' => true]),
+                'export_report' => (function () use ($in) { $kind = (string) ($in['kind'] ?? 'receivables'); $file = EON_ROOT . '/storage/data/report-' . preg_replace('/[^a-z]/', '', $kind) . '-' . date('Ymd-His') . '.xlsx'; $r = Py::run('report', $this->D, ['--company' => $this->company, '--kind' => $kind, '--out' => $file]); if (($r['ok'] ?? false) && !empty($r['file'])) $r['download'] = 'api/file.php?name=' . rawurlencode(basename($r['file'])); return $r; })(),
                 'sql_readonly' => Erp::safeSelect((string) ($in['sql'] ?? ''), 200),
                 default => ['error' => "unknown tool $name"],
             };
