@@ -15,3 +15,6 @@ Thumbs.db
 # Companion runtime state and local model binaries
 ai-companion/assets/.state/
 ai-companion/assets/models/*.glb
+
+# Reference copies (read-only inputs, not part of EON): the ERP and the three original eons
+_reference/
