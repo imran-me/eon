@@ -54,8 +54,12 @@ export function approvals(D, { company = null } = {}) {
   return { items: all, count: all.length, amount: sum(all, 'amount'), byKind: ['payroll', 'expense', 'leave', 'advance', 'request', 'payment'].map((k) => ({ kind: k, count: all.filter((a) => a.kind === k).length, amount: sum(all.filter((a) => a.kind === k), 'amount') })).filter((x) => x.count) };
 }
 
+/* Plug-in decision providers: EonErpDecisions.addProvider((D, {company}) => [decision, …]) */
+const _providers = [];
+export function addProvider(fn) { if (typeof fn === 'function' && !_providers.includes(fn)) _providers.push(fn); return () => { const i = _providers.indexOf(fn); if (i >= 0) _providers.splice(i, 1); }; }
 export function all(D, { company = null } = {}) {
-  const list = [].concat(F.decisions(D, { company }), P.decisions(D, { company }), C.decisions(D, { company }), O.decisions(D, { company }));
+  const extra = _providers.flatMap((fn) => { try { return fn(D, { company }) || []; } catch (e) { console.warn('[EON decisions] provider failed:', e); return []; } });
+  const list = [].concat(F.decisions(D, { company }), P.decisions(D, { company }), C.decisions(D, { company }), O.decisions(D, { company }), extra);
   list.forEach((d) => { d.layerLabel = LAYERS[d.layer] || d.layer; d.severityLabel = SEVERITY[d.severity] || 'info'; });
   return list.sort((a, b) => b.severity - a.severity || (b.amount || 0) - (a.amount || 0));
 }
@@ -82,6 +86,6 @@ export function brief(D, { company = null, name = null } = {}) {
   return { date: t, greeting: greet, speak: lines.join(' '), lines, kpis: k, decisions: list, critical, approvals: ap, top };
 }
 
-export const EonErpDecisions = { kpis, approvals, all, brief, firstName, LAYERS, SEVERITY };
+export const EonErpDecisions = { kpis, approvals, all, brief, firstName, addProvider, LAYERS, SEVERITY };
 if (typeof window !== 'undefined') window.EonErpDecisions = Object.assign(window.EonErpDecisions || {}, EonErpDecisions);
 export default EonErpDecisions;

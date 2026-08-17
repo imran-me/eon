@@ -241,9 +241,24 @@ final class Analytics
         if ($pipe['followups_today']) $push('crm', 2, "{$pipe['followups_today']} follow-ups due today", [], 'Sales team clears them before lunch.');
         if ($pj['at_risk']) { $p = $pj['at_risk'][0]; $push('ops', $p['risk_label'] === 'critical' ? 4 : 3, count($pj['at_risk']) . " project(s) at risk — worst: {$p['name']}", array_map(fn($x) => "{$x['name']} ({$x['company']}) — {$x['progress']}% done at {$x['elapsed_pct']}% of time" . ($x['budget_pct'] !== null ? ", budget {$x['budget_pct']}%" : ''), array_slice($pj['at_risk'], 0, 4)), "Ask the manager for a recovery plan on {$p['name']} by tomorrow: re-baseline or add capacity, and stop new scope.", $p['budget']); }
         if ($tk['overdue']) $push('ops', $tk['overdue_high'] >= 3 ? 4 : ($tk['overdue'] >= 10 ? 3 : 2), "{$tk['overdue']} tasks are overdue ({$tk['overdue_high']} high priority)", array_map(fn($t) => "{$t['title']} — {$t['project']} · {$t['assignees']} · {$t['days_overdue']}d late", array_slice($tk['overdue_list'], 0, 4)), $tk['overloaded'] ? "{$tk['overloaded'][0]['name']} is overloaded — move two tasks to someone with capacity." : 'Ask each owner for a new date today.');
+        foreach (self::decisionPlugins() as $fn) { try { foreach ((array) $fn($this->D, $this->co, $this) as $d) if (is_array($d) && isset($d['title'])) $out[] = $d + ['layer' => 'ops', 'severity' => 2, 'severity_label' => 'low', 'why' => [], 'recommend' => '', 'amount' => 0]; } catch (Throwable $e) { Log::warn('decision plug-in failed', ['error' => $e->getMessage()]); } }
         usort($out, fn($a, $b) => $b['severity'] <=> $a['severity'] ?: $b['amount'] <=> $a['amount']);
         return $out;
     }
+    /** plug-in decision providers: every server/lib/decisions/*.php returns fn(array $D, ?int $company, Analytics $A): array of decisions */
+    private static ?array $decPlugins = null;
+    public static function decisionPlugins(): array
+    {
+        if (self::$decPlugins !== null) return self::$decPlugins;
+        self::$decPlugins = [];
+        foreach (glob(EON_ROOT . '/lib/decisions/*.php') ?: [] as $f) { try { $fn = require $f; if (is_callable($fn)) self::$decPlugins[basename($f, '.php')] = $fn; } catch (Throwable $e) { Log::warn('decision plug-in load failed: ' . $f, ['error' => $e->getMessage()]); } }
+        return self::$decPlugins;
+    }
+    public function today(): string { return $this->today; }
+    public function dataset(): array { return $this->D; }
+    public function company(): ?int { return $this->co; }
+    public function companyName(int|string|null $id): string { return $this->coName($id); }
+    public function employeeName(int|string|null $id): string { return $this->empName($id); }
     public function brief(): array
     {
         $k = $this->kpis(); $dec = $this->decisions(); $ap = $this->approvals(); $td = $this->attendanceToday();

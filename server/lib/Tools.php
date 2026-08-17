@@ -15,6 +15,19 @@ final class Tools
 
     private static function obj(array $props, array $required = []): array { $o = ['type' => 'object']; if ($props) { $o['properties'] = $props; if ($required) $o['required'] = $required; } return $o; }
 
+    /** plug-in tools: every server/lib/tools/*.php returns ['definitions' => [...], 'run' => fn(string $name, array $in, Tools $tools, array $D, ?int $company)] */
+    private static ?array $plugins = null;
+    public static function plugins(): array
+    {
+        if (self::$plugins !== null) return self::$plugins;
+        self::$plugins = [];
+        foreach (glob(EON_ROOT . '/lib/tools/*.php') ?: [] as $f) { try { $p = require $f; if (is_array($p) && isset($p['definitions'], $p['run'])) self::$plugins[basename($f, '.php')] = $p; } catch (Throwable $e) { Log::warn('tool plug-in failed: ' . $f, ['error' => $e->getMessage()]); } }
+        return self::$plugins;
+    }
+    public function dataset(): array { return $this->D; }
+    public function company(): ?int { return $this->company; }
+    public function analytics(): Analytics { return $this->A; }
+
     public function definitions(): array
     {
         $t = [
@@ -46,6 +59,7 @@ final class Tools
             $t[] = ['name' => 'evaluate_all_staff', 'description' => 'Python evaluation model over every active employee: score/grade, department averages, grade distribution, attrition-risk list, top and bottom performers. Call for rankings, best/worst performers, who is at risk of leaving, team quality by department.', 'inputSchema' => self::obj([])];
             $t[] = ['name' => 'export_report', 'description' => 'Generate a downloadable report file (xlsx if openpyxl is installed, else csv): kind = receivables | payables | payroll | pnl | attendance. Returns the file path/URL. Call when the boss asks to export, download, send as Excel, or "give me the sheet".', 'inputSchema' => self::obj(['kind' => ['type' => 'string', 'enum' => ['receivables', 'payables', 'payroll', 'pnl', 'attendance']]], ['kind'])];
         }
+        foreach (self::plugins() as $p) foreach ($p['definitions'] as $d) $t[] = $d;
         if (Config::get('anthropic.allow_sql_tool') && Config::dbEnabled()) $t[] = ['name' => 'sql_readonly', 'description' => 'Run a single read-only SELECT against the live ERP MySQL database when the prepared tools cannot answer (a specific record, an unusual grouping, a report the tools do not cover). Tables follow the Epal ERP schema (journal_entries, journal_items, accounts, payment_schedules, expenses, users, employee_profiles, attendances, leaves, employee_salaries, loans, leads, deals, projects, tasks, sales, purchases, banks, companies…). Always LIMIT; never write. Prefer the prepared tools first.', 'inputSchema' => self::obj(['sql' => ['type' => 'string'], 'purpose' => ['type' => 'string']], ['sql'])];
         return $t;
     }
@@ -80,11 +94,16 @@ final class Tools
                 'evaluate_all_staff' => Py::run('evaluate', $this->D, ['--company' => $this->company, '--all' => true]),
                 'export_report' => (function () use ($in) { $kind = (string) ($in['kind'] ?? 'receivables'); $file = EON_ROOT . '/storage/data/report-' . preg_replace('/[^a-z]/', '', $kind) . '-' . date('Ymd-His') . '.xlsx'; $r = Py::run('report', $this->D, ['--company' => $this->company, '--kind' => $kind, '--out' => $file]); if (($r['ok'] ?? false) && !empty($r['file'])) $r['download'] = 'api/file.php?name=' . rawurlencode(basename($r['file'])); return $r; })(),
                 'sql_readonly' => Erp::safeSelect((string) ($in['sql'] ?? ''), 200),
-                default => ['error' => "unknown tool $name"],
+                default => $this->runPlugin($name, $in),
             };
         } catch (Throwable $e) { return ['error' => $e->getMessage()]; }
     }
 
+    private function runPlugin(string $name, array $in): array|string
+    {
+        foreach (self::plugins() as $p) foreach ($p['definitions'] as $d) if (($d['name'] ?? '') === $name) return ($p['run'])($name, $in, $this, $this->D, $this->company);
+        return ['error' => "unknown tool $name"];
+    }
     private function ledger(string $code, int $limit): array
     {
         $rows = []; $run = 0.0; $type = (int) substr($code, 0, 1); $isDr = in_array($type, [1, 5, 6, 7, 8], true);

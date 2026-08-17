@@ -43,6 +43,15 @@ function paintCompanies() {
 function route() { const h = (location.hash || '#brief').slice(1).split('/'); state.section = h[0] || 'brief'; state.sub = h[1] || null; render(); }
 window.addEventListener('hashchange', route);
 
+/* ---------------- plug-in panels ----------------
+   EonApp.registerPanel(section, { id, title, render: () => html, order? }) — plug-ins add cards to a section
+   (brief | decisions | approvals | finance | people | crm | ops | ask). Rendered under the section's own content. */
+const PANELS = {};
+function registerPanel(section, p) { (PANELS[section] = PANELS[section] || []).push(p); PANELS[section].sort((a, b) => (a.order || 50) - (b.order || 50)); if (state.section === section && D()) render(); }
+function pluginPanels(section) {
+  const list = PANELS[section] || []; if (!list.length) return '';
+  return `<div class="grid g2" style="margin-top:14px">${list.map((p) => { let html = ''; try { html = p.render() || ''; } catch (e) { console.warn('[EON panel]', p.id, e); html = `<div class="hint">${esc(e.message)}</div>`; } return html ? `<div class="card" data-panel="${esc(p.id)}"><h3>${esc(p.title)}</h3>${html}</div>` : ''; }).join('')}</div>`;
+}
 /* ---------------- renderers ---------------- */
 const TITLES = { brief: 'Brief', decisions: 'Decisions', approvals: 'Approvals', finance: 'Finance', people: 'People', crm: 'Sales & CRM', ops: 'Operations', ask: 'Ask EON' };
 function render() {
@@ -50,7 +59,7 @@ function render() {
   $('#pageTitle').textContent = TITLES[state.section] || 'EON';
   if (!D()) { $('#content').innerHTML = '<div class="empty">EON is reading the company…</div>'; return; }
   const fn = { brief: rBrief, decisions: rDecisions, approvals: rApprovals, finance: rFinance, people: rPeople, crm: rCrm, ops: rOps, ask: rAsk }[state.section] || rBrief;
-  try { $('#content').innerHTML = fn(); } catch (e) { console.error(e); $('#content').innerHTML = `<div class="card">Something went wrong rendering this view: ${esc(e.message)}</div>`; }
+  try { $('#content').innerHTML = fn() + pluginPanels(state.section); } catch (e) { console.error(e); $('#content').innerHTML = `<div class="card">Something went wrong rendering this view: ${esc(e.message)}</div>`; }
   wire();
 }
 function tile(o, key) { const money$ = o.money !== false; const v = money$ ? k(o.value) : (o.unit === '%' ? o.value + '%' : o.value); return `<div class="card tile ${o.alert ? 'alert' : (o.trend > 0 ? 'good' : '')}" data-kpi="${key}"><div class="lbl">${esc(o.label)}</div><div class="val num">${v}</div><div class="sub">${esc(o.sub || '')}</div></div>`; }
@@ -222,6 +231,7 @@ function boot() {
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
-  window.EonApp = { ask, act, render, state };
+  window.EonApp = { ask, act, render, state, api, toast, esc, k, money, registerPanel, panels: PANELS, env, server };
+  render();
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

@@ -21,6 +21,7 @@ import * as O from './ops.js';
 import * as X from './decisions.js';
 import * as Q from './qa.js';
 import { generateDemo } from './demo-data.js';
+import './plugins/index.js';   // EON 2 abilities — each plug-in registers itself (answerer, decisions, screen)
 import { fmtBDT, fmtBDTk } from './dataset.js';
 
 let _D = null, _company = null, _resolve;
