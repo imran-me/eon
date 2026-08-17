@@ -15,6 +15,7 @@
 import { CompanionBrain } from './companion-brain.js';
 import '../knowledge/academic.js';   // Eon's academic knowledge base (window.EonAcademic)
 import '../knowledge/brain-qa.js';   // Eon's wide Q&A brain — 340+ offline answers (window.EonBrainQA)
+import '../domains.js';              // pluggable domain answerers — ERP, teacher, academics… (window.EonDomains)
 
 const SYN = {
   opportunities: ['opportunit', 'opps', 'opp'],
@@ -59,7 +60,8 @@ export class AskEon {
     q = String(q || '').trim(); if (!q) return;
     // planning commands → the Action Agent (checkboxes + one-click reminders),
     // so it's available from EVERY Ask Eon, not just the dashboard deck.
-    if (/\b(plan|prepare|prep|build|organi[sz]e|set ?up|schedule|draft me)\b/i.test(q) && window.EonAgent && window.EonAgent.open) {
+    const claimed = (() => { try { return window.EonDomains?.claims?.(q); } catch { return null; } })();
+    if (!claimed && /\b(plan|prepare|prep|build|organi[sz]e|set ?up|schedule|draft me)\b/i.test(q) && window.EonAgent && window.EonAgent.open) {
       try { window.EonAgent.open(q); this._toggle && this._toggle(false); return; } catch {}
     }
     this._echo(q);
@@ -119,6 +121,8 @@ export class AskEon {
     const keys = Object.keys(data).filter((k) => Array.isArray(data[k]));
 
     const nq = q.toLowerCase().trim();
+    // registered domains first — the ERP, the teacher space, academics… (see ../domains.js)
+    try { const dom = await window.EonDomains?.answer?.(q, { data, records, brain: B }); if (dom) return dom; } catch {}
     const ex = this._extra(nq, data, records); if (ex) return ex;   // greetings/help/win/money/... (many need no data)
     if (!records.length) return { speak: this._pick([
       "I'm still reading your data — give the brain a moment (or run a meditation). Meanwhile, ask me “what can you do?” 🌱",
@@ -199,6 +203,8 @@ export class AskEon {
       }
     }
     if (ent) return this._list(recs.slice(0, 10), `${recs.length} ${ent}`);
+    // a connected language model (server mode) gets the question before the offline fallback
+    try { if (window.EonLLM?.ready?.()) { const r = await window.EonLLM.answer(q, { data, records }); if (r && r.speak) return r; } } catch {}
     // creative + PRACTICAL fallback — honest line, then a live grounded digest
     return this._fallback(q);
   }

@@ -189,6 +189,20 @@
     },
   };
 
+  /* TeacherQA is also a first-class Ask EON domain, so the shared chip, the
+     deck and the inline ask boxes all route teacher questions the same way. */
+  (window.__eonDomainQueue = window.__eonDomainQueue || []).push({
+    id: 'teacher', priority: 80,
+    answer(q) {
+      // student lookup + the intents above; skip the EonAsk fall-through here
+      // (Ask EON is the caller — it continues with its own intents when we return null)
+      const st = T.students.find(s => q.toLowerCase().includes(s.name.toLowerCase()));
+      if (st) return window.TeacherQA.answer(q);
+      for (const it of INTENTS) { if (it.re.test(q)) { try { const a = it.a(); if (a) return { speak: String(a).replace(/<[^>]+>/g, ''), detail: '' }; } catch { /* next */ } } }
+      return null;
+    },
+  });
+
   /* ---------- 5. demo reminders (seeded once) ---------- */
   function seedReminders() {
     if (localStorage.getItem('eft-eon-seeded')) return;
