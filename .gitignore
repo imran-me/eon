@@ -1,0 +1,13 @@
+# EON — ignore local secrets, caches and OS noise
+.env
+server/config.local.php
+server/storage/logs/*
+server/storage/cache/*
+!server/storage/logs/.gitkeep
+!server/storage/cache/.gitkeep
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
