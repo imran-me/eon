@@ -48,6 +48,10 @@ final class Insight
                 'due_in_7_days' => $this->f($s['due_in_7_days'] ?? 0),
                 'by_party' => $s['by_party'] ?? [],
                 'oldest' => $s['overdue'][0] ?? null,
+                // what the party accounts actually support, and where they contradict the invoices
+                'ledger_receivable' => $this->f($s['ledger_receivable'] ?? 0),
+                'advances_held' => $this->f($s['advances_held'] ?? 0),
+                'reconciliation' => $s['reconciliation'] ?? [],
                 'worst_bucket' => $worst];
     }
 

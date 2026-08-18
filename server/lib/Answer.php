@@ -618,13 +618,33 @@ final class Answer
                        sprintf('সামনের সাত দিনে দিতে হবে %s।', $this->m($this->f($ag['due_in_7_days']))))
             : '';
 
-        $advice = $isAr
+        // The invoices and the party ledger disagree when an advance was taken but never
+        // applied: the invoice still reads "due" while the money is already banked. Say so,
+        // or the boss chases a customer who has paid.
+        $recon = '';
+        if ($isAr && !empty($ag['reconciliation'])) {
+            $x = $ag['reconciliation'][0];
+            $bal = $this->f($x['ledger_balance'] ?? 0);
+            $recon = $this->t(
+                sprintf('Careful with that figure: the party ledger only supports %s. %s shows %s on the invoice but the ledger has them %s — %s.',
+                    $this->m($this->f($ag['ledger_receivable'] ?? 0)), (string) $x['party'], $this->m($this->f($x['invoiced_open'] ?? 0)),
+                    $bal < 0 ? 'in credit ' . $this->m(abs($bal)) : 'at ' . $this->m($bal), (string) $x['reason']),
+                sprintf('ওই অঙ্কটা একটু সাবধানে দেখুন: পার্টি খাতা সমর্থন করে মাত্র %s। %s-এর বিলে %s দেখালেও খাতায় তিনি %s — অগ্রিম নেওয়া হয়েছে, বিলে বসানো হয়নি।',
+                    $this->m($this->f($ag['ledger_receivable'] ?? 0)), (string) $x['party'], $this->m($this->f($x['invoiced_open'] ?? 0)),
+                    $bal < 0 ? $this->m(abs($bal)) . ' জমা আছেন' : $this->m($bal) . ' বাকি')
+            );
+        }
+
+        $advice = $recon !== ''
+            ? $this->act('get the advances applied to the invoices before anyone makes a collection call.',
+                         'তাগাদা দেওয়ার আগে অগ্রিমগুলো বিলের সঙ্গে মিলিয়ে নিন।')
+            : ($isAr
             ? $this->act('send the reminder to the largest one first — it is worth more than the other calls together.',
                          'সবচেয়ে বড়টাকে আগে তাগাদা দিন — বাকি সব ফোন মিলিয়েও ওর সমান হবে না।')
             : $this->act('clear the oldest first; age is what turns a payable into a phone call.',
-                         'সবচেয়ে পুরনোটা আগে মেটান; দেনা পুরনো হলেই ফোন আসা শুরু হয়।');
+                         'সবচেয়ে পুরনোটা আগে মেটান; দেনা পুরনো হলেই ফোন আসা শুরু হয়।'));
 
-        return $this->say([$this->open($mood), $head, $who, $old, $soon, $advice]);
+        return $this->say([$this->open($mood), $head, $who, $old, $soon, $recon, $advice]);
     }
 
     private function a_overdue_payments(): string { return $this->sideAnswer('pay'); }
@@ -741,6 +761,21 @@ final class Answer
             'Income here does not come from the generic Sales screen — that table is empty. It comes from four invoice modules: ticket sales, visa sales, contract flight bookings and contract file sales.',
             'এখানে আয় সাধারণ সেলস স্ক্রিন থেকে আসে না — ওই টেবিল খালি। আয় আসে চারটা ইনভয়েস মডিউল থেকে: টিকিট সেলস, ভিসা সেলস, কন্ট্রাক্ট ফ্লাইট বুকিং আর কন্ট্রাক্ট ফাইল সেলস।');
 
+        // The books only hold what was journalised, and the desks invoice ahead of posting.
+        // Quoting the ledger alone understates the month — say what was actually invoiced.
+        $booked = '';
+        $sb = $this->A()->salesBooked($from, $to);
+        $invoiced = $this->f($sb['invoiced'] ?? 0);
+        if ($invoiced > 0 && $invoiced - $inc > 1000) {
+            $this->used('get_sales');
+            $lines = implode(', ', array_map(fn($l) => $l['line'] . ' ' . $this->m($this->f($l['invoiced'])), array_slice($sb['by_line'] ?? [], 0, 3)));
+            $booked = $this->t(
+                sprintf('But that is only the books. The desks actually invoiced %s across %s invoices this period (%s) — %s of it has not been journalised yet, so the ledger shows %s of the real business.',
+                    $this->m($invoiced), $this->num($sb['invoices'] ?? 0), $lines, $this->m($invoiced - $inc), $this->pc($invoiced > 0 ? $inc / $invoiced * 100 : 0)),
+                sprintf('তবে ওটা কেবল খাতার হিসাব। এই সময়ে ডেস্কগুলো আসলে বিল করেছে %s, %s টা ইনভয়েসে (%s) — তার %s এখনো জার্নাল হয়নি, তাই খাতা আসল ব্যবসার %s দেখাচ্ছে।',
+                    $this->m($invoiced), $this->num($sb['invoices'] ?? 0), $lines, $this->m($invoiced - $inc), $this->pc($invoiced > 0 ? $inc / $invoiced * 100 : 0)));
+        }
+
         return $this->say([
             $this->open($inc > 0 ? 'ok' : 'warn'),
             $this->t(sprintf('Income booked in %s is %s.', Phrase::monthName($mk, 'en'), $this->m($inc)),
@@ -749,6 +784,7 @@ final class Answer
             $inc <= 0 ? $this->t('Nothing has reached a 4xxx income account for this period yet.',
                                  'এই সময়ের জন্য এখনো ৪xxx আয়ের হিসাবে কিছু পৌঁছায়নি।') : '',
             $where,
+            $booked,
             $this->act('the cost side sits in ticket purchases and visa processing — ask me for the margin and I will net them off.',
                        'খরচের দিকটা আছে টিকিট পারচেজ আর ভিসা প্রসেসিং-এ — মার্জিন জানতে চাইলে দুটো বাদ দিয়ে বের করে দেব।'),
         ]);
@@ -1366,6 +1402,52 @@ final class Answer
             $this->t('Once approved, money requests are disbursed and then recovered through payslip instalments.',
                      'অনুমোদন হলে টাকার আবেদন ছাড় হয়, তারপর পে-স্লিপের কিস্তিতে আদায় হয়।'),
         ]);
+    }
+
+    /** one customer's or vendor's running account, and where it contradicts their invoices */
+    private function a_party_balance(): string
+    {
+        $name = (string) ($this->c['slots']['name_hint'] ?? '');
+        if ($name === '') {
+            return $this->say([$this->open('ok'),
+                $this->t('Whose account? Give me a customer or vendor name and I will read their ledger — what they were invoiced, what they have paid, and what is left.',
+                         'কার হিসাব? গ্রাহক বা সরবরাহকারীর নামটা বলুন — কত বিল হয়েছে, কত দিয়েছেন, কত বাকি, সব বের করে দিচ্ছি।')]);
+        }
+        $this->used('get_party_ledger');
+        $L = $this->A()->partyLedger($name, 12);
+        $p = $L['parties'][0] ?? null;
+        if (!$p) {
+            return $this->say([$this->open('warn'),
+                $this->t(sprintf('Nothing in the party ledger matches "%s".', $name),
+                         sprintf('পার্টি খাতায় "%s" নামে কিছু পাইনি।', $name)),
+                $this->t('I can search the customers, suppliers and staff by name if you want.',
+                         'চাইলে গ্রাহক, সরবরাহকারী বা কর্মীদের মধ্যে নাম ধরে খুঁজে দিতে পারি।')]);
+        }
+        $bal = $this->f($p['balance']);
+        $owes = $bal > 0;
+        $head = $this->t(
+            sprintf('%s was invoiced %s and has paid %s, leaving %s.', (string) $p['party_name'], $this->m($this->f($p['debit'])), $this->m($this->f($p['credit'])),
+                $owes ? $this->m($bal) . ' owing' : ($bal < 0 ? $this->m(abs($bal)) . ' in credit to them' : 'nothing outstanding')),
+            sprintf('%s-এর নামে বিল হয়েছে %s, দিয়েছেন %s — বাকি %s।', (string) $p['party_name'], $this->m($this->f($p['debit'])), $this->m($this->f($p['credit'])),
+                $owes ? $this->m($bal) : ($bal < 0 ? $this->m(abs($bal)) . ' তাঁর জমা' : 'কিছু না')));
+        $warn = !empty($p['erp_balance_disagrees'])
+            ? $this->t(sprintf('The ERP stores their running balance as %s — it is written in entry order, not date order, so a back-dated payment leaves it wrong. %s is the figure to trust.',
+                    $this->m($this->f($p['erp_balance'])), $this->m($bal)),
+                sprintf('ইআরপি তাঁর চলতি ব্যালান্স রেখেছে %s — ওটা এন্ট্রির ক্রমে লেখা হয়, তারিখের ক্রমে নয়, তাই পিছনের তারিখের পেমেন্ট থাকলে ভুল দেখায়। ঠিক অঙ্কটা %s।',
+                    $this->m($this->f($p['erp_balance'])), $this->m($bal)))
+            : '';
+        $last = $L['recent'][0] ?? null;
+        $mv = $last
+            ? $this->t(sprintf('Last movement %s: %s %s.', (string) $last['date'], (string) $last['type'],
+                    $this->f($last['credit']) > 0 ? 'payment of ' . $this->m($this->f($last['credit'])) : 'charge of ' . $this->m($this->f($last['debit']))),
+                sprintf('সর্বশেষ %s তারিখে: %s, %s।', (string) $last['date'], (string) $last['type'],
+                    $this->f($last['credit']) > 0 ? $this->m($this->f($last['credit'])) . ' জমা' : $this->m($this->f($last['debit'])) . ' বিল'))
+            : '';
+        $act = $bal < 0
+            ? $this->act('they are in credit — apply it against their open invoices before anyone sends a reminder.',
+                         'তাঁর টাকা জমা আছে — তাগাদা পাঠানোর আগে খোলা বিলের সঙ্গে মিলিয়ে নিন।')
+            : ($owes ? $this->act('this is the figure to quote when you call them.', 'ফোন করলে এই অঙ্কটাই বলবেন।') : '');
+        return $this->say([$this->open($bal < 0 ? 'ok' : ($owes ? 'warn' : 'good')), $head, $warn, $mv, $act]);
     }
 
     private function a_evaluate_person(): string

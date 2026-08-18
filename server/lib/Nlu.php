@@ -214,6 +214,19 @@ final class Nlu
                          'কার কাছে দেনা' => 5, 'টাকা দিতে হবে' => 5, 'প্রদেয়' => 5, 'বিল বাকি' => 6, 'বিল+বাকি' => 6],
                 'bl' => ['kake taka dite hobe' => 5, 'dena' => 5, 'dite hobe' => 4],
             ],
+            // one party's running account — distinct from the AR/AP totals above
+            'party_balance' => [
+                'en' => ['balance for' => 7, 'balance of' => 6, 'party statement' => 7, 'statement for' => 6,
+                         'ledger for' => 7, 'account for' => 5, 'how much has he paid' => 6, 'how much has she paid' => 6,
+                         'how much have they paid' => 6, 'what has he paid' => 5, 'what has she paid' => 5,
+                         'owe us' => 3, 'his balance' => 6, 'her balance' => 6, 'their balance' => 6],
+                'bn' => ['পার্টি স্টেটমেন্ট' => 7, 'কত টাকা দিয়েছে' => 6, 'কত দিয়েছে' => 5, 'তার হিসাব' => 6,
+                         'পার্টির হিসাব' => 7, 'খাতা দেখাও' => 5, 'তার ব্যালান্স' => 6],
+                'bl' => ['party statement' => 7, 'koto taka diyeche' => 6, 'koto diyeche' => 5, 'tar hisab' => 6, 'tar balance' => 6],
+                // "income statement for Epal Travels" is a P&L, not a party account
+                'block' => ['balance sheet', 'bank balance', 'trial balance', 'ব্যালান্স শিট',
+                            'income statement', 'financial statement', 'profit statement', 'bank statement'],
+            ],
             'overdue_payments' => [
                 'en' => ['overdue payment' => 5, 'past due' => 5, 'late payment' => 4, 'missed payment' => 4,
                          'overdue bill' => 6, 'due this week' => 6, 'due today' => 5, 'late payments' => 7, 'late payment' => 6],
@@ -246,7 +259,10 @@ final class Nlu
             ],
             'revenue' => [
                 'en' => ['revenue' => 5, 'sales' => 4, 'turnover' => 5, 'top line' => 4, 'income this month' => 5,
-                         'how much did we sell' => 5, 'billing' => 3],
+                         'how much did we sell' => 5, 'billing' => 3,
+                         // the boss asks in business words, not accounting ones
+                         'did we sell' => 5, 'we sell' => 4, 'sold' => 4, 'business did we do' => 6, 'much business' => 5,
+                         'how much business' => 6, 'invoiced' => 5, 'booked' => 3, 'what did we do this month' => 5],
                 'bn' => ['বিক্রি' => 5, 'বিক্রি+কত' => 6, 'রাজস্ব' => 5, 'আয়' => 4, 'বিক্রয়' => 5, 'কত বিক্রি' => 6, 'টার্নওভার' => 5],
                 'bl' => ['bikri' => 5, 'bikri koto' => 6, 'ay koto' => 5, 'revenue koto' => 5],
                 'block' => ['profit', 'লাভ'],
@@ -709,6 +725,13 @@ final class Nlu
             if (!preg_match('/^(How|What|Who|Where|When|Why|Show|Give|Tell|The|Is|Are|Do|Does|Can|Ask|EON|Eon)\b/u', $cand)) {
                 return $cand;
             }
+        }
+        // Epal keys most clients in capitals — "ECN RABBI", "MD DAWOOD UDDIN", "BSP IATA".
+        // Two or more capitalised words in a row, so a stray acronym is not mistaken for a person.
+        if (preg_match('/\b([A-Z][A-Z.&-]{1,}(?:\s+[A-Z][A-Z.&-]{1,}){1,3})\b/u', $raw, $m)) {
+            $cand = trim($m[1]);
+            $notName = ['EON ERP', 'P&L', 'AR AP', 'VAT TDS', 'TDS VDS', 'GL TB'];
+            if (!in_array($cand, $notName, true)) return $cand;
         }
         // Bangla possessive:  "<name> এর বেতন"  /  "<name> er beton"
         if (preg_match('/([\x{0980}-\x{09FF}]{3,}(?:\s+[\x{0980}-\x{09FF}]{2,}){0,2})\s*(?:এর|র)\s/u', $raw, $m)) {
