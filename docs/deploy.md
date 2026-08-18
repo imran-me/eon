@@ -375,7 +375,10 @@ when the host has no rsync — both were exercised).
 
 ### C2. First deploy
 
-PHP 8.2 and SSL on for the subdomain (hPanel → PHP Configuration / SSL), then SSH:
+PHP 8.2 **or newer** and SSL on for the subdomain (hPanel → PHP Configuration / SSL),
+then SSH. As of 2026-08-18 `eon.gulfrabit.com` resolves to Hostinger (hPanel) and
+reports PHP 8.3 on an empty document root — the host's "Default page" — so the
+clone below is the first thing that lands there:
 
 ```bash
 # layout A — the checkout is the document root
