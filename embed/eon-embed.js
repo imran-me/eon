@@ -111,7 +111,11 @@
     const adapter = el('script', { src: `${BASE}/ai-companion/adapters/erp-adapter.js` });
     adapter.onload = () => {
       head.appendChild(el('script', { type: 'module', src: `${BASE}/ai-companion/js/boot.js` }));
-      head.appendChild(el('script', { type: 'module', src: `${BASE}/ai-companion/eon-brain/voice.js` }));
+      const v = el('script', { type: 'module', src: `${BASE}/ai-companion/eon-brain/voice.js` });
+      // point EON's voice at this deployment's speech service — the machine has
+      // no Bangla voice, so Bangla is rendered by the server and played back
+      v.onload = () => { try { window.EonVoice && window.EonVoice.setTts(O.server + '/tts.php'); } catch (e) {} };
+      head.appendChild(v);
       // the conversation in place: same brain, same actions, on the ERP page itself
       head.appendChild(el('script', { src: `${BASE}/embed/eon-ask.js`, defer: true }));
     };

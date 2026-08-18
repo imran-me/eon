@@ -69,7 +69,14 @@ const WAKE = /^\s*(hey |ok |hi )?(eon|ion|eyon|aeon|ইয়ন|ইওন|এ�
 function ttsUrl(text, lang) {
   const base = state.tts;
   const sep = base.indexOf('?') === -1 ? '?' : '&';
-  return base + sep + 'lang=' + encodeURIComponent(lang) + '&text=' + encodeURIComponent(text);
+  // an <audio> element cannot carry an Authorization header, so the token that
+  // the panel sends as a bearer has to travel in the query instead. Signed into
+  // the ERP on the same origin, the session cookie covers it and this is unused.
+  let tok = '';
+  try { tok = localStorage.getItem('eon_token') || ''; } catch (e) {}
+  return base + sep + 'lang=' + encodeURIComponent(lang)
+       + (tok ? '&token=' + encodeURIComponent(tok) : '')
+       + '&text=' + encodeURIComponent(text);
 }
 
 function sayViaServer(text, lang, myId) {

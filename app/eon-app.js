@@ -217,6 +217,8 @@ function wire() {
 }
 function toggleMic() {
   const V = window.EonVoice; if (!V) return;
+  // EON renders Bangla itself — this machine has no Bengali voice and most do not
+  try { V.setTts(server() + '/tts.php'); } catch (e) {}
   if (!V.available().stt) { toast('Voice input needs Chrome or Edge with a microphone.'); return; }
   if (V.status() === 'listening') V.stop(); else V.listen({ continuous: false });
 }

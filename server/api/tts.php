@@ -24,6 +24,14 @@ Http::run(function () {
     $lang = (string) ($b['lang'] ?? $_GET['lang'] ?? 'bn');
     if (trim($text) === '') Http::fail(400, 'text is required');
 
+    // Whatever reaches here may be screen text — "৳1.9 L", an account code, a URL.
+    // Put it through the spoken-form builder unless the caller says it is ready,
+    // so anything that asks EON to speak is spoken properly, not read out.
+    if (empty($b['raw']) && !isset($_GET['raw']) && class_exists('Speech')) {
+        $text = Speech::shorten(Speech::spoken($text, $lang === 'bn' ? 'bn' : 'en'));
+        if (trim($text) === '') Http::fail(400, 'nothing left to say once the text was prepared');
+    }
+
     $r = Tts::speak($text, $lang);
     if (!($r['ok'] ?? false)) {
         Http::fail(503, (string) ($r['error'] ?? 'speech is unavailable'));
