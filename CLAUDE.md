@@ -29,7 +29,7 @@ Target: presented at **AI Business Summit 2026**, China–Bangladesh Friendship 
 | Set-based computation (aging, TB, rollups) | SQL / MySQL | ERP database (read-only user) |
 | Face: companion, voice capture/speech, screens, offline fallback | JavaScript | `ai-companion/`, `app/` |
 
-Language model: Claude `claude-opus-5` via the official PHP SDK (`anthropic-ai/sdk`), tool use over the ERP data, adaptive thinking (default), effort `high`. Offline rule brain = fallback only.
+Language model: **none, by the owner's decision (2026-08-19)** — no Anthropic key is configured or planned. `Brain::askLlm` stays in place for the day one is added, but the shipping brain is the offline one: `Nlu` → `Answer` → `Analytics`/`Insight`/`Tools`, PHP over the live ERP. See "No language model" below.
 
 ## Repo map
 
@@ -98,13 +98,34 @@ eon/
 3. **`transactions.balance` is written in insert order, not date order**, so a back-dated row leaves the stored running balance wrong (RABBI reads −৳9.9 L instead of −৳1.4 L). EON recomputes it and flags where the ERP disagrees with itself.
 4. **Attendance covers a sixth of the payroll** — 27 enrolled on the device against 87 active staff — so presence is reported against the tracked base, never "0 of 87 in".
 
-## Next steps (in order)
+## No language model — the offline brain is the product (owner's decision, 2026-08-19)
 
-1. **Add the Anthropic key** — `server/config.local.php` → `anthropic.api_key`. Until then `health.php` shows `llm:false` and every answer is the rule brain; the whole tool layer is built and waiting.
-2. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
-3. `Answer.php` is now the first offline layer and `Answers.php` the second. If `Answer` holds at 1131/1131 for a while, delete `Answers.php` and its `bootstrap.php` line — until then it costs nothing and catches anything `Answer` throws on.
-4. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`.
-5. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
+There is no Anthropic key and none is planned for now, so `Brain::askLlm` never runs.
+Everything the boss asks is answered by **Nlu → Answer → Analytics/Insight/Tools**, in
+PHP, from the live ERP. That makes three things rules rather than preferences:
+
+- **Every tool needs an offline route.** A tool only the model can call is dead code.
+  `tools/qa-run.php` proves intent coverage; the audit that matters is *tools reachable
+  from `Answer`* — 28 of 32 today. The four that are not: `explain_erp` and
+  `erp_open_record` (the navigation intent and `plugins/navigator.js` answer those from
+  `erp-map.json` instead), `spending_anomalies` (the `anomalies` intent uses
+  `Insight::anomalies` in PHP) and `export_report` (needs Python, absent on the host).
+- **No Python on the host either** (`python:false`). Anything that matters must have a
+  PHP path — `Analytics::ranking()` exists because `evaluate_all_staff` cannot run there.
+- **Answers must be written natively in both languages.** `Phrase`/`Loc` carry the voice;
+  never translate one side from the other, and never let an English fragment leak into a
+  Bangla sentence (unit words, grades, group labels have all done this).
+
+Bangla traps already paid for: `trim($s, "…।…")` takes a list of **bytes** and the danda
+shares its lead byte with every Bangla letter — it silently produces invalid UTF-8 and the
+next `/u` regex returns null, so the reply comes back empty. And `Nlu::norm()` folds কী → কি,
+so a cue must be written in its normalised form or it never fires.
+
+## Next steps (in order)
+1. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
+2. `Answer.php` is now the first offline layer and `Answers.php` the second. If `Answer` holds at 1131/1131 for a while, delete `Answers.php` and its `bootstrap.php` line — until then it costs nothing and catches anything `Answer` throws on.
+3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`.
+4. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
 
 ## Testing the brain
 
