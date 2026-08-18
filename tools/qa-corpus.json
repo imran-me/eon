@@ -1,0 +1,9911 @@
+{
+ "generated_by": "tools/make-qa-corpus.mjs",
+ "intents": 51,
+ "sections": [
+  "Executive",
+  "Cash & Bank",
+  "Receivable & Payable",
+  "Accounts",
+  "Payroll & People",
+  "Operations",
+  "CRM",
+  "ERP navigation",
+  "ERP rules",
+  "Meta"
+ ],
+ "counts": {
+  "total": 1095,
+  "en": 498,
+  "bn": 411,
+  "bl": 186
+ },
+ "person_templates": [
+  {
+   "q": "payslip of {name}",
+   "intent": "payroll",
+   "lang": "en"
+  },
+  {
+   "q": "what is the salary of {name}",
+   "intent": "payroll",
+   "lang": "en"
+  },
+  {
+   "q": "how is {name} performing",
+   "intent": "evaluate_person",
+   "lang": "en"
+  },
+  {
+   "q": "tell me about {name}",
+   "intent": "evaluate_person",
+   "lang": "en"
+  },
+  {
+   "q": "{name} এর বেতন কত",
+   "intent": "payroll",
+   "lang": "bn"
+  },
+  {
+   "q": "{name} কেমন কাজ করছে",
+   "intent": "evaluate_person",
+   "lang": "bn"
+  }
+ ],
+ "questions": [
+  {
+   "id": 1,
+   "q": "give me the brief",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 2,
+   "q": "brief me",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 3,
+   "q": "what's the morning brief",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 4,
+   "q": "update me",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 5,
+   "q": "catch me up",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 6,
+   "q": "how are things",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 7,
+   "q": "where do we stand",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 8,
+   "q": "give me the rundown",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 9,
+   "q": "today's report",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 10,
+   "q": "overall status",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 11,
+   "q": "আজকের ব্রিফ দাও",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 12,
+   "q": "ব্রিফ দাও",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 13,
+   "q": "আজকের অবস্থা কি",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 14,
+   "q": "খবর কি",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 15,
+   "q": "সার্বিক অবস্থা বলো",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 16,
+   "q": "আপডেট দাও",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 17,
+   "q": "সংক্ষেপে বলো আজকের অবস্থা",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 18,
+   "q": "পরিস্থিতি কেমন",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 19,
+   "q": "আজকের সারসংক্ষেপ দাও",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 20,
+   "q": "ajker brief dao",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 21,
+   "q": "brief dao",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 22,
+   "q": "obostha ki",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 23,
+   "q": "khobor ki",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 24,
+   "q": "update dao",
+   "intent": "brief",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 25,
+   "q": "what should I focus on",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 26,
+   "q": "what should I do today",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 27,
+   "q": "what needs my attention",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 28,
+   "q": "what is urgent",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 29,
+   "q": "what is the top priority",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 30,
+   "q": "what matters most right now",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 31,
+   "q": "what should I deal with first",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 32,
+   "q": "my priorities today",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 33,
+   "q": "আজ কী করা উচিত",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 34,
+   "q": "কোনটা আগে দেখব",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 35,
+   "q": "কী করব আজ",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 36,
+   "q": "সবচেয়ে জরুরি কোনটা",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 37,
+   "q": "কোনদিকে নজর দেওয়া দরকার",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 38,
+   "q": "আজকের অগ্রাধিকার কী",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 39,
+   "q": "প্রথমে কোনটা ধরব",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 40,
+   "q": "ki kora uchit aj",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 41,
+   "q": "ki korbo",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 42,
+   "q": "kon ta age dekhbo",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 43,
+   "q": "joruri ki",
+   "intent": "focus",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 44,
+   "q": "what is waiting for my approval",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 45,
+   "q": "show me the approval queue",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 46,
+   "q": "anything pending my sign off",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 47,
+   "q": "what needs my authorisation",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 48,
+   "q": "how many approvals are waiting",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 49,
+   "q": "what am I holding up",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 50,
+   "q": "is anything awaiting approval",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 51,
+   "q": "আমার অনুমোদনের অপেক্ষায় কী আছে",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 52,
+   "q": "অনুমোদনের সারিতে কী",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 53,
+   "q": "কী কী অনুমোদন বাকি",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 54,
+   "q": "আমার সই লাগবে কোথায়",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 55,
+   "q": "কতগুলো অনুমোদন ঝুলে আছে",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 56,
+   "q": "onumodon ki ache",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 57,
+   "q": "amar soi lagbe kothay",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 58,
+   "q": "approval koto ache",
+   "intent": "approvals",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 59,
+   "q": "what am I missing",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 60,
+   "q": "what should worry me",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 61,
+   "q": "what is wrong",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 62,
+   "q": "any red flags",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 63,
+   "q": "what are the risks",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 64,
+   "q": "what is my blind spot",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 65,
+   "q": "anything bad I should know",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 66,
+   "q": "what problems do we have",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 67,
+   "q": "আমি কী মিস করছি",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 68,
+   "q": "কী নিয়ে চিন্তা করা উচিত",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 69,
+   "q": "কোথায় সমস্যা",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 70,
+   "q": "কী ঝুঁকি আছে",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 71,
+   "q": "কোথায় গণ্ডগোল",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 72,
+   "q": "কী ভুল হচ্ছে",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 73,
+   "q": "দুর্বলতা কোথায়",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 74,
+   "q": "ki miss korchi",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 75,
+   "q": "ki somossa ache",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 76,
+   "q": "jhuki ki",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 77,
+   "q": "ki bhul hocche",
+   "intent": "risks",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 78,
+   "q": "anything unusual",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 79,
+   "q": "any anomalies",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 80,
+   "q": "anything suspicious",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 81,
+   "q": "any duplicate entries",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 82,
+   "q": "does anything look irregular",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 83,
+   "q": "is anything off in the books",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 84,
+   "q": "any strange transactions",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 85,
+   "q": "অস্বাভাবিক কিছু আছে",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 86,
+   "q": "কোনো গরমিল আছে",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 87,
+   "q": "সন্দেহজনক কিছু",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 88,
+   "q": "কোনো অনিয়ম",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 89,
+   "q": "ডুপ্লিকেট কিছু আছে",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 90,
+   "q": "হিসাবে কোনো অসঙ্গতি",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 91,
+   "q": "gormil ache",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 92,
+   "q": "osbabhabik kichu",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 93,
+   "q": "duplicate ache",
+   "intent": "anomalies",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 94,
+   "q": "what is the health score",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 95,
+   "q": "how healthy is the business",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 96,
+   "q": "give me the scorecard",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 97,
+   "q": "overall company health",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 98,
+   "q": "how is the business doing",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 99,
+   "q": "স্বাস্থ্য স্কোর কত",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 100,
+   "q": "ব্যবসার অবস্থা কেমন",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 101,
+   "q": "সার্বিক স্কোর দাও",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 102,
+   "q": "কেমন চলছে ব্যবসা",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 103,
+   "q": "health score koto",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 104,
+   "q": "business kemon cholche",
+   "intent": "health",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 105,
+   "q": "what changed since yesterday",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 106,
+   "q": "anything new",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 107,
+   "q": "what happened since yesterday",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 108,
+   "q": "what is new today",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 109,
+   "q": "any changes today",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 110,
+   "q": "গতকাল থেকে কী পরিবর্তন",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 111,
+   "q": "নতুন কী",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 112,
+   "q": "গতকাল থেকে কী হয়েছে",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 113,
+   "q": "নতুন কিছু আছে",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 114,
+   "q": "gotokal theke ki notun",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 115,
+   "q": "notun ki ache",
+   "intent": "since",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 116,
+   "q": "forecast next quarter",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 117,
+   "q": "what is the outlook",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 118,
+   "q": "project the next three months",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 119,
+   "q": "where are we heading",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 120,
+   "q": "what does the trend say",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 121,
+   "q": "predict next month",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 122,
+   "q": "give me a projection",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 123,
+   "q": "আগামী প্রান্তিকের পূর্বাভাস দাও",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 124,
+   "q": "সামনে কী হবে",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 125,
+   "q": "ভবিষ্যতে কী দাঁড়াবে",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 126,
+   "q": "আগামী মাসে কী হবে",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 127,
+   "q": "প্রবণতা কী বলছে",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 128,
+   "q": "পূর্বাভাস দাও",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 129,
+   "q": "forecast dao",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 130,
+   "q": "agami mash e ki hobe",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 131,
+   "q": "samne ki hobe",
+   "intent": "forecast",
+   "section": "Executive",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 132,
+   "q": "cash position",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 133,
+   "q": "cash position for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 134,
+   "q": "cash position for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 135,
+   "q": "how much cash do we have",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 136,
+   "q": "how much cash do we have for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 137,
+   "q": "how much cash do we have for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 138,
+   "q": "how much money do we have",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 139,
+   "q": "how much money do we have for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 140,
+   "q": "how much money do we have for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 141,
+   "q": "what is our liquidity",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 142,
+   "q": "what is our liquidity for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 143,
+   "q": "what is our liquidity for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 144,
+   "q": "cash in hand",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 145,
+   "q": "cash in hand for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 146,
+   "q": "cash in hand for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 147,
+   "q": "how much is available",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 148,
+   "q": "how much is available for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 149,
+   "q": "how much is available for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 150,
+   "q": "what is the cash position right now",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 151,
+   "q": "what is the cash position right now for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 152,
+   "q": "what is the cash position right now for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 153,
+   "q": "total funds",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 154,
+   "q": "total funds for Epal Travels",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 155,
+   "q": "total funds for IT Solutions",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 156,
+   "q": "ক্যাশ কত আছে",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 157,
+   "q": "ক্যাশ কত আছে ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 158,
+   "q": "ক্যাশ কত আছে আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 159,
+   "q": "হাতে কত টাকা আছে",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 160,
+   "q": "হাতে কত টাকা আছে ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 161,
+   "q": "হাতে কত টাকা আছে আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 162,
+   "q": "নগদ কত",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 163,
+   "q": "নগদ কত ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 164,
+   "q": "নগদ কত আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 165,
+   "q": "কত টাকা আছে",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 166,
+   "q": "কত টাকা আছে ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 167,
+   "q": "কত টাকা আছে আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 168,
+   "q": "তহবিলে কত",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 169,
+   "q": "তহবিলে কত ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 170,
+   "q": "তহবিলে কত আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 171,
+   "q": "হাতে আর ব্যাংকে মোট কত",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 172,
+   "q": "হাতে আর ব্যাংকে মোট কত ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 173,
+   "q": "হাতে আর ব্যাংকে মোট কত আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 174,
+   "q": "নগদ অবস্থা কী",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 175,
+   "q": "নগদ অবস্থা কী ট্রাভেলসের জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 176,
+   "q": "নগদ অবস্থা কী আইটির জন্য",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 177,
+   "q": "cash koto ache",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 178,
+   "q": "cash koto ache travels er jonno",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 179,
+   "q": "hate koto taka",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 180,
+   "q": "hate koto taka travels er jonno",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 181,
+   "q": "taka koto ache",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 182,
+   "q": "taka koto ache travels er jonno",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 183,
+   "q": "nogod koto",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 184,
+   "q": "nogod koto travels er jonno",
+   "intent": "cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 185,
+   "q": "bank balances",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 186,
+   "q": "which bank has the most",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 187,
+   "q": "show me balance by bank",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 188,
+   "q": "what is in our bank accounts",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 189,
+   "q": "bank wise balance",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 190,
+   "q": "list the bank accounts",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 191,
+   "q": "ব্যাংকে কত টাকা",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 192,
+   "q": "কোন ব্যাংকে কত আছে",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 193,
+   "q": "ব্যাংক অনুযায়ী ব্যালেন্স",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 194,
+   "q": "ব্যাংক অ্যাকাউন্টে কত",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 195,
+   "q": "কোন ব্যাংকে সবচেয়ে বেশি",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 196,
+   "q": "bank e koto taka",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 197,
+   "q": "kon bank e koto",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 198,
+   "q": "bank balance koto",
+   "intent": "bank_accounts",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 199,
+   "q": "petty cash balance",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 200,
+   "q": "how much petty cash",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 201,
+   "q": "what is in the float",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 202,
+   "q": "office cash balance",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 203,
+   "q": "petty cash position",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 204,
+   "q": "পেটি ক্যাশ কত",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 205,
+   "q": "খুচরা নগদ কত আছে",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 206,
+   "q": "অফিস ক্যাশ কত",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 207,
+   "q": "ফ্লোটে কত আছে",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 208,
+   "q": "petty cash koto",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 209,
+   "q": "office cash koto",
+   "intent": "petty_cash",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 210,
+   "q": "what is our burn rate",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 211,
+   "q": "how long will the cash last",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 212,
+   "q": "how many months of cash do we have",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 213,
+   "q": "what is the runway",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 214,
+   "q": "will we run out of money",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 215,
+   "q": "how much do we spend a month",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 216,
+   "q": "টাকা কতদিন চলবে",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 217,
+   "q": "মাসে কত খরচ হয়",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 218,
+   "q": "হাতের টাকায় কত মাস চলবে",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 219,
+   "q": "ব্যয়ের হার কত",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 220,
+   "q": "টাকা কি শেষ হয়ে যাবে",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 221,
+   "q": "taka koto din cholbe",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 222,
+   "q": "mase koto khoroch",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 223,
+   "q": "koto mash cholbe",
+   "intent": "burn_runway",
+   "section": "Cash & Bank",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 224,
+   "q": "who owes us money",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 225,
+   "q": "what are our receivables",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 226,
+   "q": "how much is due to us",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 227,
+   "q": "show me the debtors",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 228,
+   "q": "how much do we have to collect",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 229,
+   "q": "receivables aging",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 230,
+   "q": "who has not paid us",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 231,
+   "q": "what is outstanding from customers",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 232,
+   "q": "কে আমাদের টাকা দেবে",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 233,
+   "q": "আমাদের পাওনা কত",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 234,
+   "q": "কার কাছে টাকা পাব",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 235,
+   "q": "বকেয়া আদায় কত",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 236,
+   "q": "গ্রাহকদের কাছে কত পাওনা",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 237,
+   "q": "কত টাকা পাওয়ার আছে",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 238,
+   "q": "ke taka debe",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 239,
+   "q": "amader pawna koto",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 240,
+   "q": "taka pabo koto",
+   "intent": "receivables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 241,
+   "q": "what do we owe",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 242,
+   "q": "who do we owe money to",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 243,
+   "q": "show me the payables",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 244,
+   "q": "how much do we have to pay",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 245,
+   "q": "what bills are due",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 246,
+   "q": "payables aging",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 247,
+   "q": "what is outstanding to suppliers",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 248,
+   "q": "কাকে টাকা দিতে হবে",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 249,
+   "q": "আমাদের দেনা কত",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 250,
+   "q": "কত টাকা পরিশোধ করতে হবে",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 251,
+   "q": "কার কাছে দেনা আছে",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 252,
+   "q": "কী কী বিল বাকি",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 253,
+   "q": "kake taka dite hobe",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 254,
+   "q": "dena koto",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 255,
+   "q": "koto taka dite hobe",
+   "intent": "payables",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 256,
+   "q": "what payments are overdue",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 257,
+   "q": "anything past due",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 258,
+   "q": "what is due this week",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 259,
+   "q": "show me late payments",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 260,
+   "q": "what is due today",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 261,
+   "q": "কোন পেমেন্টের তারিখ পেরিয়েছে",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 262,
+   "q": "কী কী বকেয়া",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 263,
+   "q": "এই সপ্তাহে কী দিতে হবে",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 264,
+   "q": "মেয়াদোত্তীর্ণ পেমেন্ট কত",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 265,
+   "q": "overdue koto",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 266,
+   "q": "ei soptahe ki dite hobe",
+   "intent": "overdue_payments",
+   "section": "Receivable & Payable",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 267,
+   "q": "show me the trial balance",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 268,
+   "q": "does the trial balance tie",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 269,
+   "q": "is the trial balance balanced",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 270,
+   "q": "debits and credits total",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 271,
+   "q": "trial balance status",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 272,
+   "q": "রেওয়ামিল দেখাও",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 273,
+   "q": "ট্রায়াল ব্যালেন্স মিলছে কি",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 274,
+   "q": "ডেবিট ক্রেডিট মিলছে",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 275,
+   "q": "রেওয়ামিল ঠিক আছে",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 276,
+   "q": "trial balance mile",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 277,
+   "q": "rewamil dekhao",
+   "intent": "trial_balance",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 278,
+   "q": "show me the balance sheet",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 279,
+   "q": "what is our net worth",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 280,
+   "q": "total assets and liabilities",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 281,
+   "q": "what is the financial position",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 282,
+   "q": "how much equity do we have",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 283,
+   "q": "স্থিতিপত্র দেখাও",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 284,
+   "q": "নিট সম্পদ কত",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 285,
+   "q": "মোট সম্পদ আর দায় কত",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 286,
+   "q": "ব্যালেন্স শীট দাও",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 287,
+   "q": "আর্থিক অবস্থা কী",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 288,
+   "q": "balance sheet dao",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 289,
+   "q": "net worth koto",
+   "intent": "balance_sheet",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 290,
+   "q": "how much profit this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 291,
+   "q": "how much profit this month this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 292,
+   "q": "how much profit this month last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 293,
+   "q": "how much profit this month this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 294,
+   "q": "how much profit this month for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 295,
+   "q": "how much profit this month for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 296,
+   "q": "are we profitable",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 297,
+   "q": "are we profitable this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 298,
+   "q": "are we profitable last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 299,
+   "q": "are we profitable this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 300,
+   "q": "are we profitable for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 301,
+   "q": "are we profitable for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 302,
+   "q": "show me the P&L",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 303,
+   "q": "show me the P&L this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 304,
+   "q": "show me the P&L last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 305,
+   "q": "show me the P&L this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 306,
+   "q": "show me the P&L for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 307,
+   "q": "show me the P&L for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 308,
+   "q": "what is the net profit",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 309,
+   "q": "what is the net profit this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 310,
+   "q": "what is the net profit last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 311,
+   "q": "what is the net profit this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 312,
+   "q": "what is the net profit for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 313,
+   "q": "what is the net profit for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 314,
+   "q": "profit and loss for last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 315,
+   "q": "profit and loss for last month this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 316,
+   "q": "profit and loss for last month last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 317,
+   "q": "profit and loss for last month this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 318,
+   "q": "profit and loss for last month for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 319,
+   "q": "profit and loss for last month for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 320,
+   "q": "what is our margin",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 321,
+   "q": "what is our margin this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 322,
+   "q": "what is our margin last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 323,
+   "q": "what is our margin this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 324,
+   "q": "what is our margin for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 325,
+   "q": "what is our margin for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 326,
+   "q": "did we make money this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 327,
+   "q": "did we make money this month this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 328,
+   "q": "did we make money this month last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 329,
+   "q": "did we make money this month this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 330,
+   "q": "did we make money this month for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 331,
+   "q": "did we make money this month for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 332,
+   "q": "income statement",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 333,
+   "q": "income statement this month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 334,
+   "q": "income statement last month",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 335,
+   "q": "income statement this year",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 336,
+   "q": "income statement for Epal Travels",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 337,
+   "q": "income statement for IT Solutions",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 338,
+   "q": "এ মাসে লাভ কত",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 339,
+   "q": "এ মাসে লাভ কত এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 340,
+   "q": "এ মাসে লাভ কত গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 341,
+   "q": "এ মাসে লাভ কত এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 342,
+   "q": "এ মাসে লাভ কত ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 343,
+   "q": "এ মাসে লাভ কত আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 344,
+   "q": "লাভ হচ্ছে কি",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 345,
+   "q": "লাভ হচ্ছে কি এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 346,
+   "q": "লাভ হচ্ছে কি গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 347,
+   "q": "লাভ হচ্ছে কি এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 348,
+   "q": "লাভ হচ্ছে কি ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 349,
+   "q": "লাভ হচ্ছে কি আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 350,
+   "q": "লাভ লোকসান দেখাও",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 351,
+   "q": "লাভ লোকসান দেখাও এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 352,
+   "q": "লাভ লোকসান দেখাও গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 353,
+   "q": "লাভ লোকসান দেখাও এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 354,
+   "q": "লাভ লোকসান দেখাও ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 355,
+   "q": "লাভ লোকসান দেখাও আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 356,
+   "q": "নিট মুনাফা কত",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 357,
+   "q": "নিট মুনাফা কত এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 358,
+   "q": "নিট মুনাফা কত গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 359,
+   "q": "নিট মুনাফা কত এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 360,
+   "q": "নিট মুনাফা কত ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 361,
+   "q": "নিট মুনাফা কত আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 362,
+   "q": "গত মাসে লাভ কত হয়েছে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 363,
+   "q": "গত মাসে লাভ কত হয়েছে এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 364,
+   "q": "গত মাসে লাভ কত হয়েছে গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 365,
+   "q": "গত মাসে লাভ কত হয়েছে এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 366,
+   "q": "গত মাসে লাভ কত হয়েছে ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 367,
+   "q": "গত মাসে লাভ কত হয়েছে আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 368,
+   "q": "মার্জিন কত",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 369,
+   "q": "মার্জিন কত এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 370,
+   "q": "মার্জিন কত গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 371,
+   "q": "মার্জিন কত এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 372,
+   "q": "মার্জিন কত ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 373,
+   "q": "মার্জিন কত আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 374,
+   "q": "লোকসান হচ্ছে কি",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 375,
+   "q": "লোকসান হচ্ছে কি এ মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 376,
+   "q": "লোকসান হচ্ছে কি গত মাসে",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 377,
+   "q": "লোকসান হচ্ছে কি এ বছর",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 378,
+   "q": "লোকসান হচ্ছে কি ট্রাভেলসের জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 379,
+   "q": "লোকসান হচ্ছে কি আইটির জন্য",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 380,
+   "q": "lav koto",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 381,
+   "q": "lav koto ei mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 382,
+   "q": "lav koto goto mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 383,
+   "q": "lav koto travels er jonno",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 384,
+   "q": "e mase lav koto",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 385,
+   "q": "e mase lav koto ei mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 386,
+   "q": "e mase lav koto goto mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 387,
+   "q": "e mase lav koto travels er jonno",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 388,
+   "q": "munafa koto",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 389,
+   "q": "munafa koto ei mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 390,
+   "q": "munafa koto goto mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 391,
+   "q": "munafa koto travels er jonno",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 392,
+   "q": "lokshan hocche ki",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 393,
+   "q": "lokshan hocche ki ei mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 394,
+   "q": "lokshan hocche ki goto mash e",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 395,
+   "q": "lokshan hocche ki travels er jonno",
+   "intent": "profit_loss",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 396,
+   "q": "how much revenue this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 397,
+   "q": "how much revenue this month this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 398,
+   "q": "how much revenue this month last month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 399,
+   "q": "how much revenue this month this year",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 400,
+   "q": "how much revenue this month for Epal Travels",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 401,
+   "q": "how much revenue this month for IT Solutions",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 402,
+   "q": "what is our turnover",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 403,
+   "q": "what is our turnover this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 404,
+   "q": "what is our turnover last month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 405,
+   "q": "what is our turnover this year",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 406,
+   "q": "what is our turnover for Epal Travels",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 407,
+   "q": "what is our turnover for IT Solutions",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 408,
+   "q": "how much did we sell",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 409,
+   "q": "how much did we sell this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 410,
+   "q": "how much did we sell last month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 411,
+   "q": "how much did we sell this year",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 412,
+   "q": "how much did we sell for Epal Travels",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 413,
+   "q": "how much did we sell for IT Solutions",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 414,
+   "q": "total income this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 415,
+   "q": "total income this month this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 416,
+   "q": "total income this month last month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 417,
+   "q": "total income this month this year",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 418,
+   "q": "total income this month for Epal Travels",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 419,
+   "q": "total income this month for IT Solutions",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 420,
+   "q": "what is the top line",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 421,
+   "q": "what is the top line this month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 422,
+   "q": "what is the top line last month",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 423,
+   "q": "what is the top line this year",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 424,
+   "q": "what is the top line for Epal Travels",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 425,
+   "q": "what is the top line for IT Solutions",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 426,
+   "q": "এ মাসে কত বিক্রি",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 427,
+   "q": "এ মাসে কত বিক্রি এ মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 428,
+   "q": "এ মাসে কত বিক্রি গত মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 429,
+   "q": "এ মাসে কত বিক্রি এ বছর",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 430,
+   "q": "এ মাসে কত বিক্রি ট্রাভেলসের জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 431,
+   "q": "এ মাসে কত বিক্রি আইটির জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 432,
+   "q": "আয় কত হয়েছে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 433,
+   "q": "আয় কত হয়েছে এ মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 434,
+   "q": "আয় কত হয়েছে গত মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 435,
+   "q": "আয় কত হয়েছে এ বছর",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 436,
+   "q": "আয় কত হয়েছে ট্রাভেলসের জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 437,
+   "q": "আয় কত হয়েছে আইটির জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 438,
+   "q": "রাজস্ব কত",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 439,
+   "q": "রাজস্ব কত এ মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 440,
+   "q": "রাজস্ব কত গত মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 441,
+   "q": "রাজস্ব কত এ বছর",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 442,
+   "q": "রাজস্ব কত ট্রাভেলসের জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 443,
+   "q": "রাজস্ব কত আইটির জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 444,
+   "q": "টার্নওভার কত",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 445,
+   "q": "টার্নওভার কত এ মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 446,
+   "q": "টার্নওভার কত গত মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 447,
+   "q": "টার্নওভার কত এ বছর",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 448,
+   "q": "টার্নওভার কত ট্রাভেলসের জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 449,
+   "q": "টার্নওভার কত আইটির জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 450,
+   "q": "কত বিক্রি হয়েছে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 451,
+   "q": "কত বিক্রি হয়েছে এ মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 452,
+   "q": "কত বিক্রি হয়েছে গত মাসে",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 453,
+   "q": "কত বিক্রি হয়েছে এ বছর",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 454,
+   "q": "কত বিক্রি হয়েছে ট্রাভেলসের জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 455,
+   "q": "কত বিক্রি হয়েছে আইটির জন্য",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 456,
+   "q": "bikri koto",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 457,
+   "q": "bikri koto ei mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 458,
+   "q": "bikri koto goto mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 459,
+   "q": "bikri koto travels er jonno",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 460,
+   "q": "ay koto hoyeche",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 461,
+   "q": "ay koto hoyeche ei mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 462,
+   "q": "ay koto hoyeche goto mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 463,
+   "q": "ay koto hoyeche travels er jonno",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 464,
+   "q": "revenue koto",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 465,
+   "q": "revenue koto ei mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 466,
+   "q": "revenue koto goto mash e",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 467,
+   "q": "revenue koto travels er jonno",
+   "intent": "revenue",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 468,
+   "q": "how much did we spend this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 469,
+   "q": "how much did we spend this month this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 470,
+   "q": "how much did we spend this month last month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 471,
+   "q": "how much did we spend this month this year",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 472,
+   "q": "how much did we spend this month for Epal Travels",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 473,
+   "q": "how much did we spend this month for IT Solutions",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 474,
+   "q": "total expenses",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 475,
+   "q": "total expenses this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 476,
+   "q": "total expenses last month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 477,
+   "q": "total expenses this year",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 478,
+   "q": "total expenses for Epal Travels",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 479,
+   "q": "total expenses for IT Solutions",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 480,
+   "q": "what is our expenditure",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 481,
+   "q": "what is our expenditure this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 482,
+   "q": "what is our expenditure last month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 483,
+   "q": "what is our expenditure this year",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 484,
+   "q": "what is our expenditure for Epal Travels",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 485,
+   "q": "what is our expenditure for IT Solutions",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 486,
+   "q": "how much has gone out",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 487,
+   "q": "how much has gone out this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 488,
+   "q": "how much has gone out last month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 489,
+   "q": "how much has gone out this year",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 490,
+   "q": "how much has gone out for Epal Travels",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 491,
+   "q": "how much has gone out for IT Solutions",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 492,
+   "q": "spending this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 493,
+   "q": "spending this month this month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 494,
+   "q": "spending this month last month",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 495,
+   "q": "spending this month this year",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 496,
+   "q": "spending this month for Epal Travels",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 497,
+   "q": "spending this month for IT Solutions",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 498,
+   "q": "এ মাসে কত খরচ হয়েছে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 499,
+   "q": "এ মাসে কত খরচ হয়েছে এ মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 500,
+   "q": "এ মাসে কত খরচ হয়েছে গত মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 501,
+   "q": "এ মাসে কত খরচ হয়েছে এ বছর",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 502,
+   "q": "এ মাসে কত খরচ হয়েছে ট্রাভেলসের জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 503,
+   "q": "এ মাসে কত খরচ হয়েছে আইটির জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 504,
+   "q": "মোট খরচ কত",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 505,
+   "q": "মোট খরচ কত এ মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 506,
+   "q": "মোট খরচ কত গত মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 507,
+   "q": "মোট খরচ কত এ বছর",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 508,
+   "q": "মোট খরচ কত ট্রাভেলসের জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 509,
+   "q": "মোট খরচ কত আইটির জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 510,
+   "q": "ব্যয় কত",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 511,
+   "q": "ব্যয় কত এ মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 512,
+   "q": "ব্যয় কত গত মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 513,
+   "q": "ব্যয় কত এ বছর",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 514,
+   "q": "ব্যয় কত ট্রাভেলসের জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 515,
+   "q": "ব্যয় কত আইটির জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 516,
+   "q": "কত টাকা খরচ হলো",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 517,
+   "q": "কত টাকা খরচ হলো এ মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 518,
+   "q": "কত টাকা খরচ হলো গত মাসে",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 519,
+   "q": "কত টাকা খরচ হলো এ বছর",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 520,
+   "q": "কত টাকা খরচ হলো ট্রাভেলসের জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 521,
+   "q": "কত টাকা খরচ হলো আইটির জন্য",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 522,
+   "q": "khoroch koto hoyeche",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 523,
+   "q": "khoroch koto hoyeche ei mash e",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 524,
+   "q": "khoroch koto hoyeche goto mash e",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 525,
+   "q": "khoroch koto hoyeche travels er jonno",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 526,
+   "q": "mot khoroch koto",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 527,
+   "q": "mot khoroch koto ei mash e",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 528,
+   "q": "mot khoroch koto goto mash e",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 529,
+   "q": "mot khoroch koto travels er jonno",
+   "intent": "expenses",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 530,
+   "q": "what is our biggest expense",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 531,
+   "q": "what is our biggest expense this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 532,
+   "q": "what is our biggest expense last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 533,
+   "q": "what is our biggest expense this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 534,
+   "q": "expenses by category",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 535,
+   "q": "expenses by category this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 536,
+   "q": "expenses by category last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 537,
+   "q": "expenses by category this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 538,
+   "q": "where is the money going",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 539,
+   "q": "where is the money going this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 540,
+   "q": "where is the money going last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 541,
+   "q": "where is the money going this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 542,
+   "q": "show me the expense breakdown",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 543,
+   "q": "show me the expense breakdown this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 544,
+   "q": "show me the expense breakdown last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 545,
+   "q": "show me the expense breakdown this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 546,
+   "q": "which head is costing most",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 547,
+   "q": "which head is costing most this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 548,
+   "q": "which head is costing most last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 549,
+   "q": "which head is costing most this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 550,
+   "q": "top 5 expense categories",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 551,
+   "q": "top 5 expense categories this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 552,
+   "q": "top 5 expense categories last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 553,
+   "q": "top 5 expense categories this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 554,
+   "q": "what are we spending on",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 555,
+   "q": "what are we spending on this month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 556,
+   "q": "what are we spending on last month",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 557,
+   "q": "what are we spending on this year",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 558,
+   "q": "কোন খাতে সবচেয়ে বেশি খরচ",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 559,
+   "q": "কোন খাতে সবচেয়ে বেশি খরচ এ মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 560,
+   "q": "কোন খাতে সবচেয়ে বেশি খরচ গত মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 561,
+   "q": "কোন খাতে সবচেয়ে বেশি খরচ এ বছর",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 562,
+   "q": "খরচ কোন খাতে বেশি",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 563,
+   "q": "খরচ কোন খাতে বেশি এ মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 564,
+   "q": "খরচ কোন খাতে বেশি গত মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 565,
+   "q": "খরচ কোন খাতে বেশি এ বছর",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 566,
+   "q": "খাত অনুযায়ী খরচ দেখাও",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 567,
+   "q": "খাত অনুযায়ী খরচ দেখাও এ মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 568,
+   "q": "খাত অনুযায়ী খরচ দেখাও গত মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 569,
+   "q": "খাত অনুযায়ী খরচ দেখাও এ বছর",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 570,
+   "q": "টাকা কোথায় যাচ্ছে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 571,
+   "q": "টাকা কোথায় যাচ্ছে এ মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 572,
+   "q": "টাকা কোথায় যাচ্ছে গত মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 573,
+   "q": "টাকা কোথায় যাচ্ছে এ বছর",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 574,
+   "q": "খরচের বড় খাত কোনটা",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 575,
+   "q": "খরচের বড় খাত কোনটা এ মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 576,
+   "q": "খরচের বড় খাত কোনটা গত মাসে",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 577,
+   "q": "খরচের বড় খাত কোনটা এ বছর",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 578,
+   "q": "kon khate khoroch beshi",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 579,
+   "q": "kon khate khoroch beshi ei mash e",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 580,
+   "q": "kon khate khoroch beshi goto mash e",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 581,
+   "q": "khoroch kothay jacche",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 582,
+   "q": "khoroch kothay jacche ei mash e",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 583,
+   "q": "khoroch kothay jacche goto mash e",
+   "intent": "expense_by_category",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 584,
+   "q": "are we over budget",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 585,
+   "q": "are we over budget this month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 586,
+   "q": "are we over budget last month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 587,
+   "q": "are we over budget this year",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 588,
+   "q": "budget vs actual",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 589,
+   "q": "budget vs actual this month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 590,
+   "q": "budget vs actual last month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 591,
+   "q": "budget vs actual this year",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 592,
+   "q": "how much of the budget is used",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 593,
+   "q": "how much of the budget is used this month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 594,
+   "q": "how much of the budget is used last month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 595,
+   "q": "how much of the budget is used this year",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 596,
+   "q": "which category is over budget",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 597,
+   "q": "which category is over budget this month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 598,
+   "q": "which category is over budget last month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 599,
+   "q": "which category is over budget this year",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 600,
+   "q": "budget variance",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 601,
+   "q": "budget variance this month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 602,
+   "q": "budget variance last month",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 603,
+   "q": "budget variance this year",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 604,
+   "q": "বাজেট ছাড়িয়েছে কি",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 605,
+   "q": "বাজেট ছাড়িয়েছে কি এ মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 606,
+   "q": "বাজেট ছাড়িয়েছে কি গত মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 607,
+   "q": "বাজেট ছাড়িয়েছে কি এ বছর",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 608,
+   "q": "বাজেটের কত ব্যবহার হয়েছে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 609,
+   "q": "বাজেটের কত ব্যবহার হয়েছে এ মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 610,
+   "q": "বাজেটের কত ব্যবহার হয়েছে গত মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 611,
+   "q": "বাজেটের কত ব্যবহার হয়েছে এ বছর",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 612,
+   "q": "কোন খাত বাজেটের বেশি",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 613,
+   "q": "কোন খাত বাজেটের বেশি এ মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 614,
+   "q": "কোন খাত বাজেটের বেশি গত মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 615,
+   "q": "কোন খাত বাজেটের বেশি এ বছর",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 616,
+   "q": "বাজেটের সাথে ফারাক কত",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 617,
+   "q": "বাজেটের সাথে ফারাক কত এ মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 618,
+   "q": "বাজেটের সাথে ফারাক কত গত মাসে",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 619,
+   "q": "বাজেটের সাথে ফারাক কত এ বছর",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 620,
+   "q": "budget er beshi hoyeche ki",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 621,
+   "q": "budget er beshi hoyeche ki ei mash e",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 622,
+   "q": "budget er beshi hoyeche ki goto mash e",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 623,
+   "q": "budget koto baki",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 624,
+   "q": "budget koto baki ei mash e",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 625,
+   "q": "budget koto baki goto mash e",
+   "intent": "budget",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 626,
+   "q": "show me the ledger for 1011",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 627,
+   "q": "what is the balance on account 2210",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 628,
+   "q": "account 6110 ledger",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 629,
+   "q": "read account 1311",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 630,
+   "q": "what is in account 2111",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 631,
+   "q": "ledger for account 1013",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 632,
+   "q": "১০১১ হিসাবের খতিয়ান দেখাও",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 633,
+   "q": "২২১০ হিসাবে কত আছে",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 634,
+   "q": "৬১১০ হিসাবের ব্যালেন্স",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 635,
+   "q": "হিসাব ১৩১১ পড়ো",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 636,
+   "q": "1011 er khotian dekhao",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 637,
+   "q": "account 2210 e koto",
+   "intent": "account_ledger",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 638,
+   "q": "how many journal entries are there",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 639,
+   "q": "show me the journal entries",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 640,
+   "q": "what are the recent postings",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 641,
+   "q": "journal entries by source",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 642,
+   "q": "কতগুলো জার্নাল এন্ট্রি আছে",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 643,
+   "q": "জার্নাল এন্ট্রি দেখাও",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 644,
+   "q": "সাম্প্রতিক দাখিলা দেখাও",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 645,
+   "q": "journal entry koto",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 646,
+   "q": "dakhila dekhao",
+   "intent": "journal",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 647,
+   "q": "what loans are outstanding",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 648,
+   "q": "how much loan is left",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 649,
+   "q": "show me the staff loans",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 650,
+   "q": "what is the EMI",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 651,
+   "q": "any loans running",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 652,
+   "q": "কত ঋণ বাকি আছে",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 653,
+   "q": "কর্মীদের ঋণ কত",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 654,
+   "q": "কিস্তি কত",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 655,
+   "q": "কোনো ঋণ চলছে কি",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 656,
+   "q": "rin koto baki",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 657,
+   "q": "loan koto ache",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 658,
+   "q": "kisti koto",
+   "intent": "loans",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 659,
+   "q": "how much advance salary is outstanding",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 660,
+   "q": "show me the advances",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 661,
+   "q": "who has taken an advance",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 662,
+   "q": "advance salary total",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 663,
+   "q": "অগ্রিম বেতন কত বাকি",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 664,
+   "q": "কে অগ্রিম নিয়েছে",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 665,
+   "q": "এডভান্স কত দেওয়া হয়েছে",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 666,
+   "q": "advance koto ache",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 667,
+   "q": "ogrim beton koto",
+   "intent": "advances",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 668,
+   "q": "how much VAT do we owe",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 669,
+   "q": "what is the TDS position",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 670,
+   "q": "show me the tax payable",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 671,
+   "q": "do we have a VAT return",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 672,
+   "q": "income tax payable",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 673,
+   "q": "ভ্যাট কত দিতে হবে",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 674,
+   "q": "উৎসে কর কত",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 675,
+   "q": "ট্যাক্স কত বাকি",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 676,
+   "q": "আয়কর কত",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 677,
+   "q": "vat koto dite hobe",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 678,
+   "q": "tax koto baki",
+   "intent": "tax",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 679,
+   "q": "which company is doing best",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 680,
+   "q": "compare the companies",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 681,
+   "q": "company wise profit",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 682,
+   "q": "which company is losing money",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 683,
+   "q": "profit by company",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 684,
+   "q": "কোন কোম্পানি ভালো করছে",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 685,
+   "q": "কোম্পানি অনুযায়ী লাভ",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 686,
+   "q": "কোন প্রতিষ্ঠান লোকসানে",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 687,
+   "q": "কোম্পানিগুলোর তুলনা দাও",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 688,
+   "q": "kon company valo korche",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 689,
+   "q": "company onujayi lav",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 690,
+   "q": "show me the payroll",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 691,
+   "q": "show me the payroll this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 692,
+   "q": "show me the payroll last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 693,
+   "q": "show me the payroll this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 694,
+   "q": "show me the payroll for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 695,
+   "q": "show me the payroll for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 696,
+   "q": "what is the salary bill",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 697,
+   "q": "what is the salary bill this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 698,
+   "q": "what is the salary bill last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 699,
+   "q": "what is the salary bill this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 700,
+   "q": "what is the salary bill for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 701,
+   "q": "what is the salary bill for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 702,
+   "q": "payroll for last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 703,
+   "q": "payroll for last month this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 704,
+   "q": "payroll for last month last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 705,
+   "q": "payroll for last month this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 706,
+   "q": "payroll for last month for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 707,
+   "q": "payroll for last month for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 708,
+   "q": "how much is the monthly wage bill",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 709,
+   "q": "how much is the monthly wage bill this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 710,
+   "q": "how much is the monthly wage bill last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 711,
+   "q": "how much is the monthly wage bill this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 712,
+   "q": "how much is the monthly wage bill for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 713,
+   "q": "how much is the monthly wage bill for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 714,
+   "q": "payroll overview",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 715,
+   "q": "payroll overview this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 716,
+   "q": "payroll overview last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 717,
+   "q": "payroll overview this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 718,
+   "q": "payroll overview for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 719,
+   "q": "payroll overview for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 720,
+   "q": "total salary cost",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 721,
+   "q": "total salary cost this month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 722,
+   "q": "total salary cost last month",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 723,
+   "q": "total salary cost this year",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 724,
+   "q": "total salary cost for Epal Travels",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 725,
+   "q": "total salary cost for IT Solutions",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 726,
+   "q": "পে-রোল দেখাও",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 727,
+   "q": "পে-রোল দেখাও এ মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 728,
+   "q": "পে-রোল দেখাও গত মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 729,
+   "q": "পে-রোল দেখাও এ বছর",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 730,
+   "q": "পে-রোল দেখাও ট্রাভেলসের জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 731,
+   "q": "পে-রোল দেখাও আইটির জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 732,
+   "q": "বেতন বিল কত",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 733,
+   "q": "বেতন বিল কত এ মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 734,
+   "q": "বেতন বিল কত গত মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 735,
+   "q": "বেতন বিল কত এ বছর",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 736,
+   "q": "বেতন বিল কত ট্রাভেলসের জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 737,
+   "q": "বেতন বিল কত আইটির জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 738,
+   "q": "গত মাসের বেতন কত হয়েছে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 739,
+   "q": "গত মাসের বেতন কত হয়েছে এ মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 740,
+   "q": "গত মাসের বেতন কত হয়েছে গত মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 741,
+   "q": "গত মাসের বেতন কত হয়েছে এ বছর",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 742,
+   "q": "গত মাসের বেতন কত হয়েছে ট্রাভেলসের জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 743,
+   "q": "গত মাসের বেতন কত হয়েছে আইটির জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 744,
+   "q": "মাসিক বেতন খরচ কত",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 745,
+   "q": "মাসিক বেতন খরচ কত এ মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 746,
+   "q": "মাসিক বেতন খরচ কত গত মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 747,
+   "q": "মাসিক বেতন খরচ কত এ বছর",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 748,
+   "q": "মাসিক বেতন খরচ কত ট্রাভেলসের জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 749,
+   "q": "মাসিক বেতন খরচ কত আইটির জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 750,
+   "q": "মোট বেতন কত",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 751,
+   "q": "মোট বেতন কত এ মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 752,
+   "q": "মোট বেতন কত গত মাসে",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 753,
+   "q": "মোট বেতন কত এ বছর",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 754,
+   "q": "মোট বেতন কত ট্রাভেলসের জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 755,
+   "q": "মোট বেতন কত আইটির জন্য",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 756,
+   "q": "payroll dekhao",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 757,
+   "q": "payroll dekhao ei mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 758,
+   "q": "payroll dekhao goto mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 759,
+   "q": "payroll dekhao travels er jonno",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 760,
+   "q": "beton bill koto",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 761,
+   "q": "beton bill koto ei mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 762,
+   "q": "beton bill koto goto mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 763,
+   "q": "beton bill koto travels er jonno",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 764,
+   "q": "beton koto",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 765,
+   "q": "beton koto ei mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 766,
+   "q": "beton koto goto mash e",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 767,
+   "q": "beton koto travels er jonno",
+   "intent": "payroll",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 768,
+   "q": "has salary been paid",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 769,
+   "q": "has salary been paid this month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 770,
+   "q": "has salary been paid last month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 771,
+   "q": "has salary been paid this year",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 772,
+   "q": "whose salary is pending",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 773,
+   "q": "whose salary is pending this month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 774,
+   "q": "whose salary is pending last month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 775,
+   "q": "whose salary is pending this year",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 776,
+   "q": "how much salary is unpaid",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 777,
+   "q": "how much salary is unpaid this month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 778,
+   "q": "how much salary is unpaid last month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 779,
+   "q": "how much salary is unpaid this year",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 780,
+   "q": "is payroll settled",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 781,
+   "q": "is payroll settled this month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 782,
+   "q": "is payroll settled last month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 783,
+   "q": "is payroll settled this year",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 784,
+   "q": "who has not been paid",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 785,
+   "q": "who has not been paid this month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 786,
+   "q": "who has not been paid last month",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 787,
+   "q": "who has not been paid this year",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 788,
+   "q": "বেতন পরিশোধ হয়েছে কি",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 789,
+   "q": "বেতন পরিশোধ হয়েছে কি এ মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 790,
+   "q": "বেতন পরিশোধ হয়েছে কি গত মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 791,
+   "q": "বেতন পরিশোধ হয়েছে কি এ বছর",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 792,
+   "q": "কার বেতন বাকি",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 793,
+   "q": "কার বেতন বাকি এ মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 794,
+   "q": "কার বেতন বাকি গত মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 795,
+   "q": "কার বেতন বাকি এ বছর",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 796,
+   "q": "কত বেতন এখনো দেওয়া হয়নি",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 797,
+   "q": "কত বেতন এখনো দেওয়া হয়নি এ মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 798,
+   "q": "কত বেতন এখনো দেওয়া হয়নি গত মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 799,
+   "q": "কত বেতন এখনো দেওয়া হয়নি এ বছর",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 800,
+   "q": "বেতন কি দেওয়া হয়েছে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 801,
+   "q": "বেতন কি দেওয়া হয়েছে এ মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 802,
+   "q": "বেতন কি দেওয়া হয়েছে গত মাসে",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 803,
+   "q": "বেতন কি দেওয়া হয়েছে এ বছর",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 804,
+   "q": "beton porishodh hoyeche ki",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 805,
+   "q": "beton porishodh hoyeche ki ei mash e",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 806,
+   "q": "beton porishodh hoyeche ki goto mash e",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 807,
+   "q": "kar beton baki",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 808,
+   "q": "kar beton baki ei mash e",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 809,
+   "q": "kar beton baki goto mash e",
+   "intent": "payroll_unpaid",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 810,
+   "q": "how is late deduction calculated",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 811,
+   "q": "explain the deduction rule",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 812,
+   "q": "why was money deducted",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 813,
+   "q": "how is salary calculated",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 814,
+   "q": "what is the grace period",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 815,
+   "q": "how does absent deduction work",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 816,
+   "q": "বিলম্ব কর্তন কিভাবে হয়",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 817,
+   "q": "কর্তনের নিয়ম কী",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 818,
+   "q": "বেতন কিভাবে হিসাব হয়",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 819,
+   "q": "কেন টাকা কাটা হলো",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 820,
+   "q": "অনুপস্থিতির কর্তন কিভাবে",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 821,
+   "q": "deduction kivabe hoy",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 822,
+   "q": "beton kivabe hisab hoy",
+   "intent": "deduction_rules",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 823,
+   "q": "how much overtime this month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 824,
+   "q": "how much overtime this month this month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 825,
+   "q": "how much overtime this month last month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 826,
+   "q": "how much overtime this month this year",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 827,
+   "q": "who worked the most overtime",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 828,
+   "q": "who worked the most overtime this month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 829,
+   "q": "who worked the most overtime last month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 830,
+   "q": "who worked the most overtime this year",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 831,
+   "q": "overtime hours",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 832,
+   "q": "overtime hours this month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 833,
+   "q": "overtime hours last month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 834,
+   "q": "overtime hours this year",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 835,
+   "q": "is overtime being paid",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 836,
+   "q": "is overtime being paid this month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 837,
+   "q": "is overtime being paid last month",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 838,
+   "q": "is overtime being paid this year",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "period"
+  },
+  {
+   "id": 839,
+   "q": "এ মাসে ওভারটাইম কত",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 840,
+   "q": "এ মাসে ওভারটাইম কত এ মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 841,
+   "q": "এ মাসে ওভারটাইম কত গত মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 842,
+   "q": "এ মাসে ওভারটাইম কত এ বছর",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 843,
+   "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 844,
+   "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 845,
+   "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে গত মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 846,
+   "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ বছর",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 847,
+   "q": "অতিরিক্ত সময় কত",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 848,
+   "q": "অতিরিক্ত সময় কত এ মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 849,
+   "q": "অতিরিক্ত সময় কত গত মাসে",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 850,
+   "q": "অতিরিক্ত সময় কত এ বছর",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 851,
+   "q": "overtime koto",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 852,
+   "q": "overtime koto ei mash e",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 853,
+   "q": "overtime koto goto mash e",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 854,
+   "q": "ke beshi overtime korlo",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 855,
+   "q": "ke beshi overtime korlo ei mash e",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 856,
+   "q": "ke beshi overtime korlo goto mash e",
+   "intent": "overtime",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "period"
+  },
+  {
+   "id": 857,
+   "q": "how many employees do we have",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 858,
+   "q": "how many employees do we have for Epal Travels",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 859,
+   "q": "how many employees do we have for IT Solutions",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 860,
+   "q": "what is the headcount",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 861,
+   "q": "what is the headcount for Epal Travels",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 862,
+   "q": "what is the headcount for IT Solutions",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 863,
+   "q": "total staff strength",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 864,
+   "q": "total staff strength for Epal Travels",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 865,
+   "q": "total staff strength for IT Solutions",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 866,
+   "q": "how many people work here",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 867,
+   "q": "how many people work here for Epal Travels",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 868,
+   "q": "how many people work here for IT Solutions",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 869,
+   "q": "how many staff are active",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 870,
+   "q": "how many staff are active for Epal Travels",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 871,
+   "q": "how many staff are active for IT Solutions",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "company"
+  },
+  {
+   "id": 872,
+   "q": "কতজন কর্মী আছে",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 873,
+   "q": "কতজন কর্মী আছে ট্রাভেলসের জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 874,
+   "q": "কতজন কর্মী আছে আইটির জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 875,
+   "q": "মোট জনবল কত",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 876,
+   "q": "মোট জনবল কত ট্রাভেলসের জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 877,
+   "q": "মোট জনবল কত আইটির জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 878,
+   "q": "কত কর্মচারী আছে",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 879,
+   "q": "কত কর্মচারী আছে ট্রাভেলসের জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 880,
+   "q": "কত কর্মচারী আছে আইটির জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 881,
+   "q": "কতজন কাজ করে",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 882,
+   "q": "কতজন কাজ করে ট্রাভেলসের জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 883,
+   "q": "কতজন কাজ করে আইটির জন্য",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 884,
+   "q": "kotojon kormi ache",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 885,
+   "q": "kotojon kormi ache travels er jonno",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 886,
+   "q": "koto employee ache",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 887,
+   "q": "koto employee ache travels er jonno",
+   "intent": "headcount",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "company"
+  },
+  {
+   "id": 888,
+   "q": "how many departments",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 889,
+   "q": "headcount by department",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 890,
+   "q": "which department is biggest",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 891,
+   "q": "show me the departments",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 892,
+   "q": "কতগুলো বিভাগ আছে",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 893,
+   "q": "বিভাগ অনুযায়ী কতজন",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 894,
+   "q": "সবচেয়ে বড় বিভাগ কোনটা",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 895,
+   "q": "koto bibhag ache",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 896,
+   "q": "bibhag onujayi kotojon",
+   "intent": "departments",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 897,
+   "q": "who is absent today",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 898,
+   "q": "attendance today",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 899,
+   "q": "who is present",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 900,
+   "q": "how many came today",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 901,
+   "q": "who is in the office",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 902,
+   "q": "today attendance summary",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 903,
+   "q": "আজ কে অনুপস্থিত",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 904,
+   "q": "আজকের হাজিরা",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 905,
+   "q": "কে কে এসেছে",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 906,
+   "q": "আজ কতজন এসেছে",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 907,
+   "q": "আজ কে আসেনি",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 908,
+   "q": "উপস্থিতি কেমন",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 909,
+   "q": "aj ke onupostit",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 910,
+   "q": "ajker hajira",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 911,
+   "q": "ke eseche aj",
+   "intent": "attendance_today",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 912,
+   "q": "who came late today",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 913,
+   "q": "who was late",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 914,
+   "q": "any latecomers today",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 915,
+   "q": "late arrivals today",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 916,
+   "q": "আজ কে দেরি করে এসেছে",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 917,
+   "q": "কে লেট করেছে",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 918,
+   "q": "আজ কে বিলম্বে এসেছে",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 919,
+   "q": "ke deri kore eseche",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 920,
+   "q": "aj ke late",
+   "intent": "late_today",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 921,
+   "q": "who is always late",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 922,
+   "q": "who is chronically late",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 923,
+   "q": "show me the punctuality problems",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 924,
+   "q": "late patterns this month",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 925,
+   "q": "who has the worst attendance",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 926,
+   "q": "কে প্রায়ই দেরি করে",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 927,
+   "q": "নিয়মিত কে দেরি করে",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 928,
+   "q": "সময়ানুবর্তিতার সমস্যা কার",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 929,
+   "q": "কে বারবার লেট করে",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 930,
+   "q": "ke baar baar late kore",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 931,
+   "q": "niyomito ke deri kore",
+   "intent": "chronic_late",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 932,
+   "q": "who is on leave",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 933,
+   "q": "any pending leave applications",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 934,
+   "q": "how many leave requests",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 935,
+   "q": "show me the leave balance",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 936,
+   "q": "is anyone on leave today",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 937,
+   "q": "কে ছুটিতে আছে",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 938,
+   "q": "ছুটির আবেদন কতগুলো",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 939,
+   "q": "ছুটি বাকি কত",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 940,
+   "q": "আজ কে ছুটিতে",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 941,
+   "q": "ke chutite ache",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 942,
+   "q": "chutir abedon koto",
+   "intent": "leaves",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 943,
+   "q": "when is the next holiday",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 944,
+   "q": "what holidays are coming",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 945,
+   "q": "show me the holiday calendar",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 946,
+   "q": "is the office closed soon",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 947,
+   "q": "পরের ছুটি কবে",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 948,
+   "q": "সামনে কী কী ছুটি",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 949,
+   "q": "ছুটির ক্যালেন্ডার দেখাও",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 950,
+   "q": "সরকারি ছুটি কবে",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 951,
+   "q": "porer chuti kobe",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 952,
+   "q": "samne ki chuti ache",
+   "intent": "holidays",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 953,
+   "q": "any employee requests pending",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 954,
+   "q": "show me the staff requests",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 955,
+   "q": "who has applied for something",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 956,
+   "q": "pending employee applications",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 957,
+   "q": "কর্মীদের কোনো আবেদন আছে",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 958,
+   "q": "কে কী আবেদন করেছে",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 959,
+   "q": "আবেদন কতগুলো ঝুলে আছে",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 960,
+   "q": "kormider abedon ache ki",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 961,
+   "q": "ke ki abedon korche",
+   "intent": "employee_requests",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 962,
+   "q": "who is online now",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 963,
+   "q": "who is working right now",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 964,
+   "q": "who is currently active",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 965,
+   "q": "anyone online",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 966,
+   "q": "এখন কে অনলাইনে",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 967,
+   "q": "এখন কে কাজ করছে",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 968,
+   "q": "কে সক্রিয় আছে",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 969,
+   "q": "ekhon ke online",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 970,
+   "q": "ke kaj korche ekhon",
+   "intent": "online_now",
+   "section": "Payroll & People",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 971,
+   "q": "how many tasks are overdue",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 972,
+   "q": "show me the tasks",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 973,
+   "q": "who is overloaded",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 974,
+   "q": "what work is pending",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 975,
+   "q": "task status",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 976,
+   "q": "কতগুলো কাজ বকেয়া",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 977,
+   "q": "টাস্কের অবস্থা কী",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 978,
+   "q": "কার উপর কাজের চাপ বেশি",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 979,
+   "q": "কী কী কাজ বাকি",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 980,
+   "q": "koto kaj baki",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 981,
+   "q": "task er obostha ki",
+   "intent": "tasks",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 982,
+   "q": "how many projects are running",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 983,
+   "q": "which projects are at risk",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 984,
+   "q": "project status",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 985,
+   "q": "is any project behind schedule",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 986,
+   "q": "show me the projects",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 987,
+   "q": "কতগুলো প্রকল্প চলছে",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 988,
+   "q": "কোন প্রকল্প ঝুঁকিতে",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 989,
+   "q": "প্রকল্পের অগ্রগতি কেমন",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 990,
+   "q": "কোন প্রজেক্ট পিছিয়ে আছে",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 991,
+   "q": "koto project cholche",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 992,
+   "q": "kon project jhukite",
+   "intent": "projects",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 993,
+   "q": "show me the office to-dos",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 994,
+   "q": "what is on the checklist",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 995,
+   "q": "office todo list",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 996,
+   "q": "অফিসের কাজের তালিকা দেখাও",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 997,
+   "q": "চেকলিস্টে কী আছে",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 998,
+   "q": "করণীয় তালিকা",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 999,
+   "q": "office todo dekhao",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1000,
+   "q": "checklist e ki ache",
+   "intent": "todos",
+   "section": "Operations",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1001,
+   "q": "what is in the pipeline",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1002,
+   "q": "how many open leads",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1003,
+   "q": "what is our conversion rate",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1004,
+   "q": "show me the CRM status",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1005,
+   "q": "any follow ups due",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1006,
+   "q": "how many leads have gone cold",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1007,
+   "q": "পাইপলাইনে কী আছে",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1008,
+   "q": "কতগুলো লিড খোলা",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1009,
+   "q": "কনভার্শন রেট কত",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1010,
+   "q": "সিআরএম-এর অবস্থা কী",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1011,
+   "q": "কোনো ফলোআপ বাকি আছে",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1012,
+   "q": "pipeline e ki ache",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1013,
+   "q": "koto lead ache",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1014,
+   "q": "conversion rate koto",
+   "intent": "pipeline",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1015,
+   "q": "how many customers do we have",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1016,
+   "q": "who is our biggest customer",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1017,
+   "q": "show me the customer list",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1018,
+   "q": "top customers",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1019,
+   "q": "কতজন গ্রাহক আছে",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1020,
+   "q": "সবচেয়ে বড় গ্রাহক কে",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1021,
+   "q": "গ্রাহকের তালিকা দেখাও",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1022,
+   "q": "koto customer ache",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1023,
+   "q": "boro customer ke",
+   "intent": "customers",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1024,
+   "q": "how many suppliers",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1025,
+   "q": "show me the vendor list",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1026,
+   "q": "who are our suppliers",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1027,
+   "q": "কতজন সরবরাহকারী আছে",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1028,
+   "q": "ভেন্ডরের তালিকা দেখাও",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1029,
+   "q": "সাপ্লায়ার কারা",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1030,
+   "q": "koto supplier ache",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1031,
+   "q": "vendor list dekhao",
+   "intent": "suppliers",
+   "section": "CRM",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1032,
+   "q": "where do I find the payslips",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1033,
+   "q": "where is the trial balance",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1034,
+   "q": "which menu has attendance",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1035,
+   "q": "where do I set the budget",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1036,
+   "q": "how do I get to the general ledger",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1037,
+   "q": "where are the payment schedules",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1038,
+   "q": "where do I see the leads",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1039,
+   "q": "which screen shows the projects",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1040,
+   "q": "where is petty cash",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1041,
+   "q": "where do I find expenses",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1042,
+   "q": "where are the bank accounts",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1043,
+   "q": "where do I see holidays",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1044,
+   "q": "কোথায় পাবো পে-স্লিপ",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1045,
+   "q": "রেওয়ামিল কোথায় দেখব",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1046,
+   "q": "হাজিরা কোন মেনুতে",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1047,
+   "q": "বাজেট কোথায় বসাবো",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1048,
+   "q": "খতিয়ান কোথায় পাব",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1049,
+   "q": "পেমেন্ট সূচি কোথায়",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1050,
+   "q": "লিড কোথায় দেখব",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1051,
+   "q": "প্রকল্প কোন স্ক্রিনে",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1052,
+   "q": "খরচ কোথায় পাবো",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1053,
+   "q": "payslip kothay pabo",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1054,
+   "q": "trial balance kothay",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1055,
+   "q": "hajira kon menu te",
+   "intent": "navigation",
+   "section": "ERP navigation",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1056,
+   "q": "how does an expense get posted",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1057,
+   "q": "what happens when a payment schedule is approved",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1058,
+   "q": "how does the lead workflow work",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1059,
+   "q": "explain the employee request process",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1060,
+   "q": "how is a correction handled",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1061,
+   "q": "why must a shared account have no company",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1062,
+   "q": "what reports is the ERP missing",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1063,
+   "q": "how does overtime work",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1064,
+   "q": "how is the leave balance worked out",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1065,
+   "q": "খরচের এন্ট্রি কিভাবে বসে",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1066,
+   "q": "পেমেন্ট সূচি অনুমোদন হলে কী হয়",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1067,
+   "q": "লিডের ধাপগুলো কী",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1068,
+   "q": "কর্মীর আবেদনের প্রক্রিয়া বুঝিয়ে বলো",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1069,
+   "q": "ভুল এন্ট্রি কিভাবে সংশোধন হয়",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1070,
+   "q": "ছুটির হিসাব কিভাবে হয়",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1071,
+   "q": "ওভারটাইম কিভাবে কাজ করে",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1072,
+   "q": "khoroch er entry kivabe bose",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1073,
+   "q": "lead er dhap ki",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1074,
+   "q": "chutir hisab kivabe hoy",
+   "intent": "howto",
+   "section": "ERP rules",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1075,
+   "q": "what can you do",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1076,
+   "q": "what can I ask you",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1077,
+   "q": "what do you know",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1078,
+   "q": "help me",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1079,
+   "q": "তুমি কী কী পারো",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1080,
+   "q": "কী জিজ্ঞেস করতে পারি",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1081,
+   "q": "তুমি কী জানো",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1082,
+   "q": "tumi ki paro",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1083,
+   "q": "ki jiggesh korte pari",
+   "intent": "capabilities",
+   "section": "Meta",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1084,
+   "q": "hello",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1085,
+   "q": "good morning",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1086,
+   "q": "hi EON",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1087,
+   "q": "thank you",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1088,
+   "q": "thanks EON",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 1089,
+   "q": "হ্যালো",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1090,
+   "q": "শুভ সকাল",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1091,
+   "q": "আসসালামু আলাইকুম",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1092,
+   "q": "ধন্যবাদ",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1093,
+   "q": "salam",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1094,
+   "q": "dhonnobad",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 1095,
+   "q": "kemon acho",
+   "intent": "greeting",
+   "section": "Meta",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  }
+ ]
+}
