@@ -48,3 +48,4 @@ deploy/.webhook.last
 /erp/public/storage
 /erp/public/hot
 # erp/public/build IS versioned: the host has no Node, so the compiled Tailwind/JS bundle ships with the source
+tools/.qa-dataset.json
