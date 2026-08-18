@@ -1,15 +1,19 @@
 <?php
-/* EON · embed self-check — is the companion being appended to PHP pages here?
+/* EON · embed self-check — is the companion being added to PHP pages here?
    GET /embed/check.php → JSON. Reveals nothing sensitive: only whether PHP's
-   auto_append_file points at eon-inject.php, and which mechanism set it. */
+   auto_prepend/append_file points at eon-inject.php, and whether the buffer
+   callback actually fired for this very response. */
 declare(strict_types=1);
 header('Content-Type: application/json');
 header('Cache-Control: no-store');
-$aaf = (string) ini_get('auto_append_file');
+$pre = (string) ini_get('auto_prepend_file');
+$app = (string) ini_get('auto_append_file');
+$mode = str_contains($pre, 'eon-inject.php') ? 'prepend' : (str_contains($app, 'eon-inject.php') ? 'append' : 'none');
 echo json_encode([
     'ok' => true,
-    'auto_append_file' => $aaf !== '' && str_contains($aaf, 'eon-inject.php'),
-    'via' => $aaf === '' ? 'none' : (str_contains($aaf, '__EON_ROOT__') ? 'placeholder-not-filled' : 'set'),
+    'mode' => $mode,
+    'placeholder_filled' => !str_contains($pre . $app, '__EON_ROOT__'),
+    'injector_loaded' => defined('EON_INJECT_LOADED'),
+    'buffer_open' => ob_get_level() > 0,
     'sapi' => PHP_SAPI,
-    'user_ini' => (string) ini_get('user_ini.filename'),
 ], JSON_UNESCAPED_SLASHES), "\n";

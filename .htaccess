@@ -44,10 +44,10 @@ RewriteRule ^erp/(?!public/) - [F,L]
 # website's own document root, which is the parent site's, not this folder.
 # __EON_ROOT__ is filled with the absolute path by deploy/post-deploy.php on the host.
 <IfModule mod_php.c>
-  php_value auto_append_file "__EON_ROOT__/embed/eon-inject.php"
+  php_value auto_prepend_file "__EON_ROOT__/embed/eon-inject.php"
 </IfModule>
 <IfModule lsapi_module>
-  php_value auto_append_file "__EON_ROOT__/embed/eon-inject.php"
+  php_value auto_prepend_file "__EON_ROOT__/embed/eon-inject.php"
 </IfModule>
 
 # the ERP is only served once it is actually installed (its packages present)

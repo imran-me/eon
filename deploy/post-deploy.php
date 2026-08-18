@@ -166,7 +166,7 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
     $line(is_file($erp . '/vendor/autoload.php') ? 'ERP ready (packages present, caches cleared)' : 'ERP source present, packages missing');
 }
 
-// ---- 1a. the site .htaccess carries this host's absolute path for auto_append_file ----
+// ---- 1a. the site .htaccess carries this host's absolute path for auto_prepend_file ----
 // (a placeholder in git, the real path on the host — the same file works on any account)
 $ht = $root . '/.htaccess';
 if (is_file($ht)) {
@@ -175,7 +175,7 @@ if (is_file($ht)) {
     if (str_contains($txt, '__EON_ROOT__')) {
         if (@file_put_contents($ht, str_replace('__EON_ROOT__', $real, $txt)) !== false) $line('site .htaccess: append path set to ' . $real);
         else $line('! cannot write the site .htaccess');
-    } elseif (preg_match('~auto_append_file "([^"]+)/embed/eon-inject\.php"~', $txt, $m) && $m[1] !== $real) {
+    } elseif (preg_match('~auto_(?:append|prepend)_file "([^"]+)/embed/eon-inject\.php"~', $txt, $m) && $m[1] !== $real) {
         // moved to another account/path: point it at the new one
         if (@file_put_contents($ht, str_replace($m[1] . '/embed/eon-inject.php', $real . '/embed/eon-inject.php', $txt)) !== false) $line('site .htaccess: append path updated to ' . $real);
     }
@@ -186,10 +186,10 @@ if (is_file($ht)) {
 // ERP itself; PHP appends one script tag to its HTML responses (embed/eon-inject.php).
 if (is_file($root . '/erp/public/index.php')) {
     $ini = $root . '/.user.ini';
-    $want = 'auto_append_file = "' . $root . '/embed/eon-inject.php"';
+    $want = 'auto_prepend_file = "' . $root . '/embed/eon-inject.php"';
     $have = is_file($ini) ? (string) @file_get_contents($ini) : '';
     if (!str_contains($have, 'eon-inject.php')) {
-        $next = trim(preg_replace('/^\s*auto_append_file\s*=.*$/mi', '', $have) ?? '');
+        $next = trim(preg_replace('/^\s*auto_(append|prepend)_file\s*=.*$/mi', '', $have) ?? '');
         if (@file_put_contents($ini, ($next ? $next . "\n" : '') . $want . "\n") !== false) {
             $line('ERP detected → companion injection enabled (.user.ini, takes effect within 5 minutes)');
         } else {
