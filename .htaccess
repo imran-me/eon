@@ -31,7 +31,9 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 #  of these rules is skipped — the -f test fails — and the site keeps
 #  serving EON's panel, so nothing breaks in the meantime.
 # ---------------------------------------------------------------
-RewriteRule ^(eon|app|ai-companion|embed|server|deploy|vendor)(/|$) - [L]
+# EON's own paths — only these names are reserved; everything else belongs to the ERP
+# (the ERP serves its own public/vendor/…, public/uploads/…, etc.)
+RewriteRule ^(eon|app|ai-companion|embed|server|deploy)(/|$) - [L]
 
 # the ERP's own source tree must never be reachable except through public/
 RewriteRule ^erp/(?!public/) - [F,L]
