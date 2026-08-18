@@ -184,6 +184,15 @@ The words EON says are now authentic Bangla, but a browser still needs a **Bangl
 
 **A trap that will cost you an hour:** on Windows, never pass Bengali to `curl --data-urlencode`. curl transcodes the argument to the ANSI codepage first, so বাংলা arrives as `???` and an em dash as a stray `0x97`, and the server rightly rejects it as malformed UTF-8 — which looks exactly like a bug in EON and is not. Percent-encode first (`urllib.parse.quote`) and pass the encoded string, as `live-check.py` does.
 
+## Access — reachable, and usable
+
+Two audits, both repeatable, both currently clean:
+
+- `python tools/audit-access.py --token …` — **33/33**. Every endpoint, page and asset the app needs answers; every private path (`config.local.php`, `server/lib/*`, `.git`, `.env`, `erp/.env`, logs, `deploy.sh`, this file) is refused. It fails the build in either direction: something needed returning 403/404/500, *or* something private returning 200.
+- `tools/a11y-check.html` (serve the repo, then open it) — controls with no name, inputs with no label, images with no alt, undeclared language, Bangla not marked `lang="bn"`, and text under 4.5:1. Currently **none** on any count.
+
+The Bangla one matters most and is easy to miss: বাংলা inside an English document is read aloud by a screen reader in an English voice — exactly the failure `Tts` exists to fix, one layer up. `markLanguages()` in `eon-app.js` marks the leaves after every paint, so new Bangla is covered without tagging each string.
+
 ## Host facts (Hostinger, eon.gulfrabit.com) — learned the hard way
 
 - **Signing in: EON trusts the ERP's session, not a token.** `server/lib/ErpSession.php` decrypts `laravel_session` with the ERP's `APP_KEY` (AES-256-CBC, `config/app.php` pins it; GCM handled too), verifies the HMAC and Laravel's cookie-value prefix, reads the session from `erp/storage/framework/sessions/` (or the `sessions` table) and requires the `login_web_<sha1>` guard key. `Http::auth()` accepts it before the token. So: logged into the ERP ⇒ logged into EON, same origin, nothing to paste. The token still works for cron and for devices not signed into the ERP. `health.php` reports `auth` (`erp-session`/`token`/`token-required`), `erp_login` and `user`.
