@@ -38,6 +38,18 @@ RewriteRule ^(eon|app|ai-companion|embed|server|deploy)(/|$) - [L]
 # the ERP's own source tree must never be reachable except through public/
 RewriteRule ^erp/(?!public/) - [F,L]
 
+# ---- EON rides on the ERP: PHP appends one script tag to every HTML page ----
+# (embed/eon-inject.php decides per response — JSON, downloads and AJAX are left alone).
+# Set here rather than in .user.ini: on this host PHP reads .user.ini only from the
+# website's own document root, which is the parent site's, not this folder.
+# __EON_ROOT__ is filled with the absolute path by deploy/post-deploy.php on the host.
+<IfModule mod_php.c>
+  php_value auto_append_file "__EON_ROOT__/embed/eon-inject.php"
+</IfModule>
+<IfModule lsapi_module>
+  php_value auto_append_file "__EON_ROOT__/embed/eon-inject.php"
+</IfModule>
+
 # the ERP is only served once it is actually installed (its packages present)
 RewriteCond %{DOCUMENT_ROOT}/erp/vendor/autoload.php !-f
 RewriteRule ^ - [S=3]

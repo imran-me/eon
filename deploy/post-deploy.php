@@ -166,6 +166,21 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
     $line(is_file($erp . '/vendor/autoload.php') ? 'ERP ready (packages present, caches cleared)' : 'ERP source present, packages missing');
 }
 
+// ---- 1a. the site .htaccess carries this host's absolute path for auto_append_file ----
+// (a placeholder in git, the real path on the host — the same file works on any account)
+$ht = $root . '/.htaccess';
+if (is_file($ht)) {
+    $txt = (string) @file_get_contents($ht);
+    $real = str_replace(DIRECTORY_SEPARATOR, '/', $root);
+    if (str_contains($txt, '__EON_ROOT__')) {
+        if (@file_put_contents($ht, str_replace('__EON_ROOT__', $real, $txt)) !== false) $line('site .htaccess: append path set to ' . $real);
+        else $line('! cannot write the site .htaccess');
+    } elseif (preg_match('~auto_append_file "([^"]+)/embed/eon-inject\.php"~', $txt, $m) && $m[1] !== $real) {
+        // moved to another account/path: point it at the new one
+        if (@file_put_contents($ht, str_replace($m[1] . '/embed/eon-inject.php', $real . '/embed/eon-inject.php', $txt)) !== false) $line('site .htaccess: append path updated to ' . $real);
+    }
+}
+
 // ---- 1b. the ERP is the front door: make sure the companion is appended to its pages ----
 // Only once the ERP is actually installed in erp/ — see docs/erp-host.md. We never edit the
 // ERP itself; PHP appends one script tag to its HTML responses (embed/eon-inject.php).
