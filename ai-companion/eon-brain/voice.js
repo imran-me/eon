@@ -20,14 +20,17 @@
      v.say(text, { lang })        → speak (returns a promise)
      v.setLang('en-US' | 'bn-BD') → recognition + synthesis language
      v.hasVoiceFor('bn')          → can this machine pronounce that language?
-     v.voiceReport()              → what is installed, and what to do if Bangla is missing
+     v.voiceReport()              → what is installed, and where Bangla comes from
+     v.setTts(url)                → EON's own speech endpoint (default /server/api/tts.php)
+     v.serverVoice('auto'|'always'|'never')
      v.wakeWord(true|false)       → require "eon" in continuous mode
    ============================================================ */
 
 const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 const SS = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
-const state = { lang: 'en-US', listening: false, continuous: false, wake: false, rec: null, voices: [], speaking: false, status: 'idle', muted: false, rate: 1.0, pitch: 1.0, sayId: 0 };
+const state = { lang: 'en-US', listening: false, continuous: false, wake: false, rec: null, voices: [], speaking: false, status: 'idle', muted: false, rate: 1.0, pitch: 1.0, sayId: 0,
+  tts: '/server/api/tts.php', serverVoice: 'auto', audio: null };   // 'auto' | 'always' | 'never'
 const listeners = { transcript: new Set(), state: new Set() };
 const emit = (k, ...a) => listeners[k].forEach((fn) => { try { fn(...a); } catch (e) { console.warn('[EON voice] listener', e); } });
 const setStatus = (s, detail) => { state.status = s; emit('state', s, detail); };
@@ -54,6 +57,49 @@ function hasVoiceFor(lang) {
 
 const WAKE = /^\s*(hey |ok |hi )?(eon|ion|eyon|aeon|ইয়ন|ইওন|এওন)[,!.\s]*/i;
 
+/* ------------------------------------------------------------------
+   EON's own voice.
+
+   This machine has English voices and nothing else — checked: Windows
+   ships David/Mark/Zira, Chrome adds nineteen Google voices and none
+   of them is Bengali. So for Bangla the browser is asked to play an
+   MP3 that the EON server rendered, instead of pretending it can
+   pronounce the script itself.
+   ------------------------------------------------------------------ */
+function ttsUrl(text, lang) {
+  const base = state.tts;
+  const sep = base.indexOf('?') === -1 ? '?' : '&';
+  return base + sep + 'lang=' + encodeURIComponent(lang) + '&text=' + encodeURIComponent(text);
+}
+
+function sayViaServer(text, lang, myId) {
+  return new Promise((resolve) => {
+    let a;
+    try { a = new Audio(ttsUrl(text, lang)); } catch (e) { resolve(false); return; }
+    a.crossOrigin = 'use-credentials';
+    state.audio = a;
+    const done = (ok) => {
+      if (state.audio === a) state.audio = null;
+      resolve(ok);
+    };
+    a.onended = () => done(true);
+    a.onerror = () => {
+      setStatus('error', 'EON could not reach its own voice service, so the answer is on screen only.');
+      done(false);
+    };
+    a.play().catch(() => {
+      // browsers block audio until the page has been interacted with
+      setStatus('error', 'The browser blocked audio until you interact with the page — click anywhere, then ask again.');
+      done(false);
+    });
+    // a hush while the clip is playing must stop it
+    const watch = setInterval(() => {
+      if (state.sayId !== myId) { try { a.pause(); } catch (e) {} clearInterval(watch); done(false); }
+      else if (a.ended || state.audio !== a) clearInterval(watch);
+    }, 120);
+  });
+}
+
 export const EonVoice = {
   available() { return { stt: !!SR, tts: !!SS }; },
   status() { return state.status; },
@@ -64,6 +110,9 @@ export const EonVoice = {
   onState(fn) { listeners.state.add(fn); return () => listeners.state.delete(fn); },
   voices() { return loadVoices(); },
   hasVoiceFor(lang) { return hasVoiceFor(lang); },
+  /** where EON's own speech comes from, and when to use it */
+  setTts(url) { if (url) state.tts = String(url); return state.tts; },
+  serverVoice(mode) { if (mode) state.serverVoice = String(mode); return state.serverVoice; },
   /** what this machine can actually speak — for the UI to warn with */
   voiceReport() {
     const vs = loadVoices();
@@ -72,7 +121,11 @@ export const EonVoice = {
       english: hasVoiceFor('en'),
       bangla: hasVoiceFor('bn'),
       picked: { en: (pickVoice('en-US') || {}).name || null, bn: (pickVoice('bn-BD') || {}).name || null },
-      note: hasVoiceFor('bn') ? '' : 'No Bangla voice is installed, so Bangla answers cannot be read aloud. Windows: Settings → Time & language → Language → add বাংলা with its speech pack.',
+      serverVoice: state.serverVoice,
+      ttsEndpoint: state.tts,
+      note: hasVoiceFor('bn')
+        ? ''
+        : 'No Bangla voice is installed on this machine, so EON renders Bangla speech on the server and plays it back — nothing to install.',
     };
   },
   mute(on) { state.muted = !!on; if (on) this.hush(); },
@@ -108,16 +161,27 @@ export const EonVoice = {
   stop() { state.continuous = false; const r = state.rec; state.rec = null; if (r) { try { r.stop(); } catch {} } state.listening = false; setStatus(state.speaking ? 'speaking' : 'idle'); },
   toggle(opts) { return state.listening ? (this.stop(), false) : this.listen(opts); },
 
-  hush() { state.sayId++; if (SS && (SS.speaking || SS.pending)) { try { SS.cancel(); } catch {} } state.speaking = false; },
+  hush() { state.sayId++; if (SS && (SS.speaking || SS.pending)) { try { SS.cancel(); } catch {} } if (state.audio) { try { state.audio.pause(); } catch {} state.audio = null; } state.speaking = false; },
   say(text, { lang, rate, pitch } = {}) {
     text = String(text || '').replace(/\s+/g, ' ').trim();
     if (!SS || !text || state.muted) return Promise.resolve(false);
-    // Bengali script with no Bengali voice installed reads as silence — say so
-    // rather than appearing to speak and producing nothing.
     const wantsBangla = /[\u0980-\u09FF]/.test(text) || String(lang || state.lang).toLowerCase().startsWith('bn');
-    if (wantsBangla && !hasVoiceFor('bn')) {
-      setStatus('error', 'No Bangla voice is installed on this device — the answer is on screen. Add বাংলা speech in the system language settings to hear it.');
-      return Promise.resolve(false);
+    const code = wantsBangla ? 'bn' : 'en';
+    // no local voice for this language (or the caller wants EON's own): let the
+    // server render it and simply play the audio back
+    const needServer = state.serverVoice === 'always'
+      || (state.serverVoice !== 'never' && !hasVoiceFor(code));
+    if (needServer) {
+      this.hush();
+      const rec0 = state.rec; if (rec0) { try { rec0.stop(); } catch {} }
+      const myId = ++state.sayId;
+      state.speaking = true; setStatus('speaking');
+      return sayViaServer(text, code, myId).then((ok) => {
+        state.speaking = false;
+        if (state.continuous && state.rec === rec0 && rec0) { try { rec0.start(); state.listening = true; setStatus('listening'); } catch (e) { setStatus('idle'); } }
+        else if (state.status === 'speaking') setStatus('idle');
+        return ok;
+      });
     }
     this.hush();
     // pause recognition while speaking so EON doesn't hear itself

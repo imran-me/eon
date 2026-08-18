@@ -38,6 +38,29 @@ return [
         'allow_sql_tool' => false,     // let the model run guarded SELECT-only queries (needs a READ-ONLY DB user; credential tables/columns are blocked)
     ],
 
+    // ---- EON's own voice -------------------------------------------------
+    // The machine usually cannot pronounce বাংলা: Windows ships English voices
+    // only and Chrome's Google voices include Hindi but not Bengali. So EON
+    // renders the speech itself and the browser just plays the audio.
+    'tts' => [
+        'enabled' => true,
+        // Best quality, and genuinely Bangladeshi. Free tier is 500k characters
+        // a month: portal.azure.com → Speech service → Keys and Endpoint.
+        'azure' => [
+            'key'      => getenv('AZURE_SPEECH_KEY') ?: '',
+            'region'   => getenv('AZURE_SPEECH_REGION') ?: '',   // e.g. southeastasia
+            'voice_bn' => 'bn-BD-NabanitaNeural',                // or bn-BD-PradeepNeural
+            'voice_en' => 'en-US-AriaNeural',
+        ],
+        // Google Cloud Text-to-Speech, if you would rather use that (bn-IN).
+        'google' => ['key' => getenv('GOOGLE_TTS_KEY') ?: ''],
+        // The keyless endpoint Google Translate's speaker button uses. It works
+        // with no setup at all, which is why it is the default — but it is
+        // undocumented and rate-limited, so treat it as the stopgap and add an
+        // Azure key before anything that matters. Set false to refuse it.
+        'allow_translate' => true,
+    ],
+
     // ---- the boss --------------------------------------------------------
     'boss' => ['name' => 'Md Imran Hossain', 'title' => 'Managing Director', 'email' => 'imran@epal.com.bd', 'company_id' => null],
     'company' => ['name' => 'Epal Group', 'timezone' => 'Asia/Dhaka', 'currency' => 'BDT'],

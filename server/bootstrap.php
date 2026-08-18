@@ -26,12 +26,14 @@ require_once EON_ROOT . '/lib/Erp.php';
 require_once EON_ROOT . '/lib/Analytics.php';
 require_once EON_ROOT . '/lib/Memory.php';
 require_once EON_ROOT . '/lib/ErpMap.php';   // the ERP described by its own source
-require_once EON_ROOT . '/lib/Nlu.php';      // understands English, বাংলা and Banglish
+require_once EON_ROOT . '/lib/Nlu.php';
+require_once EON_ROOT . '/lib/Grammar.php';  // verb x subject x qualifier — the command space      // understands English, বাংলা and Banglish
 require_once EON_ROOT . '/lib/Phrase.php';    // how EON sounds in each language
 require_once EON_ROOT . '/lib/Loc.php';      // Bangla for the templates EON did not write
 require_once EON_ROOT . '/lib/Kb.php';       // the ERP's screens and rules, in both languages
 require_once EON_ROOT . '/lib/Insight.php';  // aging, runway, forecast, anomalies, comparisons
 require_once EON_ROOT . '/lib/Speech.php';   // written answers turned into spoken words
+require_once EON_ROOT . '/lib/Tts.php';      // and rendered to audio when the machine has no voice
 require_once EON_ROOT . '/lib/Answer.php';   // the offline voice, in the boss's language
 require_once EON_ROOT . '/lib/Answers.php';  // the earlier answerer, kept as a second net
 require_once EON_ROOT . '/lib/Tools.php';
