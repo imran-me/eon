@@ -12,3 +12,4 @@ import './boardpack.js';     // printable board pack
 import './delegate.js';      // delegation & follow-through — EON chases what the boss handed out
 import './whatif.js';        // what-if simulator — levers over the real ledger
 import './navigator.js';     // knows the ERP itself: every screen, menu path, action and table
+import './entity.js';        // one person, one party, one thing: tasks, dues, assignments, errors
