@@ -56,6 +56,7 @@ const SUBJECTS = [
   { id: 'cash',        en: /\b(cash|bank|balance|liquidity|fund)s?\b/,               bn: /(ক্যাশ|নগদ|ব্যাংক|তহবিল)/,        ask: 'cash position' },
   { id: 'receivable',  en: /\b(receivable|owes? us|collect|debtor|due from)\b/,      bn: /(পাওনা|আদায়|বাকি টাকা)/,          ask: 'who owes us money' },
   { id: 'payable',     en: /\b(payable|we owe|creditor|supplier due|bill)s?\b/,      bn: /(দেনা|পরিশোধযোগ্য|পাওনাদার)/,     ask: 'what do we owe' },
+  { id: 'dues',        en: /(owes?|owing|due|dues|outstanding|balance)/,             bn: /(বাকি|বকেয়া|পাওনা কত|দেনা কত)/,   ask: 'who owes us money' },
   { id: 'payroll',     en: /\b(payroll|salary|salaries|payslip|wage)s?\b/,           bn: /(বেতন|স্যালারি|পে-?রোল|মজুরি)/,    ask: 'payroll' },
   { id: 'attendance',  en: /\b(attendance|present|absent|late|punch)\b/,             bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|দেরি)/,  ask: 'who is absent today' },
   { id: 'leave',       en: /\b(leave|holiday|vacation)s?\b/,                         bn: /(ছুটি)/,                          ask: 'leave requests' },
@@ -361,7 +362,7 @@ async function understand(q, ctx) {
         view: 'ops',
       };
     }
-    if (subj.id === 'payroll' || subj.id === 'payslip' || subj.id === 'receivable' || subj.id === 'payable' || subj.id === 'loan') {
+    if (subj.id === 'payroll' || subj.id === 'payslip' || subj.id === 'dues' || subj.id === 'receivable' || subj.id === 'payable' || subj.id === 'loan') {
       // let the entity plug-in answer the money question, then translate the lead line
       const r = typeof window !== 'undefined' && window.EonEntity ? null : null;
       const pr = P.payroll(D, s);
