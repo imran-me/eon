@@ -27,9 +27,12 @@ Http::run(function () {
     // Whatever reaches here may be screen text — "৳1.9 L", an account code, a URL.
     // Put it through the spoken-form builder unless the caller says it is ready,
     // so anything that asks EON to speak is spoken properly, not read out.
+    $prepared = false;
     if (empty($b['raw']) && !isset($_GET['raw']) && class_exists('Speech')) {
+        $before = $text;
         $text = Speech::shorten(Speech::spoken($text, $lang === 'bn' ? 'bn' : 'en'));
-        if (trim($text) === '') Http::fail(400, 'nothing left to say once the text was prepared');
+        if (trim($text) === '') { $text = $before; }
+        $prepared = ($text !== $before);
     }
 
     $r = Tts::speak($text, $lang);
@@ -46,5 +49,6 @@ Http::run(function () {
     header('Cache-Control: public, max-age=86400');
     header('X-EON-TTS-Provider: ' . (string) ($r['provider'] ?? '?'));
     header('X-EON-TTS-Cached: ' . (($r['cached'] ?? false) ? '1' : '0'));
+    header('X-EON-TTS-Prepared: ' . ($prepared ? '1' : '0'));
     echo $bytes;
 });

@@ -160,59 +160,69 @@ final class Speech
      */
     public static function spoken(string $text, string $lang = 'en'): string
     {
+        try {
+            return self::build($text, $lang);
+        } catch (Throwable $e) {
+            if (class_exists('Log')) Log::warn('speech build failed', ['error' => $e->getMessage()]);
+            return $text;                      // saying it plainly beats saying nothing
+        }
+    }
+
+    private static function build(string $text, string $lang): string
+    {
         $t = $text;
         $bn = $lang === 'bn';
 
         // 1. markdown and code fences never survive to speech
-        $t = preg_replace('/```[\s\S]*?```/u', ' ', $t);
-        $t = preg_replace('/`([^`]*)`/u', '$1', $t);
-        $t = preg_replace('/\*\*|__|\*|#+\s?/u', '', $t);
-        $t = preg_replace('/\[(.*?)\]\((.*?)\)/u', '$1', $t);
+        $t = preg_replace('/```[\s\S]*?```/u', ' ', $t) ?? $t;
+        $t = preg_replace('/`([^`]*)`/u', '$1', $t) ?? $t;
+        $t = preg_replace('/\*\*|__|\*|#+\s?/u', '', $t) ?? $t;
+        $t = preg_replace('/\[(.*?)\]\((.*?)\)/u', '$1', $t) ?? $t;
 
         // 2. a spoken menu path, not an address
         //    "HR → Payslips → Statement"  →  "HR, then Payslips, then Statement"
         $arrow = $bn ? ' মেনুতে ' : ', then ';
-        $t = preg_replace('/\s*(?:→|->|›|»)\s*/u', $arrow, $t);
+        $t = preg_replace('/\s*(?:→|->|›|»)\s*/u', $arrow, $t) ?? $t;
 
         // 3. never read a URL or a route placeholder aloud. Take the words that
         //    introduced it too, or the sentence is left dangling on a preposition.
         $URL = '(?:https?://\S+|/[A-Za-z0-9_\-/{}]{3,})';
         //    "… — /super-admin/payslips."  →  "…."
-        $t = preg_replace('~\s*[—–-]\s*' . $URL . '\s*([.।])?~u', '$1', $t);
+        $t = preg_replace('~\s*[—–-]\s*' . $URL . '\s*([.।])?~u', '$1', $t) ?? $t;
         //    "… prints from /salary/view/{id}."  →  "… prints."
-        $t = preg_replace('~\s+(?:from|at|under|in|on|via|to|is)\s+' . $URL . '~iu', '', $t);
-        $t = preg_replace('~\s*' . $URL . '~u', '', $t);
-        $t = preg_replace('/\{[a-z_]+\}/iu', '', $t);
+        $t = preg_replace('~\s+(?:from|at|under|in|on|via|to|is)\s+' . $URL . '~iu', '', $t) ?? $t;
+        $t = preg_replace('~\s*' . $URL . '~u', '', $t) ?? $t;
+        $t = preg_replace('/\{[a-z_]+\}/iu', '', $t) ?? $t;
         //    whatever is left must not end on a bare preposition
-        $t = preg_replace('/\s+(from|at|under|in|on|via|to)\s*([.।,!?])/iu', '$2', $t);
-        $t = preg_replace('/\s+(from|at|under|in|on|via|to)\s*$/iu', '', $t);
+        $t = preg_replace('/\s+(from|at|under|in|on|via|to)\s*([.।,!?])/iu', '$2', $t) ?? $t;
+        $t = preg_replace('/\s+(from|at|under|in|on|via|to)\s*$/iu', '', $t) ?? $t;
 
         // 4. account codes are read digit by digit
         $codeWord = $bn ? 'হিসাব' : 'account';
         $t = preg_replace_callback(
             '/(' . preg_quote($codeWord, '/') . '\s*)([০-৯0-9]{4})/u',
-            function ($m) use ($lang) { return $m[1] . self::digits($m[2], $lang); },
+            function ($m) use ($lang) { return $m[1] . self::digits($m[2], $lang) ?? $t; },
             $t
-        );
+        ) ?? $t;
 
         // 5. money — every written shape, both scripts
         $t = preg_replace_callback(
             '/(−|-)?৳\s?([০-৯0-9][০-৯0-9.,]*)\s*(কোটি|লাখ|হাজার|Cr|L|k)?/u',
             function ($m) use ($lang) {
-                $v = self::toFloat($m[2]);
+                $v = self::toFloat($m[2]) ?? $t;
                 $mult = ['কোটি' => 1e7, 'Cr' => 1e7, 'লাখ' => 1e5, 'L' => 1e5, 'হাজার' => 1e3, 'k' => 1e3];
                 if (!empty($m[3]) && isset($mult[$m[3]])) $v *= $mult[$m[3]];
                 if (!empty($m[1])) $v = -$v;
                 return self::money($v, $lang);
             },
             $t
-        );
+        ) ?? $t;
 
         // 6. percentages — a decimal point is never spoken
         $t = preg_replace_callback(
             '/([০-৯0-9][০-৯0-9.,]*)\s?%/u',
             function ($m) use ($lang) {
-                $v = self::toFloat($m[1]);
+                $v = self::toFloat($m[1]) ?? $t;
                 $r = round($v);
                 $word = $lang === 'bn' ? ' শতাংশ' : ' percent';
                 $s = self::number((int) $r, $lang) . $word;
@@ -220,7 +230,7 @@ final class Speech
                 return $s;
             },
             $t
-        );
+        ) ?? $t;
 
         // 7. the current year goes unsaid, as anyone would leave it
         $year = date('Y');
@@ -230,12 +240,12 @@ final class Speech
         $t = preg_replace_callback(
             '/(?<![০-৯0-9])([০-৯0-9]+)[.]([০-৯0-9]+)(?![০-৯0-9])/u',
             function ($m) use ($lang) {
-                $v = (float) (Nlu::asciiDigits($m[1]) . '.' . Nlu::asciiDigits($m[2]));
+                $v = (float) (Nlu::asciiDigits($m[1]) . '.' . Nlu::asciiDigits($m[2])) ?? $t;
                 $r = max(1, (int) round($v));      // "0.9 months" is spoken as "about one month"
                 return self::APPROX . self::number($r, $lang);
             },
             $t
-        );
+        ) ?? $t;
 
         // 9. every remaining number becomes words — first the grouped ones
         //    (12,34,567), then the plain ones. A trailing full stop or comma is
@@ -243,24 +253,24 @@ final class Speech
         $t = preg_replace_callback(
             '/(?<![০-৯0-9])([০-৯0-9]{1,3}(?:,[০-৯0-9]{2,3})+)(?![০-৯0-9])/u',
             function ($m) use ($lang) {
-                return self::number((int) str_replace(',', '', Nlu::asciiDigits($m[1])), $lang);
+                return self::number((int) str_replace(',', '', Nlu::asciiDigits($m[1])), $lang) ?? $t;
             },
             $t
-        );
+        ) ?? $t;
         $t = preg_replace_callback(
             '/(?<![০-৯0-9.])([০-৯0-9]+)(?!\.?[০-৯0-9])/u',
             function ($m) use ($lang) {
-                return self::number((int) Nlu::asciiDigits($m[1]), $lang);
+                return self::number((int) Nlu::asciiDigits($m[1]), $lang) ?? $t;
             },
             $t
-        );
+        ) ?? $t;
 
         // 10. "(Emi Agro)-এ" is one place with a case ending — not an aside
-        $t = preg_replace('/\s*\(([^)]*)\)\s*-\s*(এ|তে|য়|এর|কে|র)(?![\x{0980}-\x{09FF}])/u', ' $1 $2', $t);
+        $t = preg_replace('/\s*\(([^)]*)\)\s*-\s*(এ|তে|য়|এর|কে|র)(?![\x{0980}-\x{09FF}])/u', ' $1 $2', $t) ?? $t;
 
         //     brackets and dashes are pauses, not sounds
-        $t = preg_replace('/\s*\(([^)]*)\)\s*/u', ', $1, ', $t);
-        $t = preg_replace('/\s*[—–]\s*/u', ', ', $t);
+        $t = preg_replace('/\s*\(([^)]*)\)\s*/u', ', $1, ', $t) ?? $t;
+        $t = preg_replace('/\s*[—–]\s*/u', ', ', $t) ?? $t;
         $t = str_replace(['|', '·', '•', '~', '৳'], ' ', $t);
 
         // 11. resolve the approximation markers — one "about" per phrase, never two
@@ -268,30 +278,30 @@ final class Speech
         $mark = self::APPROX;
         $near = $bn ? '(?:প্রায়|মোটামুটি)' : '(?:about|roughly|around|approximately)';
         //     an "about" already in the sentence swallows the marker
-        $t = preg_replace('/(' . $near . ')\s*' . $mark . '/u', '$1 ', $t);
-        $t = preg_replace('/' . $mark . '\s*(' . $near . ')/u', '$1 ', $t);
-        $t = preg_replace('/' . $mark . '(?:\s*' . $mark . ')+/u', $mark, $t);
+        $t = preg_replace('/(' . $near . ')\s*' . $mark . '/u', '$1 ', $t) ?? $t;
+        $t = preg_replace('/' . $mark . '\s*(' . $near . ')/u', '$1 ', $t) ?? $t;
+        $t = preg_replace('/' . $mark . '(?:\s*' . $mark . ')+/u', $mark, $t) ?? $t;
         $t = str_replace($mark, $about, $t);
-        $t = preg_replace('/\b(' . $near . ')(\s+\1)+\b/u', '$1', $t);
+        $t = preg_replace('/\b(' . $near . ')(\s+\1)+\b/u', '$1', $t) ?? $t;
 
         // 12. Bangla counters hug the number: "সাত টা" is written, "সাতটা" is spoken
-        if ($bn) $t = preg_replace('/(\S)\s+(টা|টি|জন|টার|টির|খানা)(?![\x{0980}-\x{09FF}])/u', '$1$2', $t);
+        if ($bn) $t = preg_replace('/(\S)\s+(টা|টি|জন|টার|টির|খানা)(?![\x{0980}-\x{09FF}])/u', '$1$2', $t) ?? $t;
 
         // 13. English agreement after the number became a word
         if (!$bn) {
             $units = 'month|day|week|year|account|item|task|lead|project|hour|minute|payslip|person|entry|posting|company|department';
-            $t = preg_replace('/\bone (' . $units . ')s\b/iu', 'one $1', $t);
+            $t = preg_replace('/\bone (' . $units . ')s\b/iu', 'one $1', $t) ?? $t;
             $t = str_replace('one people', 'one person', $t);
         }
 
         // 14. tidy the punctuation the pauses left behind
-        $t = preg_replace('/\s+/u', ' ', $t);
+        $t = preg_replace('/\s+/u', ' ', $t) ?? $t;
         $t = preg_replace('/\s+([।.,;:!?])/u', '$1', $t);
-        $t = preg_replace('/,\s*,+/u', ',', $t);
-        $t = preg_replace('/([।.])\s*,/u', '$1', $t);
-        $t = preg_replace('/,\s*([।.])/u', '$1', $t);
+        $t = preg_replace('/,\s*,+/u', ',', $t) ?? $t;
+        $t = preg_replace('/([।.])\s*,/u', '$1', $t) ?? $t;
+        $t = preg_replace('/,\s*([।.])/u', '$1', $t) ?? $t;
         //     ", -এ" is the case ending of the word before the bracket, not a new clause
-        $t = preg_replace('/,\s*-\s*(এ|তে|য়|এর|কে|র)(?![\x{0980}-\x{09FF}])/u', ' $1', $t);
+        $t = preg_replace('/,\s*-\s*(এ|তে|য়|এর|কে|র)(?![\x{0980}-\x{09FF}])/u', ' $1', $t) ?? $t;
 
         return trim($t);
     }
