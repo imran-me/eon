@@ -80,6 +80,13 @@ final class Loc
             '/^cash available (৳[\d.,]+\s?(?:Cr|L|k)?)$/u' => fn($m) => 'হাতে আছে ' . $m[1],
             '/^(\d+) items? overdue$/u' => fn($m) => $m[1] . ' টার তারিখ পেরিয়েছে',
             '/^oldest (\d+) days?$/u' => fn($m) => 'সবচেয়ে পুরনোটা ' . $m[1] . ' দিনের',
+            // evaluation model
+            '/^attendance (\d+)%$/u' => fn($m) => 'হাজিরা ' . $m[1] . '%',
+            '/^punctuality (\d+)%$/u' => fn($m) => 'সময়ানুবর্তিতা ' . $m[1] . '%',
+            '/^late on (\d+) of (\d+) days$/u' => fn($m) => $m[2] . ' দিনের মধ্যে ' . $m[1] . ' দিনই দেরি',
+            '/^(\d+) tasks? (?:done|closed)$/u' => fn($m) => $m[1] . ' টা কাজ শেষ',
+            '/^(\d+) tasks? overdue$/u' => fn($m) => $m[1] . ' টা কাজের সময় পেরিয়েছে',
+            '/^(\d+) leads? won$/u' => fn($m) => $m[1] . ' টা লিড জেতা',
         ];
     }
 

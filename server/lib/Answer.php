@@ -1385,11 +1385,53 @@ final class Answer
                 $this->act('try the full name as it is spelled in HR → Users.',
                            'এইচআর → ইউজার-এ যেভাবে বানান আছে, পুরো নামটা দিয়ে দেখুন।')]);
         }
-        $n = (string) ($r['narrative'] ?? '');
-        if ($n !== '' && !$this->bn()) return $n;
+
+        $e = $r['employee'] ?? [];
+        $score = (int) ($r['score'] ?? 0);
+        $grade = (string) ($r['grade'] ?? '');
+        $mood = Phrase::moodHigh((float) $score, 75, 55);
+
+        $who = $this->t(
+            sprintf('%s — %s, %s.', (string) ($e['name'] ?? $name), (string) ($e['designation'] ?? ''), (string) ($e['company'] ?? '')),
+            sprintf('%s — %s, %s।', (string) ($e['name'] ?? $name), (string) ($e['designation'] ?? ''), (string) ($e['company'] ?? '')));
+
+        $head = $this->t(
+            sprintf('Scores %s out of 100, grade %s, over the last %s days.', $this->num($score), $grade, $this->num($r['days'] ?? 30)),
+            sprintf('গত %s দিনের হিসাবে স্কোর ১০০ তে %s, গ্রেড %s।', $this->num($r['days'] ?? 30), $this->num($score), $grade));
+
+        $att = $this->t(
+            sprintf('Attendance %s, punctuality %s — late on %s days.',
+                $this->pc($this->f($r['attendance_pct'] ?? 0)), $this->pc($this->f($r['punctuality_pct'] ?? 0)), $this->num($r['late_days'] ?? 0)),
+            sprintf('হাজিরা %s, সময়ানুবর্তিতা %s — %s দিন দেরি করেছে।',
+                $this->pc($this->f($r['attendance_pct'] ?? 0)), $this->pc($this->f($r['punctuality_pct'] ?? 0)), $this->num($r['late_days'] ?? 0)));
+
+        $work = ((int) ($r['tasks_done'] ?? 0) + (int) ($r['open_tasks'] ?? 0) + (int) ($r['leads_won'] ?? 0)) > 0
+            ? $this->t(sprintf('%s tasks closed, %s still open, %s leads won.',
+                        $this->num($r['tasks_done'] ?? 0), $this->num($r['open_tasks'] ?? 0), $this->num($r['leads_won'] ?? 0)),
+                       sprintf('%s টা কাজ শেষ, %s টা এখনো খোলা, %s টা লিড জিতেছে।',
+                        $this->num($r['tasks_done'] ?? 0), $this->num($r['open_tasks'] ?? 0), $this->num($r['leads_won'] ?? 0)))
+            : $this->t('No task or lead activity is recorded against them, so this score rests on attendance alone.',
+                       'তার নামে কোনো টাস্ক বা লিডের রেকর্ড নেই, তাই এই স্কোরটা কেবল হাজিরার ওপর দাঁড়িয়ে।');
+
+        $good = Loc::bnAll(array_map('strval', $r['strengths'] ?? []), $this->L());
+        $bad = Loc::bnAll(array_map('strval', $r['concerns'] ?? []), $this->L());
+
+        $salary = $this->f($e['salary'] ?? 0) > 0
+            ? $this->t(sprintf('On %s a month, joined %s.', $this->m($this->f($e['salary'])), Phrase::day((string) ($e['joined'] ?? ''), 'en')),
+                       sprintf('বেতন মাসে %s, যোগ দিয়েছে %s।', $this->m($this->f($e['salary'])), Phrase::day((string) ($e['joined'] ?? ''), 'bn')))
+            : '';
+
+        $advice = ($r['late_days'] ?? 0) > 10
+            ? $this->act('the lateness is the story here — a written warning costs nothing and the deduction only bites past two hours a month.',
+                         'এখানে আসল কথা দেরিটাই — একটা লিখিত সতর্কতা খরচ ছাড়াই কাজ দেয়, আর কর্তন তো মাসে দুই ঘণ্টা পেরোলে তবেই ধরে।')
+            : $this->act('nothing here needs action from you today.',
+                         'আজকের দিনে এখান থেকে আপনার কিছু করার নেই।');
+
         return $this->say([
-            $this->open('ok'),
-            $n !== '' ? $n : $this->t('I have their record but no evaluation narrative for them.', 'তার রেকর্ড আছে, তবে মূল্যায়নের বিবরণ নেই।'),
+            $this->open($mood), $who, $head, $att, $work, $salary,
+            $good ? $this->t('In their favour: ' . Phrase::join($good, 'en') . '.', 'ভালো দিক: ' . Phrase::join($good, 'bn') . '।') : '',
+            $bad ? $this->t('Against: ' . Phrase::join($bad, 'en') . '.', 'দুর্বল দিক: ' . Phrase::join($bad, 'bn') . '।') : '',
+            $advice,
         ]);
     }
 

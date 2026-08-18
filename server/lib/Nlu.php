@@ -126,15 +126,15 @@ final class Nlu
                          'pending sign' => 4, 'sign off' => 3, 'my signature' => 3, 'awaiting approval' => 4,
                          'need my ok' => 3, 'authorisation' => 3, 'authorization' => 3, 'am i holding up' => 5, 'approval queue' => 5],
                 'bn' => ['অনুমোদন' => 4, 'অনুমোদনের অপেক্ষা' => 5, 'আমার সই' => 4, 'স্বাক্ষর' => 3,
-                         'অপেক্ষমাণ অনুমোদন' => 5, 'পাশ করতে হবে' => 3, 'সম্মতি' => 2],
-                'bl' => ['onumodon' => 4, 'approval ache' => 4, 'amar soi' => 4],
+                         'অপেক্ষমাণ অনুমোদন' => 5, 'পাশ করতে হবে' => 3, 'সম্মতি' => 2, 'সই লাগবে' => 7, 'সই+কোথায়' => 8],
+                'bl' => ['onumodon' => 4, 'approval ache' => 4, 'amar soi' => 7, 'soi lagbe' => 8],
             ],
             'risks' => [
                 'en' => ['what am i missing' => 5, 'what is wrong' => 4, 'risk' => 3, 'risks' => 3, 'problem' => 3,
                          'problems' => 3, 'trouble' => 3, 'red flag' => 4, 'worry' => 3, 'worried about' => 4,
                          'blind spot' => 4, 'anything bad' => 3, 'concerns' => 3, 'what should worry me' => 5, 'red flag' => 5, 'red flags' => 5],
-                'bn' => ['কি মিস করছি' => 5, 'ঝুঁকি' => 4, 'সমস্যা' => 3, 'কি সমস্যা' => 4, 'বিপদ' => 3,
-                         'কোথায় গণ্ডগোল' => 4, 'কি ভুল' => 3, 'চিন্তার বিষয়' => 4, 'দুর্বলতা' => 3],
+                'bn' => ['কি মিস করছি' => 5, 'ঝুঁকি' => 4, 'সমস্যা' => 6, 'কি সমস্যা' => 6, 'বিপদ' => 4,
+                         'কোথায় গণ্ডগোল' => 7, 'গণ্ডগোল' => 6, 'কি ভুল' => 4, 'চিন্তার বিষয়' => 5, 'দুর্বলতা' => 6],
                 'bl' => ['ki miss korchi' => 5, 'somossa' => 3, 'jhuki' => 3, 'ki bhul' => 3],
             ],
             'anomalies' => [
@@ -146,9 +146,9 @@ final class Nlu
                 'bl' => ['osbabhabik' => 4, 'gormil' => 4, 'onioms' => 3, 'duplicate ache' => 4],
             ],
             'health' => [
-                'en' => ['health score' => 5, 'how healthy' => 4, 'business health' => 5, 'overall health' => 5,
-                         'how is the business' => 4, 'company health' => 5, 'scorecard' => 3],
-                'bn' => ['স্বাস্থ্য স্কোর' => 5, 'ব্যবসার অবস্থা' => 4, 'কেমন চলছে' => 4, 'সার্বিক স্কোর' => 4],
+                'en' => ['health score' => 8, 'how healthy' => 7, 'business health' => 8, 'overall health' => 8,
+                         'how is the business' => 9, 'business doing' => 9, 'company health' => 8, 'scorecard' => 6],
+                'bn' => ['স্বাস্থ্য স্কোর' => 7, 'ব্যবসার অবস্থা' => 7, 'কেমন চলছে' => 6, 'সার্বিক স্কোর' => 7],
                 'bl' => ['health score' => 5, 'kemon cholche' => 4, 'business kemon' => 4],
             ],
             'since' => [
@@ -160,7 +160,7 @@ final class Nlu
             'forecast' => [
                 'en' => ['forecast' => 5, 'projection' => 4, 'project the' => 3, 'next quarter' => 4, 'next month' => 3,
                          'predict' => 4, 'prediction' => 4, 'outlook' => 4, 'trend' => 3, 'where are we heading' => 4,
-                         'will we' => 2, 'expected' => 2, 'project the next' => 6, 'next three months' => 6, 'projection' => 5],
+                         'will we' => 2, 'expected' => 2, 'project the next' => 6, 'next three months' => 6, 'projection' => 5, 'where are we heading' => 10, 'heading' => 5],
                 'bn' => ['পূর্বাভাস' => 5, 'ভবিষ্যৎ' => 4, 'আগামী মাস' => 4, 'আগামী প্রান্তিক' => 5,
                          'কি হবে' => 3, 'প্রবণতা' => 4, 'সামনে কি' => 3, 'ভবিষ্যতে' => 5, 'দাঁড়াবে' => 4],
                 'bl' => ['forecast dao' => 5, 'agami mash' => 4, 'ki hobe' => 3, 'provonota' => 3],
@@ -192,7 +192,7 @@ final class Nlu
                 'en' => ['burn rate' => 5, 'runway' => 5, 'how long will cash last' => 5, 'months of cash' => 5,
                          'cash flow' => 4, 'cashflow' => 4, 'survive' => 3, 'run out of money' => 8, 'spend a month' => 8, 'per month' => 5, 'a month' => 4],
                 'bn' => ['টাকা কতদিন' => 8, 'কতদিন চলবে' => 8, 'নগদ প্রবাহ' => 6, 'ব্যয়ের হার' => 9,
-                         'টাকা শেষ' => 8, 'কত মাস চলবে' => 9, 'মাসে+খরচ' => 8, 'শেষ হয়ে যাবে' => 8],
+                         'টাকা শেষ' => 8, 'কত মাস চলবে' => 9, 'মাসে কত খরচ হয়' => 9, 'শেষ হয়ে যাবে' => 8],
                 'bl' => ['koto din cholbe' => 8, 'taka koto din' => 8, 'cash flow' => 4, 'mase koto khoroch' => 9, 'koto mash cholbe' => 9],
             ],
 
@@ -254,7 +254,7 @@ final class Nlu
             'expenses' => [
                 'en' => ['expense' => 4, 'expenses' => 4, 'spending' => 4, 'how much spent' => 5, 'cost' => 3,
                          'costs' => 3, 'outgoing' => 3, 'spend' => 3, 'expenditure' => 5, 'gone out' => 5, 'has gone out' => 6],
-                'bn' => ['খরচ' => 5, 'ব্যয়' => 5, 'খরচ কত' => 6, 'কত খরচ' => 6, 'ব্যয় কত' => 6],
+                'bn' => ['খরচ' => 5, 'ব্যয়' => 5, 'খরচ কত' => 6, 'কত খরচ' => 6, 'ব্যয় কত' => 6, 'খরচ হয়েছে' => 12, 'খরচ হলো' => 11, 'মোট খরচ' => 9],
                 'bl' => ['khoroch' => 5, 'khoroch koto' => 6, 'kharoch' => 5, 'beye' => 3],
             ],
             'expense_by_category' => [
@@ -262,8 +262,8 @@ final class Nlu
                          'top expense' => 5, 'expense breakdown' => 5, 'category wise' => 5, 'which head' => 4,
                          'largest cost' => 5, 'what are we spending on' => 5],
                 'bn' => ['কোন খাতে খরচ' => 6, 'খাত+খরচ' => 6, 'খরচ+বেশি' => 5, 'খরচ+কোথায়' => 5, 'সবচেয়ে বেশি খরচ' => 6, 'খরচের খাত' => 6, 'কিসে খরচ' => 5,
-                         'খাত অনুযায়ী' => 5, 'টাকা কোথায় যাচ্ছে' => 5],
-                'bl' => ['kon khate khoroch' => 6, 'sobcheye beshi khoroch' => 6, 'kise khoroch' => 5],
+                         'খাত অনুযায়ী' => 5, 'টাকা কোথায় যাচ্ছে' => 12, 'কোথায় যাচ্ছে' => 11],
+                'bl' => ['kon khate khoroch' => 8, 'sobcheye beshi khoroch' => 8, 'kise khoroch' => 6, 'khoroch kothay' => 12],
             ],
             'budget' => [
                 'en' => ['budget' => 5, 'over budget' => 6, 'budget variance' => 6, 'within budget' => 5,
@@ -326,10 +326,10 @@ final class Nlu
             'deduction_rules' => [
                 'en' => ['how is late deduction' => 6, 'deduction calculated' => 6, 'deduction rule' => 6,
                          'how do you calculate' => 5, 'why was deducted' => 5, 'grace period' => 5,
-                         'late rule' => 5, 'absent deduction' => 5, 'how is salary calculated' => 6, 'why was money deducted' => 7, 'was deducted' => 6, 'deduction' => 5],
-                'bn' => ['কর্তন কিভাবে' => 8, 'বিলম্ব কর্তন' => 8, 'কর্তনের নিয়ম' => 9, 'কিভাবে হিসাব' => 5,
-                         'কেন কাটা হলো' => 8, 'কাটা হলো' => 7, 'বেতন কিভাবে হিসাব' => 8, 'কর্তন' => 6],
-                'bl' => ['deduction kivabe' => 8, 'kata hoyeche keno' => 7, 'niyom ki' => 4, 'beton kivabe hisab' => 9],
+                         'late rule' => 7, 'absent deduction' => 9, 'how is salary calculated' => 9, 'why was money deducted' => 9, 'was deducted' => 7, 'deduction' => 8, 'deduction rule' => 10, 'deduction work' => 10],
+                'bn' => ['কর্তন কিভাবে' => 12, 'বিলম্ব কর্তন' => 12, 'কর্তনের নিয়ম' => 12, 'কিভাবে হিসাব' => 8,
+                         'কেন কাটা হলো' => 10, 'কাটা হলো' => 9, 'বেতন কিভাবে হিসাব' => 12, 'কর্তন' => 9],
+                'bl' => ['deduction kivabe' => 12, 'kata hoyeche keno' => 9, 'niyom ki' => 5, 'beton kivabe hisab' => 12, 'deduction' => 8],
             ],
             'overtime' => [
                 'en' => ['overtime' => 6, 'ot hours' => 5, 'extra hours' => 5, 'worked late' => 4],
@@ -431,7 +431,7 @@ final class Nlu
             'customers' => [
                 'en' => ['customer' => 5, 'customers' => 5, 'client' => 4, 'clients' => 4, 'top customer' => 6,
                          'biggest client' => 6, 'buyer' => 4],
-                'bn' => ['গ্রাহক' => 5, 'কাস্টমার' => 5, 'ক্রেতা' => 5, 'সেরা গ্রাহক' => 6, 'বড় গ্রাহক' => 6],
+                'bn' => ['গ্রাহক' => 5, 'কাস্টমার' => 5, 'ক্রেতা' => 5, 'সেরা গ্রাহক' => 7, 'বড় গ্রাহক' => 7, 'কতজন+গ্রাহক' => 9],
                 'bl' => ['customer' => 5, 'grahok' => 5, 'boro customer' => 6],
             ],
             'suppliers' => [
@@ -444,13 +444,13 @@ final class Nlu
             'navigation' => [
                 'en' => ['where is' => 5, 'where do i find' => 6, 'where can i see' => 6, 'which menu' => 6,
                          'how do i get to' => 6, 'which page' => 5, 'where to find' => 6, 'navigate to' => 5,
-                         'which screen' => 7, 'where in the erp' => 8, 'how do i open' => 6, 'where do i set' => 8, 'where are the' => 7, 'where do i see' => 8, 'where is the' => 7, 'which screen shows' => 8],
+                         'which screen' => 7, 'where in the erp' => 8, 'how do i open' => 6, 'where do i set' => 8, 'where are the' => 7, 'where do i see' => 8, 'where is the' => 7, 'where is' => 7, 'where are' => 6, 'which screen shows' => 8, 'how do i get to' => 9, 'get to the' => 7],
                 'bn' => ['কোথায় পাবো' => 6, 'কোথায় পাব' => 6, 'কোথায়+পাব' => 6, 'কোথায়+দেখ' => 6, 'কোথায়+আছে' => 5, 'কোন মেনুতে' => 6, 'কিভাবে যাবো' => 6,
-                         'কোথায় দেখব' => 8, 'কোন পেজে' => 7, 'কোথায় আছে' => 6, 'কোথায় বসাবো' => 8, 'কোথায়' => 6, 'কোন স্ক্রিনে' => 8],
-                'bl' => ['kothay pabo' => 8, 'kon menu' => 8, 'kivabe jabo' => 8, 'kothay ache' => 6, 'kothay' => 6],
+                         'কোথায় দেখব' => 8, 'কোন পেজে' => 7, 'কোথায় আছে' => 6, 'কোথায় বসাবো' => 8, 'কোথায়' => 4, 'কোন স্ক্রিনে' => 8],
+                'bl' => ['kothay pabo' => 8, 'kon menu' => 8, 'kivabe jabo' => 8, 'kothay ache' => 6, 'kothay' => 4],
             ],
             'howto' => [
-                'en' => ['how does it work' => 8, 'how does the' => 6, 'how does' => 6, 'explain' => 6, 'what does it mean' => 6,
+                'en' => ['how does it work' => 9, 'how does the' => 7, 'how does' => 7, 'does it work' => 8, 'work' => 3, 'explain' => 8, 'the process' => 8, 'what does it mean' => 6,
                          'what is the rule' => 8, 'why does' => 5, 'why must' => 7, 'how is it posted' => 8, 'get posted' => 8, 'workflow' => 6,
                          'what happens when' => 8, 'process for' => 6, 'the process' => 6, 'how is a' => 6, 'how is the' => 6, 'worked out' => 7,
                          'is missing' => 7, 'reports is the erp' => 8, 'how does an' => 7, 'how do i' => 5],
@@ -482,6 +482,22 @@ final class Nlu
     }
 
     /* ---------- matching ---------- */
+
+    /** phrasings that ask for a place — a screen, a menu, an address */
+    private const LOCATIVE = [
+        'where is', 'where are', 'where do i', 'where can i', 'where to find', 'where in the erp',
+        'which menu', 'which screen', 'which page', 'how do i get to', 'how do i open', 'how do i find',
+        'কোথায়', 'কোন মেনু', 'কোন স্ক্রিন', 'কোন পেজ', 'kothay', 'kon menu', 'kon screen',
+    ];
+
+    /** idioms that borrow a locative shape but ask about data, not about a screen */
+    private const NOT_LOCATIVE = [
+        'where is the money going', 'money going', 'where are we heading', 'where do we stand',
+        'টাকা কোথায় যাচ্ছে', 'কোথায় যাচ্ছে', 'khoroch kothay', 'taka kothay jacche',
+        // "where do I have to sign" and "where is the problem" are not screen questions
+        'সই লাগবে', 'সই কোথায়', 'soi lagbe', 'amar soi',
+        'কোথায় সমস্যা', 'কোথায় গণ্ডগোল', 'দুর্বলতা কোথায়', 'সমস্যা কোথায়', 'গণ্ডগোল কোথায়',
+    ];
 
     /** does this cue appear in the normalised haystack? word-bounded for latin cues */
     /** Bangla inflections that may follow a stem and still count as the same word */
@@ -544,8 +560,21 @@ final class Nlu
         // "where do I find the payslip screen" is a NAVIGATION question about payroll,
         // not a payroll question. The frame wins; the data intent becomes the topic.
         $topic = null;
+
+        $idiom = false;
+        foreach (self::NOT_LOCATIVE as $x) { if (self::hit($n, $x)) { $idiom = true; break; } }
+        $locative = false;
+        if (!$idiom) {
+            foreach (self::LOCATIVE as $x) { if (self::hit($n, $x)) { $locative = true; break; } }
+        }
+
         foreach (['navigation', 'howto'] as $frame) {
-            if (($scores[$frame] ?? 0) >= 5.0 && $best !== $frame) {
+            $fs = $scores[$frame] ?? 0;
+            // a real "where do I find it" question is about the screen no matter how
+            // loudly the subject scores; otherwise the frame has to earn it on points
+            $wins = ($frame === 'navigation' && $locative && $fs > 0)
+                || ($fs >= 5.0 && $fs >= $bestScore * 0.7);
+            if ($wins && $best !== $frame) {
                 foreach ($scores as $i => $sc) {
                     if ($i !== 'navigation' && $i !== 'howto') { $topic = $i; break; }
                 }

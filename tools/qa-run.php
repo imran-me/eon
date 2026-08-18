@@ -88,6 +88,10 @@ $ALIAS = [
     'focus'            => ['focus', 'brief', 'risks'],
     'risks'            => ['risks', 'focus', 'anomalies'],
     'howto'            => ['howto', 'navigation', 'deduction_rules'],
+    // the how-frame and the specific rule intent reach the same Kb rule, so either is a correct answer
+    'deduction_rules'  => ['deduction_rules', 'howto'],
+    'health'           => ['health', 'brief'],
+    'customers'        => ['customers', 'pipeline'],
     'navigation'       => ['navigation', 'howto'],
     'burn_runway'      => ['burn_runway', 'cash'],
     'attendance_today' => ['attendance_today', 'late_today'],
