@@ -1404,6 +1404,297 @@ final class Answer
         ]);
     }
 
+    /* ---------------- the travel desk ---------------- */
+
+    /** visa processing in hand: how many, at what stage, costing against sale price */
+    private function a_service_ops(): string
+    {
+        $this->used('get_service_operations');
+        $r = $this->c['tools']->run('get_service_operations', []);
+        $vp = $r['visa_processes'] ?? [];
+        $n = (int) ($vp['count'] ?? 0);
+        if ($n === 0) {
+            return $this->say([$this->open('ok'),
+                $this->t('There is no visa processing on the books at the moment.', 'এই মুহূর্তে খাতায় কোনো ভিসা প্রসেসিং নেই।')]);
+        }
+        $cost = $this->f($vp['cost_total'] ?? 0); $sale = $this->f($vp['sale_total'] ?? 0);
+        $margin = $sale - $cost;
+        $stages = implode(', ', array_map(fn($s) => (string) $s['stage'] . ' ' . $this->num($s['count']), array_slice($vp['by_stage'] ?? [], 0, 5)));
+        $head = $this->t(
+            sprintf('%s visa files are in hand — %s.', $this->num($n), $stages),
+            sprintf('হাতে %s টা ভিসা ফাইল আছে — %s।', $this->num($n), $stages));
+        $money = $this->t(
+            sprintf('They cost %s and sell for %s, so the desk is carrying %s of margin.', $this->m($cost), $this->m($sale), $this->m($margin)),
+            sprintf('খরচ %s, বিক্রি %s — অর্থাৎ ডেস্কের হাতে %s মার্জিন।', $this->m($cost), $this->m($sale), $this->m($margin)));
+        $owed = $this->f($vp['unpaid_to_vendor'] ?? 0);
+        $vendor = $owed > 0
+            ? $this->t(sprintf('%s of that cost is still unpaid to the visa vendors.', $this->m($owed)),
+                       sprintf('ওই খরচের %s এখনো ভিসা ভেন্ডরদের দেওয়া হয়নি।', $this->m($owed)))
+            : '';
+        $extra = ($r['other_visa_services']['count'] ?? 0) > 0
+            ? $this->t(sprintf('Plus %s other visa services worth %s.', $this->num($r['other_visa_services']['count']), $this->m($this->f($r['other_visa_services']['sale_total'] ?? 0))),
+                       sprintf('সঙ্গে আরও %s টা অন্যান্য ভিসা সেবা, মূল্য %s।', $this->num($r['other_visa_services']['count']), $this->m($this->f($r['other_visa_services']['sale_total'] ?? 0))))
+            : '';
+        return $this->say([$this->open($margin > 0 ? 'ok' : 'warn'), $head, $money, $vendor, $extra,
+            $this->act('ask me for ticket sales if you want the other half of the desk.',
+                       'ডেস্কের বাকি অর্ধেক দেখতে টিকিট বিক্রির কথা জিজ্ঞাসা করুন।')]);
+    }
+
+    /** the ticket side: what was invoiced, what is unpaid, and what we owe the portals */
+    private function a_ticket_business(): string
+    {
+        $this->used('get_sales');
+        $this->used('get_service_operations');
+        $mk = $this->monthKey();
+        $from = $mk . '-01';
+        $to = ($mk === substr($this->A()->today(), 0, 7)) ? $this->A()->today() : date('Y-m-t', strtotime($from));
+        $sb = $this->A()->salesBooked($from, $to);
+        $line = null;
+        foreach (($sb['by_line'] ?? []) as $l) if (($l['line'] ?? '') === 'air ticket') $line = $l;
+        $ops = $this->c['tools']->run('get_service_operations', []);
+        $tp = $ops['ticket_purchases'] ?? [];
+
+        $sold = $line
+            ? $this->t(sprintf('Air tickets invoiced %s in %s across %s invoices, of which %s has been collected.',
+                    $this->m($this->f($line['invoiced'])), Phrase::monthName($mk, 'en'), $this->num($line['invoices']), $this->m($this->f($line['collected']))),
+                sprintf('%s মাসে এয়ার টিকিটে বিল হয়েছে %s, %s টা ইনভয়েসে — তার মধ্যে আদায় হয়েছে %s।',
+                    Phrase::monthName($mk, 'bn'), $this->m($this->f($line['invoiced'])), $this->num($line['invoices']), $this->m($this->f($line['collected']))))
+            : $this->t(sprintf('No air ticket was invoiced in %s.', Phrase::monthName($mk, 'en')),
+                       sprintf('%s মাসে কোনো এয়ার টিকিট বিল হয়নি।', Phrase::monthName($mk, 'bn')));
+
+        $due = $this->f($tp['due'] ?? 0);
+        $cost = $this->t(
+            sprintf('On the buying side %s of ticket purchases is still owed.', $this->m($due)),
+            sprintf('কেনার দিকে টিকিট পারচেজের %s এখনো বাকি।', $this->m($due)));
+        $owed = '';
+        if (!empty($tp['owed_to'])) {
+            $who = implode(', ', array_map(fn($o) => (string) $o['party'] . ' ' . $this->m($this->f($o['due'])), array_slice($tp['owed_to'], 0, 3)));
+            $owed = $this->t(sprintf('Owed to: %s.', $who), sprintf('কাকে দিতে হবে: %s।', $who));
+        }
+        // a booking portal is a credit line, not a supplier invoice — worth saying so
+        $portal = '';
+        foreach (($ops['portals'] ?? []) as $p) {
+            if ($this->f($p['balance'] ?? 0) < 0) {
+                $portal = $this->t(sprintf('The %s portal is running a negative balance of %s.', (string) $p['name'], $this->m(abs($this->f($p['balance'])))),
+                                   sprintf('%s পোর্টালের ব্যালান্স ঋণাত্মক — %s।', (string) $p['name'], $this->m(abs($this->f($p['balance'])))));
+                break;
+            }
+        }
+        return $this->say([$this->open($due > 0 ? 'warn' : 'ok'), $sold, $cost, $owed, $portal,
+            $this->act('a portal balance is a credit line — clear it before the next booking window closes.',
+                       'পোর্টাল ব্যালান্স একটা ক্রেডিট লাইন — পরের বুকিং উইন্ডো বন্ধ হওয়ার আগে মিটিয়ে দিন।')]);
+    }
+
+    /** the travelling clients on file */
+    private function a_clients(): string
+    {
+        $D = $this->A()->dataset();
+        $ph = $D['passport_holders'] ?? [];
+        if (!$ph) {
+            return $this->say([$this->open('ok'),
+                $this->t('No passport holders are on file.', 'খাতায় কোনো পাসপোর্ট হোল্ডার নেই।')]);
+        }
+        $today = $this->A()->today();
+        $soon = date('Y-m-d', strtotime('+180 days', strtotime($today)));
+        $expiring = array_values(array_filter($ph, function ($h) use ($today, $soon) {
+            $e = substr((string) ($h['expiry_date'] ?? ''), 0, 10);
+            return $e !== '' && $e >= $today && $e <= $soon;
+        }));
+        $head = $this->t(
+            sprintf('%s passport holders are on file.', $this->num(count($ph))),
+            sprintf('খাতায় %s জন পাসপোর্ট হোল্ডার আছেন।', $this->num(count($ph))));
+        // an expiring passport is a booking that cannot fly — worth surfacing unprompted
+        $exp = $expiring
+            ? $this->t(sprintf('%s of them have a passport expiring within six months%s.', $this->num(count($expiring)),
+                    count($expiring) ? ' — ' . implode(', ', array_map(fn($h) => (string) $h['name'], array_slice($expiring, 0, 4))) : ''),
+                sprintf('তাঁদের %s জনের পাসপোর্ট ছয় মাসের মধ্যে মেয়াদ শেষ হবে%s।', $this->num(count($expiring)),
+                    count($expiring) ? ' — ' . implode(', ', array_map(fn($h) => (string) $h['name'], array_slice($expiring, 0, 4))) : ''))
+            : $this->t('None of their passports expire within six months.', 'ছয় মাসের মধ্যে কারও পাসপোর্টের মেয়াদ শেষ হচ্ছে না।');
+        return $this->say([$this->open($expiring ? 'warn' : 'ok'), $head, $exp,
+            $expiring ? $this->act('most embassies refuse a passport with under six months left — tell the desk before they book.',
+                                   'বেশির ভাগ দূতাবাস ছয় মাসের কম মেয়াদের পাসপোর্ট নেয় না — বুকিংয়ের আগে ডেস্ককে জানিয়ে দিন।') : '']);
+    }
+
+    /* ---------------- people, ranked ---------------- */
+
+    private function a_staff_ranking(): string
+    {
+        $this->used('evaluate_all_staff');
+        $r = $this->A()->ranking(30, 5);
+        if (!$r['rated']) {
+            return $this->say([$this->open('warn'),
+                $this->t('I cannot rank anyone yet — nobody has enough attendance or task history in the last 30 days.',
+                         'এখনো কাউকে র‍্যাঙ্ক করতে পারছি না — গত ৩০ দিনে যথেষ্ট হাজিরা বা কাজের রেকর্ড নেই।')]);
+        }
+        $wantWorst = str_contains($this->c['norm'] ?? '', 'worst') || str_contains($this->c['norm'] ?? '', 'খারাপ')
+            || str_contains($this->c['norm'] ?? '', 'underperform') || str_contains($this->c['norm'] ?? '', 'not doing well');
+        $list = $wantWorst ? $r['bottom'] : $r['top'];
+        $names = implode(', ', array_map(fn($p) => (string) $p['name'] . ' ' . $this->num($p['score']) . '/' . $this->num(100) . ' (' . $p['grade'] . ')', array_slice($list, 0, 5)));
+        $head = $wantWorst
+            ? $this->t(sprintf('Lowest scoring over the last 30 days: %s.', $names), sprintf('গত ৩০ দিনে সবচেয়ে কম স্কোর: %s।', $names))
+            : $this->t(sprintf('Top of the last 30 days: %s.', $names), sprintf('গত ৩০ দিনের সেরা: %s।', $names));
+        $base = $this->t(
+            sprintf('That is %s people with enough history to judge, averaging %s/100; %s have too little record to rate.',
+                $this->num($r['rated']), $this->num($r['average']), $this->num($r['unrated'])),
+            sprintf('বিচার করার মতো রেকর্ড আছে %s জনের, গড় %s/১০০; %s জনের রেকর্ড কম বলে র‍্যাঙ্ক করা যায়নি।',
+                $this->num($r['rated']), $this->num($r['average']), $this->num($r['unrated'])));
+        $dept = !empty($r['by_department'])
+            ? $this->t(sprintf('Best department: %s at %s/100.', (string) $r['by_department'][0]['department'], $this->num($r['by_department'][0]['average'])),
+                       sprintf('সেরা বিভাগ: %s, %s/১০০।', (string) $r['by_department'][0]['department'], $this->num($r['by_department'][0]['average'])))
+            : '';
+        $worry = !empty($r['concerns'])
+            ? $this->t(sprintf('%s need attention: %s.', $this->num(count($r['concerns'])), implode(', ', array_map(fn($p) => (string) $p['name'], array_slice($r['concerns'], 0, 4)))),
+                       sprintf('%s জনের দিকে নজর দিতে হবে: %s।', $this->num(count($r['concerns'])), implode(', ', array_map(fn($p) => (string) $p['name'], array_slice($r['concerns'], 0, 4)))))
+            : '';
+        return $this->say([$this->open($wantWorst ? 'warn' : 'good'), $head, $base, $dept, $worry,
+            $this->act('ask me about any of them by name for the full picture.', 'যে কারও নাম ধরে জিজ্ঞাসা করলে পুরো চিত্র দেব।')]);
+    }
+
+    /* ---------------- utilities ---------------- */
+
+    /** set or read back how EON should behave — the browser keeps the same shape in localStorage */
+    private function a_preferences(): string
+    {
+        $q = trim((string) ($this->c['q'] ?? ''));
+        $set = null;   // [kind, value]
+        if (preg_match('/(?:call me|address me as|my name is|আমাকে ডাকবে|আমাকে ডাকো|আমার নাম)\s+(.{1,40})$/ui', $q, $m)) $set = ['name', (string) preg_replace("/^[\\s\"'.।?!]+|[\\s\"'.।?!]+$/u", '', $m[1])];
+        elseif (preg_match('/\b(?:in |দেখাও )?(lakh|crore|full|লক্ষ|কোটি)\b/ui', $q, $m) && preg_match('/(?:show money|money in|টাকা দেখাও|লক্ষে|কোটিতে)/ui', $q)) {
+            $u = mb_strtolower($m[1]); $set = ['money_unit', $u === 'লক্ষ' ? 'lakh' : ($u === 'কোটি' ? 'crore' : $u)];
+        } elseif (preg_match('/(?:be brief|short answers|সংক্ষেপে বলো)/ui', $q)) $set = ['brevity', 'short'];
+        elseif (preg_match('/(?:speak|answer in)\s+bangla|বাংলায় বলো|bangla te bolo/ui', $q)) $set = ['language', 'bn'];
+        elseif (preg_match('/(?:speak|answer in)\s+english|ইংরেজিতে বলো/ui', $q)) $set = ['language', 'en'];
+        elseif (preg_match('/brief me at\s+(\d{1,2})/ui', $q, $m)) $set = ['brief_hour', $m[1]];
+        elseif (preg_match('/(?:remember that|মনে রাখো)\s+(.{2,300})$/ui', $q, $m)) $set = ['note', trim($m[1])];
+        elseif (preg_match('/(?:forget|ভুলে যাও)\s+(.{2,300})$/ui', $q, $m)) $set = ['forget', trim($m[1])];
+
+        if ($set !== null) {
+            $this->used('remember_preference');
+            $res = $this->c['tools']->run('remember_preference', ['kind' => $set[0], 'value' => (string) $set[1]]);
+            if (is_array($res) && !empty($res['error'])) {
+                return $this->say([$this->open('warn'),
+                    $this->t('I could not save that — the memory store is not available on this host.',
+                             'এটা রাখতে পারিনি — এই সার্ভারে মেমোরি স্টোর চালু নেই।')]);
+            }
+            // the tool confirms in English; compose the Bangla confirmation here
+            if ($this->bn()) {
+                $v = (string) $set[1];
+                $bnUnit = ['lakh' => 'লক্ষ', 'crore' => 'কোটি', 'full' => 'পুরো অঙ্কে', 'auto' => 'নিজে থেকে'];
+                $msg = match ($set[0]) {
+                    'name' => 'ঠিক আছে — এখন থেকে আপনাকে ' . $v . ' বলে ডাকব।',
+                    'money_unit' => 'টাকা এখন থেকে ' . ($bnUnit[$v] ?? $v) . ' হিসেবে দেখাব।',
+                    'brevity' => 'এখন থেকে সংক্ষেপে বলব।',
+                    'language' => $v === 'bn' ? 'এখন থেকে বাংলাতেই বলব।' : 'এখন থেকে ইংরেজিতে বলব।',
+                    'brief_hour' => 'ব্রিফ দেব ' . $this->num($v) . 'টায়।',
+                    'note' => 'মনে রাখলাম।',
+                    'forget' => 'ভুলে গেলাম।',
+                    default => 'মনে রাখলাম।',
+                };
+                return $this->say([$this->open('good'), $msg]);
+            }
+            $spoken = is_array($res) ? (string) ($res['speak'] ?? $res['confirmation'] ?? '') : '';
+            if ($spoken !== '') return $this->say([$this->open('good'), $spoken]);
+            return $this->say([$this->open('good'), 'Noted — I will remember that.']);
+        }
+
+        // no instruction found → read the preferences back
+        $this->used('get_preferences');
+        $p = $this->c['tools']->run('get_preferences', []);
+        $prefs = is_array($p) ? ($p['prefs'] ?? $p) : [];
+        $bits = [];
+        if (!empty($prefs['name'])) $bits[] = $this->t('I call you ' . $prefs['name'], 'আপনাকে ডাকি ' . $prefs['name']);
+        $unit = (string) ($prefs['money_unit'] ?? 'auto');
+        $bnUnit = ['lakh' => 'লক্ষে', 'crore' => 'কোটিতে', 'full' => 'পুরো অঙ্কে', 'auto' => 'নিজে থেকে'][$unit] ?? $unit;
+        $brev = (string) ($prefs['brevity'] ?? 'normal');
+        $bits[] = $this->t('money in ' . $unit, 'টাকা দেখাই ' . $bnUnit);
+        $bits[] = $this->t('answers in ' . (($prefs['language'] ?? 'en') === 'bn' ? 'Bangla' : 'English'), 'উত্তর দিই ' . (($prefs['language'] ?? 'en') === 'bn' ? 'বাংলায়' : 'ইংরেজিতে'));
+        $bits[] = $this->t($brev . ' length', $brev === 'short' ? 'সংক্ষেপে' : 'স্বাভাবিক দৈর্ঘ্যে');
+        $bits[] = $this->t('brief at ' . $this->num($prefs['brief_hour'] ?? 8) . ':00', 'ব্রিফ ' . $this->num($prefs['brief_hour'] ?? 8) . 'টায়');
+        $notes = (array) ($prefs['notes'] ?? []);
+        return $this->say([$this->open('ok'),
+            $this->t('What I remember: ' . implode(', ', $bits) . '.', 'যা মনে রেখেছি: ' . implode(', ', $bits) . '।'),
+            $notes ? $this->t($this->num(count($notes)) . ' note(s) kept: ' . implode('; ', array_map(fn($n) => (string) (is_array($n) ? $n['text'] : $n), array_slice($notes, 0, 3))) . '.',
+                              $this->num(count($notes)) . 'টি নোট রাখা আছে: ' . implode('; ', array_map(fn($n) => (string) (is_array($n) ? $n['text'] : $n), array_slice($notes, 0, 3))) . '।') : '',
+            $this->act('say "call me …", "show money in crore", "be brief" or "remember that …" to change it.',
+                       '"আমাকে ডাকো …", "কোটিতে দেখাও", "সংক্ষেপে বলো" বা "মনে রাখো …" বললেই বদলে যাবে।')]);
+    }
+
+    private function a_find_record(): string
+    {
+        $q = trim((string) ($this->c['slots']['name_hint'] ?? ''));
+        if ($q === '') {
+            // fall back to the words after the search verb
+            if (preg_match('/(?:find|search for|look ?up|anything on|খুঁজে দাও|খুঁজুন|সার্চ করো)\s+(.{2,60})/ui', (string) ($this->c['q'] ?? ''), $m)) $q = trim($m[1]);
+        }
+        if ($q === '') {
+            return $this->say([$this->open('ok'),
+                $this->t('What should I search for? A name, a reference or an invoice number all work.',
+                         'কী খুঁজব? নাম, রেফারেন্স বা ইনভয়েস নম্বর — যেকোনোটা বলুন।')]);
+        }
+        $this->used('search_records');
+        $res = $this->c['tools']->run('search_records', ['query' => $q, 'limit' => 20]);
+        // search_records returns a flat list; each row carries the table it came from
+        $groups = [];
+        foreach ((array) $res as $row) {
+            if (!is_array($row)) continue;
+            $t = (string) ($row['table'] ?? 'record');
+            $label = (string) ($row['name'] ?? $row['title'] ?? $row['party_name'] ?? $row['client'] ?? $row['project_name']
+                ?? $row['applicant'] ?? $row['invoice'] ?? $row['ticket_no'] ?? $row['vendor'] ?? $row['source_label'] ?? ('#' . ($row['id'] ?? '?')));
+            if ($label === '') continue;
+            $groups[$t][$label] = true;
+        }
+        $names = $this->bn()
+            ? ['employees' => 'কর্মী', 'customers' => 'গ্রাহক', 'suppliers' => 'সরবরাহকারী', 'leads' => 'লিড',
+               'projects' => 'প্রকল্প', 'tasks' => 'কাজ', 'expenses' => 'খরচ', 'payment_schedules' => 'পেমেন্ট সূচি',
+               'ticket_sales' => 'টিকিট বিল', 'visa_sales' => 'ভিসা বিল', 'contract_file_sales' => 'কন্ট্রাক্ট ফাইল বিল',
+               'ticket_purchases' => 'টিকিট কেনা', 'visa_processes' => 'ভিসা ফাইল', 'passport_holders' => 'পাসপোর্ট হোল্ডার',
+               'party_transactions' => 'খাতার এন্ট্রি', 'support_tickets' => 'সাপোর্ট টিকিট']
+            : ['employees' => 'staff', 'customers' => 'customers', 'suppliers' => 'suppliers', 'leads' => 'leads',
+               'projects' => 'projects', 'tasks' => 'tasks', 'expenses' => 'expenses', 'payment_schedules' => 'payment schedules',
+               'ticket_sales' => 'ticket invoices', 'visa_sales' => 'visa invoices', 'contract_file_sales' => 'contract file invoices',
+               'ticket_purchases' => 'ticket purchases', 'visa_processes' => 'visa files', 'passport_holders' => 'passport holders',
+               'party_transactions' => 'ledger entries', 'support_tickets' => 'support tickets'];
+        $hits = [];
+        foreach ($groups as $t => $set) {
+            $labels = array_slice(array_keys($set), 0, 3);
+            $more = count($set) > 3 ? ' +' . $this->num(count($set) - 3) : '';
+            $hits[] = ($names[$t] ?? $t) . ' — ' . implode(', ', $labels) . $more;
+        }
+        if (!$hits) {
+            return $this->say([$this->open('warn'),
+                $this->t(sprintf('Nothing matches "%s" in employees, customers, suppliers, leads, projects, tasks, expenses or schedules.', $q),
+                         sprintf('"%s" নামে কর্মী, গ্রাহক, সরবরাহকারী, লিড, প্রকল্প, কাজ, খরচ বা সূচিতে কিছু পাইনি।', $q))]);
+        }
+        return $this->say([$this->open('ok'),
+            $this->t(sprintf('Found "%s" in %s.', $q, implode('; ', $hits)), sprintf('"%s" পাওয়া গেছে — %s।', $q, implode('; ', $hits))),
+            $this->act('name the one you want and I will open it up.', 'কোনটা দেখতে চান বলুন, খুলে দিচ্ছি।')]);
+    }
+
+    /** EON is advisory: it records the instruction, it does not change the ERP */
+    private function a_remind(): string
+    {
+        $raw = trim((string) ($this->c['q'] ?? ''));
+        $this->used('record_action');
+        $who = (string) ($this->c['slots']['name_hint'] ?? '');
+        $res = $this->c['tools']->run('record_action', [
+            'kind' => 'remind',
+            'summary' => $raw !== '' ? mb_substr($raw, 0, 300) : 'reminder',
+            'payload' => array_filter(['party' => $who ?: null, 'asked_at' => $this->A()->today()]),
+        ]);
+        $ok = is_array($res) && empty($res['error']);
+        if (!$ok) {
+            return $this->say([$this->open('warn'),
+                $this->t('I could not write that down — the memory store is not available on this host.',
+                         'এটা লিখে রাখতে পারিনি — এই সার্ভারে মেমোরি স্টোর চালু নেই।')]);
+        }
+        $head = $who !== ''
+            ? $this->t(sprintf('Noted — a reminder about %s.', $who), sprintf('লিখে রাখলাম — %s সংক্রান্ত একটা রিমাইন্ডার।', $who))
+            : $this->t('Noted, I have written that down.', 'লিখে রাখলাম।');
+        return $this->say([$this->open('ok'), $head,
+            $this->t('It is queued for the ERP — I record what you decide, the ERP stays the system of record, so nothing has been sent or changed yet.',
+                     'এটা ইআরপির জন্য সারিতে রাখা হলো — আমি কেবল আপনার সিদ্ধান্ত লিখে রাখি, রেকর্ডের মূল জায়গা ইআরপিই, তাই এখনো কিছু পাঠানো বা বদলানো হয়নি।'),
+            $this->act('say the word and I will draft the message itself.', 'বললে বার্তাটার খসড়াও করে দেব।')]);
+    }
+
     /** one customer's or vendor's running account, and where it contradicts their invoices */
     private function a_party_balance(): string
     {

@@ -175,7 +175,11 @@ final class Tools
     private function search(string $q, int $limit): array
     {
         $q = mb_strtolower(trim($q)); if ($q === '') return []; $hits = [];
-        $tables = ['employees' => ['name', 'email', 'designation', 'department'], 'customers' => ['name', 'phone'], 'suppliers' => ['name'], 'leads' => ['name', 'phone', 'assigned_name'], 'projects' => ['project_name', 'customer'], 'tasks' => ['title', 'project'], 'expenses' => ['title', 'category', 'user_name'], 'payment_schedules' => ['party_name', 'source_label']];
+        $tables = ['employees' => ['name', 'email', 'designation', 'department'], 'customers' => ['name', 'phone'], 'suppliers' => ['name'], 'leads' => ['name', 'phone', 'assigned_name'], 'projects' => ['project_name', 'customer'], 'tasks' => ['title', 'project'], 'expenses' => ['title', 'category', 'user_name'], 'payment_schedules' => ['party_name', 'source_label'],
+            // the travel business: a name the boss types is usually a client on an invoice
+            'ticket_sales' => ['invoice', 'client', 'client_phone'], 'visa_sales' => ['invoice', 'client'], 'contract_file_sales' => ['invoice', 'client'],
+            'ticket_purchases' => ['ticket_no', 'vendor', 'portal', 'airline'], 'visa_processes' => ['application_id', 'applicant', 'country', 'officer'],
+            'passport_holders' => ['name', 'passport_no', 'phone'], 'party_transactions' => ['party_name', 'reference_no'], 'support_tickets' => ['title', 'assignee']];
         foreach ($tables as $t => $cols) foreach ($this->D[$t] ?? [] as $r) { if ($this->company !== null && isset($r['company_id']) && (int) $r['company_id'] !== $this->company) continue; foreach ($cols as $c) { if (isset($r[$c]) && is_string($r[$c]) && str_contains(mb_strtolower($r[$c]), $q)) { $hits[] = ['table' => $t] + array_intersect_key($r, array_flip(array_merge(['id', 'company_id', 'status', 'amount', 'due_date', 'scheduled_date', 'salary'], $cols))); break; } } if (count($hits) >= $limit) break 2; }
         return $hits;
     }

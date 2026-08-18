@@ -214,6 +214,68 @@ final class Nlu
                          'কার কাছে দেনা' => 5, 'টাকা দিতে হবে' => 5, 'প্রদেয়' => 5, 'বিল বাকি' => 6, 'বিল+বাকি' => 6],
                 'bl' => ['kake taka dite hobe' => 5, 'dena' => 5, 'dite hobe' => 4],
             ],
+            /* ---- the travel desk: what Epal actually sells ---- */
+            'service_ops' => [
+                'en' => ['visa processing' => 7, 'visa process' => 6, 'visas in hand' => 7, 'visa pipeline' => 7,
+                         'work in hand' => 6, 'visa applications' => 6, 'how many visas' => 7, 'visa status' => 5,
+                         'visa cost' => 5, 'processing now' => 4, 'travel desk' => 6, 'service operations' => 6],
+                'bn' => ['ভিসা প্রসেসিং' => 7, 'ভিসা প্রসেস' => 6, 'কতগুলো ভিসা' => 7, 'ভিসার কাজ' => 6,
+                         'হাতে কাজ' => 5, 'ভিসা আবেদন' => 6, 'ভিসার অবস্থা' => 5],
+                'bl' => ['visa processing' => 7, 'koto visa' => 6, 'visar kaj' => 6, 'hate kaj' => 5],
+            ],
+            'ticket_business' => [
+                'en' => ['ticket sales' => 7, 'ticket sale' => 6, 'air ticket' => 6, 'ticket invoices' => 7,
+                         'tickets unpaid' => 7, 'ticket purchase' => 6, 'ticket purchases' => 6, 'unpaid tickets' => 7,
+                         'how many tickets' => 6, 'ticket business' => 6, 'portal dues' => 6, 'bsp' => 5, 'iata' => 5],
+                'bn' => ['টিকিট বিক্রি' => 7, 'টিকিট সেল' => 6, 'এয়ার টিকিট' => 6, 'টিকিটের বিল' => 7,
+                         'টিকিট কেনা' => 6, 'কতগুলো টিকিট' => 6, 'পোর্টাল' => 5],
+                'bl' => ['ticket bikri' => 7, 'ticket sale' => 6, 'koto ticket' => 6, 'ticket kena' => 6],
+                'block' => ['support ticket', 'সাপোর্ট টিকিট'],
+            ],
+            'clients' => [
+                'en' => ['passport holder' => 7, 'passport holders' => 7, 'travellers' => 6, 'travelers' => 6,
+                         'our clients' => 5, 'how many clients' => 6, 'client list' => 5, 'passport' => 4],
+                'bn' => ['পাসপোর্ট হোল্ডার' => 7, 'যাত্রী' => 6, 'কতজন ক্লায়েন্ট' => 6, 'পাসপোর্ট' => 4, 'আমাদের ক্লায়েন্ট' => 5],
+                'bl' => ['passport holder' => 7, 'jatri' => 6, 'koto client' => 6],
+                'block' => ['customer', 'গ্রাহক'],
+            ],
+            /* ---- people, ranked ---- */
+            'staff_ranking' => [
+                'en' => ['best performer' => 7, 'best performers' => 7, 'top performer' => 7, 'top performers' => 7,
+                         'worst performer' => 7, 'worst performers' => 7, 'ranking' => 5, 'rank the' => 5,
+                         'who is doing well' => 6, 'who is not doing well' => 6, 'underperform' => 6,
+                         'best staff' => 6, 'best employee' => 6, 'worst employee' => 6, 'scorecard' => 5,
+                         'evaluate everyone' => 7, 'evaluate all' => 7, 'grade the team' => 6],
+                'bn' => ['সেরা কর্মী' => 7, 'সবচেয়ে ভালো কর্মী' => 7, 'সবচেয়ে খারাপ কর্মী' => 7,
+                         'কে ভালো করছে' => 6, 'কে খারাপ করছে' => 6, 'র‍্যাঙ্কিং' => 6, 'সবার মূল্যায়ন' => 7],
+                'bl' => ['best performer' => 7, 'sera kormi' => 7, 'ke valo korche' => 6, 'ranking' => 5],
+            ],
+            /* ---- how EON should behave: set and read back ---- */
+            'preferences' => [
+                'en' => ['call me' => 7, 'address me as' => 7, 'my name is' => 6, 'show money in' => 7,
+                         'in lakh' => 5, 'in crore' => 5, 'be brief' => 6, 'short answers' => 6,
+                         'brief me at' => 7, 'speak bangla' => 7, 'speak english' => 7, 'answer in bangla' => 7,
+                         'what do you remember' => 7, 'my preferences' => 7, 'remember that' => 6, 'forget ' => 5],
+                'bn' => ['আমাকে ডাকবে' => 7, 'আমাকে ডাকো' => 7, 'আমার নাম' => 6, 'টাকা দেখাও' => 6,
+                         'লক্ষে দেখাও' => 6, 'কোটিতে দেখাও' => 6, 'সংক্ষেপে বলো' => 6, 'বাংলায় বলো' => 7,
+                         'ইংরেজিতে বলো' => 7, 'কি মনে রেখেছ' => 7, 'মনে রেখেছ' => 6, 'মনে রাখো' => 6, 'ভুলে যাও' => 6],
+                'bl' => ['call me' => 7, 'amake dako' => 7, 'bangla te bolo' => 7, 'mone rakho' => 6, 'vule jao' => 6],
+            ],
+            /* ---- utilities the boss reaches for ---- */
+            'find_record' => [
+                'en' => ['find' => 4, 'search for' => 6, 'look up' => 6, 'lookup' => 5, 'do we have anyone called' => 7,
+                         'search the records' => 7, 'anything on' => 5],
+                'bn' => ['খুঁজে দাও' => 6, 'খুঁজুন' => 6, 'সার্চ করো' => 6, 'রেকর্ডে খুঁজে' => 7],
+                'bl' => ['khuje dao' => 6, 'search koro' => 6],
+                'block' => ['where is', 'কোথায়', 'balance for', 'statement for'],
+            ],
+            'remind' => [
+                'en' => ['remind me' => 7, 'set a reminder' => 7, 'draft a reminder' => 7, 'draft a' => 5,
+                         'write a reminder' => 6, 'send a reminder' => 6, 'note that' => 5, 'make a note' => 6,
+                         'follow up with' => 6, 'chase' => 4],
+                'bn' => ['মনে করিয়ে দিও' => 7, 'রিমাইন্ডার' => 7, 'তাগাদা দাও' => 6, 'নোট রাখো' => 6, 'একটা খসড়া' => 6],
+                'bl' => ['remind me' => 7, 'reminder dao' => 7, 'tagada dao' => 6, 'note rakho' => 6],
+            ],
             // one party's running account — distinct from the AR/AP totals above
             'party_balance' => [
                 'en' => ['balance for' => 7, 'balance of' => 6, 'party statement' => 7, 'statement for' => 6,

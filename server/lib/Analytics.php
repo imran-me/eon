@@ -349,6 +349,41 @@ final class Analytics
         if (count($overdue)) $concerns[] = count($overdue) . ' task(s) overdue now';
         return ['employee' => ['id' => $e['id'], 'name' => $e['name'], 'designation' => $e['designation'], 'department' => $e['department'], 'company' => $this->coName($e['company_id']), 'joined' => $e['joining_date'], 'salary' => (float) $e['salary']], 'days' => $days, 'score' => $score, 'grade' => $grade, 'attendance_pct' => (int) round($attPct * 100), 'punctuality_pct' => (int) round($punct * 100), 'late_days' => $lateDays, 'tasks_done' => count($done), 'tasks_on_time' => count($onTime), 'tasks_overdue' => count($overdue), 'open_tasks' => count($recent) - count($done), 'leads_won' => $won, 'leads_lost' => $lost, 'strengths' => $strengths, 'concerns' => $concerns, 'narrative' => sprintf('%s (%s, %s) scores %d/100 — grade %s. %s %s', $e['name'], $e['designation'], $this->coName($e['company_id']), $score, $grade, $strengths ? 'Strengths: ' . implode(', ', $strengths) . '.' : '', $concerns ? 'Watch: ' . implode('; ', $concerns) . '.' : "No concerns in the last $days days.")];
     }
+    /* Rank the whole payroll on the same 100-point model as evaluate(), in PHP.
+       The Python evaluator is not reachable on the host (no python binary), and with
+       no language model either this is the only way the boss can ask "who is doing
+       well and who is not" — so it must work with what the server has. */
+    public function ranking(int $days = 30, int $limit = 8): array
+    {
+        $rows = [];
+        foreach ($this->rows('employees') as $e) {
+            if (($e['status'] ?? 'active') !== 'active') continue;
+            $ev = $this->evaluate((int) $e['id'], $days);
+            if (!$ev) continue;
+            // someone with no attendance, no tasks and no leads has nothing to judge — do not rank noise
+            if ($ev['attendance_pct'] === 100 && $ev['tasks_done'] === 0 && $ev['open_tasks'] === 0 && $ev['late_days'] === 0 && $ev['leads_won'] === 0 && $ev['leads_lost'] === 0) { $rows[] = ['unrated' => true] + $ev; continue; }
+            $rows[] = ['unrated' => false] + $ev;
+        }
+        $rated = array_values(array_filter($rows, fn($r) => !$r['unrated']));
+        usort($rated, fn($a, $b) => $b['score'] <=> $a['score'] ?: strcmp((string) $a['employee']['name'], (string) $b['employee']['name']));
+        $flat = fn(array $r) => ['id' => $r['employee']['id'], 'name' => $r['employee']['name'], 'designation' => $r['employee']['designation'], 'department' => $r['employee']['department'],
+            'score' => $r['score'], 'grade' => $r['grade'], 'attendance_pct' => $r['attendance_pct'], 'punctuality_pct' => $r['punctuality_pct'],
+            'tasks_done' => $r['tasks_done'], 'tasks_overdue' => $r['tasks_overdue'], 'strengths' => $r['strengths'], 'concerns' => $r['concerns']];
+        $byDept = [];
+        foreach ($rated as $r) { $d = (string) ($r['employee']['department'] ?? '—'); $byDept[$d][] = $r['score']; }
+        $dept = [];
+        foreach ($byDept as $d => $s) $dept[] = ['department' => $d, 'people' => count($s), 'average' => (int) round(array_sum($s) / count($s))];
+        usort($dept, fn($a, $b) => $b['average'] <=> $a['average']);
+        $grades = ['A' => 0, 'B' => 0, 'C' => 0, 'D' => 0];
+        foreach ($rated as $r) $grades[$r['grade']] = ($grades[$r['grade']] ?? 0) + 1;
+        return ['days' => $days, 'rated' => count($rated), 'unrated' => count($rows) - count($rated), 'headcount' => count($rows),
+            'average' => count($rated) ? (int) round(array_sum(array_column($rated, 'score')) / count($rated)) : 0,
+            'grades' => $grades, 'by_department' => $dept,
+            'top' => array_map($flat, array_slice($rated, 0, $limit)),
+            'bottom' => array_map($flat, array_slice(array_reverse($rated), 0, $limit)),
+            'concerns' => array_map($flat, array_values(array_filter($rated, fn($r) => $r['score'] < 55 || $r['tasks_overdue'] > 5)))];
+    }
+
     public function pendingLeaves(): array
     {
         $rows = array_values(array_filter($this->rows('leaves'), fn($l) => $l['status'] === 'pending'));
