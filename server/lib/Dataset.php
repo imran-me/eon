@@ -5,7 +5,21 @@ declare(strict_types=1);
    Built from the ERP database (Erp::build) or loaded from the demo JSON; cached on disk. */
 final class Dataset
 {
-    public const TABLES = ['companies', 'accounts', 'journal_entries', 'banks', 'payment_schedules', 'expenses', 'expense_budgets', 'departments', 'designations', 'employees', 'attendances', 'leave_types', 'leaves', 'holidays', 'payroll', 'loans', 'advance_salaries', 'employee_requests', 'customers', 'suppliers', 'leads', 'deals', 'projects', 'tasks', 'office_todos', 'sales', 'purchases', 'notices'];
+    public const TABLES = ['companies', 'accounts', 'journal_entries', 'banks', 'payment_schedules', 'expenses', 'expense_budgets', 'departments', 'designations', 'employees', 'attendances', 'leave_types', 'leaves', 'holidays', 'payroll', 'loans', 'advance_salaries', 'employee_requests', 'customers', 'suppliers', 'leads', 'deals', 'projects', 'tasks', 'office_todos', 'sales', 'purchases', 'notices',
+        // the service business: what Epal actually sells, and what it owes for it
+        'ticket_sales', 'visa_sales', 'contract_file_sales', 'contract_flight_bookings', 'ticket_purchases', 'visa_processes', 'other_visa_services', 'passport_holders',
+        // money that moves outside the journal
+        'payments', 'bank_transfers', 'petty_cash_floats', 'petty_cash_transactions', 'employee_ledger',
+        // the rest of the people lifecycle, and the service desk
+        'payslips', 'resignations', 'shifts', 'support_tickets', 'portals'];
+
+    /** every section that carries an invoice-style due: [table, date column, label] — the real AR/AP */
+    public const SALES_TABLES = [
+        'ticket_sales' => 'air ticket',
+        'visa_sales' => 'visa',
+        'contract_file_sales' => 'contract file',
+        'contract_flight_bookings' => 'contract flight',
+    ];
 
     public static function empty(): array
     {

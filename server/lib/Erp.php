@@ -134,8 +134,62 @@ final class Erp
         $expCol = $has('notices', 'expiry_date') ? 'expiry_date' : ($has('notices', 'expires_at') ? 'expires_at' : 'NULL'); $pubCol = $has('notices', 'publish_date') ? 'publish_date' : 'DATE(created_at)';
         self::section($D, 'notices', "SELECT id, company_id, title, {$pubCol} AS published_at, {$expCol} AS expires_at FROM notices WHERE 1=1 {$sd('notices')} ORDER BY created_at DESC LIMIT 20");
 
+        // ============================================================
+        //  The service business the general ledger does not capture.
+        //  Epal sells air tickets, visas, contract files and contract
+        //  flights — `sales`/`purchases` are unused, so revenue and the
+        //  real AR/AP live in these invoice tables. Reading only the
+        //  ledger understates the business (a month can post ৳42k of
+        //  4110 against ৳8.9 L of confirmed ticket sales), and reading
+        //  only payment_schedules reports receivables of zero while
+        //  lakhs sit unpaid on invoices. EON reads both.
+        // ============================================================
+        $co = fn(string $t, string $a) => $has($t, 'company_id') ? ($company ? " AND {$a}.company_id = " . (int) $company : '') : '';
+
+        // --- air ticket sales (client_id → users) ---
+        self::section($D, 'ticket_sales', "SELECT s.id, s.company_id, s.invoice_no AS invoice, s.client_id, u.name AS client, u.phone AS client_phone, s.sale_date AS date, s.due_date, s.total_amount AS total, s.paid_amount, s.due_amount, s.payment_status, s.status, s.bank_id
+            FROM ticket_sales s LEFT JOIN users u ON u.id = s.client_id WHERE s.sale_date >= ? {$co('ticket_sales', 's')}{$sd('ticket_sales', 's')} ORDER BY s.sale_date DESC", [$from]);
+        // --- visa sales ---
+        self::section($D, 'visa_sales', "SELECT s.id, s.company_id, s.invoice_number AS invoice, s.client_id, u.name AS client, s.voucher_date AS date, s.receivable_date, s.total_amount AS total, s.paid_amount, s.due_amount, s.payment_method, s.status, s.bank_id
+            FROM visa_sales s LEFT JOIN users u ON u.id = s.client_id WHERE s.voucher_date >= ? {$co('visa_sales', 's')}{$sd('visa_sales', 's')} ORDER BY s.voucher_date DESC", [$from]);
+        // --- contract file sales ---
+        self::section($D, 'contract_file_sales', "SELECT s.id, s.company_id, s.invoice_number AS invoice, s.client_id, u.name AS client, s.sale_date AS date, s.receivable_date, s.files_count, s.total_amount AS total, s.paid_amount, s.due_amount, s.vendor_cost, s.payment_status, s.payment_method, s.bank_id
+            FROM contract_file_sales s LEFT JOIN users u ON u.id = s.client_id WHERE s.sale_date >= ? {$co('contract_file_sales', 's')}{$sd('contract_file_sales', 's')} ORDER BY s.sale_date DESC", [$from]);
+        // --- contract flight (group seat) bookings ---
+        self::section($D, 'contract_flight_bookings', "SELECT b.id, b.company_id, b.booking_number AS invoice, b.client_id, u.name AS client, DATE(b.created_at) AS date, b.receivable_date, b.seats, b.unit_price, b.total_amount AS total, b.paid_amount, b.due_amount, b.payment_status, b.bank_id
+            FROM contract_flight_bookings b LEFT JOIN users u ON u.id = b.client_id WHERE b.created_at >= ? {$co('contract_flight_bookings', 'b')}{$sd('contract_flight_bookings', 'b')} ORDER BY b.created_at DESC", [$from]);
+        // --- ticket purchases: the vendor payable side of a ticket sale ---
+        // a ticket bought through a booking portal (BSP/IATA, an airline portal) is owed to the PORTAL, not to a vendor
+        self::section($D, 'ticket_purchases', "SELECT p.id, p.company_id, p.vendor_id, v.name AS vendor, p.portal_id, o.name AS portal, p.ticket_no, p.airline_or_operator AS airline, p.ticket_type, p.trip_type, p.source, p.purchase_date AS date, p.due_date, p.amount AS total, p.paid_amount, p.due_amount, p.payment_status, p.status, p.bank_id
+            FROM ticket_purchases p LEFT JOIN users v ON v.id = p.vendor_id LEFT JOIN portals o ON o.id = p.portal_id WHERE p.purchase_date >= ? {$co('ticket_purchases', 'p')}{$sd('ticket_purchases', 'p')} ORDER BY p.purchase_date DESC", [$from]);
+        self::section($D, 'portals', "SELECT id, name, type, balance, next_payment_date, next_payment_amount, account_id, status FROM portals WHERE 1=1 {$sd('portals')}");
+        // --- visa processing pipeline: work in hand, its cost and its sale price ---
+        self::section($D, 'visa_processes', "SELECT p.id, p.application_id, p.passport_holder_id, h.name AS applicant, p.vendor_id, c.name AS country, t.name AS visa_category, p.visa_type, p.travel_date, p.embassy_fee, p.vfs_fee, p.our_service_fee, p.costing_price, p.cost_paid_amount, p.due_amount, p.sale_price, p.advance_received, p.payable_date, p.receivable_date, p.payment_status, p.status, p.stage, p.assigned_officer_id, o.name AS officer
+            FROM visa_processes p LEFT JOIN passport_holders h ON h.id = p.passport_holder_id LEFT JOIN countries c ON c.id = p.country_id LEFT JOIN visa_categories t ON t.id = p.visa_category_id LEFT JOIN users o ON o.id = p.assigned_officer_id WHERE 1=1 {$sd('visa_processes', 'p')}");
+        self::section($D, 'other_visa_services', "SELECT s.id, s.service_code, s.passport_holder_id, h.name AS applicant, t.name AS service_type, s.cost_price, s.sale_price, s.deadline, s.status, s.is_billable, s.assigned_officer_id
+            FROM other_visa_services s LEFT JOIN passport_holders h ON h.id = s.passport_holder_id LEFT JOIN other_service_types t ON t.id = s.other_service_type_id WHERE 1=1 {$sd('other_visa_services', 's')}");
+        self::section($D, 'passport_holders', "SELECT h.id, h.name, h.passport_no, h.nationality, h.phone, h.expiry_date, h.type, h.status, c.name AS category FROM passport_holders h LEFT JOIN passport_holder_categories c ON c.id = h.category_id WHERE 1=1 {$sd('passport_holders', 'h')}");
+
+        // --- money movement outside the journal ---
+        self::section($D, 'payments', "SELECT p.id, p.user_id, u.name AS person, p.employee_salary_id, p.payment_date AS date, p.bank_id, p.payment_method, p.transaction_no, p.amount, p.notes FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.payment_date >= ? ORDER BY p.payment_date DESC", [$from]);
+        self::section($D, 'bank_transfers', "SELECT t.id, t.from_bank_id, f.name AS from_bank, t.to_bank_id, b.name AS to_bank, t.amount, t.payment_date AS date, t.reference_no, t.payment_method, t.status, t.remarks FROM bank_transfers t LEFT JOIN banks f ON f.id = t.from_bank_id LEFT JOIN banks b ON b.id = t.to_bank_id WHERE t.payment_date >= ? {$sd('bank_transfers', 't')} ORDER BY t.payment_date DESC", [$from]);
+        self::section($D, 'petty_cash_floats', "SELECT f.id, f.company_id, f.custodian_id, u.name AS custodian, f.account_id, f.float_limit, f.status FROM petty_cash_floats f LEFT JOIN users u ON u.id = f.custodian_id WHERE 1=1 {$sd('petty_cash_floats', 'f')}");
+        self::section($D, 'petty_cash_transactions', "SELECT t.id, t.petty_cash_float_id, t.type, t.amount, t.date, t.bank_id, t.note FROM petty_cash_transactions t WHERE t.date >= ? {$sd('petty_cash_transactions', 't')} ORDER BY t.date DESC", [$from]);
+        self::section($D, 'employee_ledger', "SELECT l.id, l.user_id, u.name AS person, l.type, l.source_type, l.entry_date AS date, l.reference, l.debit, l.credit, l.balance, l.note FROM employee_ledger l LEFT JOIN users u ON u.id = l.user_id WHERE l.entry_date >= ? {$sd('employee_ledger', 'l')} ORDER BY l.entry_date DESC", [$from]);
+
+        // --- people, the rest of the lifecycle ---
+        self::section($D, 'payslips', "SELECT p.id, p.user_id, u.name AS person, p.employee_salary_id, p.payslip_number, p.issue_date, p.payment_status, p.bank_id FROM payslips p LEFT JOIN users u ON u.id = p.user_id WHERE p.issue_date >= ? ORDER BY p.issue_date DESC", [$from]);
+        self::section($D, 'resignations', "SELECT r.id, r.employee_id AS user_id, u.name AS person, r.resign_date, r.last_working_day, r.resign_type, r.notice_period_days, r.status, r.reason FROM employee_resignations r LEFT JOIN users u ON u.id = r.employee_id WHERE 1=1 {$sd('employee_resignations', 'r')} ORDER BY r.resign_date DESC");
+        self::section($D, 'shifts', "SELECT id, name, start_time, end_time FROM shifts WHERE 1=1 {$sd('shifts')}");
+
+        // --- service desk ---
+        self::section($D, 'support_tickets', "SELECT t.id, t.company_id, t.title, d.name AS department, t.priority, t.status, t.assigned_to, u.name AS assignee, t.customer_id, DATE(t.created_at) AS created_at FROM support_tickets t LEFT JOIN ticket_departments d ON d.id = t.ticket_department_id LEFT JOIN users u ON u.id = t.assigned_to WHERE 1=1 {$co('support_tickets', 't')}{$sd('support_tickets', 't')} ORDER BY t.created_at DESC");
+
         // numeric coercion for money fields (PDO returns strings)
-        foreach (['payment_schedules' => ['amount', 'paid_amount'], 'expenses' => ['amount'], 'expense_budgets' => ['amount'], 'payroll' => ['gross_salary', 'absent_deduction', 'leave_deduction', 'late_deduction', 'early_leave_deduction', 'loan_deduction', 'advance_salary_deduction', 'overtime_salary', 'total_deductions', 'net_salary'], 'loans' => ['amount', 'remaining_amount', 'monthly_deduction'], 'advance_salaries' => ['amount'], 'employee_requests' => ['amount'], 'deals' => ['amount'], 'sales' => ['total', 'paid_amount', 'due_amount'], 'purchases' => ['total', 'paid_amount', 'due_amount'], 'accounts' => ['opening_balance']] as $t => $cols) {
+        foreach (['payment_schedules' => ['amount', 'paid_amount'], 'expenses' => ['amount'], 'expense_budgets' => ['amount'], 'payroll' => ['gross_salary', 'absent_deduction', 'leave_deduction', 'late_deduction', 'early_leave_deduction', 'loan_deduction', 'advance_salary_deduction', 'overtime_salary', 'total_deductions', 'net_salary'], 'loans' => ['amount', 'remaining_amount', 'monthly_deduction'], 'advance_salaries' => ['amount'], 'employee_requests' => ['amount'], 'deals' => ['amount'], 'sales' => ['total', 'paid_amount', 'due_amount'], 'purchases' => ['total', 'paid_amount', 'due_amount'], 'accounts' => ['opening_balance'],
+            'ticket_sales' => ['total', 'paid_amount', 'due_amount'], 'visa_sales' => ['total', 'paid_amount', 'due_amount'], 'contract_file_sales' => ['total', 'paid_amount', 'due_amount', 'vendor_cost'], 'contract_flight_bookings' => ['total', 'paid_amount', 'due_amount', 'unit_price'],
+            'ticket_purchases' => ['total', 'paid_amount', 'due_amount'], 'visa_processes' => ['embassy_fee', 'vfs_fee', 'our_service_fee', 'costing_price', 'cost_paid_amount', 'due_amount', 'sale_price', 'advance_received'], 'other_visa_services' => ['cost_price', 'sale_price'],
+            'payments' => ['amount'], 'bank_transfers' => ['amount'], 'petty_cash_floats' => ['float_limit'], 'petty_cash_transactions' => ['amount'], 'employee_ledger' => ['debit', 'credit', 'balance']] as $t => $cols) {
             foreach ($D[$t] as &$r) foreach ($cols as $c) $r[$c] = (float) ($r[$c] ?? 0); unset($r);
         }
         foreach (Dataset::TABLES as $t) foreach ($D[$t] as &$r) { foreach (['id', 'company_id', 'user_id', 'customer_id', 'supplier_id', 'lead_id', 'project_id', 'assigned_to', 'agent_id', 'account_id', 'bank_id', 'party_id', 'category_id', 'department_id'] as $k) if (array_key_exists($k, $r) && $r[$k] !== null && !is_array($r[$k])) $r[$k] = (int) $r[$k]; } unset($r);
