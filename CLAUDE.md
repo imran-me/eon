@@ -80,21 +80,23 @@ eon/
 | **EON 2 abilities** (client): বাংলা, health score, since-yesterday, compliance calendar, preferences, board pack, delegation, what-if — plug-ins in `domains/erp/plugins/` | done, pushed, Node-tested; none hijack the English intents |
 | Compliance calendar as a **server** decision provider (`server/lib/decisions/compliance.php`) | done, tested through Analytics |
 | Build visible in the app footer (`health.php` reads the commit from the checkout) | done |
-| **ERP at the front door** (`/` → `erp/public`, `/eon/` → panel, `embed/` injects the companion with zero ERP edits) | routing + embed done and live; **awaiting the ERP clone on the host** (docs/erp-host.md) |
+| **ERP at the front door** (`/` → `erp/public`, `/eon/` → panel, `embed/` injects the companion with zero ERP edits) | **done, live** — ERP source versioned in `erp/` (from the owner's zip), post-deploy installs it (.env from EON's db config, key, folders, storage link), companion injected on every ERP page |
 
 ## Next steps (in order)
 
-1. **Owner:** clone the ERP into `erp/` on the host and fill its `.env` (docs/erp-host.md §1–2).
-   Then `/` is the ERP, pixel for pixel, with EON walking on it and the panel button opening `/eon/`.
-2. The live server now reads a **real ERP database** (`health.php` → `db:true, source:erp, auth:token`).
-   Open the panel once as `/eon/?token=…`; then sanity-check every screen against the ERP's own numbers
-   and fix any column mapping that shows blanks (first contact with the live schema).
-3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`,
-   `lib/decisions/{health,delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`
-   — they matter once an API key is added; the browser versions already work without one.
-4. `post-deploy` exits non-zero on the host without printing a reason (now instrumented — run
-   `php deploy/post-deploy.php` on the host to see it).
-5. Python is not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
+1. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
+2. Live-data check of EON's panel against the ERP's own numbers (`/eon/?token=…` once); fix any column mapping that shows blanks.
+3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php` — matter once an API key is added.
+4. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
+
+## Host facts (Hostinger, eon.gulfrabit.com) — learned the hard way
+
+- **`exec`/`shell_exec`/`proc_open` are disabled** for the web user. post-deploy does everything in-process; composer for the ERP was run once over SSH (`deploy/erp-install.sh`).
+- **`.user.ini` is ignored** in our folder (PHP reads it only from the website's own root, which is gulfrabit.com's). PHP directives go in the site `.htaccess` as `php_value` (LiteSpeed honours them). `embed/check.php` shows what PHP accepted.
+- **`auto_append_file` never reaches the client** behind Laravel (it terminates the request itself). The injector runs as **`auto_prepend_file`** and adds the tag from an output-buffer callback (`embed/eon-inject.php`).
+- Reserved root names in `.htaccess` must be only EON's real paths — reserving `vendor` once swallowed the ERP's `public/vendor/alpine.min.js` and the ERP rendered unstyled.
+- The ERP database on the host is `u239665931_eon` (the full dump `ERP Database.sql`); the ERP's `.env` is generated from EON's `server/config.local.php` db block. `public/uploads/` from the old server is **not** copied yet (user-uploaded files will 404 until it is).
+- Cron: `deploy/deploy.sh --quiet` every minute; push → live in ~60 s (`health.php` shows the commit; the panel footer shows `build …`).
 
 ## Owner preferences learned
 
