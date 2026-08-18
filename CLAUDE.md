@@ -51,7 +51,11 @@ eon/
 │   ├── cron/{morning-brief,watch}.php · install/schema.sql · storage/{cache,logs,data}
 │   └── py/eon.py, requirements.txt   Python analytics service (forecast, anomalies, evaluate, report)
 ├── deploy/                       push-to-deploy: deploy.sh (cron), post-deploy.php, webhook.php, notify.php
-├── index.html + app/{eon.css,eon-app.js}   Command Center (single page, hash routing)
+├── index.html                    placeholder → /eon/ (the ERP takes this address once installed)
+├── eon/index.html + app/{eon.css,eon-app.js}   Command Center (single page, hash routing) at /eon/
+├── embed/{eon-embed.js,eon-inject.php}   EON rides on the ERP: one script tag appended by PHP
+├── erp/                          the ERP clone (git-ignored, never edited) — docs/erp-host.md
+├── deploy/{deploy.sh,post-deploy.php,webhook.php}   git push → live (cron every minute)
 └── docs/                         erp-domain-map.md, lineage-and-architecture.md, deploy.md (planned), summit script (planned)
 ```
 
@@ -71,13 +75,26 @@ eon/
 | Command Center (`index.html` + `app/eon.css` + `app/eon-app.js`: brief, decisions, approvals, finance, people, CRM, ops, ask; server LLM answers with client fallback; headless-Chrome render verified) | done |
 | Deploy guide (`docs/deploy.md`) + summit script (`docs/summit-demo.md`) | done |
 | **Push-to-deploy** for `eon.gulfrabit.com` (`deploy/{deploy.sh,post-deploy.php,webhook.php,notify.php,.htaccess,README.md,deploy.env.example}`, `commit`/`deployed` in `health.php`, `docs/deploy.md` Option C) | done, tested end to end against a simulated origin: layout A, layout B publish (secrets/vendor/storage kept, no `.git` leak), `deploy.env`, `--force`/`--quiet`, lock, failure path, sha hand-off |
+| **Live on `eon.gulfrabit.com`** (Hostinger, PHP 8.3): clone in `public_html/eon`, cron `deploy/deploy.sh --quiet` every minute | done — `git push` is live in ~60s, verified twice |
+| White executive theme (light palette, projector/print friendly) | done, rendered headless |
+| **EON 2 abilities** (client): বাংলা, health score, since-yesterday, compliance calendar, preferences, board pack, delegation, what-if — plug-ins in `domains/erp/plugins/` | done, pushed, Node-tested; none hijack the English intents |
+| Compliance calendar as a **server** decision provider (`server/lib/decisions/compliance.php`) | done, tested through Analytics |
+| Build visible in the app footer (`health.php` reads the commit from the checkout) | done |
+| **ERP at the front door** (`/` → `erp/public`, `/eon/` → panel, `embed/` injects the companion with zero ERP edits) | routing + embed done and live; **awaiting the ERP clone on the host** (docs/erp-host.md) |
 
 ## Next steps (in order)
 
-1. Multi-agent adversarial review (22 agents) → 14 confirmed findings fixed (bdtk rounding, fail-closed auth, ERP column drift with schema-guard, payroll month parsing, sql tool hardening, prompt-injection framing, memory locking, adapter token, voice chain abort, intent order, company scope) → committed.
-2. Laravel module shim + deploy docs + summit script → committed.
-3. Push-to-deploy: cron pulls `origin/main` every 5 minutes into the document root of `eon.gulfrabit.com` (`docs/deploy.md` → Option C). **Owner's part on the host:** clone into `public_html`, `config.local.php` + `composer install`, `deploy.env`, the three cron lines.
-4. Next: live-mode test on the subdomain with a real key (LLM + ERP DB paths are still untested outside offline mode); Bangla voice polish; optional server STT/TTS.
+1. **Owner:** clone the ERP into `erp/` on the host and fill its `.env` (docs/erp-host.md §1–2).
+   Then `/` is the ERP, pixel for pixel, with EON walking on it and the panel button opening `/eon/`.
+2. The live server now reads a **real ERP database** (`health.php` → `db:true, source:erp, auth:token`).
+   Open the panel once as `/eon/?token=…`; then sanity-check every screen against the ERP's own numbers
+   and fix any column mapping that shows blanks (first contact with the live schema).
+3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`,
+   `lib/decisions/{health,delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`
+   — they matter once an API key is added; the browser versions already work without one.
+4. `post-deploy` exits non-zero on the host without printing a reason (now instrumented — run
+   `php deploy/post-deploy.php` on the host to see it).
+5. Python is not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
 
 ## Owner preferences learned
 
