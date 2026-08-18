@@ -111,7 +111,7 @@ TXT;
             $response = $create($messages);
         }
         if ($text === '') $text = 'I gathered the data but ran out of room to answer — ask me again more narrowly.';
-        return ['mode' => self::MODE_LLM, 'model' => $model, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => array_values(array_unique($used)), 'usage' => $usage];
+        return ['mode' => self::MODE_LLM, 'model' => $model, 'text' => $text, 'speak' => self::voice($text), 'tools_used' => array_values(array_unique($used)), 'usage' => $usage];
     }
 
     /** Rule-based fallback, in three layers.
@@ -128,7 +128,7 @@ TXT;
                 $parse = Nlu::parse($q, $lang);
                 $r = Answer::compose($q, $parse, new Analytics($D, $company), $tools);
                 if (($r['text'] ?? '') !== '') {
-                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::plain($r['text']),
+                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null),
                             'tools_used' => $r['tools_used'] ?? [], 'intent' => $r['intent'] ?? null,
                             'lang' => $r['lang'] ?? null, 'usage' => null];
                 }
@@ -138,7 +138,7 @@ TXT;
             try {
                 $r = Answers::reply($q, $D, $company, $tools, $lang);
                 if (($r['text'] ?? '') !== '') {
-                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::plain($r['text']), 'tools_used' => $r['tools_used'], 'intent' => $r['intent'], 'lang' => $r['lang'], 'usage' => null];
+                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null), 'tools_used' => $r['tools_used'], 'intent' => $r['intent'], 'lang' => $r['lang'], 'usage' => null];
                 }
             } catch (Throwable $e) { Log::warn('offline answerer failed, falling back to regex', ['error' => $e->getMessage()]); }
         }
@@ -169,7 +169,22 @@ TXT;
         if ($text === null && preg_match('/evaluat|who is|tell me about|performance of|salary of|profile of/', $s)) { $e = $A->findEmployee($q); if ($e) { $used[] = 'find_employee'; $ev = $A->evaluate((int) $e['id']); $text = $ev['narrative'] ?? null; } }
         if ($text === null && preg_match('/\b(\d{4})\b/', $s, $m) && preg_match('/code|account|ledger|what is|explain/', $s)) { $used[] = 'get_account_ledger'; $r = $tools->run('get_account_ledger', ['code' => $m[1]]); $text = "Account {$m[1]}: {$r['postings']} postings, closing balance " . Analytics::bdt((float) $r['closing_balance']) . '.'; }
         if ($text === null) { $b = $A->kpis(); $text = "I did not match that to a report yet (offline mode). Right now: cash " . $k((float) $b['cash']) . ', receivables overdue ' . $k((float) $b['receivables_overdue']) . ", {$b['absent_today']} absent today, {$b['tasks_overdue']} tasks overdue. Ask me about cash, receivables, payables, profit, budget, attendance, payroll, pipeline, tasks, projects, approvals, or a person by name."; }
-        return ['mode' => self::MODE_OFFLINE, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => $used, 'usage' => null];
+        return ['mode' => self::MODE_OFFLINE, 'text' => $text, 'speak' => self::voice($text), 'tools_used' => $used, 'usage' => null];
+    }
+
+    /** What EON says, as opposed to what it writes: money and percentages become
+        words, account codes are read digit by digit, URLs are never read out.
+        Falls back to the plain-text stripper if Speech is not loaded. */
+    public static function voice(string $text, ?string $lang = null): string
+    {
+        $plain = self::plain($text);
+        if (!class_exists('Speech')) return $plain;
+        $l = $lang;
+        if ($l === null || ($l !== 'bn' && $l !== 'en')) {
+            $l = (class_exists('Nlu') && Nlu::banglaRatio($text) > 0.25) ? 'bn' : 'en';
+        }
+        try { return Speech::shorten(Speech::spoken($plain, $l)); }
+        catch (Throwable $e) { Log::warn('speech render failed', ['error' => $e->getMessage()]); return $plain; }
     }
 
     /** strip markdown for text-to-speech */

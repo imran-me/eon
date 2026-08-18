@@ -31,7 +31,7 @@ $show = isset($opt['show']) ? (int) $opt['show'] : 0;
 
 /* ---------- load EON ---------- */
 foreach (['Config', 'Log', 'Db', 'Dataset', 'Erp', 'Memory', 'Analytics',
-          'ErpMap', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Insight', 'Tools', 'Answer'] as $c) {
+          'ErpMap', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Speech', 'Insight', 'Tools', 'Answer'] as $c) {
     $f = EON_ROOT . '/lib/' . $c . '.php';
     if (is_file($f)) require_once $f;
 }
@@ -144,6 +144,16 @@ foreach ($questions as $row) {
         $expect = (string) $row['expect'];
         if ($expect === 'bn' && $ratio < 0.2) { $ok = false; $why[] = 'answered in english'; }
         if ($expect === 'en' && $ratio > 0.5) { $ok = false; $why[] = 'answered in bangla'; }
+
+        // 4. sayable: nothing a speech engine would read as gibberish
+        if (class_exists('Speech')) {
+            $spoken = Speech::shorten(Speech::spoken($text, $expect));
+            if (trim($spoken) === '') { $ok = false; $why[] = 'nothing to say'; }
+            elseif (preg_match('/[০-৯0-9]/u', $spoken)) { $ok = false; $why[] = 'digits left unspoken'; }
+            elseif (mb_strpos($spoken, '৳') !== false) { $ok = false; $why[] = 'currency sign unspoken'; }
+            elseif (preg_match('~(?:https?://|/[A-Za-z0-9_\-]{3,}/)~u', $spoken)) { $ok = false; $why[] = 'url read aloud'; }
+            elseif (preg_match('/[→›»{}|]/u', $spoken)) { $ok = false; $why[] = 'symbol read aloud'; }
+        }
     } catch (Throwable $e) {
         $ok = false;
         $why[] = 'threw: ' . $e->getMessage();

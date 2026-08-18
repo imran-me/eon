@@ -19,6 +19,8 @@
      v.stop()                     → stop listening
      v.say(text, { lang })        → speak (returns a promise)
      v.setLang('en-US' | 'bn-BD') → recognition + synthesis language
+     v.hasVoiceFor('bn')          → can this machine pronounce that language?
+     v.voiceReport()              → what is installed, and what to do if Bangla is missing
      v.wakeWord(true|false)       → require "eon" in continuous mode
    ============================================================ */
 
@@ -41,6 +43,15 @@ function pickVoice(lang) {
   return vs.slice().sort((a, b) => (prefer(b) + quality(b)) - (prefer(a) + quality(a)))[0] || null;
 }
 
+/* Is there a voice that can actually pronounce this language? A machine with no
+   Bangla voice will happily accept Bengali text and read it with an English
+   voice — which produces silence or nonsense. Better to know and say so. */
+function hasVoiceFor(lang) {
+  const base = String(lang || state.lang).toLowerCase().split('-')[0];
+  const vs = state.voices.length ? state.voices : loadVoices();
+  return vs.some((v) => (v.lang || '').toLowerCase().split('-')[0] === base);
+}
+
 const WAKE = /^\s*(hey |ok |hi )?(eon|ion|eyon|aeon|ইয়ন|ইওন|এওন)[,!.\s]*/i;
 
 export const EonVoice = {
@@ -52,6 +63,18 @@ export const EonVoice = {
   onTranscript(fn) { listeners.transcript.add(fn); return () => listeners.transcript.delete(fn); },
   onState(fn) { listeners.state.add(fn); return () => listeners.state.delete(fn); },
   voices() { return loadVoices(); },
+  hasVoiceFor(lang) { return hasVoiceFor(lang); },
+  /** what this machine can actually speak — for the UI to warn with */
+  voiceReport() {
+    const vs = loadVoices();
+    return {
+      total: vs.length,
+      english: hasVoiceFor('en'),
+      bangla: hasVoiceFor('bn'),
+      picked: { en: (pickVoice('en-US') || {}).name || null, bn: (pickVoice('bn-BD') || {}).name || null },
+      note: hasVoiceFor('bn') ? '' : 'No Bangla voice is installed, so Bangla answers cannot be read aloud. Windows: Settings → Time & language → Language → add বাংলা with its speech pack.',
+    };
+  },
   mute(on) { state.muted = !!on; if (on) this.hush(); },
 
   listen({ continuous = false } = {}) {
@@ -89,6 +112,13 @@ export const EonVoice = {
   say(text, { lang, rate, pitch } = {}) {
     text = String(text || '').replace(/\s+/g, ' ').trim();
     if (!SS || !text || state.muted) return Promise.resolve(false);
+    // Bengali script with no Bengali voice installed reads as silence — say so
+    // rather than appearing to speak and producing nothing.
+    const wantsBangla = /[\u0980-\u09FF]/.test(text) || String(lang || state.lang).toLowerCase().startsWith('bn');
+    if (wantsBangla && !hasVoiceFor('bn')) {
+      setStatus('error', 'No Bangla voice is installed on this device — the answer is on screen. Add বাংলা speech in the system language settings to hear it.');
+      return Promise.resolve(false);
+    }
     this.hush();
     // pause recognition while speaking so EON doesn't hear itself
     const rec = state.rec; if (rec) { try { rec.stop(); } catch {} }
