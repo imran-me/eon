@@ -32,6 +32,7 @@
   #eon-ask-ui .h .where{margin-left:auto;font-size:11px;color:#8c97b2;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #eon-ask-ui .h button{border:1px solid #e2e7f0;background:#fff;border-radius:8px;height:26px;padding:0 8px;cursor:pointer;font:600 11.5px inherit;color:#5b6785}
   #eon-ask-ui .h button:hover{background:#f5f7fc}
+  #eon-ask-ui .h button#eon-ask-live.on{background:#dc2626;border-color:#dc2626;color:#fff;animation:eon-ask-pulse 1.6s infinite}
   #eon-ask-ui .thread{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:#fbfcfe}
   #eon-ask-ui .m{max-width:88%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
   #eon-ask-ui .m.me{align-self:flex-end;background:linear-gradient(135deg,#4f46e5,#3b6fe0);color:#fff;border-bottom-right-radius:5px}
@@ -68,6 +69,7 @@
   ui.innerHTML = `
     <div class="h"><span class="dot"></span><b>EON</b>
       <span class="where" id="eon-ask-where"></span>
+      <button id="eon-ask-live" title="Full-time conversation — EON keeps listening, say “EON …”">◉ Live</button>
       <button id="eon-ask-dock" title="Work with EON beside the ERP">Dock ⇥</button>
       <button id="eon-ask-close" title="Close (Esc)">✕</button></div>
     <div class="thread" id="eon-ask-thread"></div>
@@ -186,6 +188,31 @@
     V.onTranscript((text, meta) => { if (meta && meta.final && text) { mic.classList.remove('on'); send(text); } });
     V.listen({ continuous: false });
   };
+
+  /* ---------- full-time conversation ----------
+     EON keeps the microphone open and answers anything addressed to him.
+     He stops listening while he speaks, so he never hears himself, and
+     picks up again the moment he finishes. Say "stop listening" to end. */
+  let live = false;
+  const liveBtn = $('#eon-ask-live', ui);
+  function setLive(on) {
+    const V = window.EonVoice;
+    if (!V || !V.available().stt) { bubble('eon', 'This browser cannot listen — Chrome or Edge can.'); return; }
+    live = !!on;
+    liveBtn.classList.toggle('on', live);
+    liveBtn.textContent = live ? '◉ Listening' : '◉ Live';
+    if (!live) { V.stop(); return; }
+    bubble('eon', 'I am listening. Just talk — say “EON, …” and I will answer, or “stop listening” when you are done.');
+    V.wakeWord(true);
+    V.onTranscript((text, meta) => {
+      if (!live || !meta || !meta.final || !text) return;
+      if (/\b(stop listening|that'?s all|thank you eon|থামো|যথেষ্ট)\b/i.test(text)) { setLive(false); return; }
+      send(text);
+    });
+    V.listen({ continuous: true });
+  }
+  liveBtn.onclick = () => setLive(!live);
+  window.EonAskUI.live = setLive;
 
   /* ---------- take over the companion's chip ---------- */
   function claimChip() {

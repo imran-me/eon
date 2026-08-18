@@ -228,11 +228,10 @@ function answerBangla(q, ctx) {
     if (!it.re.test(q)) continue;
     try { const r = it.a(D, s, q); if (r) return r; } catch (e) { console.warn('[EON বাংলা] intent failed:', it.id, e); }
   }
-  // Bangla, but nothing matched — answer in Bangla rather than failing in English
-  return {
-    speak: 'এটা এখনও শিখিনি। জিজ্ঞাসা করতে পারেন: ব্রিফ, ক্যাশ কত, কে টাকা পাবে, কাকে দিতে হবে, আজ কে অনুপস্থিত, বেতন, লাভ কত, পাইপলাইন, কাজ বাকি, অনুমোদন।',
-    detail: [],
-  };
+  // Bangla, but no intent of ours matched: yield, so the understander (and the
+  // action layer) get their turn. Swallowing it here is what made "টাস্ক দাও"
+  // come back as a task count instead of assigning anything.
+  return null;
 }
 
 /* ---------- example questions on the Ask screen ---------- */

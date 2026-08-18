@@ -14,3 +14,4 @@ import './whatif.js';        // what-if simulator — levers over the real ledge
 import './navigator.js';     // knows the ERP itself: every screen, menu path, action and table
 import './entity.js';        // one person, one party, one thing: tasks, dues, assignments, errors
 import './act.js';           // EON does the work through the ERP's own forms (with a confirmation gate)
+import './understand.js';    // verb + subject + who, in Bangla and English, and half commands are held
