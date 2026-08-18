@@ -100,6 +100,10 @@ const ALIAS = {
   bill: ['expenses', 'purchase'],
   staff: ['user management', 'employee', 'users'],
   employee: ['user', 'users', 'employee documents', 'attendance'],
+  'add employee': ['add user', 'user create'],
+  'new employee': ['add user', 'user create'],
+  'add user': ['user create'],
+  hire: ['add user', 'user create'],
   hr: ['hrm', 'user management', 'attendance', 'leave'],
   hiring: ['user', 'employee'],
   leave: ['leaves', 'leave types'],
@@ -303,6 +307,70 @@ function describeTable(t, q, alts = []) {
   };
 }
 
+/* ---------- one particular record ----------
+   "open invoice 4821", "show journal 1204", "employee 206" — the ERP keeps a
+   screen per record (/{role}/journals/{journal}), so with the entity and the
+   number EON can open the thing itself, not just the list it lives in. */
+const RECORD = /\b(?:open|show|view|find|go\s*to|take\s*me\s*to|display)?\s*(?:the\s+)?([a-z][a-z .\-]{2,28}?)\s*(?:#|no\.?|number|id)?\s*(\d{1,9})\b/i;
+
+export function findRecord(query) {
+  if (!MAP) return null;
+  const m = String(query || '').match(RECORD);
+  if (!m) return null;
+  const entity = norm(m[1]).replace(/\b(open|show|view|find|the|go|to|take|me|display|my|a|an)\b/g, ' ').trim();
+  const id = m[2];
+  if (!entity) return null;
+
+  const terms = words(entity).concat(words(expand(entity)));
+  if (!terms.length) return null;
+
+  /* the resource a screen belongs to is the first path segment:
+     /{role}/expenses/{expense}/edit → "expenses". Matching the entity against
+     that (not against the whole route) keeps "expense" off expense-categories. */
+  const resourceOf = (uri) => (String(uri).split('/').filter((p) => p && p !== '{role}')[0] || '');
+  const singular = (x) => x.replace(/ies$/, 'y').replace(/s$/, '');
+
+  const scoreDetail = (d) => {
+    const res = resourceOf(d.uri);
+    const resWords = norm(res.replace(/-/g, ' '));
+    const hay = routeWords(d.name) + ' ' + norm(d.uri.replace('{role}', ' ').replace(/[/{}]/g, ' '));
+    let s = 0;
+    for (const w of new Set(terms)) {
+      if (hay.includes(w)) {
+        s += 1;
+        if (new RegExp(`\\b${w}s?\\b`).test(hay)) s += 1.5;
+      }
+      // the resource itself is the strongest signal
+      if (res === w || res === w + 's' || singular(res) === singular(w)) s += 4;
+      else if (resWords.split(' ').length === 1 && resWords.startsWith(w)) s += 1;
+      else if (resWords.includes(w) && resWords.split(' ').length > 1) s -= 0.5;   // expense-categories for "expense"
+    }
+    if (/\.show$/.test(d.name)) s += 3;            // the record's own page
+    else if (/\.edit$/.test(d.name)) s += 0.5;
+    // a screen hanging off the record (…/{id}/status-history) is not "the record"
+    const after = String(d.uri).split(`{${d.param}}`)[1] || '';
+    if (after.replace(/^\//, '').length) s -= 2;
+    if (/\.(destroy|update|store|print|download)$/.test(d.name)) s -= 3;
+    return s;
+  };
+  const ranked = MAP.details.map((d) => ({ d, s: scoreDetail(d) })).sort((a, b) => b.s - a.s);
+  const best = ranked[0];
+  if (!best || best.s < 2.5) return null;
+  // the winner must really be that entity's screen — "lead 302" has no lead page in this
+  // ERP (only sub-views), and a near-miss like /accounts/302 would be worse than saying
+  // nothing: fall through and answer with the screen instead.
+  const res = resourceOf(best.d.uri);
+  const ok = [...new Set(terms)].some((w) => res === w || res === w + 's' || singular(res) === singular(w));
+  if (!ok) return null;
+  return {
+    id,
+    entity,
+    route: best.d.name,
+    uri: best.d.uri.replace(`{${best.d.param}}`, id).replace(/\{[^}]*\?\}/g, ''),
+    controller: best.d.controller,
+  };
+}
+
 /* ---------- the answers ---------- */
 const CLAIM = /\b(where\s+(is|are|can i find|do i)|how do i|how can i|open|navigate|take me|go to|show me the|which (page|screen|menu|table|section)|what can i do (on|in|with))\b/i;
 
@@ -315,6 +383,18 @@ function answer(q, ctx) {
   const s = String(q || '').trim();
   if (!s) return null;
   if (!MAP) { load(); return null; }                    // not ready yet: let another domain answer
+
+  // "open invoice 4821" — a particular record, not the list
+  const rec = findRecord(s);
+  if (rec && /\b(open|show|view|go\s*to|take\s*me|find|display)\b/i.test(s)) {
+    const target = url(rec.uri);
+    return {
+      speak: `Opening ${rec.entity} ${rec.id} — ${target.replace(erpBase(), '')}`,
+      detail: [`Screen: ${rec.route}`, `Address: ${target.replace(erpBase(), '')}`],
+      actions: [{ label: `Open ${rec.entity} ${rec.id}`, kind: 'erp-open', href: target }],
+      navigate: target,
+    };
+  }
 
   const nq = norm(s);
 
@@ -384,7 +464,7 @@ function wire() {
 /* ---------- registration ---------- */
 if (typeof window !== 'undefined') {
   wire();
-  window.EonNavigator = { find, abilities, tableFor, url, currentRole, go, map: () => MAP, ready: () => load() };
+  window.EonNavigator = { find, findRecord, abilities, tableFor, url, currentRole, go, map: () => MAP, ready: () => load() };
   (window.__eonDomainQueue = window.__eonDomainQueue || []).push({
     id: 'navigator',
     priority: 97,
