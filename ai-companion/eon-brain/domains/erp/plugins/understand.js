@@ -74,6 +74,8 @@ const SUBJECTS = [
   { id: 'loan',        en: /\b(loan|advance)s?\b/,                                   bn: /(ঋণ|লোন|অগ্রিম)/,                 ask: 'loans' },
   { id: 'error',       en: /\b(error|mistake|wrong|problem|issue|unbalanced)s?\b/,   bn: /(ভুল|সমস্যা|গরমিল|এরর)/,          ask: 'any accounting error' },
   { id: 'profit',      en: /\b(profit|loss|margin|p&l|income statement)\b/,          bn: /(লাভ|মুনাফা|লোকসান)/,             ask: 'profit' },
+  { id: 'profile',     en: /\b(profile|details|record|information|info|who is)\b/,       bn: /(প্রোফাইল|তথ্য|বিস্তারিত|পরিচয়)/,  ask: 'user' },
+  { id: 'payslip',     en: /\b(payslip|pay slip|salary slip|pay statement)\b/,           bn: /(পে-?স্লিপ|বেতন স্লিপ)/,          ask: 'payslips' },
   { id: 'brief',       en: /\b(brief|summary|situation|status|overview|today)\b/,    bn: /(ব্রিফ|সারসংক্ষেপ|অবস্থা|আজকের)/,  ask: 'brief' },
 ];
 function subjectOf(q) {
@@ -83,7 +85,13 @@ function subjectOf(q) {
   return hits.length ? hits[0] : null;
 }
 
-/* ---------- 3. who and when ---------- */
+/* ---------- 3. who and when ----------
+   The boss asks about a person once and then keeps going: "what is Imran's
+   payroll" … "take me to his profile" … "give pay to him". EON remembers the
+   last person named — in either language — so the follow-ups land. */
+let lastWho = null;
+const PRONOUN = /\b(he|him|his|she|her|hers|they|them|their|the same|that person)\b|(তার|ওর|তাকে|ওকে|উনার|তিনি)/i;
+export function subject_of_last() { return lastWho; }
 function whoIn(D, q) {
   // a person the ERP knows — try the longest capitalised run, then any word
   const caps = String(q).match(/\b[A-Z][a-z.]{1,15}(?:\s+[A-Z][a-z.]{1,15}){0,3}\b/g) || [];
@@ -102,6 +110,16 @@ function whoIn(D, q) {
       if (nm.length > 3 && norm(q).includes(nm.split(' ')[0])) return { kind: 'party', name: p.party_name, side: type, row: p };
     }
   }
+  return null;
+}
+
+/** who this sentence is about — the name in it, or the last person named */
+function whoOrLast(D, q) {
+  const w = whoIn(D, q);
+  if (w) { lastWho = w; return w; }
+  if (PRONOUN.test(q) && lastWho) return lastWho;
+  // "payroll of Imran", "Imran's payroll", "give Imran's payroll" — the name may sit
+  // anywhere; whoIn already scans, so a miss here means no name was said at all
   return null;
 }
 const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
@@ -292,7 +310,7 @@ async function understand(q, ctx) {
     if (s) return s;
   }
   const subj = subjectOf(q);
-  const who = whoIn(D, q);
+  const who = whoOrLast(D, q);
   const month = monthIn(q);
   const amount = amountIn(q);
   const bn = BN.test(q);
@@ -321,6 +339,18 @@ async function understand(q, ctx) {
   // a question about one person
   if (who && subj) {
     const s = { company: null };
+
+    // "take me to his profile" / "Imran's payslip" — the record screen for that person
+    if ((subj.id === 'profile' || subj.id === 'payslip') && N()) {
+      const key = subj.id === 'profile' ? 'user' : 'payslips';
+      const rec = who.kind === 'employee' && subj.id === 'profile' ? N().findRecord(`user ${who.id}`) : null;
+      const url = rec ? N().url(rec.uri) : (() => { const h = (N().find(key, 1) || [])[0]; return h ? N().url(h.uri) : null; })();
+      if (url) return {
+        speak: say(q, `${who.name} — ${subj.id === 'profile' ? 'profile' : 'payslips'}. Opening it.`,
+                      `${who.name} — ${subj.id === 'profile' ? 'প্রোফাইল' : 'পে-স্লিপ'}। খুলছি।`),
+        detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }], navigate: url,
+      };
+    }
     if (subj.id === 'task' && who.kind === 'employee') {
       const mine = (O.tasks(D, s).all || []).filter((t) => (t.assigned_to || []).includes(who.id));
       const open = mine.filter((t) => t.status !== 'done');
@@ -331,7 +361,7 @@ async function understand(q, ctx) {
         view: 'ops',
       };
     }
-    if (subj.id === 'payroll' || subj.id === 'receivable' || subj.id === 'payable' || subj.id === 'loan') {
+    if (subj.id === 'payroll' || subj.id === 'payslip' || subj.id === 'receivable' || subj.id === 'payable' || subj.id === 'loan') {
       // let the entity plug-in answer the money question, then translate the lead line
       const r = typeof window !== 'undefined' && window.EonEntity ? null : null;
       const pr = P.payroll(D, s);
@@ -343,6 +373,23 @@ async function understand(q, ctx) {
       if (who.kind === 'party') {
         const row = who.row;
         return { speak: say(q, `${who.name}: ${fmtBDT(row.due)} outstanding, ${fmtBDT(row.overdue)} of it overdue.`, `${who.name}: ${fmtBDT(row.due)} বকেয়া, তার ${fmtBDT(row.overdue)} সময় পার।`), detail: [], view: 'finance' };
+      }
+      // "Imran's payroll" wants his pay, not only what is owed
+      if (subj.id === 'payroll' || subj.id === 'payslip') {
+        const sal = +(who.row && who.row.salary) || 0;
+        const bits = [
+          sal ? say(q, `salary ${fmtBDT(sal)}/month`, `বেতন ${fmtBDT(sal)}/মাস`) : null,
+          unpaid ? say(q, `${fmtBDT(unpaid)} unpaid`, `${fmtBDT(unpaid)} বকেয়া`) : say(q, `${pr.month} paid`, `${pr.month} পরিশোধিত`),
+          left ? say(q, `loan ${fmtBDT(left)} left`, `ঋণ বাকি ${fmtBDT(left)}`) : null,
+        ].filter(Boolean);
+        const n = N();
+        const hit = n ? (n.find('employee salaries', 1) || [])[0] : null;
+        return {
+          speak: `${who.name} — ${bits.join(', ')}.`,
+          detail: who.row ? [`${who.row.designation || ''}${who.row.department ? ' · ' + who.row.department : ''}`.trim()].filter(Boolean) : [],
+          actions: hit ? [{ label: say(q, 'Open payroll', 'পে-রোল খুলুন'), kind: 'erp-open', href: n.url(hit.uri) }] : [],
+          view: 'people',
+        };
       }
       if (!unpaid && !left) return { speak: say(q, `Nothing is outstanding for ${who.name}.`, `${who.name}-এর কিছু বকেয়া নেই।`), detail: [], view: 'people' };
       return {
