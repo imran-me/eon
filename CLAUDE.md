@@ -150,8 +150,16 @@ Two runners measure it, and both print holes rather than a grade:
 
 | runner | walks | size | answering |
 | --- | --- | --- | --- |
-| `tools/matrix-run.php` | subject × verb × script | 441 | 89.1% (68.3% before composition) |
-| `tools/instance-matrix.php` | record × aspect × phrasing × script | 50,711 | 97.8% on a 400-point stratified sample |
+| `tools/matrix-run.php` | subject × verb × script | 441 | 88.7% (68.3% before composition) |
+| `tools/instance-matrix.php` | record × aspect × phrasing × script | **120,105** | 99.7% on a 600-point stratified sample |
+
+**Sample by strata, never by stride.** The phrasings sit in per-language blocks, so a stride
+sharing a factor with the block size lands on the same offsets forever — 500 points and
+Banglish was never drawn once, while the report read a confident 97.8%. And match a name
+*word by word*: a flat consonant skeleton runs across word boundaries and borrows letters
+from what follows, which married the passenger "MD SHAFIQUL ISLAM" to an employee called
+Shafiqul Islam Sohel — the possessive left an "s" that satisfied "Sohel". Answering
+confidently about the wrong human is worse than not answering.
 
 Add a subject, an aspect or a phrasing and the denominator moves by itself — that is the
 point. `--fail` lists misses, `--json` writes the full grid, `--all` walks every point.
