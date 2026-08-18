@@ -50,6 +50,9 @@ final class Tools
             ['name' => 'get_projects', 'description' => 'Active projects with progress vs elapsed time, budget burn, days left and a risk rating; the at-risk list first. Call for projects, delivery risk, deadlines.', 'inputSchema' => self::obj([])],
             ['name' => 'get_approvals', 'description' => 'Everything waiting for the boss: payroll run, expenses, leaves, salary advances, employee requests. Call for approvals, pending sign-offs, what is waiting on me.', 'inputSchema' => self::obj([])],
             ['name' => 'get_decisions', 'description' => 'The ranked list of decisions EON proposes right now across all layers (severity, why, recommendation). Call for "what needs attention", risks, priorities, problems.', 'inputSchema' => self::obj([])],
+            ['name' => 'get_sales', 'description' => 'What Epal actually sold in a period, per service line — air tickets, visas, contract files, contract flights: invoiced, collected, still outstanding, invoice count, the biggest invoices and their clients. This is the real top line: the `sales` table is unused and the general ledger only carries what has been journalised, so ALWAYS call this (not just get_profit_and_loss) for revenue, sales, turnover or "how much business did we do" questions. Dates ISO; omit for month-to-date.', 'inputSchema' => self::obj(['from' => ['type' => 'string'], 'to' => ['type' => 'string']])],
+            ['name' => 'get_service_operations', 'description' => 'The travel desk\'s work in hand: visa processing pipeline by stage with cost vs sale price and the officer assigned, ticket purchases and what is still owed to vendors and booking portals (BSP/IATA), portal balances, and other visa services. Call for visa processing, ticket purchase, vendor/portal dues, work in hand, or travel operations questions.', 'inputSchema' => self::obj([])],
+            ['name' => 'explain_erp', 'description' => 'Ask the ERP about itself, from its own source: which screen does something and its address, what actions a module supports, which database table holds a kind of record and its columns, and the model behind it. Call for "where do I ...", "how do I ...", "which screen/table/report has ...", "what can I do on ...", or any question about how the ERP is built rather than what the numbers say.', 'inputSchema' => self::obj(['query' => ['type' => 'string', 'description' => 'a screen, module, record or concept — e.g. "payslip", "journal entry", "leads", "ticket sale"']], ['query'])],
             ['name' => 'search_records', 'description' => 'Full-text search across employees, customers, suppliers, leads, projects, tasks, expenses and payment schedules by a word or name. Call when a name or reference is mentioned that no other tool covers.', 'inputSchema' => self::obj(['query' => ['type' => 'string'], 'limit' => ['type' => 'integer']], ['query'])],
             ['name' => 'record_action', 'description' => 'Record an instruction the boss gives through EON — an approval decision, a reminder to set, a draft to send, a note. EON is advisory: this logs the intent for the ERP/staff to execute; say so in your reply. kind: approve | reject | remind | send_draft | note. payload: free JSON describing the target.', 'inputSchema' => self::obj(['kind' => ['type' => 'string', 'enum' => ['approve', 'reject', 'remind', 'send_draft', 'note']], 'payload' => ['type' => 'object', 'description' => 'what/who/amount/when'], 'summary' => ['type' => 'string']], ['kind', 'summary'])],
         ];
@@ -87,6 +90,9 @@ final class Tools
                 'get_projects' => $this->A->projects(),
                 'get_approvals' => $this->A->approvals(),
                 'get_decisions' => $this->A->decisions(),
+                'get_sales' => $this->A->salesBooked($in['from'] ?? null, $in['to'] ?? null) + ['top_invoices' => $this->topInvoices($in['from'] ?? null, $in['to'] ?? null)],
+                'get_service_operations' => $this->serviceOps(),
+                'explain_erp' => ErpMap::explain((string) ($in['query'] ?? '')),
                 'search_records' => $this->search((string) ($in['query'] ?? ''), (int) ($in['limit'] ?? 15)),
                 'record_action' => Memory::logAction((string) ($in['kind'] ?? 'note'), ['summary' => $in['summary'] ?? '', 'detail' => $in['payload'] ?? [], 'via' => 'model'], 'proposed'),
                 'forecast' => Py::run('forecast', $this->D, ['--company' => $this->company, '--months' => (int) ($in['months'] ?? 3)]),
@@ -97,6 +103,59 @@ final class Tools
                 default => $this->runPlugin($name, $in),
             };
         } catch (Throwable $e) { return ['error' => $e->getMessage()]; }
+    }
+
+    /** the biggest invoices in a period, whatever service line they came from */
+    private function topInvoices(?string $from, ?string $to): array
+    {
+        $today = (string) ($this->D['meta']['today'] ?? date('Y-m-d'));
+        $from = $from ?: substr($today, 0, 7) . '-01'; $to = $to ?: $today;
+        $rows = [];
+        foreach (Dataset::SALES_TABLES as $table => $label) {
+            foreach ($this->D[$table] ?? [] as $r) {
+                if ($this->company !== null && isset($r['company_id']) && (int) $r['company_id'] !== $this->company) continue;
+                $d = substr((string) ($r['date'] ?? ''), 0, 10);
+                if ($d === '' || $d < $from || $d > $to) continue;
+                $rows[] = ['line' => $label, 'invoice' => $r['invoice'] ?? null, 'date' => $d, 'client' => $r['client'] ?? null,
+                    'total' => (float) ($r['total'] ?? 0), 'paid' => (float) ($r['paid_amount'] ?? 0), 'due' => (float) ($r['due_amount'] ?? 0), 'status' => $r['payment_status'] ?? ($r['status'] ?? null)];
+            }
+        }
+        usort($rows, fn($a, $b) => $b['total'] <=> $a['total']);
+        return array_slice($rows, 0, 15);
+    }
+
+    /** the travel desk's work in hand and what it owes for it */
+    private function serviceOps(): array
+    {
+        $co = fn(array $r) => $this->company === null || !isset($r['company_id']) || (int) $r['company_id'] === $this->company;
+        $vp = array_values(array_filter($this->D['visa_processes'] ?? [], $co));
+        $byStage = [];
+        foreach ($vp as $p) {
+            $k = (string) ($p['status'] ?? $p['stage'] ?? 'unknown');
+            if (!isset($byStage[$k])) $byStage[$k] = ['stage' => $k, 'count' => 0, 'cost' => 0.0, 'sale' => 0.0];
+            $byStage[$k]['count']++; $byStage[$k]['cost'] += (float) ($p['costing_price'] ?? 0); $byStage[$k]['sale'] += (float) ($p['sale_price'] ?? 0);
+        }
+        usort($byStage, fn($a, $b) => $b['count'] <=> $a['count']);
+        $tp = array_values(array_filter($this->D['ticket_purchases'] ?? [], $co));
+        $owedByParty = [];
+        foreach ($tp as $p) {
+            $due = (float) ($p['due_amount'] ?? 0);
+            if (round($due) <= 0) continue;
+            $name = (string) ($p['vendor'] ?? '') ?: (string) ($p['portal'] ?? '') ?: (string) ($p['airline'] ?? '') ?: 'Ticket vendor';
+            $owedByParty[$name] = ($owedByParty[$name] ?? 0) + $due;
+        }
+        arsort($owedByParty);
+        return [
+            'visa_processes' => ['count' => count($vp), 'by_stage' => array_values($byStage),
+                'cost_total' => round(array_sum(array_map(fn($p) => (float) ($p['costing_price'] ?? 0), $vp))),
+                'sale_total' => round(array_sum(array_map(fn($p) => (float) ($p['sale_price'] ?? 0), $vp))),
+                'unpaid_to_vendor' => round(array_sum(array_map(fn($p) => max(0, (float) ($p['costing_price'] ?? 0) - (float) ($p['cost_paid_amount'] ?? 0)), $vp)))],
+            'ticket_purchases' => ['count' => count($tp), 'total' => round(array_sum(array_map(fn($p) => (float) ($p['total'] ?? 0), $tp))), 'due' => round(array_sum(array_map(fn($p) => (float) ($p['due_amount'] ?? 0), $tp))),
+                'owed_to' => array_map(fn($k, $v) => ['party' => $k, 'due' => round($v)], array_keys($owedByParty), array_values($owedByParty))],
+            'portals' => array_map(fn($p) => ['name' => $p['name'] ?? '', 'balance' => (float) ($p['balance'] ?? 0), 'next_payment_date' => $p['next_payment_date'] ?? null], $this->D['portals'] ?? []),
+            'other_visa_services' => ['count' => count($this->D['other_visa_services'] ?? []), 'sale_total' => round(array_sum(array_map(fn($s) => (float) ($s['sale_price'] ?? 0), $this->D['other_visa_services'] ?? [])))],
+            'passport_holders' => count($this->D['passport_holders'] ?? []),
+        ];
     }
 
     private function runPlugin(string $name, array $in): array|string

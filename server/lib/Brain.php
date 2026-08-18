@@ -25,6 +25,13 @@ PAYROLL (PayrollService, run on the 1st at 01:00 for the previous month): base =
 WORKFLOWS: payment schedules pending → approve/reject/reschedule (logged) → mark paid; auto overdue daily 00:05. Expenses pending → approve (journal) / reverse. Leaves apply → approve/reject. Employee requests pending → under review → approved/rejected → fulfilled/disbursed (cash, bank, cheque, payroll deduction) → recovered by payslip instalments → closed. Leads new → contacted → qualified → proposal_sent → negotiation → won/lost; types air_ticket, visa, software, interior, other; won interior leads convert to projects. Tasks: workspace = company; boards → columns → tasks (priority low/medium/high, due dates, assignees, comments); office_todos per department.
 REPORTS the ERP prints: General Ledger, Trial Balance, P&L, Balance Sheet, Account Ledger/Statement, Journal Entries, Account Balances, Monthly Attendance, Task Report, Payroll Overview, Monthly Profit, Petty Cash, Expense, Party Statement, Bank Statement, Loan Statement, Payslip Statement. Not yet: AR/AP aging, cash-flow statement, opening-balance UI, Bangladesh VAT/TDS (Mushak 6.3/9.1) — EON computes aging and cash position itself.
 Currency BDT (৳; Bangladeshi grouping 12,34,567; L = lakh 1e5, Cr = crore 1e7). Dates ISO. Weekend Friday–Saturday.
+
+WHAT EPAL ACTUALLY SELLS — read this before answering any revenue question. The generic `sales`/`purchases`/`products`/`stocks` tables are EMPTY: this is a travel and services house, not a shop. The top line comes from four invoice modules: ticket_sales (air tickets; client_id → users; invoice_no, sale_date, due_date, total_amount/paid_amount/due_amount, payment_status, status confirm|…), visa_sales (invoice_number, voucher_date, receivable_date), contract_file_sales (files_count, vendor_cost, receivable_date) and contract_flight_bookings (group seats: seats × unit_price). The cost side is ticket_purchases (vendor_id → users, or portal_id → portals when bought through a booking portal such as BSP/IATA — then the money is owed to the PORTAL, not a vendor) and visa_processes.costing_price vs cost_paid_amount. Supporting operational tables: visa_processes (embassy_fee, vfs_fee, our_service_fee, costing_price, sale_price, stage/status, assigned_officer), other_visa_services, passport_holders (the travelling clients), portals + portal_balances, tickets/ticket_legs/ticket_refunds/ticket_reissues, contract_flights and contract_flight_passengers, commissions.
+TWO NUMBERS, BOTH TRUE. The ledger only holds what has been journalised, and the desks invoice well ahead of posting — a month can carry ৳42k on account 4110 against ৳8.9 L of confirmed ticket invoices. So: get_profit_and_loss gives the BOOKS (income, cost, opex, net); get_sales gives the BUSINESS (invoiced, collected, outstanding, per service line). For "revenue / sales / turnover / how much did we do" call get_sales, and when the two disagree say so plainly and name the gap (get_profit_and_loss returns sales_invoiced, unposted_sales and ledger_covers_pct for exactly this).
+REAL AR/AP. payment_schedules only ever carries salaries and a few ad-hoc items, so it alone reports receivables of zero while lakhs sit unpaid on invoices. get_receivables and get_payables already merge BOTH sources — the schedules and the invoice dues (ticket/visa/contract-file/contract-flight on the receive side; ticket purchases and visa costing on the pay side) — with aging, buckets and named parties. Trust them; do not add the two up yourself.
+ATTENDANCE HAS A NARROW BASE. Only the staff on the device/selfie system punch — roughly a sixth of the payroll — so presence is reported against `tracked`, not headcount, and `no_data_yet` means nobody has punched yet today (normal early morning), NOT that everyone is absent. Never report "0 of 87 present" as absence.
+THE REST OF THE ERP, by module. Accounts & finance: chart of accounts, journal entries and items, banks, bank_transfers, petty_cash_floats/transactions, employee_ledger, payments, transactions, financing_loans/schedules/transactions/capital_movements, party_invoices, vouchers, estimates, proposals, monthly profit, party and bank statements. People: users + employee_profiles, departments, designations, shifts, attendances + attendance_logs, device_users/device_settings, leaves + leave_types + holidays, employee_salaries + payslips + salary_templates + salary_reconciliations, loans + loan_transactions, advance_salaries, employee_requests (+ attachments, disbursements, recoveries), employee_promotions, employee_resignations, employee_documents, expense_reimbursements, commissions, notices. CRM & work: leads (+ lead_followups, lead_reminders, lead_sources, lead_status_histories, lead_interiors, lead_visas, lead_air_tickets, lead_visa_documents), deals, customers, suppliers, vendors, projects + project_categories + project_field_definitions/values, boards → columns → tasks (+ task_user, labels/label_task, task_comments, task_attachments, task_activity_logs, task_links), office_todos (+ assignees, checklists), support_tickets + ticket_departments, chats/conversations/messages, notifications, email/sms/whatsapp campaigns. Wood Art Interiors is an isolated module with its own wa_* tables (projects, spaces, phases, requirements, estimates, materials, purchases, production, vendors, revisions, drawings, installs).
+KNOW THE SOFTWARE ITSELF. Call explain_erp for anything about how the ERP is built or where to do something — it answers from the ERP's own source: the screen and its address, what actions a module supports, which table holds a record and its columns, and the model behind it. Screen addresses carry the signed-in role segment (/super-admin/payslips, /accountant/payslips). Use it for "where do I…", "how do I…", "which report shows…", "what can I do on…".
 TXT;
     }
 
@@ -38,8 +45,15 @@ TXT;
         $prefs = Memory::setting('prefs', []) ?: [];
         $prefText = $prefs ? "\nBoss preferences (remembered): " . json_encode($prefs, JSON_UNESCAPED_UNICODE) . ' — honour them (name to use, money units, brevity, language).' : '';
         $langRule = "\nLanguage: answer in the language the boss used — Bangla (বাংলা) questions get Bangla answers (Bangla script, Bangladeshi money words লক্ষ/কোটি with ৳), English gets English; if the request carries lang=bn-BD, prefer Bangla.";
+        // the ERP described by its own source — routes, screens, menu, tables (tools/erp-map.mjs)
+        $map = '';
+        if (class_exists('ErpMap') && ErpMap::available()) {
+            $menu = ErpMap::menuOutline(90);
+            $map = "\n\n" . ErpMap::summary() . ($menu ? "\nThe sidebar the boss sees:\n" . $menu : '')
+                . "\nFor anything more specific — a screen's address, a module's actions, a table's columns — call explain_erp rather than guessing.";
+        }
         return [
-            ['type' => 'text', 'text' => $persona . "\n\n" . self::knowledge(), 'cacheControl' => ['type' => 'ephemeral']],
+            ['type' => 'text', 'text' => $persona . "\n\n" . self::knowledge() . $map, 'cacheControl' => ['type' => 'ephemeral']],
             ['type' => 'text', 'text' => $langRule . $prefText],
         ];
     }
@@ -54,7 +68,7 @@ TXT;
         $out = null;
         if ($lang) $clientFacts['lang'] = $lang;
         if (Config::llmEnabled()) { try { $out = self::askLlm($question, $conv['id'], $D, $company, $voice, $tools, $clientFacts); } catch (Throwable $e) { Log::error('llm failed: ' . $e->getMessage()); $out = null; $llmError = $e->getMessage(); } }
-        if (!$out) { $out = self::askOffline($question, $D, $company, $tools); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
+        if (!$out) { $out = self::askOffline($question, $D, $company, $tools, $lang); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
         Memory::addMessage($conv['id'], 'assistant', $out['text'], ['mode' => $out['mode'], 'tools' => $out['tools_used'] ?? []]);
         $out['conversation_id'] = $conv['id'];
         return $out;
@@ -99,8 +113,24 @@ TXT;
         return ['mode' => self::MODE_LLM, 'model' => $model, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => array_values(array_unique($used)), 'usage' => $usage];
     }
 
-    /** rule-based fallback — a compact port of the JS answerer's most-used intents */
-    public static function askOffline(string $q, array $D, ?int $company, Tools $tools): array
+    /** rule-based fallback. Nlu scores the sentence in English, বাংলা and Banglish;
+        Answers replies in the language the boss used, grounded in the live dataset.
+        The old English-only regex chain stays underneath as a safety net. */
+    public static function askOffline(string $q, array $D, ?int $company, Tools $tools, ?string $lang = null): array
+    {
+        if (class_exists('Nlu') && class_exists('Answers')) {
+            try {
+                $r = Answers::reply($q, $D, $company, $tools, $lang);
+                if (($r['text'] ?? '') !== '') {
+                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::plain($r['text']), 'tools_used' => $r['tools_used'], 'intent' => $r['intent'], 'lang' => $r['lang'], 'usage' => null];
+                }
+            } catch (Throwable $e) { Log::warn('offline answerer failed, falling back to regex', ['error' => $e->getMessage()]); }
+        }
+        return self::askOfflineRegex($q, $D, $company, $tools);
+    }
+
+    /** the original English-only matcher — kept as the last line of defence */
+    public static function askOfflineRegex(string $q, array $D, ?int $company, Tools $tools): array
     {
         $s = mb_strtolower($q); $A = new Analytics($D, $company); $k = fn(float $n) => Analytics::bdtk($n); $used = []; $text = null;
         $try = function (string $re, string $tool, callable $fmt) use ($s, $tools, &$used, &$text) { if ($text !== null || !preg_match($re, $s)) return; $used[] = $tool; $r = $tools->run($tool, []); $text = is_array($r) ? $fmt($r) : (string) $r; };
