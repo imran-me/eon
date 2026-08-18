@@ -4,3 +4,8 @@
    • a screen panel         window.EonApp?.registerPanel(section, { id, title, render })
    Add a line here for every plug-in. */
 import './bangla.js';        // বাংলা — Bangla brief and Bangla answers
+import './health.js';        // company health score — one number per company, with drivers
+import './since.js';         // since yesterday — what moved since the last snapshot
+import './compliance.js';    // Bangladesh statutory calendar — VAT, TDS, licences, RJSC
+import './prefs.js';         // what EON remembers about the boss
+import './boardpack.js';     // printable board pack
