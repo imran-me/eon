@@ -199,7 +199,8 @@ final class Nlu
                          'outstanding from customer' => 5, 'ar aging' => 5],
                 'bn' => ['কে টাকা দেবে' => 5, 'টাকা+দেবে' => 5, 'টাকা+পাব' => 5, 'পাওনা' => 5, 'বকেয়া আদায়' => 5, 'গ্রাহক বকেয়া' => 5,
                          'আমাদের পাওনা' => 5, 'কার কাছে পাওনা' => 5, 'টাকা পাব' => 5, 'আদায়যোগ্য' => 5],
-                'bl' => ['ke taka debe' => 5, 'pawna' => 5, 'paona koto' => 5, 'taka pabo' => 5],
+                'bl' => ['ke taka debe' => 5, 'pawna' => 5, 'paona koto' => 5, 'taka pabo' => 5,
+                         'amader taka' => 5, 'taka debe' => 5, 'taka dibe' => 5, 'ke dibe taka' => 5],
             ],
             'payables' => [
                 'en' => ['payable' => 5, 'payables' => 5, 'what do we owe' => 5, 'we owe' => 4, 'creditor' => 4,
@@ -214,6 +215,8 @@ final class Nlu
                          'overdue bill' => 5, 'due this week' => 4, 'due today' => 4],
                 'bn' => ['মেয়াদোত্তীর্ণ' => 5, 'সময় পার' => 4, 'বকেয়া পেমেন্ট' => 5, 'এই সপ্তাহে দিতে' => 4],
                 'bl' => ['overdue' => 4, 'somoy par' => 4],
+                // "overdue tasks" is work, not money — let the tasks intent have it
+                'block' => ['task', 'tasks', 'kaj', 'টাস্ক'],
             ],
 
             /* ============ REPORTS ============ */
@@ -396,7 +399,7 @@ final class Nlu
 
             /* ============ OPS / PROJECTS ============ */
             'tasks' => [
-                'en' => ['task' => 4, 'tasks' => 4, 'overdue task' => 6, 'workload' => 5, 'to do' => 3,
+                'en' => ['task' => 4, 'tasks' => 4, 'overdue task' => 6, 'overdue tasks' => 7, 'workload' => 5, 'to do' => 3,
                          'assignments' => 4, 'pending work' => 5, 'who is overloaded' => 6],
                 'bn' => ['টাস্ক' => 5, 'কাজ' => 3, 'বকেয়া কাজ' => 6, 'কাজের চাপ' => 6, 'অসম্পূর্ণ কাজ' => 6],
                 'bl' => ['task' => 4, 'kaj baki' => 5, 'kajer chap' => 6],

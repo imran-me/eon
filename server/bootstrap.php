@@ -25,6 +25,9 @@ require_once EON_ROOT . '/lib/Dataset.php';
 require_once EON_ROOT . '/lib/Erp.php';
 require_once EON_ROOT . '/lib/Analytics.php';
 require_once EON_ROOT . '/lib/Memory.php';
+require_once EON_ROOT . '/lib/ErpMap.php';   // the ERP described by its own source
+require_once EON_ROOT . '/lib/Nlu.php';      // understands English, বাংলা and Banglish
+require_once EON_ROOT . '/lib/Answers.php';  // the offline voice, in the boss's language
 require_once EON_ROOT . '/lib/Tools.php';
 require_once EON_ROOT . '/lib/Brain.php';
 require_once EON_ROOT . '/lib/Notify.php';
