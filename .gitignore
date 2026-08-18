@@ -31,3 +31,6 @@ deploy/deploy.log
 deploy/state.json
 deploy/.deploy.lock/
 deploy/.webhook.last
+erp/
+!erp/.gitkeep
+.user.ini

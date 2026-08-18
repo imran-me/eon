@@ -20,6 +20,28 @@ RewriteCond %{HTTPS} !=on
 RewriteCond %{HTTP:X-Forwarded-Proto} !=https
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
+# ---------------------------------------------------------------
+#  The ERP is the front door; EON rides on it.
+#
+#    /            → the ERP exactly as it is (erp/public, Laravel)
+#    /eon/        → EON's own panel, opened from the ERP's button
+#    /server/api  → EON's API · /embed  → the companion loader
+#
+#  Until the ERP is placed in erp/ (see docs/erp-host.md) every one
+#  of these rules is skipped — the -f test fails — and the site keeps
+#  serving EON's panel, so nothing breaks in the meantime.
+# ---------------------------------------------------------------
+RewriteRule ^(eon|app|ai-companion|embed|server|deploy|vendor)(/|$) - [L]
+
+RewriteCond %{DOCUMENT_ROOT}/erp/public/index.php -f
+RewriteRule ^$ erp/public/ [L]
+
+RewriteCond %{DOCUMENT_ROOT}/erp/public/index.php -f
+RewriteCond %{REQUEST_URI} !^/erp/public/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ erp/public/$1 [L]
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set X-Frame-Options "SAMEORIGIN"

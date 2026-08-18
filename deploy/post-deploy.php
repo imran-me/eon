@@ -39,6 +39,25 @@ foreach (['storage', 'lib', 'install', 'cron', 'py'] as $d) {
 }
 $line('folders ok');
 
+// ---- 1b. the ERP is the front door: make sure the companion is appended to its pages ----
+// Only once the ERP is actually installed in erp/ — see docs/erp-host.md. We never edit the
+// ERP itself; PHP appends one script tag to its HTML responses (embed/eon-inject.php).
+if (is_file($root . '/erp/public/index.php')) {
+    $ini = $root . '/.user.ini';
+    $want = 'auto_append_file = "' . $root . '/embed/eon-inject.php"';
+    $have = is_file($ini) ? (string) @file_get_contents($ini) : '';
+    if (!str_contains($have, 'eon-inject.php')) {
+        $next = trim(preg_replace('/^\s*auto_append_file\s*=.*$/mi', '', $have) ?? '');
+        if (@file_put_contents($ini, ($next ? $next . "\n" : '') . $want . "\n") !== false) {
+            $line('ERP detected → companion injection enabled (.user.ini, takes effect within 5 minutes)');
+        } else {
+            $line('! ERP detected but .user.ini is not writable — add by hand: ' . $want);
+        }
+    } else {
+        $line('ERP detected · companion injection already on');
+    }
+}
+
 // ---- 2. composer packages (the Anthropic SDK) — optional, EON runs without them ----
 if (!is_file($server . '/vendor/autoload.php')) {
     $composer = null;
