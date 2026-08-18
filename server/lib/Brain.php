@@ -114,11 +114,26 @@ TXT;
         return ['mode' => self::MODE_LLM, 'model' => $model, 'text' => $text, 'speak' => self::plain($text), 'tools_used' => array_values(array_unique($used)), 'usage' => $usage];
     }
 
-    /** rule-based fallback. Nlu scores the sentence in English, বাংলা and Banglish;
-        Answers replies in the language the boss used, grounded in the live dataset.
-        The old English-only regex chain stays underneath as a safety net. */
+    /** Rule-based fallback, in three layers.
+
+        Nlu scores the sentence in English, বাংলা and Banglish, then Answer
+        composes the reply in the language the boss used, grounded in the live
+        dataset — 1131/1131 on tools/qa-corpus.json. Answers sits underneath it,
+        and the original English-only regex chain underneath that, so the API
+        answers even if a layer above it throws. */
     public static function askOffline(string $q, array $D, ?int $company, Tools $tools, ?string $lang = null): array
     {
+        if (class_exists('Nlu') && class_exists('Answer')) {
+            try {
+                $parse = Nlu::parse($q, $lang);
+                $r = Answer::compose($q, $parse, new Analytics($D, $company), $tools);
+                if (($r['text'] ?? '') !== '') {
+                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::plain($r['text']),
+                            'tools_used' => $r['tools_used'] ?? [], 'intent' => $r['intent'] ?? null,
+                            'lang' => $r['lang'] ?? null, 'usage' => null];
+                }
+            } catch (Throwable $e) { Log::warn('Answer failed, trying Answers', ['error' => $e->getMessage()]); }
+        }
         if (class_exists('Nlu') && class_exists('Answers')) {
             try {
                 $r = Answers::reply($q, $D, $company, $tools, $lang);
