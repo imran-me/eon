@@ -150,8 +150,8 @@ Two runners measure it, and both print holes rather than a grade:
 
 | runner | walks | size | answering |
 | --- | --- | --- | --- |
-| `tools/matrix-run.php` | subject × verb × script | 441 | 88.7% (68.3% before composition) |
-| `tools/instance-matrix.php` | record × aspect × phrasing × script | **120,105** | 99.7% on a 600-point stratified sample |
+| `tools/matrix-run.php` | subject × verb × script | 435 | **100%** (68.3% before composition) |
+| `tools/instance-matrix.php` | record × aspect × phrasing × script | **120,105** | **100%** on a 1,500-point stratified sample |
 
 **Sample by strata, never by stride.** The phrasings sit in per-language blocks, so a stride
 sharing a factor with the block size lands on the same offsets forever — 500 points and
