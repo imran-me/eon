@@ -96,10 +96,32 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
             if ($probe && stripos($probe, 'composer') !== false) { $composer = $c; break; }
         }
         if ($composer === null && is_file($erp . '/composer.phar')) $composer = escapeshellarg($bin) . ' ' . escapeshellarg($erp . '/composer.phar');
+        // shared hosts often ship composer only as a phar somewhere on disk, or the cron PATH lacks it
+        if ($composer === null) {
+            foreach (['/usr/local/bin/composer.phar', '/usr/bin/composer.phar', '/opt/composer/composer.phar', getenv('HOME') . '/composer.phar', getenv('HOME') . '/bin/composer'] as $phar) {
+                if ($phar && is_file($phar)) { $composer = escapeshellarg($bin) . ' ' . escapeshellarg($phar); break; }
+            }
+        }
+        // last resort: fetch composer itself (official installer, verified by its own checksum) into erp/
+        if ($composer === null && function_exists('shell_exec') && ini_get('allow_url_fopen')) {
+            $line('composer not on this host — downloading composer.phar into erp/ (once)…');
+            $setup = @file_get_contents('https://getcomposer.org/installer');
+            $sig = trim((string) @file_get_contents('https://composer.github.io/installer.sig'));
+            if ($setup !== false && $sig !== '' && hash('sha384', $setup) === $sig) {
+                @file_put_contents($erp . '/composer-setup.php', $setup);
+                @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' composer-setup.php --quiet 2>&1');
+                @unlink($erp . '/composer-setup.php');
+                if (is_file($erp . '/composer.phar')) $composer = escapeshellarg($bin) . ' ' . escapeshellarg($erp . '/composer.phar');
+                else $line('! composer download did not produce composer.phar');
+            } else {
+                $line('! composer installer could not be fetched or failed its checksum');
+            }
+        }
         if ($composer !== null && function_exists('shell_exec')) {
             $line('installing the ERP packages (first deploy only, this takes a few minutes)…');
-            @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . $composer . ' install --no-dev --optimize-autoloader --no-interaction --no-progress 2>&1');
-            $line(is_file($erp . '/vendor/autoload.php') ? 'ERP packages ok' : '! composer install did not finish — run it over SSH in erp/');
+            $cout = (string) @shell_exec('cd ' . escapeshellarg($erp) . ' && COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_MEMORY_LIMIT=-1 ' . $composer . ' install --no-dev --optimize-autoloader --no-interaction --no-progress 2>&1');
+            if (is_file($erp . '/vendor/autoload.php')) $line('ERP packages ok');
+            else { $line('! composer install did not finish — run it over SSH in erp/'); foreach (array_slice(array_filter(explode(PHP_EOL, $cout)), -6) as $cl) $line('    ' . $cl); }
         } else {
             $line('! composer not found on this host — run "composer install --no-dev -o" in erp/ over SSH');
         }

@@ -33,14 +33,25 @@ RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 # ---------------------------------------------------------------
 RewriteRule ^(eon|app|ai-companion|embed|server|deploy|vendor)(/|$) - [L]
 
-RewriteCond %{DOCUMENT_ROOT}/erp/public/index.php -f
-RewriteRule ^$ erp/public/ [L]
+# the ERP's own source tree must never be reachable except through public/
+RewriteRule ^erp/(?!public/) - [F,L]
 
-RewriteCond %{DOCUMENT_ROOT}/erp/public/index.php -f
+# the ERP is only served once it is actually installed (its packages present)
+RewriteCond %{DOCUMENT_ROOT}/erp/vendor/autoload.php !-f
+RewriteRule ^ - [S=3]
+
+# home
+RewriteRule ^$ erp/public/index.php [L]
+
+# a real file under erp/public (css, js, images, storage link) is served as-is
+RewriteCond %{DOCUMENT_ROOT}/erp/public/$1 -f
+RewriteRule ^(.+)$ erp/public/$1 [L]
+
+# everything else is a Laravel route → its front controller (the URI is preserved for routing)
 RewriteCond %{REQUEST_URI} !^/erp/public/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ erp/public/$1 [L]
+RewriteRule ^ erp/public/index.php [L]
 
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
