@@ -63,14 +63,14 @@ const SUBJECTS = [
   { id: 'project',     en: /\b(project|delivery|milestone)s?\b/,                     bn: /(প্রজেক্ট|প্রকল্প)/,               ask: 'projects' },
   { id: 'lead',        en: /\b(lead|pipeline|prospect|crm|deal)s?\b/,                bn: /(লিড|পাইপলাইন|সম্ভাব্য)/,          ask: 'pipeline' },
   { id: 'sale',        en: /\b(sale|invoice|ticket sale|booking|revenue)s?\b/,       bn: /(বিক্রি|সেল|ইনভয়েস|টিকিট)/,       ask: 'any ticket sale today' },
-  { id: 'expense',     en: /\b(expense|spend|cost|budget)s?\b/,                      bn: /(খরচ|ব্যয়|বাজেট)/,                ask: 'expenses' },
+  { id: 'expense',     en: /\b(expense|spend|cost|budget)s?\b/,                      bn: /(খরচ|ব্যয়|বাজেট)/,                ask: 'spending' },
   { id: 'journal',     en: /\b(journal|ledger|entry|entries|voucher|posting)s?\b/,   bn: /(জার্নাল|লেজার|খতিয়ান|ভাউচার)/,   ask: 'last transaction' },
   { id: 'account',     en: /\b(account|chart of accounts|coa)s?\b/,                  bn: /(হিসাব|একাউন্ট|চার্ট)/,            ask: 'chart of accounts' },
   { id: 'employee',    en: /\b(employee|staff|people|headcount|worker)s?\b/,         bn: /(কর্মী|স্টাফ|জনবল|লোক)/,           ask: 'headcount' },
-  { id: 'customer',    en: /\b(customer|client|party)s?\b/,                          bn: /(ক্রেতা|গ্রাহক|পার্টি)/,           ask: 'customers' },
-  { id: 'vendor',      en: /\b(vendor|supplier)s?\b/,                                bn: /(সরবরাহকারী|ভেন্ডর)/,             ask: 'vendor' },
+  { id: 'customer',    en: /\b(customer|client|party)s?\b/,                          bn: /(ক্রেতা|গ্রাহক|পার্টি)/,           ask: 'top customers' },
+  { id: 'vendor',      en: /\b(vendor|supplier)s?\b/,                                bn: /(সরবরাহকারী|ভেন্ডর)/,             ask: 'top suppliers' },
   { id: 'meeting',     en: /\b(meeting|appointment|visit)s?\b/,                      bn: /(মিটিং|সভা|অ্যাপয়েন্টমেন্ট)/,     ask: 'vendor meeting' },
-  { id: 'notice',      en: /\b(notice|announcement|circular)s?\b/,                   bn: /(নোটিশ|বিজ্ঞপ্তি)/,               ask: 'notices' },
+  { id: 'notice',      en: /\b(notice|announcement|circular)s?\b/,                   bn: /(নোটিশ|বিজ্ঞপ্তি)/,               ask: 'office todos' },
   { id: 'loan',        en: /\b(loan|advance)s?\b/,                                   bn: /(ঋণ|লোন|অগ্রিম)/,                 ask: 'loans' },
   { id: 'error',       en: /\b(error|mistake|wrong|problem|issue|unbalanced)s?\b/,   bn: /(ভুল|সমস্যা|গরমিল|এরর)/,          ask: 'any accounting error' },
   { id: 'profit',      en: /\b(profit|loss|margin|p&l|income statement)\b/,          bn: /(লাভ|মুনাফা|লোকসান)/,             ask: 'profit' },
@@ -106,14 +106,17 @@ function whoIn(D, q) {
 }
 const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 function monthIn(q) {
-  const s = norm(q);
+  const s = norm(latinDigits(q));
   const i = MONTHS.findIndex((m) => s.includes(m.toLowerCase().slice(0, 3)));
   if (i >= 0) return i + 1;
   const j = BN_MONTH.findIndex((m) => q.includes(m));
   return j >= 0 ? j + 1 : null;
 }
+/* ৩০০০০ is thirty thousand — the boss speaks money in Bangla digits too */
+const BN_DIGITS = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
+const latinDigits = (x) => String(x).replace(/[০-৯]/g, (d) => BN_DIGITS[d]);
 function amountIn(q) {
-  const m = String(q).replace(/,/g, '').match(/\b(\d{3,9})(?:\s*(tk|৳|taka|টাকা))?\b/i);
+  const m = latinDigits(q).replace(/,/g, '').match(/\b(\d{3,9})(?:\s*(tk|৳|taka|টাকা))?\b/i);
   return m ? +m[1] : null;
 }
 
@@ -271,13 +274,20 @@ async function step(D, q, verb, ctx) {
 }
 
 /* ---------- the composer ---------- */
+/* Bangla marks a question with a tail word rather than word order:
+   "বেতন পরিশোধ হয়েছে?" asks whether salary was paid; "বেতন দাও" orders it.
+   Without this every question about paying became an order to pay. */
+const QUESTION = /\?\s*$|\b(হয়েছে|হয়েছে কি|আছে কি|কি\b|কী\b|কেমন|কত|কারা|কোথায়|কয়টা)\b|\b(is|are|was|were|has|have|did|does|do|what|which|who|how|why|when|where|any)\b/i;
+const ORDER = /\b(assign|pay|message|msg|send|write to|tell|notify|clear|settle|release)\b|(অ্যাসাইন|নিয়োগ|পরিশোধ করো|পে করো|ক্লিয়ার করো|(টাস্ক|কাজ)[^।]{0,10}(দাও|দিন|দে)|(বেতন|টাকা|বিল|বকেয়া)[^।]{0,12}(দাও|দিন))/i;
+
 async function understand(q, ctx) {
   const D = D0();
   if (!D) return null;
   const verb = verbOf(q);
+  const isOrder = ORDER.test(q) && !(QUESTION.test(q) && !ORDER.test(String(q).replace(/[?？]/g, '')));
 
   // a half command, or an answer to what EON asked a moment ago
-  if (NEEDS[verb] || (convo && convo.asked)) {
+  if ((NEEDS[verb] && isOrder) || (convo && convo.asked)) {
     const s = await step(D, q, verb, ctx);
     if (s) return s;
   }
@@ -375,6 +385,19 @@ async function understand(q, ctx) {
       if (!r && typeof window !== 'undefined' && window.EonErpQA) r = window.EonErpQA.answer(askEn, ctx);
     } catch {}
     if (r && r.speak) return r;
+    // the subject is understood but no answerer covers it — say that plainly
+    // rather than returning nothing and looking deaf
+    const N2 = N();
+    const hit = N2 ? (N2.find(subj.ask || subj.id, 1) || [])[0] : null;
+    if (hit) {
+      const url = N2.url(hit.uri);
+      return {
+        speak: bn
+          ? `${subj.id} নিয়ে সরাসরি হিসাব এখনো নেই, তবে স্ক্রিনটা খুলে দিতে পারি।`
+          : `I do not have a figure for ${subj.id} yet, but I can open the screen.`,
+        detail: [], actions: [{ label: bn ? 'খুলুন' : 'Open', kind: 'erp-open', href: url }],
+      };
+    }
   }
 
   return null;
