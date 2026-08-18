@@ -19,7 +19,7 @@ final class Analytics
 
     // ---------- helpers ----------
     private function inCo(array $r, bool $sharedOk = false): bool { if ($this->co === null) return true; $c = $r['company_id'] ?? null; return ($sharedOk && $c === null) || (int) $c === $this->co; }
-    private function rows(string $t, bool $sharedOk = false): array
+    public function rows(string $t, bool $sharedOk = false): array
     {
         $viaEmp = in_array($t, ['advance_salaries', 'employee_requests', 'loans'], true);
         return array_values(array_filter($this->D[$t] ?? [], function ($r) use ($sharedOk, $viaEmp) {
@@ -58,6 +58,27 @@ final class Analytics
         foreach ($this->ledgerBalances() as $b) { $isDr = in_array($b['type'], ['asset', 'expense'], true); $d = max(0, $isDr ? $b['balance'] : -$b['balance']); $c = max(0, $isDr ? -$b['balance'] : $b['balance']); $rows[] = ['code' => $b['code'], 'name' => $b['name'], 'debit' => round($d), 'credit' => round($c)]; $dr += $d; $cr += $c; }
         return ['rows' => $rows, 'total_debit' => round($dr), 'total_credit' => round($cr), 'balanced' => abs($dr - $cr) < 2];
     }
+    /* Sales actually invoiced in a period, per service line. The ledger only sees what
+       was journalised, and Epal's ticket/visa desks invoice well ahead of posting — so a
+       month can show ৳42k of Air Ticket Sales against ৳8.9 L of confirmed invoices. EON
+       reports both and names the gap rather than quietly under-reporting the business. */
+    public function salesBooked(?string $from = null, ?string $to = null): array
+    {
+        $from = $from ?: substr($this->today, 0, 7) . '-01'; $to = $to ?: $this->today;
+        $lines = []; $total = 0.0; $collected = 0.0; $count = 0;
+        foreach (Dataset::SALES_TABLES as $table => $label) {
+            $amt = 0.0; $paid = 0.0; $n = 0;
+            foreach ($this->rows($table) as $r) {
+                $d = substr((string) ($r['date'] ?? ''), 0, 10);
+                if ($d === '' || $d < $from || $d > $to) continue;
+                $amt += (float) ($r['total'] ?? 0); $paid += (float) ($r['paid_amount'] ?? 0); $n++;
+            }
+            if ($n) { $lines[] = ['line' => $label, 'invoiced' => round($amt), 'collected' => round($paid), 'invoices' => $n]; $total += $amt; $collected += $paid; $count += $n; }
+        }
+        usort($lines, fn($a, $b) => $b['invoiced'] <=> $a['invoiced']);
+        return ['from' => $from, 'to' => $to, 'invoiced' => round($total), 'collected' => round($collected), 'outstanding' => round($total - $collected), 'invoices' => $count, 'by_line' => $lines];
+    }
+
     public function profitAndLoss(?string $from = null, ?string $to = null): array
     {
         $bal = $this->ledgerBalances($from, $to);
@@ -65,7 +86,10 @@ final class Analytics
         foreach ($bal as $b) { if ($b['type'] === 'income') { $inc += $b['balance']; $top['income'][] = ['code' => $b['code'], 'name' => $b['name'], 'amount' => round($b['balance'])]; } elseif ($b['type'] === 'expense') { $p = $b['code'][0]; if ($p === '5') $dir += $b['balance']; elseif ($p === '8') $fin += $b['balance']; else { $opex += $b['balance']; $top['opex'][] = ['code' => $b['code'], 'name' => $b['name'], 'amount' => round($b['balance'])]; } } }
         usort($top['income'], fn($a, $b) => $b['amount'] <=> $a['amount']); usort($top['opex'], fn($a, $b) => $b['amount'] <=> $a['amount']);
         $net = $inc - $dir - $opex - $fin;
-        return ['from' => $from, 'to' => $to, 'income' => round($inc), 'direct_cost' => round($dir), 'opex' => round($opex), 'finance_cost' => round($fin), 'gross_profit' => round($inc - $dir), 'net_profit' => round($net), 'margin_pct' => $inc ? (int) round($net / $inc * 100) : 0, 'top_income' => array_slice($top['income'], 0, 6), 'top_opex' => array_slice($top['opex'], 0, 8)];
+        $sb = $this->salesBooked($from, $to);
+        return ['from' => $from, 'to' => $to, 'income' => round($inc), 'direct_cost' => round($dir), 'opex' => round($opex), 'finance_cost' => round($fin), 'gross_profit' => round($inc - $dir), 'net_profit' => round($net), 'margin_pct' => $inc ? (int) round($net / $inc * 100) : 0, 'top_income' => array_slice($top['income'], 0, 6), 'top_opex' => array_slice($top['opex'], 0, 8),
+            // what the desks actually invoiced in the same period, and how much of it never reached the ledger
+            'sales_invoiced' => $sb['invoiced'], 'sales_by_line' => $sb['by_line'], 'unposted_sales' => round($sb['invoiced'] - $inc), 'ledger_covers_pct' => $sb['invoiced'] > 0 ? (int) round($inc / $sb['invoiced'] * 100) : null];
     }
     public function balanceSheet(): array
     {
@@ -81,9 +105,68 @@ final class Analytics
         $byCo = []; foreach ($banks as $b) { $k = (int) $b['company_id']; $byCo[$k] = ($byCo[$k] ?? 0) + (float) $b['balance']; } arsort($byCo);
         return ['total' => round(self::sum($banks, 'balance')), 'accounts' => $out, 'by_company' => array_map(fn($k, $v) => ['company' => $this->coName($k), 'total' => round($v)], array_keys($byCo), $byCo), 'low' => array_values(array_filter($out, fn($b) => $b['balance'] < 50000 && $b['type'] !== 'cash'))];
     }
+    /* ------------------------------------------------------------------
+       The dues that never reach payment_schedules.
+       Epal's money sits on invoices: ticket / visa / contract-file /
+       contract-flight sales owe us, ticket purchases and visa costing
+       owe the vendor. Shaped exactly like a payment_schedule row so
+       aging, buckets, top parties and the overdue list all work on it.
+       ------------------------------------------------------------------ */
+    public function invoiceDues(string $type): array
+    {
+        $out = [];
+        $add = function (array $r, string $party, string $label, string $dateCol, float $amount, float $paid) use (&$out, $type) {
+            if (round($amount - $paid) <= 0) return;
+            $when = (string) ($r[$dateCol] ?? '') ?: (string) ($r['date'] ?? $this->today);
+            $out[] = [
+                'id' => $label . '-' . ($r['id'] ?? 0), 'company_id' => $r['company_id'] ?? null, 'type' => $type,
+                'party_type' => $party, 'party_id' => $r[$party === 'vendor' ? 'vendor_id' : 'client_id'] ?? null,
+                'party_name' => (string) ($r[$party === 'vendor' ? 'vendor' : 'client'] ?? '') ?: 'Unnamed ' . $party,
+                'source_label' => $label . ' ' . (string) ($r['invoice'] ?? $r['id'] ?? ''),
+                'amount' => $amount, 'paid_amount' => $paid, 'scheduled_date' => substr($when, 0, 10),
+                'status' => 'pending', 'priority' => null, 'paid_date' => null, 'from_invoice' => true,
+            ];
+        };
+        if ($type === 'receive') {
+            foreach (Dataset::SALES_TABLES as $table => $label) {
+                foreach ($this->rows($table) as $r) {
+                    $paid = (float) ($r['paid_amount'] ?? 0);
+                    $total = (float) ($r['total'] ?? 0);
+                    // trust the ERP's own due_amount when it carries one; else total − paid
+                    $due = array_key_exists('due_amount', $r) ? (float) $r['due_amount'] : $total - $paid;
+                    $add($r, 'client', $label, isset($r['due_date']) && $r['due_date'] ? 'due_date' : 'receivable_date', $paid + $due, $paid);
+                }
+            }
+        } elseif ($type === 'pay') {
+            foreach ($this->rows('ticket_purchases') as $r) {
+                $paid = (float) ($r['paid_amount'] ?? 0);
+                $due = array_key_exists('due_amount', $r) ? (float) $r['due_amount'] : (float) ($r['total'] ?? 0) - $paid;
+                if (round($due) <= 0) continue;
+                // bought on a portal (BSP/IATA, an airline portal) → the money is owed to the portal
+                $name = (string) ($r['vendor'] ?? '') ?: (string) ($r['portal'] ?? '') ?: (string) ($r['airline'] ?? '') ?: 'Ticket vendor';
+                $pid = $r['vendor_id'] ?? (isset($r['portal_id']) && $r['portal_id'] ? 'portal:' . $r['portal_id'] : null);
+                $out[] = ['id' => 'ticket-purchase-' . ($r['id'] ?? 0), 'company_id' => $r['company_id'] ?? null, 'type' => 'pay', 'party_type' => 'vendor', 'party_id' => $pid,
+                    'party_name' => $name, 'source_label' => 'ticket purchase ' . (string) ($r['ticket_no'] ?? $r['id'] ?? ''),
+                    'amount' => $paid + $due, 'paid_amount' => $paid, 'scheduled_date' => substr((string) ((($r['due_date'] ?? '') ?: ($r['date'] ?? '')) ?: $this->today), 0, 10),
+                    'status' => 'pending', 'priority' => null, 'paid_date' => null, 'from_invoice' => true];
+            }
+            foreach ($this->rows('visa_processes') as $r) {   // what the visa costs us, still unpaid to the vendor
+                $paid = (float) ($r['cost_paid_amount'] ?? 0);
+                $due = (float) ($r['costing_price'] ?? 0) - $paid;
+                if (round($due) <= 0) continue;
+                $out[] = ['id' => 'visa-cost-' . ($r['id'] ?? 0), 'company_id' => null, 'type' => 'pay', 'party_type' => 'vendor', 'party_id' => $r['vendor_id'] ?? null,
+                    'party_name' => 'Visa vendor' . (isset($r['country']) && $r['country'] ? ' — ' . $r['country'] : ''), 'source_label' => 'visa ' . (string) ($r['application_id'] ?? $r['id'] ?? ''),
+                    'amount' => $paid + $due, 'paid_amount' => $paid, 'scheduled_date' => substr((string) (($r['payable_date'] ?? '') ?: $this->today), 0, 10),
+                    'status' => 'pending', 'priority' => null, 'paid_date' => null, 'from_invoice' => true];
+            }
+        }
+        return $out;
+    }
+
     public function schedules(string $type): array
     {
-        $open = []; foreach ($this->rows('payment_schedules') as $p) { if ($p['type'] !== $type || !in_array($p['status'], ['pending', 'overdue'], true)) continue; $due = (float) $p['amount'] - (float) ($p['paid_amount'] ?? 0); $days = $this->days((string) $p['scheduled_date'], $this->today); $p['due'] = round($due); $p['days_overdue'] = max(0, $days); $p['bucket'] = $days <= 0 ? 'current' : ($days <= 30 ? '1-30' : ($days <= 60 ? '31-60' : ($days <= 90 ? '61-90' : '90+'))); $p['overdue'] = $days > 0; $open[] = $p; }
+        $rows = array_merge($this->rows('payment_schedules'), $this->invoiceDues($type));
+        $open = []; foreach ($rows as $p) { if ($p['type'] !== $type || !in_array($p['status'], ['pending', 'overdue'], true)) continue; $due = (float) $p['amount'] - (float) ($p['paid_amount'] ?? 0); if (round($due) <= 0) continue; $days = $this->days((string) $p['scheduled_date'], $this->today); $p['due'] = round($due); $p['days_overdue'] = max(0, $days); $p['bucket'] = $days <= 0 ? 'current' : ($days <= 30 ? '1-30' : ($days <= 60 ? '31-60' : ($days <= 90 ? '61-90' : '90+'))); $p['overdue'] = $days > 0; $open[] = $p; }
         $overdue = array_values(array_filter($open, fn($p) => $p['overdue'])); usort($overdue, fn($a, $b) => $b['days_overdue'] <=> $a['days_overdue'] ?: $b['due'] <=> $a['due']);
         $buckets = []; foreach (['current', '1-30', '31-60', '61-90', '90+'] as $bk) { $s = array_filter($open, fn($p) => $p['bucket'] === $bk); $buckets[] = ['bucket' => $bk, 'amount' => round(self::sum($s, 'due')), 'count' => count($s)]; }
         $byParty = []; foreach ($open as $p) { $k = $p['party_type'] . ':' . $p['party_id']; if (!isset($byParty[$k])) $byParty[$k] = ['party_type' => $p['party_type'], 'party_id' => $p['party_id'], 'party_name' => $p['party_name'], 'due' => 0, 'overdue' => 0, 'count' => 0, 'oldest' => 0]; $byParty[$k]['due'] += $p['due']; if ($p['overdue']) $byParty[$k]['overdue'] += $p['due']; $byParty[$k]['count']++; $byParty[$k]['oldest'] = max($byParty[$k]['oldest'], $p['days_overdue']); }
