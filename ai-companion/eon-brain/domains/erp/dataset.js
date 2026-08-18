@@ -40,6 +40,40 @@ export const DATASET_SHAPE = {
   sales:             ['id', 'company_id', 'invoice_no', 'customer_id', 'date', 'total', 'paid_amount', 'due_amount', 'payment_status', 'due_date'],
   purchases:         ['id', 'company_id', 'supplier_id', 'date', 'total', 'paid_amount', 'due_amount', 'payment_status', 'due_date'],
   notices:           ['id', 'company_id', 'title', 'published_at', 'expires_at'],
+
+  /* The service business. `sales`/`purchases` above are unused on this ERP —
+     Epal sells tickets, visas and contract files, so the top line and the real
+     receivables/payables live here. */
+  ticket_sales:            ['id', 'company_id', 'invoice', 'client_id', 'client', 'client_phone', 'date', 'due_date', 'total', 'paid_amount', 'due_amount', 'payment_status', 'status', 'bank_id'],
+  visa_sales:              ['id', 'company_id', 'invoice', 'client_id', 'client', 'date', 'receivable_date', 'total', 'paid_amount', 'due_amount', 'payment_method', 'status', 'bank_id'],
+  contract_file_sales:     ['id', 'company_id', 'invoice', 'client_id', 'client', 'date', 'receivable_date', 'files_count', 'total', 'paid_amount', 'due_amount', 'vendor_cost', 'payment_status', 'bank_id'],
+  contract_flight_bookings:['id', 'company_id', 'invoice', 'client_id', 'client', 'date', 'receivable_date', 'seats', 'unit_price', 'total', 'paid_amount', 'due_amount', 'payment_status', 'bank_id'],
+  ticket_purchases:        ['id', 'company_id', 'vendor_id', 'vendor', 'portal_id', 'portal', 'ticket_no', 'airline', 'ticket_type', 'trip_type', 'source', 'date', 'due_date', 'total', 'paid_amount', 'due_amount', 'payment_status', 'status', 'bank_id'],
+  visa_processes:          ['id', 'application_id', 'passport_holder_id', 'applicant', 'vendor_id', 'country', 'visa_category', 'visa_type', 'travel_date', 'embassy_fee', 'vfs_fee', 'our_service_fee', 'costing_price', 'cost_paid_amount', 'due_amount', 'sale_price', 'advance_received', 'payable_date', 'receivable_date', 'payment_status', 'status', 'stage', 'assigned_officer_id', 'officer'],
+  other_visa_services:     ['id', 'service_code', 'passport_holder_id', 'applicant', 'service_type', 'cost_price', 'sale_price', 'deadline', 'status', 'is_billable'],
+  passport_holders:        ['id', 'name', 'passport_no', 'nationality', 'phone', 'expiry_date', 'type', 'status', 'category'],
+  portals:                 ['id', 'name', 'type', 'balance', 'next_payment_date', 'next_payment_amount', 'account_id', 'status'],
+  ticket_sale_items:       ['id', 'ticket_sale_id', 'price', 'ticket_no', 'airline', 'trip_type', 'ticket_type'],
+  visa_sale_items:         ['id', 'visa_sale_id', 'sale_price', 'application_id', 'country', 'visa_category'],
+
+  /* Money that moves outside the journal, and each party's running account. */
+  party_transactions:      ['id', 'user_id', 'party_name', 'party_type(customer|supplier)', 'type(ticket_sale|visa_sale|party_payment|ticket_purchase|visa_process|bank_transfer|opening_balance)', 'invoice_id', 'date', 'reference_no', 'payment_method', 'debit', 'credit', 'balance', 'remarks'],
+  payments:                ['id', 'user_id', 'person', 'employee_salary_id', 'date', 'bank_id', 'payment_method', 'transaction_no', 'amount', 'notes'],
+  bank_transfers:          ['id', 'from_bank_id', 'from_bank', 'to_bank_id', 'to_bank', 'amount', 'date', 'reference_no', 'payment_method', 'status', 'remarks'],
+  petty_cash_floats:       ['id', 'company_id', 'custodian_id', 'custodian', 'account_id', 'float_limit', 'status'],
+  petty_cash_transactions: ['id', 'petty_cash_float_id', 'type', 'amount', 'date', 'bank_id', 'note'],
+  employee_ledger:         ['id', 'user_id', 'person', 'type', 'source_type', 'date', 'reference', 'debit', 'credit', 'balance', 'note'],
+  expense_items:           ['id', 'expense_id', 'description', 'amount'],
+  payment_schedule_logs:   ['id', 'payment_schedule_id', 'action', 'old_date', 'new_date', 'reason', 'done_by', 'done_by_name', 'created_at'],
+
+  /* The rest of the people lifecycle, the service desk, and Wood Art. */
+  payslips:                ['id', 'user_id', 'person', 'employee_salary_id', 'payslip_number', 'issue_date', 'payment_status', 'bank_id'],
+  resignations:            ['id', 'user_id', 'person', 'resign_date', 'last_working_day', 'resign_type', 'notice_period_days', 'status', 'reason'],
+  salary_templates:        ['id', 'name', 'company_id', 'basic_salary', 'house_rent', 'medical_allowance', 'conveyance_allowance', 'other_allowance', 'bonus', 'total_salary', 'status'],
+  shifts:                  ['id', 'name', 'start_time', 'end_time'],
+  device_users:            ['id', 'user_id', 'device_id'],
+  support_tickets:         ['id', 'company_id', 'title', 'department', 'priority', 'status', 'assigned_to', 'assignee', 'customer_id', 'created_at'],
+  wa_projects:             ['id', 'company_id', 'name', 'client', 'type', 'area', 'value', 'cost', 'stage', 'phase', 'progress', 'designer', 'start', 'deadline', 'billed'],
 };
 
 export function emptyDataset() {

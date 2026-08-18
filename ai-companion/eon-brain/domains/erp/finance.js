@@ -75,9 +75,50 @@ export function cashPosition(D, { company = null } = {}) {
 
 /* ---------- 3. receivables / payables ---------- */
 function ageBucket(days) { return days <= 0 ? 'current' : days <= 30 ? '1–30' : days <= 60 ? '31–60' : days <= 90 ? '61–90' : '90+'; }
+/* The dues that never reach payment_schedules. Epal sells air tickets, visas,
+   contract files and contract flights, so the money sits on those invoices —
+   reading only payment_schedules reports receivables of zero while lakhs are
+   outstanding. Mirrors Analytics::invoiceDues() on the server. */
+const SALES_LINES = { ticket_sales: 'air ticket', visa_sales: 'visa', contract_file_sales: 'contract file', contract_flight_bookings: 'contract flight' };
+export function invoiceDues(D, type, { company = null } = {}) {
+  const today = T(D); const out = [];
+  const row = (r, kind, label, name, id, when) => {
+    const paid = +(r.paid_amount || 0);
+    const due = r.due_amount != null ? +r.due_amount : +(r.total || 0) - paid;
+    if (Math.round(due) <= 0) return;
+    out.push({ id: label + '-' + r.id, company_id: r.company_id ?? null, type, party_type: kind, party_id: id ?? null,
+      party_name: name || ('Unnamed ' + kind), source_label: label + ' ' + (r.invoice || r.id || ''),
+      amount: paid + due, paid_amount: paid, scheduled_date: String(when || r.date || today).slice(0, 10),
+      status: 'pending', from_invoice: true });
+  };
+  if (type === 'receive') {
+    for (const [table, label] of Object.entries(SALES_LINES)) {
+      for (const r of (D[table] || [])) { if (!inCompany(r, company)) continue; row(r, 'client', label, r.client, r.client_id, r.due_date || r.receivable_date); }
+    }
+  } else if (type === 'pay') {
+    for (const r of (D.ticket_purchases || [])) {
+      if (!inCompany(r, company)) continue;
+      // bought on a booking portal (BSP/IATA) → the money is owed to the portal
+      const name = r.vendor || r.portal || r.airline || 'Ticket vendor';
+      row(r, 'vendor', 'ticket purchase', name, r.vendor_id ?? (r.portal_id ? 'portal:' + r.portal_id : null), r.due_date);
+    }
+    for (const r of (D.visa_processes || [])) {
+      const paid = +(r.cost_paid_amount || 0), due = +(r.costing_price || 0) - paid;
+      if (Math.round(due) <= 0) continue;
+      out.push({ id: 'visa-cost-' + r.id, company_id: null, type: 'pay', party_type: 'vendor', party_id: r.vendor_id ?? null,
+        party_name: 'Visa vendor' + (r.country ? ' — ' + r.country : ''), source_label: 'visa ' + (r.application_id || r.id || ''),
+        amount: paid + due, paid_amount: paid, scheduled_date: String(r.payable_date || today).slice(0, 10), status: 'pending', from_invoice: true });
+    }
+  }
+  return out;
+}
+
 export function schedules(D, type, { company = null } = {}) {
   const today = T(D);
-  const open = (D.payment_schedules || []).filter((p) => p.type === type && ['pending', 'overdue'].includes(p.status) && inCompany(p, company)).map((p) => { const due = +p.amount - (+p.paid_amount || 0); const days = daysBetween(p.scheduled_date, today); return Object.assign({}, p, { due, days_overdue: Math.max(0, days), bucket: ageBucket(days), overdue: days > 0 }); });
+  const open = (D.payment_schedules || []).filter((p) => p.type === type && ['pending', 'overdue'].includes(p.status) && inCompany(p, company))
+    .concat(invoiceDues(D, type, { company }))
+    .map((p) => { const due = +p.amount - (+p.paid_amount || 0); const days = daysBetween(p.scheduled_date, today); return Object.assign({}, p, { due, days_overdue: Math.max(0, days), bucket: ageBucket(days), overdue: days > 0 }); })
+    .filter((p) => Math.round(p.due) > 0);
   const overdue = open.filter((p) => p.overdue).sort((a, b) => b.days_overdue - a.days_overdue || b.due - a.due);
   const buckets = ['current', '1–30', '31–60', '61–90', '90+'].map((b) => ({ bucket: b, amount: sum(open.filter((p) => p.bucket === b), 'due'), count: open.filter((p) => p.bucket === b).length }));
   const byParty = [...groupBy(open, (p) => p.party_type + ':' + p.party_id).values()].map((arr) => ({ party_type: arr[0].party_type, party_id: arr[0].party_id, party_name: arr[0].party_name, due: sum(arr, 'due'), overdue: sum(arr.filter((p) => p.overdue), 'due'), count: arr.length, oldest: Math.max(...arr.map((p) => p.days_overdue)) })).sort((a, b) => b.overdue - a.overdue || b.due - a.due);
