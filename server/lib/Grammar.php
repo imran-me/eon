@@ -271,6 +271,7 @@ final class Grammar
         foreach ($D['passport_holders'] ?? [] as $r) $consider('passenger', $r['id'] ?? null, $r['name'] ?? null);
         foreach ($D['projects'] ?? [] as $r) $consider('project', $r['id'] ?? null, $r['project_name'] ?? null);
         foreach ($D['companies'] ?? [] as $r) { $consider('company', $r['id'] ?? null, $r['name'] ?? null); $consider('company', $r['id'] ?? null, $r['short_name'] ?? null); }
+        foreach ($D['accounts'] ?? [] as $r) $consider('account', $r['code'] ?? null, $r['name'] ?? null);
         // a first name is enough when it is unambiguous
         if ($best === null) {
             $firsts = [];
@@ -332,11 +333,10 @@ final class Grammar
         return match ($kind) {
             'employee'  => 'person_aspect',
             'party'     => 'party_balance',
-            'passenger' => 'clients',
-            'project'   => 'projects',
-            'company'   => 'company_compare',
-            'account'   => 'account_ledger',
-            'invoice'   => 'find_record',
+            // a named passenger, project, company or account is that record — not the
+            // aggregate screen. Routing them to the list answered without ever naming
+            // the thing asked about, which reads as EON not having heard the question.
+            'passenger', 'project', 'company', 'account', 'invoice' => 'record_aspect',
             default     => null,
         };
     }

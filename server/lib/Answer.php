@@ -58,6 +58,12 @@ final class Answer
     private function num($v): string { return Phrase::n($v, $this->L()); }
     private function pc(float $v): string { return Phrase::pct($v, $this->L()); }
     private function f($v): float { return (float) ($v ?? 0); }
+    /** a date or YYYY-MM in the answer language — digits only, separators kept */
+    private function d(?string $v): string
+    {
+        $v = (string) $v;
+        return $this->bn() ? str_replace(['0','1','2','3','4','5','6','7','8','9'], ['০','১','২','৩','৪','৫','৬','৭','৮','৯'], $v) : $v;
+    }
 
     /** pick the English or Bangla member of a pair */
     private function t(string $en, string $bn): string { return $this->bn() ? $bn : $en; }
@@ -1616,6 +1622,263 @@ final class Answer
                               $this->num(count($notes)) . 'টি নোট রাখা আছে: ' . implode('; ', array_map(fn($n) => (string) (is_array($n) ? $n['text'] : $n), array_slice($notes, 0, 3))) . '।') : '',
             $this->act('say "call me …", "show money in crore", "be brief" or "remember that …" to change it.',
                        '"আমাকে ডাকো …", "কোটিতে দেখাও", "সংক্ষেপে বলো" বা "মনে রাখো …" বললেই বদলে যাবে।')]);
+    }
+
+    /* One named person, any aspect. This is the handler that makes the space large:
+       "Imran's payroll", "payroll of Imran", "ইমরানের বেতন", "Imran er hajira",
+       "take me to Imran's payslip" all arrive here as (person, aspect) and are
+       answered from a single dossier rather than an intent per phrasing. */
+    private function a_person_aspect(): string
+    {
+        $s = $this->c['slots'];
+        $uid = (int) ($s['instance_id'] ?? 0);
+        $label = (string) ($s['instance_label'] ?? '');
+        if ($uid <= 0) {
+            $e = $this->A()->findEmployee((string) ($s['name_hint'] ?? $this->c['q'] ?? ''));
+            if ($e) { $uid = (int) $e['id']; $label = (string) $e['name']; }
+        }
+        if ($uid <= 0) return $this->a_evaluate_person();
+        $this->used('find_employee');
+        $p = $this->A()->person($uid);
+        if (!$p) return $this->a_evaluate_person();
+        $e = $p['employee'];
+        $who = (string) $e['name'];
+        $aspect = (string) ($s['aspect'] ?? '');
+
+        // no aspect named → the profile card, which is what "who is X" means
+        switch ($aspect) {
+            case 'payroll':
+                $this->used('get_payroll');
+                $latest = $p['payroll']['latest'] ?? null;
+                $unpaid = $p['payroll']['unpaid'] ?? [];
+                $head = $this->t(
+                    sprintf('%s is on %s a month.', $who, $this->m($this->f($e['salary']))),
+                    sprintf('%s-এর মাসিক বেতন %s।', $who, $this->m($this->f($e['salary']))));
+                $last = $latest
+                    ? $this->t(sprintf('The last payslip on record is %s: gross %s, deductions %s, net %s — %s.',
+                            (string) ($latest['month'] ?? $latest['month_key'] ?? ''), $this->m($this->f($latest['gross_salary'])), $this->m($this->f($latest['total_deductions'])), $this->m($this->f($latest['net_salary'])), (string) ($latest['status'] ?? '')),
+                        sprintf('সর্বশেষ পে-স্লিপ %s: মোট %s, কর্তন %s, নিট %s — %s।',
+                            (string) ($latest['month'] ?? $latest['month_key'] ?? ''), $this->m($this->f($latest['gross_salary'])), $this->m($this->f($latest['total_deductions'])), $this->m($this->f($latest['net_salary'])), (string) ($latest['status'] ?? '')))
+                    : $this->t('No payslip has been generated for them yet.', 'তাঁর কোনো পে-স্লিপ এখনো তৈরি হয়নি।');
+                $due = $this->f($p['payroll']['scheduled_due']);
+                $owed = $due > 0
+                    ? $this->t(sprintf('%s is scheduled and still unpaid.', $this->m($due)), sprintf('%s এখনো বাকি আছে।', $this->m($due)))
+                    : ($unpaid ? $this->t($this->num(count($unpaid)) . ' payslip(s) are unpaid.', $this->num(count($unpaid)) . 'টি পে-স্লিপ অপরিশোধিত।') : '');
+                return $this->say([$this->open($due > 0 ? 'warn' : 'ok'), $head, $last, $owed]);
+
+            case 'payslip':
+                $docs = $p['payslip_docs'] ?? [];
+                $slips = $p['payroll']['payslips'] ?? 0;
+                return $this->say([$this->open('ok'),
+                    $this->t(sprintf('%s has %s payslip(s) on record%s.', $who, $this->num($slips), $docs ? ' and ' . $this->num(count($docs)) . ' issued document(s)' : ''),
+                        sprintf('%s-এর %s টি পে-স্লিপ আছে%s।', $who, $this->num($slips), $docs ? ', এর মধ্যে ' . $this->num(count($docs)) . ' টি ইস্যু করা' : '')),
+                    $this->screenLine('payslip')]);
+
+            case 'attendance':
+                $a = $p['attendance'];
+                $today = $a['today'] ?? null;
+                return $this->say([$this->open(($a['pct'] ?? 100) >= 85 ? 'ok' : 'warn'),
+                    $this->t(sprintf('Over the last %s days %s was present on %s of %s recorded days%s.', $this->num($p['days']), $who, $this->num($a['present']), $this->num($a['recorded']), $a['pct'] !== null ? ' (' . $this->pc((float) $a['pct']) . ')' : ''),
+                        sprintf('গত %s দিনে %s %s দিনের মধ্যে %s দিন উপস্থিত ছিলেন%s।', $this->num($p['days']), $who, $this->num($a['recorded']), $this->num($a['present']), $a['pct'] !== null ? ' (' . $this->pc((float) $a['pct']) . ')' : '')),
+                    $today ? $this->t(sprintf('Today: %s, in at %s.', (string) $today['status'], (string) ($today['check_in'] ?? '—')),
+                                      sprintf('আজ: %s, ঢুকেছেন %s-এ।', (string) $today['status'], (string) ($today['check_in'] ?? '—')))
+                           : $this->t('Nothing recorded for today yet.', 'আজকের কিছু এখনো ওঠেনি।'),
+                    $a['absent'] ? $this->t($this->num($a['absent']) . ' absent, ' . $this->num($a['on_leave']) . ' on leave.', $this->num($a['absent']) . ' দিন অনুপস্থিত, ' . $this->num($a['on_leave']) . ' দিন ছুটিতে।') : '']);
+
+            case 'lateness':
+                $l = $p['lateness'];
+                return $this->say([$this->open($l['days'] > 3 ? 'warn' : 'ok'),
+                    $l['days']
+                        ? $this->t(sprintf('%s was late on %s day(s) in the last %s, %s minutes in total (worst %s).', $who, $this->num($l['days']), $this->num($p['days']), $this->num($l['minutes']), $this->num($l['worst'])),
+                            sprintf('%s গত %s দিনে %s দিন দেরি করেছেন, মোট %s মিনিট (সবচেয়ে বেশি %s)।', $who, $this->num($p['days']), $this->num($l['days']), $this->num($l['minutes']), $this->num($l['worst'])))
+                        : $this->t(sprintf('%s has not been late in the last %s days.', $who, $this->num($p['days'])), sprintf('%s গত %s দিনে দেরি করেননি।', $who, $this->num($p['days']))),
+                    $l['minutes'] >= 120
+                        ? $this->t('That passes the 120-minute monthly grace, so the late deduction applies.', 'এটা মাসিক ১২০ মিনিটের ছাড় পেরিয়েছে, তাই দেরির কর্তন প্রযোজ্য।')
+                        : ($l['minutes'] ? $this->t(sprintf('Still inside the 120-minute monthly grace — no deduction yet.'), 'এখনো ১২০ মিনিটের ছাড়ের ভেতরে — কর্তন হবে না।') : '')]);
+
+            case 'leave':
+                $lv = $p['leaves'];
+                $pending = array_values(array_filter($lv, fn($x) => strtolower((string) ($x['status'] ?? '')) === 'pending'));
+                $daysTaken = array_sum(array_map(fn($x) => (int) ($x['days'] ?? 0), array_filter($lv, fn($x) => strtolower((string) ($x['status'] ?? '')) === 'approved')));
+                return $this->say([$this->open($pending ? 'warn' : 'ok'),
+                    $this->t(sprintf('%s has %s leave application(s) on record, %s day(s) approved this year.', $who, $this->num(count($lv)), $this->num($daysTaken)),
+                        sprintf('%s-এর %s টি ছুটির আবেদন আছে, এ বছরে অনুমোদিত %s দিন।', $who, $this->num(count($lv)), $this->num($daysTaken))),
+                    $pending ? $this->t($this->num(count($pending)) . ' still waiting on approval.', $this->num(count($pending)) . 'টি এখনো অনুমোদনের অপেক্ষায়।') : '']);
+
+            case 'loan':
+                return $this->say([$this->open($p['loan_remaining'] > 0 ? 'warn' : 'ok'),
+                    $p['loans']
+                        ? $this->t(sprintf('%s has %s running loan(s) with %s still to recover.', $who, $this->num(count($p['loans'])), $this->m($this->f($p['loan_remaining']))),
+                            sprintf('%s-এর %s টি চলমান ঋণ আছে, আদায় বাকি %s।', $who, $this->num(count($p['loans'])), $this->m($this->f($p['loan_remaining']))))
+                        : $this->t(sprintf('%s has no outstanding loan.', $who), sprintf('%s-এর কোনো ঋণ বাকি নেই।', $who))]);
+
+            case 'advance':
+                $adv = $p['advances'];
+                $amt = array_sum(array_map(fn($x) => (float) ($x['amount'] ?? 0), $adv));
+                return $this->say([$this->open('ok'),
+                    $adv
+                        ? $this->t(sprintf('%s has taken %s salary advance(s) totalling %s.', $who, $this->num(count($adv)), $this->m($amt)),
+                            sprintf('%s %s বার অগ্রিম বেতন নিয়েছেন, মোট %s।', $who, $this->num(count($adv)), $this->m($amt)))
+                        : $this->t(sprintf('%s has taken no salary advance.', $who), sprintf('%s কোনো অগ্রিম বেতন নেননি।', $who))]);
+
+            case 'task':
+                $t = $p['tasks'];
+                return $this->say([$this->open($t['overdue'] ? 'warn' : 'ok'),
+                    $this->t(sprintf('%s has %s open task(s), %s overdue, %s done.', $who, $this->num($t['open']), $this->num($t['overdue']), $this->num($t['done'])),
+                        sprintf('%s-এর %s টি কাজ চলছে, %s টির সময় পার, %s টি শেষ।', $who, $this->num($t['open']), $this->num($t['overdue']), $this->num($t['done']))),
+                    !empty($t['list']) ? $this->t('Oldest: ' . implode(', ', array_map(fn($x) => (string) $x['title'], array_slice($t['list'], 0, 3))) . '.',
+                                                  'সবচেয়ে পুরনো: ' . implode(', ', array_map(fn($x) => (string) $x['title'], array_slice($t['list'], 0, 3))) . '।') : '']);
+
+            case 'project':
+                $pj = $p['projects'];
+                return $this->say([$this->open('ok'),
+                    $pj
+                        ? $this->t(sprintf('%s is on %s project(s): %s.', $who, $this->num(count($pj)), implode(', ', array_map(fn($x) => (string) $x['project_name'], array_slice($pj, 0, 4)))),
+                            sprintf('%s %s টি প্রকল্পে আছেন: %s।', $who, $this->num(count($pj)), implode(', ', array_map(fn($x) => (string) $x['project_name'], array_slice($pj, 0, 4)))))
+                        : $this->t(sprintf('%s is not on any project team.', $who), sprintf('%s কোনো প্রকল্প দলে নেই।', $who))]);
+
+            case 'request':
+                $rq = $p['requests'];
+                return $this->say([$this->open($rq ? 'warn' : 'ok'),
+                    $rq
+                        ? $this->t(sprintf('%s has %s request(s) on file; latest is %s.', $who, $this->num(count($rq)), (string) ($rq[0]['status'] ?? '—')),
+                            sprintf('%s-এর %s টি আবেদন আছে; সর্বশেষটির অবস্থা %s।', $who, $this->num(count($rq)), (string) ($rq[0]['status'] ?? '—')))
+                        : $this->t(sprintf('%s has no open request.', $who), sprintf('%s-এর কোনো আবেদন নেই।', $who))]);
+
+            case 'ledger':
+                $lg = $p['ledger'];
+                // clients are users too, so a name can be both staff and a trading party;
+                // if the employee ledger is empty, the party account is what was meant
+                if (!$lg) {
+                    $pl = $this->A()->partyLedger($who, 6);
+                    if (!empty($pl['parties'])) { $this->c['slots']['name_hint'] = $who; return $this->a_party_balance(); }
+                }
+                $bal = $lg ? (float) ($lg[0]['balance'] ?? 0) : 0.0;
+                return $this->say([$this->open('ok'),
+                    $lg
+                        ? $this->t(sprintf('%s has %s ledger entries, balance %s.', $who, $this->num(count($lg)), $this->m($bal)),
+                            sprintf('%s-এর খতিয়ানে %s টি এন্ট্রি, ব্যালান্স %s।', $who, $this->num(count($lg)), $this->m($bal)))
+                        : $this->t(sprintf('Nothing in the employee ledger for %s.', $who), sprintf('%s-এর জন্য কর্মী খতিয়ানে কিছু নেই।', $who))]);
+
+            case 'contact':
+                return $this->say([$this->open('ok'),
+                    $this->t(sprintf('%s — %s%s.', $who, (string) ($e['phone'] ?: 'no phone on file'), $e['email'] ? ', ' . $e['email'] : ''),
+                        sprintf('%s — %s%s।', $who, (string) ($e['phone'] ?: 'ফোন নম্বর নেই'), $e['email'] ? ', ' . $e['email'] : ''))]);
+
+            case 'resignation':
+                $r = $p['resignation'];
+                return $this->say([$this->open($r ? 'warn' : 'ok'),
+                    $r
+                        ? $this->t(sprintf('%s resigned on %s, last working day %s — %s.', $who, (string) $r['resign_date'], (string) $r['last_working_day'], (string) $r['status']),
+                            sprintf('%s %s তারিখে পদত্যাগ করেছেন, শেষ কর্মদিবস %s — %s।', $who, (string) $r['resign_date'], (string) $r['last_working_day'], (string) $r['status']))
+                        : $this->t(sprintf('%s has not resigned.', $who), sprintf('%s পদত্যাগ করেননি।', $who))]);
+
+            case 'department':
+                return $this->say([$this->open('ok'),
+                    $this->t(sprintf('%s is %s in %s at %s.', $who, (string) ($e['designation'] ?: 'unlisted'), (string) ($e['department'] ?: '—'), (string) $e['company']),
+                        sprintf('%s %s পদে আছেন, %s বিভাগে, %s-এ।', $who, (string) ($e['designation'] ?: '—'), (string) ($e['department'] ?: '—'), (string) $e['company']))]);
+
+            case 'evaluation':
+                return $this->a_evaluate_person();
+        }
+
+        // profile, or an aspect that has no special answer
+        $a = $p['attendance'];
+        return $this->say([$this->open('ok'),
+            $this->t(sprintf('%s — %s, %s, %s. On %s a month since %s.', $who, (string) ($e['designation'] ?: 'unlisted'), (string) ($e['department'] ?: '—'), (string) $e['company'], $this->m($this->f($e['salary'])), (string) ($e['joined'] ?: '—')),
+                sprintf('%s — %s, %s, %s। মাসিক বেতন %s, যোগ দিয়েছেন %s-এ।', $who, (string) ($e['designation'] ?: '—'), (string) ($e['department'] ?: '—'), (string) $e['company'], $this->m($this->f($e['salary'])), (string) ($e['joined'] ?: '—'))),
+            $this->t(sprintf('Attendance %s over %s days, %s late day(s), %s open task(s).', $a['pct'] !== null ? $this->pc((float) $a['pct']) : 'not tracked', $this->num($p['days']), $this->num($p['lateness']['days']), $this->num($p['tasks']['open'])),
+                sprintf('গত %s দিনে হাজিরা %s, দেরি %s দিন, চলমান কাজ %s টি।', $this->num($p['days']), $a['pct'] !== null ? $this->pc((float) $a['pct']) : 'হিসাব নেই', $this->num($p['lateness']['days']), $this->num($p['tasks']['open']))),
+            $this->act('ask me for their payroll, attendance, tasks or evaluation and I will go deeper.',
+                       'তাঁর বেতন, হাজিরা, কাজ বা মূল্যায়ন চাইলে আরও বিস্তারিত দেব।')]);
+    }
+
+    /* A named record that is not a person: a passenger, a project, a company, an
+       account, an invoice. The boss names the thing and expects to hear about that
+       thing — routing him to the list screen reads as EON not having heard him. */
+    private function a_record_aspect(): string
+    {
+        $s = $this->c['slots'];
+        $kind = (string) ($s['instance_kind'] ?? '');
+        $id = $s['instance_id'] ?? null;
+        $label = (string) ($s['instance_label'] ?? '');
+        $D = $this->c['D'];
+        $find = fn(string $t, string $key, $needle) => (function () use ($D, $t, $key, $needle) {
+            foreach ($D[$t] ?? [] as $r) if ((string) ($r[$key] ?? '') === (string) $needle) return $r;
+            return null;
+        })();
+
+        switch ($kind) {
+            case 'passenger':
+                $h = $find('passport_holders', 'id', $id);
+                if (!$h) break;
+                $name = (string) $h['name'];
+                $visas = array_values(array_filter($D['visa_processes'] ?? [], fn($v) => (int) ($v['passport_holder_id'] ?? 0) === (int) $id));
+                $exp = substr((string) ($h['expiry_date'] ?? ''), 0, 10);
+                $daysLeft = $exp !== '' ? (int) round((strtotime($exp) - strtotime($this->A()->today())) / 86400) : null;
+                return $this->say([$this->open($daysLeft !== null && $daysLeft < 180 ? 'warn' : 'ok'),
+                    $this->t(sprintf('%s — passport %s, %s.', $name, (string) ($h['passport_no'] ?: '—'), (string) ($h['nationality'] ?: '—')),
+                             sprintf('%s — পাসপোর্ট %s, %s।', $name, (string) ($h['passport_no'] ?: '—'), (string) ($h['nationality'] ?: '—'))),
+                    $exp !== '' ? $this->t(sprintf('Expires %s (%s days).', $exp, $this->num((int) $daysLeft)), sprintf('মেয়াদ শেষ %s (%s দিন)।', $this->d($exp), $this->num((int) $daysLeft))) : '',
+                    $visas ? $this->t(sprintf('%s visa file(s): %s.', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . (string) ($v['status'] ?? ''), array_slice($visas, 0, 3)))),
+                                      sprintf('%s টি ভিসা ফাইল: %s।', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . (string) ($v['status'] ?? ''), array_slice($visas, 0, 3)))))
+                           : $this->t('No visa file on record.', 'কোনো ভিসা ফাইল নেই।'),
+                    $daysLeft !== null && $daysLeft < 180 ? $this->act('under six months left — most embassies will refuse it.', 'ছয় মাসের কম মেয়াদ — বেশির ভাগ দূতাবাস নেবে না।') : '']);
+
+            case 'project':
+                $p = $find('projects', 'id', $id);
+                if (!$p) break;
+                $name = (string) $p['project_name'];
+                $tasks = array_values(array_filter($D['tasks'] ?? [], fn($t) => (int) ($t['project_id'] ?? 0) === (int) $id));
+                $open = array_values(array_filter($tasks, fn($t) => ($t['status'] ?? '') !== 'done'));
+                return $this->say([$this->open(($p['progress'] ?? 0) < 50 ? 'warn' : 'ok'),
+                    $this->t(sprintf('%s — %s, %s%% done, %s.', $name, (string) ($p['status'] ?? '—'), $this->num($p['progress'] ?? 0), (string) ($p['customer'] ?: 'no customer')),
+                             sprintf('%s — %s, %s%% শেষ, %s।', $name, (string) ($p['status'] ?? '—'), $this->num($p['progress'] ?? 0), (string) ($p['customer'] ?: 'গ্রাহক নেই'))),
+                    $this->t(sprintf('Budget %s, %s of %s tasks still open, due %s.', $this->m($this->f($p['budget'] ?? 0)), $this->num(count($open)), $this->num(count($tasks)), (string) ($p['end_date'] ?: '—')),
+                             sprintf('বাজেট %s, %s টির মধ্যে %s টি কাজ বাকি, শেষ তারিখ %s।', $this->m($this->f($p['budget'] ?? 0)), $this->num(count($tasks)), $this->num(count($open)), $this->d((string) ($p['end_date'] ?: '—'))))]);
+
+            case 'company':
+                $c = $find('companies', 'id', $id);
+                if (!$c) break;
+                $name = (string) $c['name'];
+                $A = new Analytics($D, (int) $id);
+                $k = $A->kpis();
+                return $this->say([$this->open('ok'),
+                    $this->t(sprintf('%s — cash %s, receivable %s, payable %s.', $name, $this->m($this->f($k['cash'])), $this->m($this->f($k['receivables'])), $this->m($this->f($k['payables']))),
+                             sprintf('%s — হাতে %s, পাওনা %s, দেনা %s।', $name, $this->m($this->f($k['cash'])), $this->m($this->f($k['receivables'])), $this->m($this->f($k['payables'])))),
+                    $this->t(sprintf('%s staff, revenue %s this month, net %s.', $this->num($k['headcount']), $this->m($this->f($k['revenue_mtd'])), $this->m($this->f($k['net_profit_mtd']))),
+                             sprintf('কর্মী %s জন, এ মাসের আয় %s, নিট %s।', $this->num($k['headcount']), $this->m($this->f($k['revenue_mtd'])), $this->m($this->f($k['net_profit_mtd']))))]);
+
+            case 'account':
+                $code = (string) $id;
+                $aname = $label;
+                foreach ($D['accounts'] ?? [] as $a) {
+                    if ((string) ($a['code'] ?? '') === $code || trim((string) ($a['name'] ?? '')) === trim($label)) { $code = (string) $a['code']; $aname = (string) $a['name']; break; }
+                }
+                $this->c['slots']['account_code'] = $code;
+                $body = $this->a_account_ledger();
+                // name the account, not just its code — the boss asked for it by name
+                $head = $this->t(sprintf('%s is account %s.', $aname, $code), sprintf('%s হলো %s নম্বর হিসাব।', $aname, $this->d($code)));
+                return $body === '' ? $head : $head . ' ' . $body;
+
+            case 'invoice':
+                $this->c['slots']['name_hint'] = $label;
+                return $this->a_find_record();
+        }
+        // the record vanished between resolving and answering — say so rather than guess
+        $this->c['slots']['name_hint'] = $label;
+        return $this->a_find_record();
+    }
+
+    /** where a screen lives, when the answer is really "take me there" */
+    private function screenLine(string $what): string
+    {
+        if (!class_exists('ErpMap') || !ErpMap::available()) return '';
+        $hits = ErpMap::findPages($what, 1);
+        if (!$hits) return '';
+        $uri = (string) ($hits[0]['uri'] ?? '');
+        if ($uri === '') return '';
+        return $this->t('The screen is at ' . $uri . '.', 'স্ক্রিনটি আছে ' . $uri . '-এ।');
     }
 
     private function a_find_record(): string

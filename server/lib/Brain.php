@@ -123,6 +123,8 @@ TXT;
         answers even if a layer above it throws. */
     public static function askOffline(string $q, array $D, ?int $company, Tools $tools, ?string $lang = null): array
     {
+        // let Nlu resolve a name in the sentence against real records
+        if (class_exists('Nlu') && method_exists('Nlu', 'useDataset')) Nlu::useDataset($D);
         if (class_exists('Nlu') && class_exists('Answer')) {
             try {
                 $parse = Nlu::parse($q, $lang);

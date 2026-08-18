@@ -581,6 +581,12 @@ final class Nlu
     /** Bangla inflections that may follow a stem and still count as the same word */
     private const BN_SUFFIX = '\x{09C7}\x{09B0}|\x{09C7}|\x{09B0}|\x{099F}\x{09BE}|\x{0995}\x{09C7}|\x{09AF}\x{09BC}|\x{09A6}\x{09C7}\x{09B0}|\x{0997}\x{09C1}\x{09B2}\x{09CB}';
 
+    /** the same cue test the scorer uses, for Grammar and anything else that needs it */
+    public static function mentions(string $haystack, string $cue): bool
+    {
+        return self::hit(' ' . trim($haystack) . ' ', mb_strtolower(trim($cue), 'UTF-8'));
+    }
+
     private static function hit(string $hay, string $cue): bool
     {
         // "a+b" — both tokens must appear, in any order (Bangla word order is free)
@@ -677,15 +683,58 @@ final class Nlu
             if (++$c >= 3) break;
         }
 
+        $intent = ($bestScore >= 3.0) ? $best : null;
+        $slots = ['topic' => $topic] + self::slots($raw, $n, $lang);
+
+        /* Compose where the cue list runs out.
+           A boss does not stay inside the phrasings somebody wrote down: he says
+           "Imran's payroll", "payroll of Imran", "take me to Imran's payslip". Those
+           are one aspect on one named record, and Grammar reads them structurally —
+           verb + subject, or instance + aspect — so the sentence answers without an
+           intent existing for that exact wording. Cues still win when they fire;
+           this only fills the space they leave. */
+        if (class_exists('Grammar')) {
+            $D = self::$dataset;
+            if ($D !== null) {
+                $inst = Grammar::instance($raw, trim($n), $lang, $D);
+                if ($inst['kind'] !== null && ($intent === null || $inst['aspect'] !== null || $inst['possessive'])) {
+                    $routed = Grammar::routeInstance($inst['kind'], $inst['aspect']);
+                    // a named record with an aspect beats a generic cue: "Imran's leave"
+                    // is about Imran, not about the leave queue
+                    if ($routed !== null && ($intent === null || $inst['aspect'] !== null)) {
+                        $intent = $routed;
+                        $slots['instance_kind'] = $inst['kind'];
+                        $slots['instance_id'] = $inst['id'];
+                        $slots['instance_label'] = $inst['label'];
+                        $slots['aspect'] = $inst['aspect'];
+                        if (($slots['name_hint'] ?? '') === '') $slots['name_hint'] = $inst['label'];
+                    }
+                }
+            }
+            if ($intent === null) {
+                $g = Grammar::parse(trim($n), $lang);
+                if ($g['intent'] !== null && $g['confidence'] >= 0.6) {
+                    $intent = $g['intent'];
+                    $slots['verb'] = $g['verb'];
+                    $slots['subject'] = $g['subject'];
+                    $slots['qualifiers'] = $g['qualifiers'];
+                }
+            }
+        }
+
         return [
-            'intent'      => ($bestScore >= 3.0) ? $best : null,
+            'intent'      => $intent,
             'score'       => round($bestScore, 2),
             'lang'        => $lang,
-            'slots'       => ['topic' => $topic] + self::slots($raw, $n, $lang),
+            'slots'       => $slots,
             'alternatives' => $alts,
             'normalised'  => trim($n),
         ];
     }
+
+    /** the live dataset, so a name in a sentence can be matched to a real record */
+    private static ?array $dataset = null;
+    public static function useDataset(?array $D): void { self::$dataset = $D; }
 
     /* ---------- slot extraction ---------- */
 

@@ -384,6 +384,58 @@ final class Analytics
             'concerns' => array_map($flat, array_values(array_filter($rated, fn($r) => $r['score'] < 55 || $r['tasks_overdue'] > 5)))];
     }
 
+    /* Everything the ERP holds about one person, in one pass. The boss asks about a
+       human by name and then keeps going — "Imran's payroll", "his attendance", "take
+       me to his payslip" — so every aspect has to be ready from a single lookup rather
+       than a new query per phrasing. */
+    public function person(int $uid, int $days = 30): ?array
+    {
+        $e = null;
+        foreach ($this->rows('employees') as $x) if ((int) $x['id'] === $uid) { $e = $x; break; }
+        if (!$e) return null;
+        $from = date('Y-m-d', strtotime("-$days days", strtotime($this->today)));
+        $mine = fn(string $t, string $key = 'user_id') => array_values(array_filter($this->D[$t] ?? [], fn($r) => (int) ($r[$key] ?? 0) === $uid));
+
+        $att = array_values(array_filter($this->D['attendances'] ?? [], fn($a) => (int) $a['user_id'] === $uid && $a['date'] >= $from));
+        $present = array_values(array_filter($att, fn($a) => $a['status'] === 'present'));
+        $lateRows = array_values(array_filter($present, fn($a) => (int) ($a['late_minutes'] ?? 0) > 0));
+        $slips = $mine('payroll');
+        usort($slips, fn($a, $b) => strcmp((string) ($b['month_key'] ?? ''), (string) ($a['month_key'] ?? '')));
+        $loans = array_values(array_filter($mine('loans'), fn($l) => (float) ($l['remaining_amount'] ?? 0) > 0));
+        $tasks = array_values(array_filter($this->D['tasks'] ?? [], fn($t) => in_array($uid, $t['assigned_to'] ?? [], true)));
+        $openTasks = array_values(array_filter($tasks, fn($t) => ($t['status'] ?? '') !== 'done'));
+        $overdueTasks = array_values(array_filter($openTasks, fn($t) => ($t['due_date'] ?? '9999') < $this->today));
+        $sched = array_values(array_filter($this->rows('payment_schedules'), fn($p) => ($p['party_type'] ?? '') === 'employee' && (int) ($p['party_id'] ?? 0) === $uid && in_array($p['status'], ['pending', 'overdue'], true)));
+
+        return [
+            'employee' => ['id' => $uid, 'name' => $e['name'], 'designation' => $e['designation'], 'department' => $e['department'],
+                'company' => $this->coName($e['company_id']), 'email' => $e['email'] ?? null, 'phone' => $e['phone'] ?? null,
+                'joined' => $e['joining_date'] ?? null, 'salary' => (float) ($e['salary'] ?? 0), 'status' => $e['status'] ?? 'active',
+                'role' => $e['role'] ?? null, 'shift' => ($e['shift_start'] ?? '') . '–' . ($e['shift_end'] ?? ''), 'overtime_eligible' => (bool) ($e['overtime_eligible'] ?? false)],
+            'days' => $days,
+            'attendance' => ['recorded' => count($att), 'present' => count($present),
+                'absent' => count(array_filter($att, fn($a) => $a['status'] === 'absent')),
+                'on_leave' => count(array_filter($att, fn($a) => $a['status'] === 'leave')),
+                'pct' => count($att) ? (int) round(count($present) / count($att) * 100) : null,
+                'today' => (function () use ($att) { foreach ($att as $a) if ($a['date'] === $this->today) return $a; return null; })()],
+            'lateness' => ['days' => count($lateRows), 'minutes' => (int) array_sum(array_map(fn($a) => (int) $a['late_minutes'], $lateRows)),
+                'worst' => $lateRows ? max(array_map(fn($a) => (int) $a['late_minutes'], $lateRows)) : 0],
+            'payroll' => ['payslips' => count($slips), 'latest' => $slips[0] ?? null,
+                'unpaid' => array_values(array_filter($slips, fn($p) => strtolower((string) ($p['status'] ?? '')) !== 'paid')),
+                'scheduled' => $sched, 'scheduled_due' => round(array_sum(array_map(fn($p) => (float) $p['amount'] - (float) ($p['paid_amount'] ?? 0), $sched)))],
+            'payslip_docs' => $mine('payslips'),
+            'leaves' => $mine('leaves'),
+            'loans' => $loans, 'loan_remaining' => round(array_sum(array_map(fn($l) => (float) $l['remaining_amount'], $loans))),
+            'advances' => $mine('advance_salaries'),
+            'requests' => $mine('employee_requests'),
+            'resignation' => $mine('resignations')[0] ?? null,
+            'ledger' => $mine('employee_ledger'),
+            'tasks' => ['total' => count($tasks), 'open' => count($openTasks), 'overdue' => count($overdueTasks),
+                'done' => count(array_filter($tasks, fn($t) => ($t['status'] ?? '') === 'done')), 'list' => array_slice($overdueTasks ?: $openTasks, 0, 5)],
+            'projects' => array_values(array_filter($this->D['projects'] ?? [], fn($p) => in_array($uid, $p['team'] ?? [], true))),
+        ];
+    }
+
     public function pendingLeaves(): array
     {
         $rows = array_values(array_filter($this->rows('leaves'), fn($l) => $l['status'] === 'pending'));
