@@ -81,19 +81,35 @@ eon/
 | Compliance calendar as a **server** decision provider (`server/lib/decisions/compliance.php`) | done, tested through Analytics |
 | Build visible in the app footer (`health.php` reads the commit from the checkout) | done |
 | **ERP at the front door** (`/` → `erp/public`, `/eon/` → panel, `embed/` injects the companion with zero ERP edits) | **done, live** — ERP source versioned in `erp/` (from the owner's zip), post-deploy installs it (.env from EON's db config, key, folders, storage link), companion injected on every ERP page |
+| **The service business** — EON reads what Epal actually sells (ticket/visa/contract-file/contract-flight sales, ticket purchases, visa processing, passport holders, portals), the money outside the journal (party transactions, payments, bank transfers, petty cash, employee ledger) and the rest of the people lifecycle. 54 dataset sections, up from 28 | done, verified against the production dump |
+| **Real AR/AP and revenue** — invoice dues merged into `schedules()`, party ledger reconciled against them, `salesBooked()` beside the P&L, attendance measured against the tracked base | done, tested locally against the live schema |
+| **Offline brain speaks Bangla** — `Nlu` wired into `Brain::askOffline` through `Answers` (English/বাংলা/Banglish, লক্ষ-কোটি, Bengali numerals) | done |
+| **EON knows the ERP itself** — `erp-map.json` generated (1,376 routes, 293 screens, 245 controllers, 175 models, 203 tables), `ErpMap` + `explain_erp` tool, map summary and sidebar in the system prompt | done |
+| **The panel matches the server** — `finance.js` ports the invoice dues, `DATASET_SHAPE` documents all 54 sections | done, cross-checked browser vs PHP |
+
+## What the audit found in the ERP's own data (not code bugs — tell the accountant)
+
+1. **৳5.3 L of August sales are not journalised.** The desks invoiced ৳9.1 L; the ledger carries ৳3.8 L (42%). EON reports both and names the gap rather than under-reporting the business.
+2. **Advances are not applied to invoices.** ECN RABBI paid ৳9.98 L in advances yet INV000021 still reads ৳8.5 L due — his party ledger is ৳1.4 L in *credit*. Gross open invoices ৳15.5 L against a ledger position of ৳7.4 L. EON reports both and refuses to send anyone chasing money already banked.
+3. **`transactions.balance` is written in insert order, not date order**, so a back-dated row leaves the stored running balance wrong (RABBI reads −৳9.9 L instead of −৳1.4 L). EON recomputes it and flags where the ERP disagrees with itself.
+4. **Attendance covers a sixth of the payroll** — 27 enrolled on the device against 87 active staff — so presence is reported against the tracked base, never "0 of 87 in".
 
 ## Next steps (in order)
 
-1. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
-2. Live-data check of EON's panel against the ERP's own numbers (`/eon/?token=…` once); fix any column mapping that shows blanks.
-3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php` — matter once an API key is added.
-4. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
+1. **Add the Anthropic key** — `server/config.local.php` → `anthropic.api_key`. Until then `health.php` shows `llm:false` and every answer is the rule brain; the whole tool layer is built and waiting.
+2. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
+3. Consolidate the two offline answerers: `Answers.php` (wired into `bootstrap.php`, used by `Brain::askOffline`) and `Answer.php` + `Kb`/`Insight`/`Phrase` (committed, not wired). Keep one.
+4. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`.
+5. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
 
 ## Host facts (Hostinger, eon.gulfrabit.com) — learned the hard way
 
 - **Signing in: EON trusts the ERP's session, not a token.** `server/lib/ErpSession.php` decrypts `laravel_session` with the ERP's `APP_KEY` (AES-256-CBC, `config/app.php` pins it; GCM handled too), verifies the HMAC and Laravel's cookie-value prefix, reads the session from `erp/storage/framework/sessions/` (or the `sessions` table) and requires the `login_web_<sha1>` guard key. `Http::auth()` accepts it before the token. So: logged into the ERP ⇒ logged into EON, same origin, nothing to paste. The token still works for cron and for devices not signed into the ERP. `health.php` reports `auth` (`erp-session`/`token`/`token-required`), `erp_login` and `user`.
 - **The ERP's frontend must be built and committed**: `erp/public/build/` is git-ignored upstream, but the host has no Node — without it `@vite` is skipped and the dashboard loads NO stylesheet (the layout's `@else` branch is a commented-out CDN line). Rebuild with `npm ci && npm run build` in `erp/`, then `git add -f erp/public/build`.
 - Node 24 is installed on the workstation (winget `OpenJS.NodeJS.LTS`); the portable PHP in the scratchpad needed `php_openssl.dll` added to test the session crypto.
+- **Test against the real database, not the demo.** XAMPP ships MySQL at `C:\xampp\mysql\bin`; start `mysqld.exe`, create the database and user with the *same* names as production (`u239665931_eon`), import `Desktop/eon/ERP-import-ready.sql` (~30 s, 203 tables) and `server/config.local.php` then works unmodified — run with `EON_DB_HOST=127.0.0.1` so PDO uses TCP. XAMPP's own PHP is 8.0 and cannot parse the 8.1+ syntax in `Brain.php`; fetch a portable PHP 8.3 (the host runs 8.3.31) from windows.php.net and run it with `-d extension=mbstring -d extension=openssl -d extension=pdo_mysql`.
+- **Line endings are mixed in this repo** — `Analytics.php`, `Erp.php` and `Nlu.php` are committed CRLF, most other files LF. Editing with a tool that rewrites newlines turns the whole file into one diff; match the committed style before staging (`git show HEAD:<file> | tr -cd '\r' | wc -c` tells you which it is).
+- `tools/erp-map.mjs` needs Laravel's route table to produce anything useful: without `--routes` it writes `routes: 0`. Point `erp/.env` at a database it can boot against, run `php artisan route:list --json > routes.json`, then `node tools/erp-map.mjs --routes routes.json` → 1,376 routes.
 
 - **`exec`/`shell_exec`/`proc_open` are disabled** for the web user. post-deploy does everything in-process; composer for the ERP was run once over SSH (`deploy/erp-install.sh`).
 - **`.user.ini` is ignored** in our folder (PHP reads it only from the website's own root, which is gulfrabit.com's). PHP directives go in the site `.htaccess` as `php_value` (LiteSpeed honours them). `embed/check.php` shows what PHP accepted.
