@@ -335,7 +335,7 @@ export class Backpack {
     const s = document.createElement('style'); s.id = 'eon-bag-style';
     s.textContent = `
       #eon-bag{position:relative;display:none;width:26px;height:26px;border-radius:50%;padding:0;cursor:pointer;
-        border:1px solid rgba(31,109,255,.18);background:rgba(255,255,255,.92);color:#1f6dff;line-height:1;font-size:13px;
+        border:1px solid rgba(31,109,255,.18);background:rgba(255,255,255,.92);color:#1863ee;line-height:1;font-size:13px;
         box-shadow:0 4px 12px rgba(16,24,40,.16);align-items:center;justify-content:center;transition:transform .15s,background .15s}
       #eon-bag:hover{background:#fff;transform:translateY(-2px)}
       #eon-bag .eb-n{position:absolute;top:-5px;right:-6px;background:#7ed957;color:#10225e;border-radius:9px;
@@ -356,11 +356,11 @@ export class Backpack {
         border:2px solid rgba(126,217,87,.55);pointer-events:none;will-change:transform,opacity}
       #eon-pockets .ep-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border-top:1px solid #eef1f7}
       #eon-pockets .ep-txt{flex:1;min-width:0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#16203a;font-weight:600}
-      #eon-pockets .ep-row:hover .ep-txt{color:#1f6dff}
+      #eon-pockets .ep-row:hover .ep-txt{color:#1863ee}
       #eon-pockets .ep-pin,.ep-x{cursor:pointer;opacity:.55;font-size:13px}
       #eon-pockets .ep-pin:hover,.ep-x:hover{opacity:1}
       #eon-pockets .ep-pin.on{opacity:1;filter:drop-shadow(0 0 1px #C9A227)}
-      #eon-pockets .ep-empty{padding:16px 12px;color:#8a96ad;font-weight:500;text-align:center}
+      #eon-pockets .ep-empty{padding:16px 12px;color:#616a8e;font-weight:500;text-align:center}
       #eon-pockets .ep-tools{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#f6f8fc;border-top:1px solid #eef1f7}
       #eon-pockets .ep-tools button{flex:1 1 28%;border:0;border-radius:8px;padding:6px 3px;cursor:pointer;background:#eaeefb;color:#10225e;font:700 11px system-ui}
       #eon-pockets .ep-tools button:hover{background:#dde4f8}
@@ -390,7 +390,7 @@ export class Backpack {
         border-radius:14px;padding:11px 13px;box-shadow:0 12px 34px rgba(16,34,94,.24);border:1.5px solid #1f6dff44;
         font:600 13px/1.35 system-ui;opacity:0;pointer-events:none;transition:opacity .18s}
       #eon-go.show{opacity:1;pointer-events:auto}
-      #eon-go .eg-t{font-size:11px;color:#1f6dff;font-weight:800;letter-spacing:.3px}
+      #eon-go .eg-t{font-size:11px;color:#1863ee;font-weight:800;letter-spacing:.3px}
       #eon-go .eg-l{margin:3px 0 9px;color:#16203a}
       #eon-go .eg-b{display:flex;gap:6px}
       #eon-go button{flex:1;border:0;border-radius:8px;padding:5px 7px;cursor:pointer;font:700 11px system-ui}

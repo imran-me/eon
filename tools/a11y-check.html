@@ -1,0 +1,123 @@
+<!doctype html><meta charset="utf-8">
+<title>EON · accessibility check</title>
+<!-- ============================================================
+     a11y-check.html — the things that actually stop someone using EON.
+
+       python -m http.server 8731      (from the repo root)
+       open http://localhost:8731/tools/a11y-check.html
+
+     Must be served, not opened from disk: it reads the panel through
+     an iframe and that only works same-origin. Checks controls with no
+     accessible name, inputs with no label, images with no alt text, a
+     document that does not declare its language, Bangla text that is
+     not marked lang="bn" (a screen reader would read it in an English
+     voice — the same failure the speech service exists to fix), and
+     text below the 4.5:1 contrast minimum.
+     ============================================================ -->
+<body>
+<iframe id="f" src="../eon/#ask" style="width:1280px;height:900px;border:0"></iframe>
+<pre id="r">running…</pre>
+<script>
+// A small audit of the things that actually stop someone using a page:
+// controls with no name, inputs with no label, images with no alt text,
+// a document that does not declare its language, and text too faint to read.
+function luminance(rgb) {
+  const c = rgb.map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+function parse(col) {
+  const m = String(col).match(/rgba?\(([^)]+)\)/);
+  if (!m) return null;
+  const p = m[1].split(',').map((x) => parseFloat(x));
+  if (p.length > 3 && p[3] === 0) return null;
+  return [p[0], p[1], p[2]];
+}
+function contrast(fg, bg) {
+  const a = luminance(fg), b = luminance(bg);
+  const hi = Math.max(a, b), lo = Math.min(a, b);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function bgOf(el, d) {
+  let n = el;
+  while (n && n !== d.documentElement) {
+    const c = parse(d.defaultView.getComputedStyle(n).backgroundColor);
+    if (c) return c;
+    n = n.parentElement;
+  }
+  return [255, 255, 255];
+}
+function name(el) {
+  return (el.getAttribute('aria-label') || el.getAttribute('title') ||
+          (el.getAttribute('aria-labelledby') ? 'labelledby' : '') ||
+          el.textContent.replace(/\s+/g, ' ').trim()).trim();
+}
+
+setTimeout(() => {
+  const f = document.getElementById('f');
+  const d = f.contentDocument;
+  const out = [];
+  if (!d) { document.getElementById('r').textContent = 'could not read the frame'; return; }
+
+  out.push(['html lang', d.documentElement.getAttribute('lang') || 'MISSING']);
+  out.push(['title', (d.title || 'MISSING').slice(0, 50)]);
+
+  const noName = [];
+  d.querySelectorAll('button, a[href], [role="button"]').forEach((b) => {
+    if (b.offsetParent === null) return;
+    if (!name(b)) noName.push(b.outerHTML.slice(0, 60));
+  });
+  out.push(['controls with no name', noName.length ? noName.length + ': ' + noName.slice(0, 3).join(' | ') : 'none']);
+
+  const noLabel = [];
+  d.querySelectorAll('input, select, textarea').forEach((i) => {
+    if (i.type === 'hidden' || i.offsetParent === null) return;
+    const lab = i.labels && i.labels.length ? 1 : 0;
+    if (!lab && !i.getAttribute('aria-label') && !i.getAttribute('aria-labelledby')) {
+      noLabel.push((i.id || i.name || i.type) + '|' + (i.placeholder||'').slice(0,24) + '|' + (i.className||'').slice(0,20));
+    }
+  });
+  out.push(['inputs with no label', noLabel.length ? noLabel.length + ': ' + noLabel.slice(0, 4).join(', ') : 'none']);
+
+  const noAlt = [];
+  d.querySelectorAll('img').forEach((i) => { if (!i.hasAttribute('alt')) noAlt.push(i.src.slice(-40)); });
+  out.push(['images with no alt', noAlt.length ? noAlt.length + ': ' + noAlt.slice(0, 3).join(', ') : 'none']);
+
+  // Bangla text that does not say it is Bangla — a screen reader will use an
+  // English voice on it, exactly the failure the speech service exists to fix
+  let bnUnmarked = 0, bnMarked = 0;
+  d.querySelectorAll('body *').forEach((el) => {
+    if (el.children.length) return;
+    const t = (el.textContent || '').trim();
+    if (!/[ঀ-৿]/.test(t)) return;
+    let n = el, lang = '';
+    while (n && !lang) { lang = n.getAttribute && n.getAttribute('lang'); n = n.parentElement; }
+    if (lang && lang.slice(0, 2) === 'bn') bnMarked++; else bnUnmarked++;
+  });
+  out.push(['bangla text marked lang=bn', bnMarked]);
+  out.push(['bangla text NOT marked', bnUnmarked]);
+
+  const faint = [];
+  d.querySelectorAll('body *').forEach((el) => {
+    if (el.children.length || el.offsetParent === null) return;
+    const t = (el.textContent || '').trim();
+    if (t.length < 4) return;
+    const st = d.defaultView.getComputedStyle(el);
+    const fg = parse(st.color);
+    if (!fg) return;
+    const size = parseFloat(st.fontSize);
+    const bold = parseInt(st.fontWeight, 10) >= 700;
+    const large = size >= 24 || (size >= 18.66 && bold);
+    const need = large ? 3 : 4.5;
+    const r = contrast(fg, bgOf(el, d));
+    if (r < need) faint.push(t.slice(0, 26) + ' (' + r.toFixed(1) + ':1, needs ' + need + ')');
+  });
+  out.push(['text below contrast minimum', faint.length ? faint.length + ': ' + faint.slice(0, 4).join(' | ') : 'none']);
+
+  const focusable = d.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+  out.push(['keyboard reachable controls', focusable.length]);
+  out.push(['live regions', d.querySelectorAll('[aria-live]').length]);
+
+  document.getElementById('r').textContent = JSON.stringify(out);
+}, 6000);
+</script>
+</body>

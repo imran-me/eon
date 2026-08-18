@@ -176,8 +176,24 @@
     });
   }
 
+  function announce(msg) {
+    let live = document.getElementById('eon-sb-live');
+    if (!live) {
+      live = document.createElement('div');
+      live.id = 'eon-sb-live';
+      live.setAttribute('data-eon', '');
+      live.setAttribute('aria-live', 'polite');
+      live.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap';
+      document.body.appendChild(live);
+    }
+    live.textContent = msg;
+  }
+
   function setCollapsed(on) {
     root.classList.toggle('eon-sb-collapsed', !!on);
+    // the panel is display:none when collapsed, so it leaves the accessibility
+    // tree with it — say what happened rather than letting the menu vanish silently
+    announce(on ? 'Menu collapsed to icons' : 'Menu expanded');
     root.classList.remove('eon-sb-peek');
     remember(on ? 'collapsed' : 'expanded');
     paintToggle();
@@ -228,7 +244,17 @@
     };
     sidebar.addEventListener('mouseenter', enter);
     sidebar.addEventListener('mouseleave', leave);
+    // keyboard users get the same peek, and get out of it again
     sidebar.addEventListener('focusin', enter);
+    sidebar.addEventListener('focusout', (e) => {
+      if (!sidebar.contains(e.relatedTarget)) leave();
+    });
+    // Escape closes the peek without changing the saved choice
+    sidebar.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && root.classList.contains('eon-sb-peek')) {
+        root.classList.remove('eon-sb-peek');
+      }
+    });
   }
 
   /* ---------- keyboard ---------- */

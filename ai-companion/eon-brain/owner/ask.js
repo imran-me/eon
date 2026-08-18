@@ -426,7 +426,7 @@ export class AskEon {
       #eon-ask .ea-keep:hover{background:#e2e7f2}
       #eon-ask .ea-go-there{display:none;margin:0 12px 8px;border:0;border-radius:9px;background:#1f6dff;color:#fff;padding:7px 10px;cursor:pointer;font:700 12px system-ui}
       #eon-ask .ea-go-there:hover{background:#1559d8}
-      #eon-ask .ea-ex{padding:2px 12px 10px;color:#8a96ad;font-size:11px}`;
+      #eon-ask .ea-ex{padding:2px 12px 10px;color:#616a8e;font-size:11px}`;
     document.head.appendChild(s);
   }
   _buildChip() {
@@ -441,7 +441,7 @@ export class AskEon {
     const p = document.createElement('div'); p.id = 'eon-ask';
     p.innerHTML = `
       <div class="ea-h">💬 Ask EON <span class="ea-x" title="Close">✕</span></div>
-      <div class="ea-in"><input type="text" placeholder="e.g. what's due this week?" /><button class="ea-go">Ask</button></div>
+      <div class="ea-in"><input type="text" placeholder="e.g. what's due this week?" aria-label="Ask EON a question" /><button class="ea-go">Ask</button></div>
       <div class="ea-ex">Try: what am I forgetting · remind me to call X tomorrow · plan my day · what's due · overdue · find &lt;name&gt; · total amount</div>
       <div class="ea-a"></div>
       <button class="ea-go-there">➡️ Take me there</button>

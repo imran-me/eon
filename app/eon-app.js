@@ -58,6 +58,21 @@ function pluginPanels(section) {
 }
 /* ---------------- renderers ---------------- */
 const TITLES = { brief: 'Brief', decisions: 'Decisions', approvals: 'Approvals', finance: 'Finance', people: 'People', crm: 'Sales & CRM', ops: 'Operations', ask: 'Ask EON' };
+/* Bangla inside an English document is read aloud by assistive tech in an
+   English voice — the same failure the speech service exists to fix, one layer
+   up. Rather than tag every string by hand, mark the leaves after each paint. */
+const BENGALI = /[ঀ-৿]/;
+function markLanguages(root) {
+  if (!root) return;
+  const els = root.querySelectorAll('*');
+  for (let i = 0; i < els.length; i++) {
+    const el = els[i];
+    if (el.children.length || el.hasAttribute('lang')) continue;
+    const t = el.textContent;
+    if (t && BENGALI.test(t)) el.setAttribute('lang', 'bn');
+  }
+}
+
 function render() {
   document.querySelectorAll('#nav a, #dockNav a').forEach((a) => a.classList.toggle('active', a.dataset.sec === state.section));
   $('#pageTitle').textContent = TITLES[state.section] || 'EON';
@@ -65,6 +80,7 @@ function render() {
   const fn = { brief: rBrief, decisions: rDecisions, approvals: rApprovals, finance: rFinance, people: rPeople, crm: rCrm, ops: rOps, ask: rAsk }[state.section] || rBrief;
   try { $('#content').innerHTML = fn() + pluginPanels(state.section); } catch (e) { console.error(e); $('#content').innerHTML = `<div class="card">Something went wrong rendering this view: ${esc(e.message)}</div>`; }
   wire();
+  markLanguages(document.body);
 }
 function tile(o, key) { const money$ = o.money !== false; const v = money$ ? k(o.value) : (o.unit === '%' ? o.value + '%' : o.value); return `<div class="card tile ${o.alert ? 'alert' : (o.trend > 0 ? 'good' : '')}" data-kpi="${key}"><div class="lbl">${esc(o.label)}</div><div class="val num">${v}</div><div class="sub">${esc(o.sub || '')}</div></div>`; }
 function decisionItem(d) {
@@ -161,14 +177,18 @@ function rOps() {
 function rAsk() {
   const e = env();
   return `<div class="card"><h3>Ask EON <span class="spacer"></span><span class="hint">${e.serverOk ? (e.llm ? 'language model + ERP tools' : 'server · offline brain') : 'offline brain (client)'} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'ready' : 'unavailable in this browser'}</span></h3>
-    <div class="chat" id="chat">${state.messages.map(msgHtml).join('') || '<div class="msg eon">Ask me anything about the business — by voice or by typing. Try “brief”, “who owes us money”, “who is absent today”, “payroll”, “evaluate Afiqur Rahman”, “forecast the next quarter”, “draft a payment reminder”, “what is 2210”.</div>'}</div>
-    <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk">🎙</button><input id="askInput" placeholder="Ask EON… (Enter to send)" autocomplete="off"><button class="btn primary" id="btnAsk">Ask</button></div>
+    <div class="chat" id="chat" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with EON">${state.messages.map(msgHtml).join('') || '<div class="msg eon">Ask me anything about the business — by voice or by typing. Try “brief”, “who owes us money”, “who is absent today”, “payroll”, “evaluate Afiqur Rahman”, “forecast the next quarter”, “draft a payment reminder”, “what is 2210”.</div>'}</div>
+    <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk" aria-label="Ask by voice"><span aria-hidden="true">🎙</span></button><input id="askInput" placeholder="Ask EON… (Enter to send)" aria-label="Ask EON a question" autocomplete="off"><button class="btn primary" id="btnAsk">Ask</button></div>
     <div class="chips" style="margin-top:10px"><label class="chip"><input type="checkbox" id="convMode" ${state.voiceMode ? 'checked' : ''}> conversation mode (hands-free, say “EON …”)</label><span class="chip" id="langChip">${state.lang === 'bn-BD' ? 'বাংলা' : 'English'} · switch</span><span class="chip" id="muteChip">${window.EonVoice && window.EonVoice.status && localStorage.getItem('eon_mute') === '1' ? '🔇 muted' : '🔊 speaks'}</span>${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></div>`;
 }
+/** which language is this text in? assistive tech needs to be told, per message */
+const langOf = (t) => (/[\u0980-\u09FF]/.test(String(t || '')) ? 'bn' : 'en');
+
 function msgHtml(m) {
-  if (m.role === 'me') return `<div class="msg me">${esc(m.text)}</div>`;
-  if (m.role === 'think') return `<div class="msg eon think">${esc(m.text)}</div>`;
-  return `<div class="msg eon">${esc(m.text)}${m.detail ? `<div class="detail">${esc(m.detail)}</div>` : ''}${m.draft ? `<div class="draft" style="margin-top:8px">${esc(m.draft)}</div><div class="actions"><button class="btn sm" data-copy="${esc(m.draft)}">Copy</button><button class="btn sm ok" data-send-draft="${esc(m.draftTitle || 'draft')}">Queue to send</button></div>` : ''}${(m.actions || []).length ? `<div class="actions">${m.actions.map((a) => `<button class="btn sm" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</button>`).join('')}</div>` : ''}${m.trace ? `<div class="trace">${esc(m.trace)}</div>` : ''}</div>`;
+  const L = langOf(m.text);
+  if (m.role === 'me') return `<div class="msg me" lang="${L}">${esc(m.text)}</div>`;
+  if (m.role === 'think') return `<div class="msg eon think" lang="${L}">${esc(m.text)}</div>`;
+  return `<div class="msg eon" lang="${L}">${esc(m.text)}${m.detail ? `<div class="detail" lang="${langOf(m.detail)}">${esc(m.detail)}</div>` : ''}${m.draft ? `<div class="draft" style="margin-top:8px">${esc(m.draft)}</div><div class="actions"><button class="btn sm" data-copy="${esc(m.draft)}">Copy</button><button class="btn sm ok" data-send-draft="${esc(m.draftTitle || 'draft')}">Queue to send</button></div>` : ''}${(m.actions || []).length ? `<div class="actions">${m.actions.map((a) => `<button class="btn sm" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</button>`).join('')}</div>` : ''}${m.trace ? `<div class="trace">${esc(m.trace)}</div>` : ''}</div>`;
 }
 
 /* ---------------- ask ---------------- */
@@ -193,7 +213,7 @@ async function ask(q, { voice = false } = {}) {
   if (voice || state.voiceMode) { try { window.EonVoice.say(out.speak, { lang: state.lang }); } catch {} }
   else if (window.EON && window.EON.ai && out.speak) { try { window.EON.ai.speak(out.speak.slice(0, 120), 4000); } catch {} }
 }
-function paintChat() { const c = $('#chat'); if (!c) return; c.innerHTML = state.messages.map(msgHtml).join(''); c.scrollTop = c.scrollHeight; wire(); }
+function paintChat() { const c = $('#chat'); if (!c) return; c.innerHTML = state.messages.map(msgHtml).join(''); c.scrollTop = c.scrollHeight; wire(); markLanguages(c); }
 
 /* ---------------- actions ---------------- */
 async function act(kind, payload, summary) {

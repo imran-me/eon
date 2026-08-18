@@ -170,7 +170,7 @@ class Eon {
             <div class="eon-pan-h">Personality</div>
             <div class="eon-pan-row" id="eon-arche"></div>
             <div class="eon-pan-h">Size</div>
-            <input type="range" id="eon-size" min="55" max="175" value="100" class="eon-range">
+            <input type="range" id="eon-size" aria-label="Companion size" min="55" max="175" value="100" class="eon-range">
           </div>
 
           <button class="eon-grp" data-sec="behaviour"><span>🧭 Behaviour</span><span class="chev">⌄</span></button>
@@ -178,7 +178,7 @@ class Eon {
             <div class="eon-pan-h">Mode</div>
             <div class="eon-pan-row" id="eon-modes"></div>
             <div class="eon-pan-h">Energy <span id="eon-energy-v"></span></div>
-            <input type="range" id="eon-energy" min="0" max="100" value="50" class="eon-range">
+            <input type="range" id="eon-energy" aria-label="Companion energy" min="0" max="100" value="50" class="eon-range">
             <div class="eon-pan-h">Messages</div>
             <div class="eon-pan-row"><button class="eon-pill" id="eon-msg-toggle" style="width:100%">Speech bubbles: On</button></div>
           </div>
@@ -187,7 +187,7 @@ class Eon {
           <div class="eon-sec" data-body="space">
             <div class="eon-pan-row"><button class="eon-pill" id="eon-couch-toggle" style="width:100%">Couch: Off</button></div>
             <div class="eon-pan-h">Couch size</div>
-            <input type="range" id="eon-couch-size" min="50" max="170" value="100" class="eon-range">
+            <input type="range" id="eon-couch-size" aria-label="Couch size" min="50" max="170" value="100" class="eon-range">
           </div>
 
           <button class="eon-grp" data-sec="tools"><span>🧰 Tools</span><span class="chev">⌄</span></button>

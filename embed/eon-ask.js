@@ -29,7 +29,7 @@
   #eon-ask-ui .h{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e2e7f0;background:#fff}
   #eon-ask-ui .h .dot{width:8px;height:8px;border-radius:50%;background:#0f9265;box-shadow:0 0 8px #0f9265}
   #eon-ask-ui .h b{font-size:13.5px;letter-spacing:.2px}
-  #eon-ask-ui .h .where{margin-left:auto;font-size:11px;color:#8c97b2;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #eon-ask-ui .h .where{margin-left:auto;font-size:11px;color:#616c8a;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #eon-ask-ui .h button{border:1px solid #e2e7f0;background:#fff;border-radius:8px;height:26px;padding:0 8px;cursor:pointer;font:600 11.5px inherit;color:#5b6785}
   #eon-ask-ui .h button:hover{background:#f5f7fc}
   #eon-ask-ui .h button#eon-ask-live.on{background:#dc2626;border-color:#dc2626;color:#fff;animation:eon-ask-pulse 1.6s infinite}
@@ -37,7 +37,7 @@
   #eon-ask-ui .m{max-width:88%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
   #eon-ask-ui .m.me{align-self:flex-end;background:linear-gradient(135deg,#4f46e5,#3b6fe0);color:#fff;border-bottom-right-radius:5px}
   #eon-ask-ui .m.eon{align-self:flex-start;background:#fff;border:1px solid #e2e7f0;border-bottom-left-radius:5px}
-  #eon-ask-ui .m.think{align-self:flex-start;color:#8c97b2;font-style:italic}
+  #eon-ask-ui .m.think{align-self:flex-start;color:#616c8a;font-style:italic}
   #eon-ask-ui .m .d{margin-top:7px;padding-top:7px;border-top:1px dashed #e8ecf4;color:#5b6785;font-size:12.5px}
   #eon-ask-ui .m .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
   #eon-ask-ui .m .acts button{border:1px solid #d7deea;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;font:600 12px inherit;color:#4f46e5}

@@ -239,7 +239,7 @@ export class Games {
         background:#fff;border-radius:14px;border:1.5px solid #1f6dff33;box-shadow:0 16px 44px rgba(16,34,94,.26);
         padding:7px;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s;font:600 13px system-ui}
       #eon-games-menu.show{opacity:1;transform:none;pointer-events:auto}
-      #eon-games-menu .egm-h{font:800 11px system-ui;letter-spacing:.4px;color:#8a96ad;text-transform:uppercase;padding:6px 8px 4px}
+      #eon-games-menu .egm-h{font:800 11px system-ui;letter-spacing:.4px;color:#616a8e;text-transform:uppercase;padding:6px 8px 4px}
       #eon-games-menu button{display:flex;align-items:center;gap:9px;width:100%;border:0;background:transparent;border-radius:9px;
         padding:8px 9px;cursor:pointer;font:600 13px system-ui;color:#16203a;text-align:left}
       #eon-games-menu button:hover{background:#eef3ff}

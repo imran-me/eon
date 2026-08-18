@@ -109,7 +109,7 @@ export class Resume {
         background:#fff;color:#10225e;border-radius:14px;padding:11px 13px;box-shadow:0 12px 34px rgba(16,34,94,.24);
         border:1.5px solid #1f6dff44;font:600 13px/1.35 system-ui;opacity:0;pointer-events:none;transition:opacity .18s}
       #eon-resume.show{opacity:1;pointer-events:auto}
-      #eon-resume .er-t{font-size:11.5px;color:#1f6dff;font-weight:800}
+      #eon-resume .er-t{font-size:11.5px;color:#1863ee;font-weight:800}
       #eon-resume .er-l{margin:3px 0 9px;color:#16203a}
       #eon-resume .er-b{display:flex;gap:7px}
       #eon-resume button{flex:1;border:0;border-radius:8px;padding:5px 6px;cursor:pointer;font:700 11px system-ui}
