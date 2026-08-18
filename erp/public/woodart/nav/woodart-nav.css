@@ -1,0 +1,51 @@
+/* ===========================================================================
+   WOOD ART INTERIORS — in-suite navigation, presentation
+   ---------------------------------------------------------------------------
+   Two things only: how a swapped section arrives, and the progress bar for the
+   rare slow fetch.
+
+   Zero global selectors. `.wa-nav-busy` is set on <html>, but it is only ever
+   written by woodart-nav.js, and this file is loaded only by Wood Art views —
+   so no other company's page can match any rule here. See CLAUDE.md.
+   ======================================================================== */
+
+/* The incoming section fades up over ~150ms with a 4px lift. Short enough to
+   read as "it's already there" rather than as an animation you wait through.
+   There is deliberately no fade-OUT: that would add its own delay to every
+   click, which is the opposite of the point. */
+@keyframes wa-view-enter {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+[data-wa-view].wa-view-enter {
+    animation: wa-view-enter .15s cubic-bezier(.16, .84, .44, 1) both;
+}
+
+/* Progress bar. woodart-nav.js only adds .wa-nav-busy after 140ms, so a
+   prefetched (i.e. normal) navigation never shows this at all — it exists for
+   a cold cache or a slow query, where showing nothing would feel broken. */
+.wa-nav-busy::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    width: 100%;
+    z-index: 9999;
+    background: linear-gradient(90deg, #6f9c1c, #a8d24a);
+    transform-origin: 0 50%;
+    animation: wa-nav-bar 1.4s cubic-bezier(.2, .8, .3, 1) infinite;
+    pointer-events: none;
+}
+
+@keyframes wa-nav-bar {
+    0%   { transform: scaleX(0);   opacity: 1; }
+    70%  { transform: scaleX(.85); opacity: 1; }
+    100% { transform: scaleX(1);   opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-wa-view].wa-view-enter { animation: none; }
+    .wa-nav-busy::before { animation: none; opacity: .9; }
+}

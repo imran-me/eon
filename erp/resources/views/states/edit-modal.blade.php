@@ -1,0 +1,11 @@
+<div id="editStateModal" role="dialog" class="fixed inset-0 z-[9000] hidden flex items-center justify-center bg-slate-950/50 p-4 state-overlay">
+ <div class="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
+  <header class="flex items-center gap-3 bg-gradient-to-r from-blue-700 to-indigo-600 px-5 py-4 text-white"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15"><i class="fas fa-pen"></i></span><div><h2 class="text-sm font-bold">Edit State</h2><p class="text-[11px] text-blue-100">Update country, state name and status</p></div><button type="button" class="modal-close-edit ml-auto h-8 w-8 rounded-lg bg-white/15"><i class="fas fa-times"></i></button></header>
+  <form id="editStateForm" class="grid gap-4 p-5"><input type="hidden" id="editStateId"><input type="hidden" id="updateFormAction">
+   <label><span class="mb-1 block text-xs font-semibold text-slate-600">Country <b class="text-red-500">*</b></span><select id="editCountry" class="form-select select2 w-full"><option value="">Select Country</option>@foreach($countries as $country)<option value="{{ $country->id }}">{{ $country->name }}</option>@endforeach</select><p class="error-message mt-1 hidden text-xs text-red-500">Please select a country</p></label>
+   <label><span class="mb-1 block text-xs font-semibold text-slate-600">State Name <b class="text-red-500">*</b></span><input id="editStateName" class="form-input h-10 w-full rounded-lg border border-slate-300 px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"><p class="error-message mt-1 hidden text-xs text-red-500">Please enter a state name</p></label>
+   <label class="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3"><input type="checkbox" id="editStatus" class="h-4 w-4 rounded text-blue-600"><span class="text-sm font-medium text-slate-700">Active</span></label>
+  </form>
+  <footer class="flex justify-end gap-2 border-t bg-slate-50 px-5 py-3"><button type="button" class="modal-close-edit rounded-lg border px-4 py-2 text-xs font-semibold text-slate-600">Cancel</button><button id="editStateSubmit" type="button" class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white"><i class="fas fa-floppy-disk mr-1"></i>Update State</button></footer>
+ </div>
+</div>

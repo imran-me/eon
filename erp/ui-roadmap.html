@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EPAL ERP — Modern UI Roadmap</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue-900: #0f172a;
+      --blue-800: #1e3a8a;
+      --blue-600: #2563eb;
+      --blue-500: #3b82f6;
+      --blue-400: #60a5fa;
+      --blue-100: #dbeafe;
+      --green-500: #22c55e;
+      --green-100: #dcfce7;
+      --yellow-500: #eab308;
+      --yellow-100: #fef9c3;
+      --purple-500: #a855f7;
+      --purple-100: #f3e8ff;
+      --red-500: #ef4444;
+      --red-100: #fee2e2;
+      --orange-500: #f97316;
+      --orange-100: #ffedd5;
+      --gray-900: #111827;
+      --gray-800: #1f2937;
+      --gray-700: #374151;
+      --gray-600: #4b5563;
+      --gray-500: #6b7280;
+      --gray-400: #9ca3af;
+      --gray-300: #d1d5db;
+      --gray-200: #e5e7eb;
+      --gray-100: #f3f4f6;
+      --gray-50:  #f9fafb;
+      --white: #ffffff;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      line-height: 1.6;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #1e40af 100%);
+      color: white;
+      padding: 60px 40px 80px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(ellipse at center, rgba(59,130,246,0.15) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(59,130,246,0.25);
+      border: 1px solid rgba(96,165,250,0.4);
+      color: #93c5fd;
+      padding: 6px 18px;
+      border-radius: 50px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 52px);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .hero h1 span { color: #60a5fa; }
+    .hero p {
+      font-size: 17px;
+      color: #94a3b8;
+      max-width: 680px;
+      margin: 0 auto 32px;
+      position: relative;
+    }
+    .hero-meta {
+      display: flex;
+      gap: 32px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+    .hero-meta-item {
+      text-align: center;
+    }
+    .hero-meta-item .num {
+      display: block;
+      font-size: 28px;
+      font-weight: 800;
+      color: #60a5fa;
+    }
+    .hero-meta-item .label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section {
+      padding: 56px 0 32px;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .section-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--blue-600);
+      background: var(--blue-100);
+      padding: 4px 14px;
+      border-radius: 50px;
+      margin-bottom: 12px;
+    }
+    .section-header h2 {
+      font-size: clamp(22px, 4vw, 36px);
+      font-weight: 800;
+      color: var(--gray-900);
+      margin-bottom: 10px;
+    }
+    .section-header p {
+      color: var(--gray-500);
+      font-size: 16px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* ── TECH STACK ── */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 0;
+    }
+    .tech-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 14px;
+      padding: 20px 16px;
+      text-align: center;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .tech-card:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.08); transform: translateY(-2px); }
+    .tech-card .icon { font-size: 28px; margin-bottom: 8px; }
+    .tech-card .name { font-size: 14px; font-weight: 700; color: var(--gray-800); }
+    .tech-card .ver  { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+    .badge-keep    { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; background: var(--green-100); color: #15803d; margin-top: 6px; }
+    .badge-upgrade { background: var(--yellow-100); color: #a16207; }
+    .badge-remove  { background: var(--red-100);    color: #dc2626; }
+    .badge-new     { background: var(--blue-100);   color: var(--blue-800); }
+
+    /* ── PROBLEM / SOLUTION ── */
+    .ps-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media(max-width:700px){ .ps-grid { grid-template-columns: 1fr; } }
+    .ps-card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      border: 1px solid var(--gray-200);
+    }
+    .ps-card.problem { border-top: 4px solid var(--red-500); }
+    .ps-card.solution { border-top: 4px solid var(--green-500); }
+    .ps-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ps-card.problem h3 { color: var(--red-500); }
+    .ps-card.solution h3 { color: #15803d; }
+    .ps-card ul { padding-left: 18px; }
+    .ps-card ul li { font-size: 14px; color: var(--gray-600); margin-bottom: 8px; }
+
+    /* ── PHASE TIMELINE ── */
+    .timeline { position: relative; padding-left: 32px; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 14px; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--blue-500), var(--purple-500));
+      border-radius: 2px;
+    }
+    .phase {
+      position: relative;
+      margin-bottom: 40px;
+    }
+    .phase-dot {
+      position: absolute;
+      left: -25px;
+      top: 18px;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 3px solid white;
+      box-shadow: 0 0 0 3px currentColor;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 800; color: white;
+    }
+    .phase-card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .phase-num {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      font-size: 13px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      color: white; flex-shrink: 0;
+    }
+    .phase-header h3 { font-size: 16px; font-weight: 700; color: var(--gray-900); }
+    .phase-header .duration {
+      margin-left: auto;
+      font-size: 12px;
+      padding: 4px 12px;
+      border-radius: 50px;
+      font-weight: 600;
+    }
+    .phase-body { padding: 24px; }
+    .task-list { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width:600px){ .task-list { grid-template-columns: 1fr; } }
+    .task-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--gray-700);
+      background: var(--gray-50);
+      border-radius: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--gray-100);
+    }
+    .task-list li .check {
+      width: 20px; height: 20px;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; color: white; flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* Phase colors */
+    .p1 { background: linear-gradient(135deg,#2563eb,#1d4ed8); }
+    .p1-light { background: #eff6ff; color: #1e40af; }
+    .p1-dot  { color: #2563eb; background: #2563eb; }
+
+    .p2 { background: linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .p2-light { background: #f5f3ff; color: #6d28d9; }
+    .p2-dot  { color: #7c3aed; background: #7c3aed; }
+
+    .p3 { background: linear-gradient(135deg,#0891b2,#0e7490); }
+    .p3-light { background: #ecfeff; color: #0e7490; }
+    .p3-dot  { color: #0891b2; background: #0891b2; }
+
+    .p4 { background: linear-gradient(135deg,#d97706,#b45309); }
+    .p4-light { background: #fffbeb; color: #b45309; }
+    .p4-dot  { color: #d97706; background: #d97706; }
+
+    .p5 { background: linear-gradient(135deg,#16a34a,#15803d); }
+    .p5-light { background: #f0fdf4; color: #15803d; }
+    .p5-dot  { color: #16a34a; background: #16a34a; }
+
+    /* ── SIDEBAR WIREFRAME ── */
+    .wireframe-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+    @media(max-width:800px){ .wireframe-section { grid-template-columns: 1fr; } }
+
+    .wireframe-box {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .wf-title {
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .wf-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* OLD sidebar mockup */
+    .sidebar-old {
+      background: #0f172a;
+      padding: 0;
+      min-height: 420px;
+      font-size: 13px;
+    }
+    .sidebar-old .s-logo {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-old .s-logo .icon-box {
+      width: 32px; height: 32px;
+      background: #1e40af;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .s-section { padding: 8px 8px 0; }
+    .s-section-label {
+      padding: 6px 12px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #475569;
+      font-weight: 700;
+    }
+    .s-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      color: #94a3b8;
+      margin: 1px 0;
+      font-size: 13px;
+    }
+    .s-item.active {
+      background: linear-gradient(135deg,#1e40af,#1d4ed8);
+      color: white;
+    }
+    .s-item .ico { font-size: 14px; width: 18px; text-align: center; }
+    .s-sub {
+      padding-left: 20px;
+    }
+    .s-sub .s-item { font-size: 12px; padding: 7px 12px; }
+    .old-issue {
+      background: #0f172a;
+      padding: 12px 16px;
+      color: #475569;
+      font-size: 11px;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      margin-top: 8px;
+    }
+    .old-issue span { color: #ef4444; }
+
+    /* NEW sidebar mockup */
+    .sidebar-new {
+      background: white;
+      padding: 0;
+      min-height: 420px;
+      font-size: 13px;
+      border-left: 3px solid #2563eb;
+    }
+    .sidebar-new .s-logo {
+      padding: 16px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sidebar-new .s-logo .icon-box {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg,#2563eb,#1d4ed8);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+    }
+    .sidebar-new .s-logo .name { font-weight: 800; color: var(--gray-900); font-size: 15px; }
+    .sidebar-new .s-logo .sub  { font-size: 11px; color: var(--gray-500); }
+
+    /* search bar */
+    .s-search {
+      margin: 10px 12px;
+      background: var(--gray-100);
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: flex; align-items: center; gap: 8px;
+      color: var(--gray-400); font-size: 12px;
+    }
+
+    .s-item-new {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      color: var(--gray-600);
+      margin: 2px 8px;
+      font-size: 13px; font-weight: 500;
+      transition: all 0.15s;
+    }
+    .s-item-new.active {
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-weight: 700;
+      border-left: 3px solid #2563eb;
+    }
+    .s-item-new .ico-new {
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      background: var(--gray-100);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+    .s-item-new.active .ico-new { background: #dbeafe; }
+    .s-badge {
+      margin-left: auto;
+      background: #2563eb;
+      color: white;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 50px;
+      font-weight: 700;
+    }
+    .s-section-new { margin-top: 8px; }
+    .s-section-label-new {
+      padding: 4px 20px;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      font-weight: 700;
+    }
+    .new-user {
+      margin: 10px 12px;
+      padding: 10px 12px;
+      background: var(--gray-50);
+      border-radius: 12px;
+      border: 1px solid var(--gray-200);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .new-user .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: linear-gradient(135deg,#2563eb,#7c3aed);
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 12px; font-weight: 700;
+    }
+    .new-user .info .n { font-size: 13px; font-weight: 700; color: var(--gray-800); }
+    .new-user .info .r { font-size: 11px; color: var(--gray-500); }
+
+    /* ── DASHBOARD WIREFRAME ── */
+    .db-wireframe {
+      background: var(--gray-50);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--gray-200);
+    }
+    .db-old-header {
+      background: white; border-radius: 10px; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 16px; border: 1px solid var(--gray-200);
+      font-size: 13px; color: var(--gray-600);
+    }
+    .db-stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 16px; }
+    @media(max-width:700px){ .db-stat-grid { grid-template-columns: repeat(2,1fr); } }
+    .db-stat {
+      background: white; border-radius: 12px; padding: 16px;
+      border: 1px solid var(--gray-200);
+    }
+    .db-stat .label { font-size: 11px; color: var(--gray-500); margin-bottom: 4px; }
+    .db-stat .val   { font-size: 22px; font-weight: 800; }
+    .db-stat .trend { font-size: 11px; margin-top: 4px; }
+    .db-stat.c1 .val { color: #2563eb; }
+    .db-stat.c2 .val { color: #16a34a; }
+    .db-stat.c3 .val { color: #d97706; }
+    .db-stat.c4 .val { color: #7c3aed; }
+    .trend-up   { color: #16a34a; }
+    .trend-down { color: #ef4444; }
+
+    .db-charts {
+      display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 16px;
+    }
+    @media(max-width:700px){ .db-charts { grid-template-columns: 1fr; } }
+    .db-chart-box {
+      background: white; border-radius: 12px; padding: 16px;
+      border: 1px solid var(--gray-200);
+    }
+    .db-chart-box .ch-title { font-size: 13px; font-weight: 700; color: var(--gray-800); margin-bottom: 12px; }
+    .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+    .bar { flex: 1; border-radius: 4px 4px 0 0; }
+    .b1{background:#dbeafe;height:40%}  .b2{background:#bfdbfe;height:65%}
+    .b3{background:#93c5fd;height:50%}  .b4{background:#60a5fa;height:80%}
+    .b5{background:#3b82f6;height:70%}  .b6{background:#2563eb;height:55%}
+    .b7{background:#1d4ed8;height:90%}
+
+    .donut {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: conic-gradient(#2563eb 0% 35%, #7c3aed 35% 60%, #16a34a 60% 80%, #d97706 80% 100%);
+      display: flex; align-items: center; justify-content: center;
+      margin: 4px auto 12px;
+      position: relative;
+    }
+    .donut::after {
+      content: '';
+      width: 50px; height: 50px;
+      background: white;
+      border-radius: 50%;
+      position: absolute;
+    }
+
+    .db-bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media(max-width:700px){ .db-bottom { grid-template-columns: 1fr; } }
+    .db-table {
+      background: white; border-radius: 12px; padding: 16px;
+      border: 1px solid var(--gray-200);
+    }
+    .db-table .t-title { font-size: 13px; font-weight: 700; color: var(--gray-800); margin-bottom: 10px; }
+    .t-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 0; border-bottom: 1px solid var(--gray-100); font-size: 12px; color: var(--gray-700);
+    }
+    .t-row:last-child { border-bottom: none; }
+    .t-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .t-status {
+      margin-left: auto; padding: 2px 8px;
+      border-radius: 50px; font-size: 10px; font-weight: 700;
+    }
+    .st-done   { background: var(--green-100); color: #15803d; }
+    .st-prog   { background: var(--blue-100);  color: #1e40af; }
+    .st-pend   { background: var(--yellow-100);color: #a16207; }
+
+    /* ── COMPONENT SPEC CARDS ── */
+    .comp-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .comp-card {
+      background: white;
+      border-radius: 16px;
+      border: 1px solid var(--gray-200);
+      overflow: hidden;
+    }
+    .comp-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--gray-100);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .comp-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .comp-header .comp-name { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+    .comp-header .comp-sub  { font-size: 12px; color: var(--gray-500); }
+    .comp-body { padding: 16px 20px; }
+    .comp-spec-item {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 6px 0; font-size: 13px; color: var(--gray-700);
+      border-bottom: 1px dashed var(--gray-100);
+    }
+    .comp-spec-item:last-child { border-bottom: none; }
+    .spec-key { font-weight: 600; color: var(--gray-900); min-width: 90px; flex-shrink: 0; }
+    .spec-val { color: var(--gray-600); }
+
+    /* ── COLOR PALETTE ── */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 12px;
+    }
+    .color-swatch {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+    }
+    .swatch-block { height: 60px; }
+    .swatch-info { padding: 8px 10px; background: white; }
+    .swatch-info .s-name { font-size: 12px; font-weight: 700; color: var(--gray-800); }
+    .swatch-info .s-hex  { font-size: 11px; color: var(--gray-500); font-family: monospace; }
+
+    /* ── SUCCESS METRICS ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .metric-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid var(--gray-200);
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .metric-icon { font-size: 30px; margin-bottom: 8px; }
+    .metric-val  { font-size: 32px; font-weight: 800; color: var(--blue-600); }
+    .metric-name { font-size: 13px; font-weight: 600; color: var(--gray-700); margin: 4px 0; }
+    .metric-desc { font-size: 12px; color: var(--gray-500); }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--gray-900);
+      color: #94a3b8;
+      text-align: center;
+      padding: 32px;
+      margin-top: 60px;
+      font-size: 13px;
+    }
+    .footer strong { color: white; }
+
+    /* ── UTILITY ── */
+    .divider {
+      height: 1px;
+      background: var(--gray-200);
+      margin: 8px 0 24px;
+    }
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 50px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .tag-blue   { background: var(--blue-100);   color: var(--blue-800); }
+    .tag-green  { background: var(--green-100);  color: #15803d; }
+    .tag-purple { background: var(--purple-100); color: #6b21a8; }
+    .tag-orange { background: var(--orange-100); color: #c2410c; }
+    .tag-red    { background: var(--red-100);    color: #b91c1c; }
+
+    /* ── PRIORITY BOARD ── */
+    .priority-board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media(max-width:700px){ .priority-board { grid-template-columns: 1fr; } }
+    .priority-col {
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .priority-col.p-high   { background: #fef2f2; border: 1px solid #fecaca; }
+    .priority-col.p-medium { background: #fffbeb; border: 1px solid #fde68a; }
+    .priority-col.p-low    { background: #f0fdf4; border: 1px solid #bbf7d0; }
+    .priority-col h4 {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 12px;
+    }
+    .priority-col.p-high   h4 { color: #dc2626; }
+    .priority-col.p-medium h4 { color: #d97706; }
+    .priority-col.p-low    h4 { color: #16a34a; }
+    .p-item {
+      background: white; border-radius: 8px; padding: 10px 12px;
+      margin-bottom: 8px; font-size: 13px; color: var(--gray-700);
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+    .p-item:last-child { margin-bottom: 0; }
+    .p-item strong { color: var(--gray-900); display: block; margin-bottom: 2px; }
+
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════ HERO ══════════════════════════════════════ -->
+<div class="hero">
+  <div class="hero-badge">UI/UX Modernization Plan</div>
+  <h1>EPAL ERP — <span>Modern Dashboard</span><br>&amp; Sidebar Roadmap</h1>
+  <p>Laravel 12 · Tailwind CSS v4 · Alpine.js — Complete UI/UX upgrade plan for a world-class ERP experience</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item"><span class="num">5</span><span class="label">Phases</span></div>
+    <div class="hero-meta-item"><span class="num">12</span><span class="label">Modules</span></div>
+    <div class="hero-meta-item"><span class="num">30+</span><span class="label">Components</span></div>
+    <div class="hero-meta-item"><span class="num">8–12</span><span class="label">Weeks</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════ TECH STACK ══════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Current Stack</div>
+      <h2>Technology Overview</h2>
+      <p>Project-এ বর্তমানে যা আছে — কোনটা রাখব, কোনটা উন্নত করব, কোনটা বদলাব</p>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-card">
+        <div class="icon">⚙️</div>
+        <div class="name">Laravel</div>
+        <div class="ver">v12.x</div>
+        <span class="badge-keep badge">✓ Keep</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🎨</div>
+        <div class="name">Tailwind CSS</div>
+        <div class="ver">v4.1.8</div>
+        <span class="badge-keep badge">✓ Expand Use</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🏔️</div>
+        <div class="name">Alpine.js</div>
+        <div class="ver">Latest</div>
+        <span class="badge-keep badge">✓ Enhance</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">⚡</div>
+        <div class="name">Vite</div>
+        <div class="ver">v6.2.4</div>
+        <span class="badge-keep badge">✓ Keep</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🔔</div>
+        <div class="name">Pusher / Echo</div>
+        <div class="ver">Real-time</div>
+        <span class="badge-keep badge">✓ Keep</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">💬</div>
+        <div class="name">SweetAlert2</div>
+        <div class="ver">CDN</div>
+        <span class="badge-upgrade badge">→ Tailwind Modal</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🔽</div>
+        <div class="name">Select2</div>
+        <div class="ver">+ jQuery</div>
+        <span class="badge-remove badge">✗ Replace</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🅰️</div>
+        <div class="name">Font Awesome</div>
+        <div class="ver">6.5 CDN</div>
+        <span class="badge-upgrade badge">→ Heroicons</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">📊</div>
+        <div class="name">Chart Library</div>
+        <div class="ver">—</div>
+        <span class="badge-new badge">+ ApexCharts</span>
+      </div>
+      <div class="tech-card">
+        <div class="icon">🗓️</div>
+        <div class="name">Date Picker</div>
+        <div class="ver">—</div>
+        <span class="badge-new badge">+ Flatpickr</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ PROBLEM vs SOLUTION ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Analysis</div>
+      <h2>Current Problems &amp; Solutions</h2>
+      <p>Sidebar এবং Dashboard-এর বর্তমান সমস্যা চিহ্নিত করা এবং আধুনিক সমাধান</p>
+    </div>
+
+    <div class="ps-grid">
+      <div class="ps-card problem">
+        <h3>🚨 Sidebar — বর্তমান সমস্যা</h3>
+        <ul>
+          <li>82KB বিশাল ফাইল — Blade-এ সব hardcoded</li>
+          <li>Menu items অনেক বেশি, organization নেই</li>
+          <li>Search বা filter নেই sidebar-এ</li>
+          <li>Mobile-এ অনেক menu একসাথে দেখলে confusing</li>
+          <li>Active state শুধু background color দিয়ে</li>
+          <li>User profile section নেই sidebar-এ</li>
+          <li>Icon inconsistency — সব icon same style না</li>
+          <li>Submenu toggle অনেক slow &amp; jumpy লাগে</li>
+        </ul>
+      </div>
+      <div class="ps-card solution">
+        <h3>✅ Sidebar — আধুনিক সমাধান</h3>
+        <ul>
+          <li>Grouped section + Search bar যোগ করা</li>
+          <li>Collapsible mini sidebar (icon-only mode)</li>
+          <li>Smart active state — left border + tinted background</li>
+          <li>User avatar + role badge নিচে</li>
+          <li>Smooth CSS transition (not JavaScript jump)</li>
+          <li>Mobile: bottom navigation + hamburger drawer</li>
+          <li>Heroicons দিয়ে consistent icon system</li>
+          <li>Badge/notification count on menu items</li>
+        </ul>
+      </div>
+      <div class="ps-card problem">
+        <h3>🚨 Dashboard — বর্তমান সমস্যা</h3>
+        <ul>
+          <li>91KB ফাইল — inline CSS এবং style block ভর্তি</li>
+          <li>Statistics card design পুরনো, flat</li>
+          <li>Chart নেই — শুধু table এ data</li>
+          <li>Quick action button নেই</li>
+          <li>Activity feed / recent logs নেই</li>
+          <li>Loading state নেই — data fetch-এ blank দেখায়</li>
+          <li>Mobile layout ভালো না</li>
+          <li>Dark mode সাপোর্ট নেই</li>
+        </ul>
+      </div>
+      <div class="ps-card solution">
+        <h3>✅ Dashboard — আধুনিক সমাধান</h3>
+        <ul>
+          <li>Glassmorphism stat cards with trend indicators</li>
+          <li>ApexCharts — Line, Bar, Donut charts</li>
+          <li>Quick action grid (New Sale, New Invoice, etc.)</li>
+          <li>Live activity feed with relative timestamps</li>
+          <li>Skeleton loading animation</li>
+          <li>Responsive grid (1col → 2col → 4col)</li>
+          <li>Dark mode toggle (Tailwind dark: class)</li>
+          <li>Widget drag-and-drop customization (later phase)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ SIDEBAR BEFORE/AFTER ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Sidebar Design</div>
+      <h2>Before vs After — Sidebar</h2>
+      <p>পুরনো Dark sidebar এবং নতুন Modern Light sidebar তুলনা</p>
+    </div>
+
+    <div class="wireframe-section">
+      <!-- OLD -->
+      <div class="wireframe-box">
+        <div class="wf-title" style="background:#1e2940;color:#64748b;">
+          <div class="wf-dot" style="background:#ef4444;"></div>
+          <div class="wf-dot" style="background:#eab308; margin-left:4px;"></div>
+          <div class="wf-dot" style="background:#22c55e; margin-left:4px;"></div>
+          <span style="margin-left:12px; font-size:11px; color:#475569;">🚫 বর্তমান Sidebar</span>
+          <span class="tag tag-red" style="margin-left:auto; font-size:10px;">82KB · Needs Update</span>
+        </div>
+        <div class="sidebar-old">
+          <div class="s-logo">
+            <div class="icon-box">🏢</div>
+            <span>EPAL ERP</span>
+          </div>
+          <div class="s-section">
+            <div class="s-section-label">MAIN</div>
+            <div class="s-item active">
+              <span class="ico">📊</span> Dashboard
+            </div>
+            <div class="s-item">
+              <span class="ico">✈️</span> Epal Travels
+              <span style="margin-left:auto;font-size:10px;color:#475569;">▼</span>
+            </div>
+            <div class="s-sub">
+              <div class="s-item"><span class="ico">👥</span> Vendors</div>
+              <div class="s-item"><span class="ico">🎫</span> Ticket Sell</div>
+              <div class="s-item"><span class="ico">📋</span> Passport</div>
+            </div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-label">HR &amp; FINANCE</div>
+            <div class="s-item"><span class="ico">👤</span> HRM</div>
+            <div class="s-item"><span class="ico">💰</span> Accounts</div>
+            <div class="s-item"><span class="ico">🏦</span> Banks</div>
+          </div>
+          <div class="s-section">
+            <div class="s-section-label">OPERATIONS</div>
+            <div class="s-item"><span class="ico">📦</span> Products</div>
+            <div class="s-item"><span class="ico">🛒</span> Sales</div>
+            <div class="s-item"><span class="ico">📁</span> Projects</div>
+          </div>
+          <div class="old-issue">
+            <span>⚠ সমস্যা:</span> কোনো search নেই, icon inconsistent,<br>
+            user info নেই, mobile layout poor
+          </div>
+        </div>
+      </div>
+
+      <!-- NEW -->
+      <div class="wireframe-box">
+        <div class="wf-title" style="background:white; border-bottom:1px solid #e5e7eb;">
+          <div class="wf-dot" style="background:#ef4444;"></div>
+          <div class="wf-dot" style="background:#eab308; margin-left:4px;"></div>
+          <div class="wf-dot" style="background:#22c55e; margin-left:4px;"></div>
+          <span style="margin-left:12px; font-size:11px; color:#374151;">✅ নতুন Modern Sidebar</span>
+          <span class="tag tag-green" style="margin-left:auto; font-size:10px;">Clean · Smart</span>
+        </div>
+        <div class="sidebar-new">
+          <!-- Logo -->
+          <div class="s-logo">
+            <div class="icon-box">🏢</div>
+            <div>
+              <div class="name">EPAL ERP</div>
+              <div class="sub">Enterprise Suite v2</div>
+            </div>
+          </div>
+          <!-- Search -->
+          <div class="s-search">🔍 Menu search...</div>
+
+          <!-- Main -->
+          <div class="s-section-new">
+            <div class="s-section-label-new">Main</div>
+            <div class="s-item-new active">
+              <div class="ico-new">📊</div>
+              Dashboard
+              <span class="s-badge">3</span>
+            </div>
+            <div class="s-item-new">
+              <div class="ico-new">✈️</div>
+              Travels
+            </div>
+          </div>
+
+          <div class="s-section-new">
+            <div class="s-section-label-new">Business</div>
+            <div class="s-item-new">
+              <div class="ico-new">🛒</div>
+              Sales
+            </div>
+            <div class="s-item-new">
+              <div class="ico-new">📦</div>
+              Inventory
+            </div>
+            <div class="s-item-new">
+              <div class="ico-new">📁</div>
+              Projects
+              <span class="s-badge" style="background:#7c3aed;">5</span>
+            </div>
+          </div>
+
+          <div class="s-section-new">
+            <div class="s-section-label-new">HR &amp; Finance</div>
+            <div class="s-item-new">
+              <div class="ico-new">👤</div>
+              HRM
+            </div>
+            <div class="s-item-new">
+              <div class="ico-new">💰</div>
+              Accounts
+            </div>
+          </div>
+
+          <!-- User at bottom -->
+          <div class="new-user" style="margin-top:12px;">
+            <div class="avatar">AD</div>
+            <div class="info">
+              <div class="n">Admin User</div>
+              <div class="r">Super Admin · Online</div>
+            </div>
+            <span style="margin-left:auto;font-size:14px;color:#9ca3af;">⚙️</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ DASHBOARD WIREFRAME ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Dashboard Design</div>
+      <h2>Modern Dashboard Wireframe</h2>
+      <p>নতুন Dashboard-এ Stats, Charts, Activity Feed সহ সম্পূর্ণ redesign</p>
+    </div>
+
+    <div class="db-wireframe">
+      <!-- Header -->
+      <div class="db-old-header">
+        <span style="font-size:18px;">👋</span>
+        <div>
+          <div style="font-weight:700;color:#111827;font-size:14px;">Good morning, Admin!</div>
+          <div style="font-size:11px;color:#9ca3af;">Saturday, 19 April 2026 · Dhaka, BD</div>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <span class="tag tag-blue">+ New Sale</span>
+          <span class="tag tag-green">+ New Task</span>
+          <span class="tag tag-purple">📊 Reports</span>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="db-stat-grid">
+        <div class="db-stat c1">
+          <div class="label">Total Revenue</div>
+          <div class="val">৳4.2M</div>
+          <div class="trend trend-up">↑ 12.5% this month</div>
+        </div>
+        <div class="db-stat c2">
+          <div class="label">Active Employees</div>
+          <div class="val">148</div>
+          <div class="trend trend-up">↑ 3 new this week</div>
+        </div>
+        <div class="db-stat c3">
+          <div class="label">Pending Tasks</div>
+          <div class="val">34</div>
+          <div class="trend trend-down">↓ 8 overdue</div>
+        </div>
+        <div class="db-stat c4">
+          <div class="label">Open Projects</div>
+          <div class="val">12</div>
+          <div class="trend trend-up">↑ 2 on track</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="db-charts">
+        <div class="db-chart-box">
+          <div class="ch-title">Monthly Revenue Trend (ApexCharts)</div>
+          <div class="bar-chart">
+            <div class="bar b1"></div><div class="bar b2"></div>
+            <div class="bar b3"></div><div class="bar b4"></div>
+            <div class="bar b5"></div><div class="bar b6"></div>
+            <div class="bar b7"></div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:8px;font-size:11px;color:#9ca3af;">
+            <span>Oct</span><span>Nov</span><span>Dec</span><span>Jan</span>
+            <span>Feb</span><span>Mar</span><span style="color:#2563eb;font-weight:700;">Apr</span>
+          </div>
+        </div>
+        <div class="db-chart-box">
+          <div class="ch-title">Expense Breakdown</div>
+          <div class="donut"></div>
+          <div style="font-size:11px;color:#9ca3af;">
+            <div style="display:flex;gap:6px;align-items:center;margin:3px 0;"><span style="width:10px;height:10px;background:#2563eb;border-radius:2px;display:inline-block;"></span>Salary 35%</div>
+            <div style="display:flex;gap:6px;align-items:center;margin:3px 0;"><span style="width:10px;height:10px;background:#7c3aed;border-radius:2px;display:inline-block;"></span>Operations 25%</div>
+            <div style="display:flex;gap:6px;align-items:center;margin:3px 0;"><span style="width:10px;height:10px;background:#16a34a;border-radius:2px;display:inline-block;"></span>Marketing 20%</div>
+            <div style="display:flex;gap:6px;align-items:center;margin:3px 0;"><span style="width:10px;height:10px;background:#d97706;border-radius:2px;display:inline-block;"></span>Others 20%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom -->
+      <div class="db-bottom">
+        <div class="db-table">
+          <div class="t-title">Recent Activities</div>
+          <div class="t-row"><div class="t-dot" style="background:#2563eb;"></div>New sale created · Dhaka Office <span class="t-status st-done">Done</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#d97706;"></div>Leave request · Rafi Ahmed <span class="t-status st-pend">Pending</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#7c3aed;"></div>Task updated · ERP Module <span class="t-status st-prog">In Progress</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#16a34a;"></div>Invoice paid · Client ABC <span class="t-status st-done">Paid</span></div>
+        </div>
+        <div class="db-table">
+          <div class="t-title">Top Tasks Due Today</div>
+          <div class="t-row"><div class="t-dot" style="background:#ef4444;"></div>UI Roadmap Review <span class="t-status" style="background:#fee2e2;color:#b91c1c;">High</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#d97706;"></div>Payroll Processing <span class="t-status st-pend">Medium</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#2563eb;"></div>Client Meeting Prep <span class="t-status st-prog">In Progress</span></div>
+          <div class="t-row"><div class="t-dot" style="background:#16a34a;"></div>Stock Report Submit <span class="t-status st-done">Done</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ IMPLEMENTATION PHASES ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Implementation Plan</div>
+      <h2>5-Phase Roadmap</h2>
+      <p>ধাপে ধাপে পুরো UI modernize করার সম্পূর্ণ পরিকল্পনা</p>
+    </div>
+
+    <div class="timeline">
+
+      <!-- Phase 1 -->
+      <div class="phase">
+        <div class="phase-dot p1-dot">1</div>
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num p1">1</div>
+            <div>
+              <h3>Foundation &amp; Design System</h3>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">Tailwind config, color tokens, typography, base components</div>
+            </div>
+            <div class="duration p1-light">Week 1–2</div>
+          </div>
+          <div class="phase-body">
+            <ul class="task-list">
+              <li><div class="check p1">✓</div> Tailwind CSS v4 custom color tokens সেটআপ করা</li>
+              <li><div class="check p1">✓</div> Typography scale (heading, body, caption) define করা</li>
+              <li><div class="check p1">✓</div> Spacing system (4px grid) ঠিক করা</li>
+              <li><div class="check p1">✓</div> Button component — Primary, Secondary, Ghost, Danger</li>
+              <li><div class="check p1">✓</div> Badge &amp; Tag component তৈরি করা</li>
+              <li><div class="check p1">✓</div> Form input — text, select, checkbox, radio redesign</li>
+              <li><div class="check p1">✓</div> Heroicons যোগ করা (tree-shakable, no CDN)</li>
+              <li><div class="check p1">✓</div> Dark mode CSS variables সেটআপ করা</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase">
+        <div class="phase-dot p2-dot">2</div>
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num p2">2</div>
+            <div>
+              <h3>Sidebar Redesign — Complete Overhaul</h3>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">sidebar.blade.php পুরোপুরি নতুনভাবে লেখা</div>
+            </div>
+            <div class="duration p2-light">Week 2–3</div>
+          </div>
+          <div class="phase-body">
+            <ul class="task-list">
+              <li><div class="check p2">✓</div> Light theme sidebar — white bg, blue accent</li>
+              <li><div class="check p2">✓</div> Search bar — real-time menu filter (Alpine.js)</li>
+              <li><div class="check p2">✓</div> Grouped sections — Main / Business / HR / Settings</li>
+              <li><div class="check p2">✓</div> Icon-only mini mode (collapse to 64px)</li>
+              <li><div class="check p2">✓</div> Smooth CSS transition (no JS jump)</li>
+              <li><div class="check p2">✓</div> Active state — left border + bg tint</li>
+              <li><div class="check p2">✓</div> Notification badge on menu items</li>
+              <li><div class="check p2">✓</div> User card at bottom (avatar + role + logout)</li>
+              <li><div class="check p2">✓</div> Mobile: bottom tab bar (5 main items)</li>
+              <li><div class="check p2">✓</div> Mobile: slide-out drawer for full menu</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase">
+        <div class="phase-dot p3-dot">3</div>
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num p3">3</div>
+            <div>
+              <h3>Header &amp; Notification System</h3>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">header.blade.php modernize + real-time notification UX</div>
+            </div>
+            <div class="duration p3-light">Week 3–4</div>
+          </div>
+          <div class="phase-body">
+            <ul class="task-list">
+              <li><div class="check p3">✓</div> Sticky header — glassmorphism effect</li>
+              <li><div class="check p3">✓</div> Global search — command palette style (Ctrl+K)</li>
+              <li><div class="check p3">✓</div> Breadcrumb redesign — clickable path</li>
+              <li><div class="check p3">✓</div> Notification dropdown — grouped by type</li>
+              <li><div class="check p3">✓</div> Real-time notification badge (Pusher)</li>
+              <li><div class="check p3">✓</div> Quick Task button redesign</li>
+              <li><div class="check p3">✓</div> Dark mode toggle button</li>
+              <li><div class="check p3">✓</div> User avatar dropdown menu redesign</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 4 -->
+      <div class="phase">
+        <div class="phase-dot p4-dot">4</div>
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num p4">4</div>
+            <div>
+              <h3>Dashboard Complete Redesign</h3>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">panel/dashboard/index.blade.php — Charts, Stats, Widgets</div>
+            </div>
+            <div class="duration p4-light">Week 4–7</div>
+          </div>
+          <div class="phase-body">
+            <ul class="task-list">
+              <li><div class="check p4">✓</div> KPI stat cards — icon + number + trend arrow</li>
+              <li><div class="check p4">✓</div> ApexCharts — Revenue line chart</li>
+              <li><div class="check p4">✓</div> ApexCharts — Expense breakdown donut chart</li>
+              <li><div class="check p4">✓</div> Attendance summary widget</li>
+              <li><div class="check p4">✓</div> Quick actions grid (6 shortcut buttons)</li>
+              <li><div class="check p4">✓</div> Recent activity feed — live update</li>
+              <li><div class="check p4">✓</div> Today's tasks list (due date sorted)</li>
+              <li><div class="check p4">✓</div> Skeleton loading — no blank flash</li>
+              <li><div class="check p4">✓</div> Responsive grid layout (mobile-first)</li>
+              <li><div class="check p4">✓</div> Role-based widget visibility</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase 5 -->
+      <div class="phase">
+        <div class="phase-dot p5-dot">5</div>
+        <div class="phase-card">
+          <div class="phase-header">
+            <div class="phase-num p5">5</div>
+            <div>
+              <h3>Polish, Performance &amp; Accessibility</h3>
+              <div style="font-size:12px;color:#6b7280;margin-top:2px;">Final touches — speed, a11y, cross-browser test</div>
+            </div>
+            <div class="duration p5-light">Week 8–10</div>
+          </div>
+          <div class="phase-body">
+            <ul class="task-list">
+              <li><div class="check p5">✓</div> jQuery + Select2 সরিয়ে Tailwind native select</li>
+              <li><div class="check p5">✓</div> SweetAlert2 → custom Tailwind modal</li>
+              <li><div class="check p5">✓</div> Inline CSS সব বাদ দিয়ে Tailwind class</li>
+              <li><div class="check p5">✓</div> ARIA labels, keyboard navigation</li>
+              <li><div class="check p5">✓</div> Focus ring &amp; tab order fix</li>
+              <li><div class="check p5">✓</div> Lazy load charts (IntersectionObserver)</li>
+              <li><div class="check p5">✓</div> Mobile cross-browser test (Chrome, Safari, Firefox)</li>
+              <li><div class="check p5">✓</div> Dark mode polish — all components</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /timeline -->
+  </div>
+
+  <!-- ══════════════════════════════ COMPONENT SPECS ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Component Design</div>
+      <h2>Key Component Specifications</h2>
+      <p>প্রতিটি নতুন component এর design spec এবং behavior</p>
+    </div>
+    <div class="comp-grid">
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#eff6ff;">📌</div>
+          <div><div class="comp-name">Sidebar Navigation</div><div class="comp-sub">layout/sidebar.blade.php</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Width</span><span class="spec-val">260px expanded · 64px collapsed</span></div>
+          <div class="comp-spec-item"><span class="spec-key">BG Color</span><span class="spec-val">White / Dark: #0f172a</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Active Item</span><span class="spec-val">Blue left border + #eff6ff bg</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Transition</span><span class="spec-val">CSS: width 0.25s ease-in-out</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Mobile</span><span class="spec-val">Bottom tab + slide drawer</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Technology</span><span class="spec-val">Alpine.js x-data, localStorage</span></div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#f0fdf4;">📊</div>
+          <div><div class="comp-name">KPI Stat Card</div><div class="comp-sub">Dashboard widget</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Layout</span><span class="spec-val">Icon left · Number + Label right</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Trend</span><span class="spec-val">Arrow icon + % change (green/red)</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Hover</span><span class="spec-val">Shadow lift + slight scale</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Loading</span><span class="spec-val">Tailwind animate-pulse skeleton</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Variants</span><span class="spec-val">Blue · Green · Orange · Purple</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Responsive</span><span class="spec-val">1→2→4 cols (sm→md→lg)</span></div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#faf5ff;">🔔</div>
+          <div><div class="comp-name">Notification System</div><div class="comp-sub">Pusher + Echo real-time</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Trigger</span><span class="spec-val">Bell icon + red badge count</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Dropdown</span><span class="spec-val">Grouped: Today · Earlier</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Item</span><span class="spec-val">Avatar + text + relative time</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Animation</span><span class="spec-val">Slide-down + fade-in</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Actions</span><span class="spec-val">Mark all read · View all</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Real-time</span><span class="spec-val">Pusher broadcast → badge update</span></div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#fff7ed;">🔍</div>
+          <div><div class="comp-name">Command Palette</div><div class="comp-sub">Global search (Ctrl+K)</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Trigger</span><span class="spec-val">Ctrl+K shortcut · Click search</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Modal</span><span class="spec-val">Overlay + centered input</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Search</span><span class="spec-val">Employees, Sales, Tasks, Pages</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Results</span><span class="spec-val">Grouped by category + icon</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Navigation</span><span class="spec-val">Arrow keys + Enter</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Tech</span><span class="spec-val">Alpine.js + AJAX search API</span></div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#ecfeff;">📈</div>
+          <div><div class="comp-name">Charts (ApexCharts)</div><div class="comp-sub">Dashboard data visualization</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Library</span><span class="spec-val">ApexCharts (npm install)</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Types</span><span class="spec-val">Line · Bar · Donut · Area</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Data</span><span class="spec-val">Laravel API endpoint → JSON</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Theme</span><span class="spec-val">Auto dark/light mode sync</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Loading</span><span class="spec-val">Lazy load with IntersectionObserver</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Export</span><span class="spec-val">SVG/PNG download button</span></div>
+        </div>
+      </div>
+
+      <div class="comp-card">
+        <div class="comp-header">
+          <div class="comp-icon" style="background:#fef2f2;">📋</div>
+          <div><div class="comp-name">Data Tables</div><div class="comp-sub">All list/index pages</div></div>
+        </div>
+        <div class="comp-body">
+          <div class="comp-spec-item"><span class="spec-key">Style</span><span class="spec-val">Striped rows · hover highlight</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Features</span><span class="spec-val">Sort · Filter · Search</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Pagination</span><span class="spec-val">Laravel paginate + AJAX</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Responsive</span><span class="spec-val">Horizontal scroll on mobile</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Actions</span><span class="spec-val">Icon buttons (edit/delete/view)</span></div>
+          <div class="comp-spec-item"><span class="spec-key">Empty</span><span class="spec-val">Illustration + message</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ COLOR SYSTEM ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Design Tokens</div>
+      <h2>New Color System</h2>
+      <p>Tailwind CSS v4 custom color palette — সব জায়গায় consistent color ব্যবহার</p>
+    </div>
+    <div class="palette-grid">
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#2563eb;"></div>
+        <div class="swatch-info"><div class="s-name">Primary Blue</div><div class="s-hex">#2563eb</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#1d4ed8;"></div>
+        <div class="swatch-info"><div class="s-name">Blue Dark</div><div class="s-hex">#1d4ed8</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#eff6ff;"></div>
+        <div class="swatch-info"><div class="s-name">Blue Light</div><div class="s-hex">#eff6ff</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#7c3aed;"></div>
+        <div class="swatch-info"><div class="s-name">Purple</div><div class="s-hex">#7c3aed</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#16a34a;"></div>
+        <div class="swatch-info"><div class="s-name">Success</div><div class="s-hex">#16a34a</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#d97706;"></div>
+        <div class="swatch-info"><div class="s-name">Warning</div><div class="s-hex">#d97706</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#ef4444;"></div>
+        <div class="swatch-info"><div class="s-name">Danger</div><div class="s-hex">#ef4444</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#0891b2;"></div>
+        <div class="swatch-info"><div class="s-name">Cyan</div><div class="s-hex">#0891b2</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#111827;"></div>
+        <div class="swatch-info"><div class="s-name">Gray 900</div><div class="s-hex">#111827</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#6b7280;"></div>
+        <div class="swatch-info"><div class="s-name">Gray 500</div><div class="s-hex">#6b7280</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#f3f4f6;"></div>
+        <div class="swatch-info"><div class="s-name">Gray 100</div><div class="s-hex">#f3f4f6</div></div>
+      </div>
+      <div class="color-swatch">
+        <div class="swatch-block" style="background:#ffffff; border:1px solid #e5e7eb;"></div>
+        <div class="swatch-info"><div class="s-name">White</div><div class="s-hex">#ffffff</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ PRIORITY BOARD ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Work Priority</div>
+      <h2>Task Priority Board</h2>
+      <p>কোন কাজ আগে করব — সহজ priority board</p>
+    </div>
+    <div class="priority-board">
+      <div class="priority-col p-high">
+        <h4>🔴 High Priority (Week 1–3)</h4>
+        <div class="p-item"><strong>Sidebar Redesign</strong>82KB file → modular, searchable, modern</div>
+        <div class="p-item"><strong>Design Token Setup</strong>Tailwind config — colors, spacing, fonts</div>
+        <div class="p-item"><strong>Dashboard Stat Cards</strong>KPI cards with trend indicators</div>
+        <div class="p-item"><strong>Mobile Sidebar Fix</strong>Bottom nav + slide drawer</div>
+      </div>
+      <div class="priority-col p-medium">
+        <h4>🟡 Medium Priority (Week 4–6)</h4>
+        <div class="p-item"><strong>ApexCharts Integration</strong>Revenue + expense charts</div>
+        <div class="p-item"><strong>Command Palette</strong>Ctrl+K global search</div>
+        <div class="p-item"><strong>Header Redesign</strong>Glassmorphism + notification UX</div>
+        <div class="p-item"><strong>Activity Feed Widget</strong>Real-time recent activity</div>
+        <div class="p-item"><strong>Dark Mode</strong>Tailwind dark: classes everywhere</div>
+      </div>
+      <div class="priority-col p-low">
+        <h4>🟢 Low Priority (Week 7–10)</h4>
+        <div class="p-item"><strong>jQuery/Select2 Remove</strong>Replace with Tailwind dropdowns</div>
+        <div class="p-item"><strong>Inline CSS Cleanup</strong>Move all to Tailwind classes</div>
+        <div class="p-item"><strong>A11y Audit</strong>ARIA + keyboard nav</div>
+        <div class="p-item"><strong>Widget Customization</strong>Drag-drop dashboard widgets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════ SUCCESS METRICS ══════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-label">Success Metrics</div>
+      <h2>কিভাবে বুঝব সফল হয়েছি?</h2>
+      <p>Measurable goals after each phase completion</p>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-icon">⚡</div>
+        <div class="metric-val">&lt;2s</div>
+        <div class="metric-name">Page Load Time</div>
+        <div class="metric-desc">Dashboard full load target</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📱</div>
+        <div class="metric-val">100%</div>
+        <div class="metric-name">Mobile Responsive</div>
+        <div class="metric-desc">All pages work on mobile</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🎨</div>
+        <div class="metric-val">0</div>
+        <div class="metric-name">Inline Styles</div>
+        <div class="metric-desc">All moved to Tailwind classes</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">♿</div>
+        <div class="metric-val">AA</div>
+        <div class="metric-name">WCAG Level</div>
+        <div class="metric-desc">Accessibility compliance</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">🌙</div>
+        <div class="metric-val">✓</div>
+        <div class="metric-name">Dark Mode</div>
+        <div class="metric-desc">All components support dark mode</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-icon">📉</div>
+        <div class="metric-val">-60%</div>
+        <div class="metric-name">Bundle Size</div>
+        <div class="metric-desc">Remove jQuery + Select2</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ══════════════════════════════ FOOTER ══════════════════════════════ -->
+<div class="footer">
+  <strong>EPAL ERP — Modern UI Roadmap</strong><br>
+  <span>Laravel 12 · Tailwind CSS v4 · Alpine.js · ApexCharts</span><br>
+  <span style="margin-top:8px;display:block;font-size:11px;color:#475569;">
+    Generated: April 2026 · Project: d:/laragon/www/epal_erp · Branch: main
+  </span>
+</div>
+
+</body>
+</html>

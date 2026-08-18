@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interior Company CRM Roadmap — EPAL ERP</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 50%, #0ea5e9 100%);
+    padding: 40px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .header h1 { font-size: 2.2rem; font-weight: 800; color: #fff; position: relative; margin-bottom: 8px; }
+  .header p { color: rgba(255,255,255,0.85); font-size: 1rem; position: relative; }
+  .badge { display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 14px; font-size: 0.8rem; color: #fff; margin-top: 12px; }
+
+  /* ── Layout ── */
+  .container { max-width: 1300px; margin: 0 auto; padding: 32px 16px; }
+
+  /* ── Section Title ── */
+  .section-title {
+    display: flex; align-items: center; gap: 12px;
+    font-size: 1.3rem; font-weight: 700; color: #f1f5f9;
+    margin: 40px 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #334155;
+  }
+  .section-title .icon { font-size: 1.5rem; }
+
+  /* ── Phase Cards ── */
+  .phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+
+  .phase-card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .phase-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.4); }
+  .phase-header {
+    padding: 16px 18px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .phase-body { padding: 14px 18px; }
+  .phase-body ul { list-style: none; }
+  .phase-body li {
+    padding: 7px 0;
+    border-bottom: 1px solid #334155;
+    font-size: 0.87rem;
+    color: #cbd5e1;
+    display: flex; align-items: flex-start; gap: 8px;
+  }
+  .phase-body li:last-child { border-bottom: none; }
+  .phase-body li::before { content: '›'; color: inherit; font-weight: bold; margin-top: 1px; flex-shrink: 0; }
+
+  /* Phase Colors */
+  .ph-purple .phase-header { background: linear-gradient(90deg,#7c3aed,#6d28d9); color:#fff; }
+  .ph-purple .phase-body li::before { color: #a78bfa; }
+  .ph-blue .phase-header { background: linear-gradient(90deg,#1d4ed8,#2563eb); color:#fff; }
+  .ph-blue .phase-body li::before { color: #60a5fa; }
+  .ph-green .phase-header { background: linear-gradient(90deg,#065f46,#059669); color:#fff; }
+  .ph-green .phase-body li::before { color: #34d399; }
+  .ph-orange .phase-header { background: linear-gradient(90deg,#b45309,#d97706); color:#fff; }
+  .ph-orange .phase-body li::before { color: #fbbf24; }
+  .ph-red .phase-header { background: linear-gradient(90deg,#991b1b,#dc2626); color:#fff; }
+  .ph-red .phase-body li::before { color: #f87171; }
+  .ph-teal .phase-header { background: linear-gradient(90deg,#0f766e,#0d9488); color:#fff; }
+  .ph-teal .phase-body li::before { color: #2dd4bf; }
+  .ph-indigo .phase-header { background: linear-gradient(90deg,#3730a3,#4338ca); color:#fff; }
+  .ph-indigo .phase-body li::before { color: #818cf8; }
+  .ph-pink .phase-header { background: linear-gradient(90deg,#9d174d,#be185d); color:#fff; }
+  .ph-pink .phase-body li::before { color: #f472b6; }
+
+  /* ── Flow Diagram ── */
+  .flow { display: flex; align-items: stretch; flex-wrap: wrap; gap: 0; margin: 20px 0; }
+  .flow-step {
+    flex: 1; min-width: 120px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 14px 12px;
+    text-align: center;
+    position: relative;
+    font-size: 0.82rem;
+  }
+  .flow-step .step-num {
+    display: inline-block;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    line-height: 26px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  .flow-step .step-label { font-weight: 600; color: #f1f5f9; margin-bottom: 4px; }
+  .flow-step .step-sub { color: #94a3b8; font-size: 0.75rem; }
+  .flow-arrow {
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 6px;
+    color: #4f46e5;
+    font-size: 1.4rem;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+
+  /* ── Status Pipeline ── */
+  .pipeline { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+  .status-pill {
+    padding: 8px 16px;
+    border-radius: 24px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex; align-items: center; gap: 6px;
+    flex: 1; min-width: 110px;
+    justify-content: center;
+    border: 1px solid transparent;
+  }
+  .s-new { background: #1e3a5f; border-color: #3b82f6; color: #93c5fd; }
+  .s-contacted { background: #1e1b4b; border-color: #6366f1; color: #a5b4fc; }
+  .s-qualified { background: #3f2a00; border-color: #d97706; color: #fde68a; }
+  .s-proposal { background: #2e1065; border-color: #9333ea; color: #d8b4fe; }
+  .s-nego { background: #431407; border-color: #ea580c; color: #fed7aa; }
+  .s-won { background: #052e16; border-color: #16a34a; color: #86efac; }
+  .s-lost { background: #450a0a; border-color: #dc2626; color: #fca5a5; }
+
+  /* ── Code Block ── */
+  .code-block {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-left: 4px solid #7c3aed;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.82rem;
+    color: #a5f3fc;
+    overflow-x: auto;
+    white-space: pre;
+    line-height: 1.6;
+  }
+  .code-comment { color: #475569; }
+  .code-key { color: #818cf8; }
+  .code-val { color: #34d399; }
+  .code-str { color: #fbbf24; }
+
+  /* ── Info Box ── */
+  .info-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 12px 0;
+    font-size: 0.87rem;
+    color: #cbd5e1;
+    line-height: 1.7;
+  }
+  .info-box strong { color: #f1f5f9; }
+  .info-box .tag {
+    display: inline-block;
+    background: #334155;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 0.78rem;
+    color: #94a3b8;
+    font-family: monospace;
+  }
+
+  /* ── Alert ── */
+  .alert {
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-size: 0.87rem;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .alert-info { background: #0c2340; border: 1px solid #1d4ed8; color: #93c5fd; }
+  .alert-success { background: #052e16; border: 1px solid #16a34a; color: #86efac; }
+  .alert-warning { background: #3f2a00; border: 1px solid #d97706; color: #fde68a; }
+  .alert .icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── DB Table ── */
+  .db-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.83rem;
+    margin: 12px 0;
+  }
+  .db-table th {
+    background: #334155;
+    color: #f1f5f9;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+  }
+  .db-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #1e293b;
+    color: #cbd5e1;
+  }
+  .db-table tr:nth-child(even) td { background: #1a2537; }
+  .db-table tr:hover td { background: #243046; }
+  .field-type { color: #818cf8; font-family: monospace; font-size: 0.78rem; }
+  .field-note { color: #64748b; font-size: 0.75rem; }
+
+  /* ── Two Col ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } .flow { flex-direction: column; } .flow-arrow { transform: rotate(90deg); } }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: #334155; }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    background: #0f172a;
+  }
+  .tl-title { font-weight: 700; color: #f1f5f9; font-size: 0.95rem; margin-bottom: 6px; }
+  .tl-body { color: #94a3b8; font-size: 0.85rem; line-height: 1.7; }
+
+  /* ── Footer ── */
+  .footer { text-align: center; padding: 32px; color: #475569; font-size: 0.82rem; border-top: 1px solid #1e293b; margin-top: 48px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <h1>🏠 Interior Company CRM Roadmap</h1>
+  <p>Lead Management → Project Conversion → Project Maintenance</p>
+  <div class="badge">EPAL ERP System · Laravel · Full Workflow Guide</div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       PART 1 — OVERVIEW FLOW
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🗺️</span> Complete Interior Lead → Project Flow</div>
+
+  <div class="flow">
+    <div class="flow-step" style="border-top:3px solid #7c3aed">
+      <div class="step-num" style="background:#7c3aed;color:#fff">1</div>
+      <div class="step-label">Lead Create</div>
+      <div class="step-sub">Interior lead<br>type add করুন</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #2563eb">
+      <div class="step-num" style="background:#2563eb;color:#fff">2</div>
+      <div class="step-label">Follow-up</div>
+      <div class="step-sub">Call / Visit<br>log করুন</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #d97706">
+      <div class="step-num" style="background:#d97706;color:#fff">3</div>
+      <div class="step-label">Proposal</div>
+      <div class="step-sub">Design brief<br>+ Budget</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #9333ea">
+      <div class="step-num" style="background:#9333ea;color:#fff">4</div>
+      <div class="step-label">Negotiation</div>
+      <div class="step-sub">Revision<br>চালান</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #16a34a">
+      <div class="step-num" style="background:#16a34a;color:#fff">5</div>
+      <div class="step-label">Won ✓</div>
+      <div class="step-sub">Agreement<br>sign</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #0d9488">
+      <div class="step-num" style="background:#0d9488;color:#fff">6</div>
+      <div class="step-label">Convert</div>
+      <div class="step-sub">Project এ<br>convert করুন</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #ea580c">
+      <div class="step-num" style="background:#ea580c;color:#fff">7</div>
+      <div class="step-label">Execution</div>
+      <div class="step-sub">Task / Board<br>দিয়ে manage</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="border-top:3px solid #be185d">
+      <div class="step-num" style="background:#be185d;color:#fff">8</div>
+      <div class="step-label">Handover</div>
+      <div class="step-sub">Invoice &<br>payment</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 2 — STEP 1: LEAD TYPE ADD
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">📝</span> Step 1 — Interior Lead Type যোগ করুন</div>
+
+  <div class="alert alert-warning">
+    <div class="icon">⚠️</div>
+    <div><strong>বর্তমান সমস্যা:</strong> আপনার <span style="font-family:monospace;background:#1e293b;padding:1px 6px;border-radius:4px">Lead</span> model এ <span style="font-family:monospace;background:#1e293b;padding:1px 6px;border-radius:4px">getLeadTypeLabelAttribute()</span> তে শুধু <code>air_ticket</code>, <code>visa</code>, <code>software</code> আছে। Interior lead এর জন্য <code>interior</code> type add করতে হবে।</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="info-box">
+        <strong>📄 app/Models/Lead.php — এ যোগ করুন</strong>
+        <div class="code-block"><span class="code-comment">// getLeadTypeLabelAttribute() এ:</span>
+<span class="code-key">'air_ticket'</span> => <span class="code-str">'Air Ticket'</span>,
+<span class="code-key">'visa'</span>       => <span class="code-str">'Visa'</span>,
+<span class="code-key">'software'</span>   => <span class="code-str">'Software'</span>,
+<span class="code-key">'interior'</span>  => <span class="code-str">'Interior'</span>, <span class="code-comment">// ← নতুন</span>
+<span class="code-key">default</span>      => <span class="code-str">'Other'</span>,</div>
+      </div>
+    </div>
+    <div>
+      <div class="info-box">
+        <strong>🗄️ Migration — interior_leads table তৈরি করুন</strong>
+        <div class="code-block"><span class="code-comment">// Extra fields for interior leads:</span>
+Schema::create(<span class="code-str">'lead_interiors'</span>, function($t) {
+  $t->id();
+  $t->foreignId(<span class="code-str">'lead_id'</span>)->constrained();
+  $t->string(<span class="code-str">'property_type'</span>);   <span class="code-comment">// flat/house/office</span>
+  $t->decimal(<span class="code-str">'area_sqft'</span>, 8, 2)->nullable();
+  $t->string(<span class="code-str">'style_preference'</span>)->nullable();
+  $t->text(<span class="code-str">'room_details'</span>)->nullable(); <span class="code-comment">// JSON</span>
+  $t->decimal(<span class="code-str">'budget_min'</span>, 12, 2)->nullable();
+  $t->decimal(<span class="code-str">'budget_max'</span>, 12, 2)->nullable();
+  $t->date(<span class="code-str">'site_visit_date'</span>)->nullable();
+  $t->timestamps();
+});</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 2 — LEAD FIELDS
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🗃️</span> Interior Lead — Database Fields</div>
+
+  <div class="two-col">
+    <div>
+      <div class="info-box"><strong>🔵 leads table (existing) — Interior এর জন্য যা use হবে</strong></div>
+      <table class="db-table">
+        <tr><th>Field</th><th>Type</th><th>Interior Use</th></tr>
+        <tr><td>lead_type</td><td class="field-type">string</td><td><code>'interior'</code> দিন</td></tr>
+        <tr><td>service_category</td><td class="field-type">string</td><td>Bedroom/Living/Office</td></tr>
+        <tr><td>name</td><td class="field-type">string</td><td>Client নাম</td></tr>
+        <tr><td>phone</td><td class="field-type">string</td><td>যোগাযোগ নম্বর</td></tr>
+        <tr><td>email</td><td class="field-type">string</td><td>Client email</td></tr>
+        <tr><td>lead_source_id</td><td class="field-type">FK</td><td>Facebook/Referral/Walk-in</td></tr>
+        <tr><td>assigned_to</td><td class="field-type">FK→User</td><td>Sales executive</td></tr>
+        <tr><td>status</td><td class="field-type">string</td><td>Pipeline stage</td></tr>
+        <tr><td>notes</td><td class="field-type">text</td><td>Initial requirement</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="info-box"><strong>🟢 lead_interiors table (নতুন) — Interior-specific details</strong></div>
+      <table class="db-table">
+        <tr><th>Field</th><th>Type</th><th>কী রাখবেন</th></tr>
+        <tr><td>property_type</td><td class="field-type">string</td><td>Flat / House / Office / Shop</td></tr>
+        <tr><td>area_sqft</td><td class="field-type">decimal</td><td>Property আয়তন</td></tr>
+        <tr><td>style_preference</td><td class="field-type">string</td><td>Modern/Classic/Minimalist</td></tr>
+        <tr><td>room_details</td><td class="field-type">json</td><td>Room list + requirement</td></tr>
+        <tr><td>budget_min</td><td class="field-type">decimal</td><td>Minimum budget</td></tr>
+        <tr><td>budget_max</td><td class="field-type">decimal</td><td>Maximum budget</td></tr>
+        <tr><td>site_visit_date</td><td class="field-type">date</td><td>Site visit schedule</td></tr>
+        <tr><td>site_visit_done</td><td class="field-type">boolean</td><td>Visit completed?</td></tr>
+        <tr><td>measurement_file</td><td class="field-type">string</td><td>Floor plan / measurement</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 3 — STATUS PIPELINE
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🔄</span> Interior Lead — Status Pipeline</div>
+
+  <div class="pipeline">
+    <div class="status-pill s-new">🔵 New<br><small>Initial Enquiry</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-contacted">🟣 Contacted<br><small>Call/Meeting Done</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-qualified">🟡 Site Visit<br><small>Measurement নিন</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-proposal">🟤 Proposal<br><small>Design + Quote</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-nego">🟠 Negotiation<br><small>Revision চলছে</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-won">🟢 Won<br><small>Deal Confirmed</small></div>
+    <div style="display:flex;align-items:center;color:#4f46e5;font-weight:bold;">→</div>
+    <div class="status-pill s-lost">🔴 Lost<br><small>Client গেছে</small></div>
+  </div>
+
+  <div class="info-box">
+    <strong>Interior Lead এর জন্য Extra Status (optional):</strong>
+    <span class="tag">site_visit_scheduled</span> →
+    <span class="tag">design_in_progress</span> →
+    <span class="tag">quotation_sent</span> →
+    <span class="tag">agreement_signed</span>
+    <br><br>
+    এগুলো <code>leads.status</code> column এ string হিসেবে add করা যাবে অথবা আলাদা <code>interior_stage</code> column রাখতে পারেন।
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 4 — LEAD MANAGEMENT PHASES
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">📋</span> Interior Lead Management — Phase by Phase</div>
+
+  <div class="phases">
+
+    <div class="phase-card ph-purple">
+      <div class="phase-header">🆕 Phase 1 — Lead Create</div>
+      <div class="phase-body"><ul>
+        <li>Lead type: <strong>Interior</strong> select করুন</li>
+        <li>Client নাম, ফোন, email এন্ট্রি দিন</li>
+        <li>Lead source: Facebook Ad / Referral / Walk-in</li>
+        <li>Property type এবং area এন্ট্রি দিন</li>
+        <li>Budget range লিখুন (min-max)</li>
+        <li>Sales executive assign করুন</li>
+        <li>Initial notes/requirement লিখুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-blue">
+      <div class="phase-header">📞 Phase 2 — Follow-up & Contact</div>
+      <div class="phase-body"><ul>
+        <li>LeadFollowup তৈরি করুন (call/meeting)</li>
+        <li>Follow-up date ও outcome লিখুন</li>
+        <li>Status: New → Contacted update করুন</li>
+        <li>Reminder set করুন next contact এর জন্য</li>
+        <li>WhatsApp/SMS marketing send করুন</li>
+        <li>Portfolio images/videos share করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-teal">
+      <div class="phase-header">🏠 Phase 3 — Site Visit</div>
+      <div class="phase-body"><ul>
+        <li>Site visit date schedule করুন</li>
+        <li>Reminder set করুন visit এর আগে</li>
+        <li>Visit complete হলে mark করুন</li>
+        <li>Measurement ও floor plan upload করুন</li>
+        <li>Room-wise requirement নোট করুন</li>
+        <li>Status: Contacted → Qualified update করুন</li>
+        <li>Design team কে brief করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-indigo">
+      <div class="phase-header">📐 Phase 4 — Design & Proposal</div>
+      <div class="phase-body"><ul>
+        <li>3D design / mood board তৈরি করুন</li>
+        <li>Proposal document attach করুন (PDF)</li>
+        <li>Itemized quotation তৈরি করুন</li>
+        <li>Material list ও cost breakdown দিন</li>
+        <li>Status: Qualified → Proposal Sent করুন</li>
+        <li>Estimate module ব্যবহার করুন (CRM)</li>
+        <li>Proposal email/WhatsApp পাঠান</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-orange">
+      <div class="phase-header">🤝 Phase 5 — Negotiation</div>
+      <div class="phase-body"><ul>
+        <li>Client feedback নোট করুন</li>
+        <li>Design revision track করুন</li>
+        <li>Budget adjustment করুন</li>
+        <li>Revised proposal পাঠান</li>
+        <li>Payment terms discuss করুন</li>
+        <li>Status: Proposal Sent → Negotiation করুন</li>
+        <li>Agreement draft তৈরি করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-green">
+      <div class="phase-header">✅ Phase 6 — Won & Convert</div>
+      <div class="phase-body"><ul>
+        <li>Status: Won করুন</li>
+        <li>Agreement/Contract sign করুন</li>
+        <li>Advance payment নিন (Payment Schedule)</li>
+        <li><strong>Lead → Project এ Convert করুন</strong></li>
+        <li>Customer record তৈরি করুন (Customer module)</li>
+        <li>Project category: Interior select করুন</li>
+        <li>Team assign করুন project এ</li>
+      </ul></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 5 — CONVERT LEAD TO PROJECT
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🔀</span> Lead → Project Conversion Process</div>
+
+  <div class="alert alert-success">
+    <div class="icon">💡</div>
+    <div><strong>কীভাবে Convert করবেন:</strong> Lead status <strong>Won</strong> হওয়ার পর একটি "Convert to Project" button থাকবে। এই button click করলে automatically Project তৈরি হবে এবং Lead এর data গুলো Project এ copy হবে।</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="info-box">
+        <strong>🔧 LeadManagerController.php — convertToProject() method</strong>
+        <div class="code-block"><span class="code-key">public function</span> convertToProject($leadId)
+{
+    $lead = Lead::findOrFail($leadId);
+
+    <span class="code-comment">// Project তৈরি করুন</span>
+    $project = Project::create([
+        <span class="code-str">'project_name'</span>  => <span class="code-str">'Interior - '</span> . $lead->name,
+        <span class="code-str">'customer_id'</span>   => $lead->customer_id,
+        <span class="code-str">'project_category_id'</span> => <span class="code-comment">/* Interior category */</span>,
+        <span class="code-str">'budget'</span>       => $lead->interior->budget_max,
+        <span class="code-str">'description'</span>  => $lead->notes,
+        <span class="code-str">'company_id'</span>   => auth()->user()->company_id,
+        <span class="code-str">'status'</span>       => <span class="code-str">'in_progress'</span>,
+        <span class="code-str">'start_date'</span>   => now(),
+    ]);
+
+    <span class="code-comment">// Lead এ project_id save করুন</span>
+    $lead->update([
+        <span class="code-str">'project_id'</span>     => $project->id,
+        <span class="code-str">'converted_at'</span>   => now(),
+    ]);
+
+    <span class="code-key">return</span> redirect()->route(<span class="code-str">'projects.show'</span>, $project->id);
+}</div>
+      </div>
+    </div>
+    <div>
+      <div class="info-box">
+        <strong>📊 Lead থেকে Project এ যা Transfer হবে</strong>
+      </div>
+      <table class="db-table">
+        <tr><th>Lead Data</th><th>→</th><th>Project Field</th></tr>
+        <tr><td>lead.name (client)</td><td>→</td><td>project.customer_id</td></tr>
+        <tr><td>interior.budget_max</td><td>→</td><td>project.budget</td></tr>
+        <tr><td>lead.notes</td><td>→</td><td>project.description</td></tr>
+        <tr><td>interior.area_sqft</td><td>→</td><td>project description</td></tr>
+        <tr><td>interior.style</td><td>→</td><td>project description</td></tr>
+        <tr><td>lead.assigned_to</td><td>→</td><td>project.team_members</td></tr>
+        <tr><td>'Interior' category</td><td>→</td><td>project_category_id</td></tr>
+        <tr><td>lead.company_id</td><td>→</td><td>project.company_id</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 6 — PROJECT MANAGEMENT
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🏗️</span> Project Management — Interior Project চালানো</div>
+
+  <div class="phases">
+
+    <div class="phase-card ph-blue">
+      <div class="phase-header">📁 Project Setup</div>
+      <div class="phase-body"><ul>
+        <li>Project Category: "Interior Design" তৈরি করুন</li>
+        <li>Project name, budget, timeline set করুন</li>
+        <li>Department assign করুন (Interior Dept)</li>
+        <li>Team members: Designer, Supervisor, PM</li>
+        <li>Project color code দিন (identification)</li>
+        <li>Start date ও deadline set করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-purple">
+      <div class="phase-header">📋 Board / Module Setup</div>
+      <div class="phase-body"><ul>
+        <li>Board তৈরি করুন: <strong>Interior Workflow</strong></li>
+        <li>Column: To Do → In Progress → Review → Done</li>
+        <li>Phase অনুযায়ী Board আলাদা করুন:</li>
+        <li>Board 1: Design Phase</li>
+        <li>Board 2: Procurement Phase</li>
+        <li>Board 3: Execution Phase</li>
+        <li>Board 4: Finishing Phase</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-orange">
+      <div class="phase-header">✅ Task Management</div>
+      <div class="phase-body"><ul>
+        <li>Room-wise task তৈরি করুন</li>
+        <li>Task: Master Bedroom Design → Assign designer</li>
+        <li>Task: Living Room Furniture Order → Assign PM</li>
+        <li>Task: Electrical Work → Assign supervisor</li>
+        <li>Due date ও priority set করুন</li>
+        <li>Task completion % track করুন</li>
+        <li>Sub-task add করুন বড় কাজের জন্য</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-teal">
+      <div class="phase-header">💰 Budget & Payment</div>
+      <div class="phase-body"><ul>
+        <li>Payment Schedule তৈরি করুন</li>
+        <li>Milestone-based payment set করুন:</li>
+        <li>Advance: 30% on signing</li>
+        <li>Mid: 40% on midway</li>
+        <li>Final: 30% on handover</li>
+        <li>Expense track করুন (materials, labor)</li>
+        <li>Budget vs Actual compare করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-green">
+      <div class="phase-header">📸 Documentation</div>
+      <div class="phase-body"><ul>
+        <li>Before/After photos upload করুন</li>
+        <li>Daily progress photo রাখুন</li>
+        <li>Material delivery challan scan করুন</li>
+        <li>Work order documents attach করুন</li>
+        <li>Client approval sign collect করুন</li>
+        <li>Warranty documents সংরক্ষণ করুন</li>
+      </ul></div>
+    </div>
+
+    <div class="phase-card ph-pink">
+      <div class="phase-header">🎯 Handover</div>
+      <div class="phase-body"><ul>
+        <li>Final walkthrough schedule করুন</li>
+        <li>Punch list তৈরি (remaining items)</li>
+        <li>Client sign-off নিন</li>
+        <li>Final invoice তৈরি করুন</li>
+        <li>Final payment collect করুন</li>
+        <li>Project status: Completed করুন</li>
+        <li>Testimonial/review নিন</li>
+      </ul></div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 7 — PROJECT STAGES TABLE
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">📊</span> Interior Project — Stage Breakdown</div>
+
+  <table class="db-table">
+    <tr>
+      <th>Stage</th>
+      <th>কাজ</th>
+      <th>Responsible</th>
+      <th>Deliverable</th>
+      <th>Payment Trigger</th>
+    </tr>
+    <tr>
+      <td>🟣 Design</td>
+      <td>3D Design, Floor Plan, Material Selection</td>
+      <td>Interior Designer</td>
+      <td>Approved Design File</td>
+      <td>Advance Payment (30%)</td>
+    </tr>
+    <tr>
+      <td>🔵 Procurement</td>
+      <td>Material order, Furniture booking</td>
+      <td>Project Manager</td>
+      <td>Purchase Orders</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>🟠 Civil Work</td>
+      <td>Demolition, Plumbing, Electrical, Ceiling</td>
+      <td>Site Supervisor</td>
+      <td>Civil Work Complete</td>
+      <td>Mid Payment (40%)</td>
+    </tr>
+    <tr>
+      <td>🟡 Finishing</td>
+      <td>Paint, Flooring, Wallpaper, Polish</td>
+      <td>Site Supervisor</td>
+      <td>Finishing Complete</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>🟢 Furnishing</td>
+      <td>Furniture install, Accessories, Decoration</td>
+      <td>Interior Designer</td>
+      <td>Furnished Space</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>✅ Handover</td>
+      <td>Final check, Client walkthrough, Sign-off</td>
+      <td>PM + Designer</td>
+      <td>Signed Completion Form</td>
+      <td>Final Payment (30%)</td>
+    </tr>
+  </table>
+
+  <!-- ══════════════════════════════════════════
+       PART 8 — IMPLEMENTATION TIMELINE
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">🗓️</span> Implementation Timeline — কোথা থেকে শুরু করবেন</div>
+
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#7c3aed"></div>
+      <div class="tl-title" style="color:#a78bfa">Week 1 — Lead Type Setup</div>
+      <div class="tl-body">
+        ① Lead model এ <code>interior</code> type add করুন।
+        ② <code>lead_interiors</code> migration তৈরি ও run করুন।
+        ③ LeadInterior model তৈরি করুন।
+        ④ Lead create form এ Interior option add করুন।
+        ⑤ Interior-specific fields (property type, area, budget range) form এ add করুন।
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#2563eb"></div>
+      <div class="tl-title" style="color:#60a5fa">Week 2 — Lead Management View</div>
+      <div class="tl-body">
+        ① Lead list এ Interior filter add করুন।
+        ② Interior lead detail page এ site visit section add করুন।
+        ③ Follow-up workflow interior এর জন্য customize করুন।
+        ④ Status pipeline visualization add করুন।
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#059669"></div>
+      <div class="tl-title" style="color:#34d399">Week 3 — Convert Feature</div>
+      <div class="tl-body">
+        ① <code>leads</code> table এ <code>project_id</code> ও <code>converted_at</code> column add করুন।
+        ② <code>convertToProject()</code> method implement করুন।
+        ③ Won lead এ "Convert to Project" button add করুন।
+        ④ Conversion এর পর Project page এ redirect করুন।
+        ⑤ "Interior Design" project category তৈরি করুন।
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#d97706"></div>
+      <div class="tl-title" style="color:#fbbf24">Week 4 — Project Management Enhancement</div>
+      <div class="tl-body">
+        ① Interior project এর জন্য default Board template তৈরি করুন (4টি phase board)।
+        ② Default task templates add করুন room-wise।
+        ③ Payment Schedule milestone-based setup করুন।
+        ④ Project dashboard এ Interior metrics add করুন।
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot" style="color:#be185d"></div>
+      <div class="tl-title" style="color:#f472b6">Week 5 — Reporting</div>
+      <div class="tl-body">
+        ① Interior lead conversion rate report তৈরি করুন।
+        ② Active interior projects overview dashboard।
+        ③ Budget vs Actual expense report।
+        ④ Lead source analysis (কোন source থেকে বেশি lead আসছে)।
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 9 — QUICK ACTIONS
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">⚡</span> CRM এ এখনই করুন — Quick Setup</div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <strong>✅ এখনই করা যাবে (No Coding)</strong>
+      <ul style="margin-top:10px;list-style:none;">
+        <li style="padding:5px 0;border-bottom:1px solid #334155">🔸 Lead Source তৈরি করুন: "Facebook Ad Interior", "Instagram", "Referral", "Walk-in"</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">🔸 Project Category তৈরি করুন: "Interior Design"</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">🔸 New lead এ lead type "Other" দিয়ে interior lead তৈরি শুরু করুন</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">🔸 Follow-up দিয়ে call/visit log করুন</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">🔸 Won হলে manually Project তৈরি করুন (manual convert)</li>
+        <li style="padding:5px 0">🔸 Board ও Task দিয়ে project চালান</li>
+      </ul>
+    </div>
+    <div class="info-box">
+      <strong>🔧 Coding দরকার হবে</strong>
+      <ul style="margin-top:10px;list-style:none;">
+        <li style="padding:5px 0;border-bottom:1px solid #334155">⚙️ <code>interior</code> lead type model এ add করা</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">⚙️ <code>lead_interiors</code> table migration</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">⚙️ Lead form এ interior-specific fields</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">⚙️ "Convert to Project" button ও controller method</li>
+        <li style="padding:5px 0;border-bottom:1px solid #334155">⚙️ Auto Board template creation on project convert</li>
+        <li style="padding:5px 0">⚙️ Interior-specific reports ও dashboard</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       PART 10 — SUMMARY TABLE
+  ══════════════════════════════════════════ -->
+  <div class="section-title"><span class="icon">📌</span> Summary — Key Modules ও তাদের Role</div>
+
+  <table class="db-table">
+    <tr>
+      <th>Module</th>
+      <th>Interior এ কী কাজ করবে</th>
+      <th>Status</th>
+    </tr>
+    <tr>
+      <td>🔵 Lead Manager</td>
+      <td>Interior lead create, status track, follow-up manage</td>
+      <td style="color:#fbbf24">Partial (interior type add করতে হবে)</td>
+    </tr>
+    <tr>
+      <td>📞 Lead Follow-up</td>
+      <td>Call log, visit schedule, outcome track</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>⏰ Lead Reminder</td>
+      <td>Follow-up reminder, site visit alert</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>📄 Estimate</td>
+      <td>Interior quotation তৈরি, client কে proposal পাঠান</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>🏗️ Project Manage</td>
+      <td>Interior project tracking, team assign, timeline</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>📋 Board & Task</td>
+      <td>Phase-wise task management (Design/Civil/Finishing)</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>💰 Payment Schedule</td>
+      <td>Milestone-based payment (Advance/Mid/Final)</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>💸 Expense</td>
+      <td>Material cost, labor cost track করুন</td>
+      <td style="color:#34d399">✅ Already Available</td>
+    </tr>
+    <tr>
+      <td>🔀 Lead → Project Convert</td>
+      <td>Won lead automatically project এ convert</td>
+      <td style="color:#f87171">❌ Implement করতে হবে</td>
+    </tr>
+    <tr>
+      <td>📊 Interior Report</td>
+      <td>Conversion rate, revenue, project status report</td>
+      <td style="color:#f87171">❌ Implement করতে হবে</td>
+    </tr>
+  </table>
+
+  <div class="alert alert-info" style="margin-top:24px">
+    <div class="icon">ℹ️</div>
+    <div>
+      <strong>পরামর্শ:</strong> সবচেয়ে দ্রুত ফলাফলের জন্য — এখনই Lead Source, Project Category "Interior Design" তৈরি করুন এবং Manual প্রক্রিয়ায় interior lead manage শুরু করুন। পাশাপাশি coding করে <strong>interior lead type</strong> এবং <strong>Convert to Project</strong> feature implement করলে সম্পূর্ণ automation পাবেন।
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<div class="footer">
+  EPAL ERP — Interior Company CRM Roadmap · Generated for omithasan18 · 2026
+</div>
+
+</body>
+</html>

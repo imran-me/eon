@@ -1,0 +1,257 @@
+/* ===========================================================================
+   WOOD ART INTERIORS — ambient scene
+   ---------------------------------------------------------------------------
+   Concept: the company's own tagline, Design · Build · Fit-out — drawn as a
+   single interior ELEVATION, the straight-on drawing a designer presents to a
+   client. At the top of a page it is a cool drafting sketch; as you scroll it
+   BUILDS — line-art warms into walnut, the credenza and curtain fill, shadows
+   ground the furniture, the pendant comes on and dust drifts through its light.
+   Scroll position is the construction timeline. Minimal by element count;
+   realistic by proportion.
+
+   Three rules this file keeps:
+     1. Background only. Everything is pointer-events:none behind content, and
+        contrast stays low enough to read text over.
+     2. GPU-only animation — transform and opacity, nothing that triggers
+        layout. Freezes entirely under prefers-reduced-motion, and pauses when
+        the tab is hidden.
+     3. Zero global selectors. Every rule is scoped under .wa-scene, so this
+        cannot touch anything outside the element it owns. Loaded only by the
+        interior views.
+   ======================================================================== */
+
+.wa-scene {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 1s cubic-bezier(.16, .84, .44, 1);
+
+    /* Scroll progress 0→1, written by woodart-scene.js. Everything below reads
+       from this one number. */
+    --p: 0;
+
+    /* Wood Art's own accent, plus the warm palette a fit-out lives in. */
+    --wa-accent: #6f9c1c;
+    --wa-draft: #1a43bf;   /* drafting blue — the "design" end   */
+    --wa-timber: #a86a2e;  /* walnut line-art — the "built" end  */
+    --wa-lamp: #f0a848;    /* lamplight                          */
+    --wa-lamp-hot: #ffd08a;
+
+    /* Line colour interpolates from drafting blue to timber as you scroll. */
+    --wa-ink: color-mix(in srgb, var(--wa-timber) calc(var(--p) * 100%), var(--wa-draft));
+}
+
+.wa-scene.on { opacity: 1; }
+.wa-scene.paused * { animation-play-state: paused !important; }
+
+/* ── ambient wash ────────────────────────────────────────────────────────
+   Two slow-drifting colour fields. This is what makes the page feel alive
+   before any line is read. Kept under 10% alpha so text stays crisp. */
+.wa-wash {
+    position: absolute;
+    inset: -25%;
+    filter: blur(46px);
+    opacity: .45;
+}
+
+.wa-wash span {
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    will-change: transform;
+}
+
+.wa-wash .w1 {
+    width: 46%; height: 58%; top: -8%; right: 4%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--wa-accent) 22%, transparent), transparent 68%);
+    animation: wa-drift-a 34s ease-in-out infinite;
+}
+
+.wa-wash .w2 {
+    width: 40%; height: 52%; bottom: -6%; left: -4%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--wa-draft) 16%, transparent), transparent 66%);
+    animation: wa-drift-b 42s ease-in-out infinite;
+}
+
+/* Warmth arrives with the build — invisible at the top of the page. */
+.wa-wash .w3 {
+    width: 52%; height: 46%; top: 22%; left: 26%;
+    background: radial-gradient(circle, color-mix(in srgb, var(--wa-lamp) 26%, transparent), transparent 70%);
+    opacity: calc(var(--p) * .9);
+    transition: opacity .25s linear;
+    animation: wa-drift-a 28s ease-in-out infinite reverse;
+}
+
+@keyframes wa-drift-a {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(-6%, 5%, 0) scale(1.12); }
+}
+
+@keyframes wa-drift-b {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1.05); }
+    50%      { transform: translate3d(7%, -4%, 0) scale(.95); }
+}
+
+/* ── the room ────────────────────────────────────────────────────────────── */
+.wa-room {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+    /* Fades out toward the bottom so the scene never crowds the content that
+       matters most — the cards nearer the fold. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 94%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 52%, transparent 94%);
+}
+
+.wa-room [stroke] { vector-effect: non-scaling-stroke; }
+
+/* Structure: the shell of the room, always present. */
+.wa-struct {
+    fill: none;
+    stroke: var(--wa-ink);
+    stroke-width: 1.25;
+    opacity: .30;
+}
+
+/* Floorboards — faint horizontals under the floor line. */
+.wa-floor {
+    fill: none;
+    stroke: var(--wa-ink);
+    stroke-width: 1;
+    opacity: calc(.10 + var(--p) * .08);
+}
+
+/* Grounding shadows under the furniture. Nearly absent at the sketch stage,
+   deepening as the room is built — the realism is things sitting ON the floor
+   rather than floating near it. */
+.wa-shadow {
+    fill: #123499;
+    filter: blur(6px);
+    opacity: calc(.04 + var(--p) * .12);
+    transition: opacity .25s linear;
+}
+
+/* Daylight falling from the window across the floor. Strongest at the top of
+   the page; yields to the pendant as the build completes. */
+.wa-daypool {
+    fill: #bcd2ff;
+    filter: blur(16px);
+    opacity: calc((1 - var(--p)) * .15 + .04);
+    transition: opacity .25s linear;
+}
+
+/* Furniture line-art. Draws itself in on first paint, like a pencil pass. */
+.wa-line {
+    fill: none;
+    stroke: var(--wa-ink);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: .42;
+    stroke-dasharray: var(--len, 1200);
+    stroke-dashoffset: var(--len, 1200);
+    animation: wa-draw 2.6s cubic-bezier(.16, .84, .44, 1) forwards;
+}
+
+.wa-line.d1 { animation-delay: .15s; }
+.wa-line.d2 { animation-delay: .35s; }
+.wa-line.d3 { animation-delay: .55s; }
+.wa-line.d4 { animation-delay: .75s; }
+.wa-line.d5 { animation-delay: .95s; }
+
+@keyframes wa-draw { to { stroke-dashoffset: 0; } }
+
+/* Timber fill — the "built" state. Washes in with scroll. */
+.wa-fill {
+    fill: color-mix(in srgb, var(--wa-timber) 26%, transparent);
+    opacity: calc(var(--p) * .55);
+    transition: opacity .25s linear;
+}
+
+.wa-fill-soft {
+    fill: color-mix(in srgb, var(--wa-accent) 22%, transparent);
+    opacity: calc(var(--p) * .40);
+    transition: opacity .25s linear;
+}
+
+/* ── lamplight ───────────────────────────────────────────────────────────
+   The lamp switches on as the room gets built, then breathes. */
+.wa-lamp-cone {
+    fill: var(--wa-lamp);
+    opacity: calc(clamp(0, (var(--p) - .18) / .5, 1) * .16);
+    transition: opacity .3s linear;
+    filter: blur(3px);
+}
+
+.wa-lamp-pool {
+    fill: var(--wa-lamp-hot);
+    opacity: calc(clamp(0, (var(--p) - .25) / .5, 1) * .22);
+    transition: opacity .3s linear;
+    filter: blur(10px);
+    animation: wa-breathe 7s ease-in-out infinite;
+    transform-origin: center;
+}
+
+.wa-bulb {
+    fill: var(--wa-lamp-hot);
+    opacity: calc(clamp(0, (var(--p) - .12) / .4, 1) * .85);
+    animation: wa-flicker 5.5s ease-in-out infinite;
+}
+
+@keyframes wa-breathe {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.09); }
+}
+
+@keyframes wa-flicker {
+    0%, 100% { opacity: .85; }
+    45%      { opacity: .62; }
+    60%      { opacity: .92; }
+}
+
+/* Window daylight — strongest at the top, before the lamp takes over. */
+.wa-daylight {
+    fill: #bcd2ff;
+    opacity: calc((1 - var(--p)) * .20 + .05);
+    transition: opacity .25s linear;
+    filter: blur(8px);
+}
+
+/* ── dust motes in the light ─────────────────────────────────────────────
+   Only appear once the lamp is on. Pure transform, staggered so they never
+   pulse in unison. */
+.wa-mote {
+    fill: var(--wa-lamp-hot);
+    opacity: 0;
+    animation: wa-rise 13s linear infinite;
+}
+
+.wa-motes { opacity: clamp(0, calc((var(--p) - .3) / .4), 1); transition: opacity .3s linear; }
+
+.wa-mote:nth-child(1) { animation-delay: 0s;    animation-duration: 14s; }
+.wa-mote:nth-child(2) { animation-delay: -3.2s; animation-duration: 17s; }
+.wa-mote:nth-child(3) { animation-delay: -6.1s; animation-duration: 13s; }
+.wa-mote:nth-child(4) { animation-delay: -8.9s; animation-duration: 18s; }
+.wa-mote:nth-child(5) { animation-delay: -11.4s; animation-duration: 15s; }
+
+@keyframes wa-rise {
+    0%        { transform: translate3d(0, 40px, 0);   opacity: 0; }
+    12%       { opacity: .55; }
+    70%       { opacity: .35; }
+    100%      { transform: translate3d(18px, -190px, 0); opacity: 0; }
+}
+
+/* ── accessibility ───────────────────────────────────────────────────────
+   Reduced motion keeps the artwork — a room, fully drawn — and removes every
+   moving part rather than hiding the scene. */
+@media (prefers-reduced-motion: reduce) {
+    .wa-scene * {
+        animation: none !important;
+        transition: none !important;
+    }
+    .wa-line { stroke-dashoffset: 0; }
+}

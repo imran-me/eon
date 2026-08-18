@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bangladesh Tax ERP Implementation Roadmap — EPAL ERP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+  :root {
+    --green: #16a34a; --green-light: #dcfce7; --green-mid: #bbf7d0;
+    --blue: #1d4ed8; --blue-light: #dbeafe; --blue-mid: #bfdbfe;
+    --orange: #ea580c; --orange-light: #ffedd5;
+    --purple: #7c3aed; --purple-light: #ede9fe;
+    --red: #dc2626; --red-light: #fee2e2;
+    --gray: #374151; --gray-light: #f9fafb; --border: #e5e7eb;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f1f5f9;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── PDF/Print button ── */
+  .no-print { }
+  @media print {
+    .no-print { display: none !important; }
+    body { background: white; font-size: 11px; }
+    .page { box-shadow: none; margin: 0; border-radius: 0; }
+    .phase-card { break-inside: avoid; }
+  }
+
+  /* ── Layout ── */
+  .page {
+    max-width: 1100px;
+    margin: 32px auto;
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f4c2a 100%);
+    padding: 48px 48px 36px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; top: -60px; right: -60px;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute; bottom: -80px; left: 20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(22,163,74,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .flag-bar {
+    display: flex; gap: 4px; margin-bottom: 20px;
+  }
+  .flag-green { width: 40px; height: 6px; background: #16a34a; border-radius: 3px; }
+  .flag-red { width: 40px; height: 6px; background: #dc2626; border-radius: 3px; }
+  .header h1 {
+    font-size: 30px; font-weight: 900; color: white;
+    line-height: 1.2; margin-bottom: 10px; position: relative; z-index: 1;
+  }
+  .header h1 span { color: #4ade80; }
+  .header p {
+    color: #94a3b8; font-size: 14px; max-width: 600px; position: relative; z-index: 1;
+  }
+  .header-meta {
+    display: flex; gap: 24px; margin-top: 24px; flex-wrap: wrap;
+    position: relative; z-index: 1;
+  }
+  .meta-pill {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 50px;
+    padding: 6px 16px;
+    color: #e2e8f0;
+    font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .meta-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+
+  /* ── PDF Button ── */
+  .pdf-btn-wrap {
+    padding: 20px 48px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  }
+  .pdf-btn {
+    background: linear-gradient(135deg, #1d4ed8, #7c3aed);
+    color: white; border: none; border-radius: 12px;
+    padding: 12px 28px; font-size: 14px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(29,78,216,0.35);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .pdf-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(29,78,216,0.45); }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* ── Summary Grid ── */
+  .summary-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border-bottom: 1px solid var(--border);
+  }
+  .summary-card {
+    background: white; padding: 20px 24px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .summary-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #9ca3af; }
+  .summary-card .value { font-size: 26px; font-weight: 800; }
+  .summary-card .sub { font-size: 12px; color: #6b7280; }
+
+  /* ── Body ── */
+  .body { padding: 40px 48px; }
+
+  /* ── Section headers ── */
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 24px; margin-top: 40px;
+  }
+  .section-header:first-child { margin-top: 0; }
+  .section-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 18px; font-weight: 800; }
+  .section-header p { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+  /* ── Phase Cards ── */
+  .phase-card {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .phase-header {
+    padding: 18px 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+  }
+  .phase-header-left { display: flex; align-items: center; gap: 12px; }
+  .phase-num {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; color: white;
+    flex-shrink: 0;
+  }
+  .phase-title { font-size: 15px; font-weight: 700; }
+  .phase-subtitle { font-size: 12px; color: #6b7280; margin-top: 2px; }
+  .phase-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 50px;
+    white-space: nowrap;
+  }
+  .phase-body { padding: 0 24px 20px; }
+
+  /* ── Task rows ── */
+  .task-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px;
+  }
+  .task-item {
+    background: var(--gray-light);
+    border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .task-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0; margin-top: 1px;
+  }
+  .task-text .t-title { font-size: 12.5px; font-weight: 600; }
+  .task-text .t-desc { font-size: 11.5px; color: #6b7280; margin-top: 2px; line-height: 1.4; }
+  .task-text .t-file { font-size: 10.5px; color: #9ca3af; margin-top: 4px; font-family: monospace; }
+
+  /* ── Tax tables ── */
+  .tax-table {
+    width: 100%; border-collapse: collapse; margin-top: 14px; border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .tax-table th {
+    background: #f3f4f6; padding: 10px 14px;
+    text-align: left; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280;
+  }
+  .tax-table td {
+    padding: 10px 14px; border-top: 1px solid var(--border);
+    font-size: 12px; vertical-align: top;
+  }
+  .tax-table tr:hover td { background: #f9fafb; }
+  .mono { font-family: monospace; font-size: 11px; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+
+  /* ── Timeline ── */
+  .timeline { padding: 8px 0; }
+  .timeline-item {
+    display: flex; gap: 16px; padding: 12px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .timeline-item:last-child { border-bottom: none; }
+  .timeline-period {
+    min-width: 110px; font-size: 11.5px; font-weight: 700;
+    color: #374151;
+  }
+  .timeline-period span {
+    font-size: 10px; font-weight: 500; color: #9ca3af;
+    display: block; margin-top: 2px;
+  }
+  .timeline-content .tc-title { font-size: 12.5px; font-weight: 600; }
+  .timeline-content .tc-items { margin-top: 4px; }
+  .timeline-content .tc-items li {
+    font-size: 11.5px; color: #4b5563; list-style: none;
+    padding: 2px 0; display: flex; align-items: center; gap: 6px;
+  }
+  .timeline-content .tc-items li::before { content: '→'; color: #9ca3af; font-size: 10px; }
+
+  /* ── DB Schema boxes ── */
+  .schema-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .schema-box {
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+  }
+  .schema-box .sb-header {
+    padding: 8px 12px; font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .schema-box .sb-body { padding: 10px 12px; }
+  .schema-box .sb-field {
+    font-size: 11px; font-family: monospace; padding: 2px 0;
+    color: #374151; display: flex; justify-content: space-between;
+  }
+  .sb-field .field-type { color: #9ca3af; font-size: 10px; }
+  .sb-field .field-key { color: #ea580c; font-weight: 700; }
+
+  /* ── Alert boxes ── */
+  .alert-box {
+    border-radius: 10px; padding: 14px 16px; margin-top: 14px;
+    display: flex; gap: 10px; align-items: flex-start;
+    border-left: 4px solid;
+  }
+  .alert-box .a-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-box .a-title { font-size: 12.5px; font-weight: 700; margin-bottom: 3px; }
+  .alert-box .a-text { font-size: 11.5px; line-height: 1.5; }
+
+  /* ── Colors helper ── */
+  .c-green { color: var(--green); }
+  .c-blue { color: var(--blue); }
+  .c-orange { color: var(--orange); }
+  .c-purple { color: var(--purple); }
+  .c-red { color: var(--red); }
+
+  .bg-green { background: var(--green); }
+  .bg-blue { background: var(--blue); }
+  .bg-orange { background: var(--orange); }
+  .bg-purple { background: var(--purple); }
+  .bg-red { background: var(--red); }
+
+  .bgL-green { background: var(--green-light); }
+  .bgL-blue { background: var(--blue-light); }
+  .bgL-orange { background: var(--orange-light); }
+  .bgL-purple { background: var(--purple-light); }
+  .bgL-red { background: var(--red-light); }
+
+  /* ── Footer ── */
+  .footer {
+    background: #0f172a; color: #64748b;
+    padding: 24px 48px; font-size: 11.5px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .footer strong { color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ══ HEADER ══ -->
+  <div class="header">
+    <div class="flag-bar">
+      <div class="flag-green"></div>
+      <div class="flag-red"></div>
+      <div class="flag-green"></div>
+    </div>
+    <h1>Bangladesh Tax Compliance<br><span>ERP Implementation Roadmap</span></h1>
+    <p>NBR (National Board of Revenue) অনুযায়ী VAT, Income Tax, TDS, এবং Corporate Tax — EPAL ERP-এ সম্পূর্ণ integration-এর ধাপে ধাপে পরিকল্পনা।</p>
+    <div class="header-meta">
+      <div class="meta-pill"><div class="dot" style="background:#4ade80;"></div> Laravel 11 · PHP</div>
+      <div class="meta-pill"><div class="dot" style="background:#60a5fa;"></div> NBR VAT Act 2012</div>
+      <div class="meta-pill"><div class="dot" style="background:#f97316;"></div> Income Tax Act 2023</div>
+      <div class="meta-pill"><div class="dot" style="background:#c084fc;"></div> 6 Phases · ~9 Months</div>
+    </div>
+  </div>
+
+  <!-- ══ PDF BUTTON ══ -->
+  <div class="pdf-btn-wrap no-print">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#16a34a;"></div> Phase 1–2: Foundation &amp; VAT</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1d4ed8;"></div> Phase 3–4: Tax &amp; Payroll</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed;"></div> Phase 5–6: Reports &amp; NBR API</div>
+    </div>
+    <button class="pdf-btn" onclick="window.print()">
+      ⬇ PDF Download করুন
+    </button>
+  </div>
+
+  <!-- ══ SUMMARY ══ -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="label">Total Phases</div>
+      <div class="value" style="color:#1d4ed8;">6</div>
+      <div class="sub">Foundation → NBR API</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Timeline</div>
+      <div class="value" style="color:#16a34a;">9 মাস</div>
+      <div class="sub">Estimated completion</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Tax Modules</div>
+      <div class="value" style="color:#7c3aed;">4</div>
+      <div class="sub">VAT · Income · TDS · Payroll</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Mushak Forms</div>
+      <div class="value" style="color:#ea580c;">8+</div>
+      <div class="sub">6.3, 6.6, 9.1, 4.3 ইত্যাদি</div>
+    </div>
+  </div>
+
+  <!-- ══ BODY ══ -->
+  <div class="body">
+
+    <!-- ─ SECTION: BD TAX OVERVIEW ─ -->
+    <div class="section-header">
+      <div class="section-icon" style="background:#dcfce7; color:#16a34a;">🇧🇩</div>
+      <div>
+        <h2>বাংলাদেশের ট্যাক্স কাঠামো — ERP Integration Overview</h2>
+        <p>NBR-এর অধীনে যে ট্যাক্সগুলো ERP-এ implement করতে হবে</p>
+      </div>
+    </div>
+
+    <table class="tax-table">
+      <thead>
+        <tr>
+          <th>ট্যাক্সের ধরন</th>
+          <th>আইন / Authority</th>
+          <th>হার</th>
+          <th>Filing Frequency</th>
+          <th>EPAL ERP Module</th>
+          <th>Priority</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>VAT (মূল্য সংযোজন কর)</strong></td>
+          <td>VAT Act 2012<br><span style="color:#9ca3af;font-size:11px;">Effective 2019</span></td>
+          <td>15% standard<br>5%, 7.5%, 10% reduced</td>
+          <td>Monthly (মাসিক)</td>
+          <td>Sales, Purchase, Accounts</td>
+          <td><span class="badge" style="background:#fee2e2;color:#dc2626;">Critical</span></td>
+        </tr>
+        <tr>
+          <td><strong>TDS (উৎসে কর কর্তন)</strong></td>
+          <td>Income Tax Act 2023<br><span style="color:#9ca3af;font-size:11px;">Sec 87–121</span></td>
+          <td>0.5% – 15%<br>(লেনদেন ভেদে)</td>
+          <td>Monthly challan</td>
+          <td>Purchase, Vendor Payment</td>
+          <td><span class="badge" style="background:#fee2e2;color:#dc2626;">Critical</span></td>
+        </tr>
+        <tr>
+          <td><strong>Income Tax (আয়কর)</strong><br>Corporate</td>
+          <td>Income Tax Act 2023</td>
+          <td>Listed: 20%<br>Unlisted: 27.5%</td>
+          <td>Annual (বার্ষিক)</td>
+          <td>Finance, Reports</td>
+          <td><span class="badge" style="background:#ffedd5;color:#ea580c;">High</span></td>
+        </tr>
+        <tr>
+          <td><strong>Payroll Tax</strong><br>(Salary TDS)</td>
+          <td>ITA 2023, Sec 87</td>
+          <td>0% – 25%<br>(slab অনুযায়ী)</td>
+          <td>Monthly deduction</td>
+          <td>Payroll, HR</td>
+          <td><span class="badge" style="background:#ffedd5;color:#ea580c;">High</span></td>
+        </tr>
+        <tr>
+          <td><strong>VDS (VAT Deduction at Source)</strong></td>
+          <td>VAT Act 2012, Rule 40</td>
+          <td>15% of VAT amount</td>
+          <td>Monthly</td>
+          <td>Accounts, Banks</td>
+          <td><span class="badge" style="background:#dbeafe;color:#1d4ed8;">Medium</span></td>
+        </tr>
+        <tr>
+          <td><strong>AIT (Advance Income Tax)</strong><br>Import</td>
+          <td>ITA 2023, Sec 112</td>
+          <td>3% – 5%</td>
+          <td>At import time</td>
+          <td>Purchase</td>
+          <td><span class="badge" style="background:#dbeafe;color:#1d4ed8;">Medium</span></td>
+        </tr>
+        <tr>
+          <td><strong>SD (Supplementary Duty)</strong></td>
+          <td>VAT Act 2012</td>
+          <td>Varies by product</td>
+          <td>Monthly with VAT</td>
+          <td>Products, Sales</td>
+          <td><span class="badge" style="background:#f3f4f6;color:#6b7280;">Low</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ─ INDIVIDUAL SALARY SLAB ─ -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;">
+      <div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📊 Individual Tax Slab (FY 2024-25)</div>
+        <table class="tax-table">
+          <thead><tr><th>আয় সীমা (বার্ষিক)</th><th>হার</th></tr></thead>
+          <tbody>
+            <tr><td>প্রথম ৩,৫০,০০০ টাকা পর্যন্ত</td><td><strong>০%</strong></td></tr>
+            <tr><td>পরবর্তী ১,০০,০০০ টাকা</td><td><strong>৫%</strong></td></tr>
+            <tr><td>পরবর্তী ৩,০০,০০০ টাকা</td><td><strong>১০%</strong></td></tr>
+            <tr><td>পরবর্তী ৪,০০,০০০ টাকা</td><td><strong>১৫%</strong></td></tr>
+            <tr><td>পরবর্তী ৫,০০,০০০ টাকা</td><td><strong>২০%</strong></td></tr>
+            <tr><td>অবশিষ্ট সমুদয় আয়</td><td><strong>২৫%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">📋 Mushak Forms Quick Reference</div>
+        <table class="tax-table">
+          <thead><tr><th>Form</th><th>উদ্দেশ্য</th></tr></thead>
+          <tbody>
+            <tr><td><span class="mono">Mushak 6.3</span></td><td>VAT Invoice (বিক্রয় চালান)</td></tr>
+            <tr><td><span class="mono">Mushak 6.6</span></td><td>Credit/Debit Note</td></tr>
+            <tr><td><span class="mono">Mushak 6.7</span></td><td>Input Tax Credit Declaration</td></tr>
+            <tr><td><span class="mono">Mushak 9.1</span></td><td>Monthly VAT Return</td></tr>
+            <tr><td><span class="mono">Mushak 4.3</span></td><td>VAT Registration Certificate</td></tr>
+            <tr><td><span class="mono">Treasury Challan</span></td><td>TDS / VDS payment</td></tr>
+            <tr><td><span class="mono">IT-11GA</span></td><td>Company Annual Tax Return</td></tr>
+            <tr><td><span class="mono">IT-10B</span></td><td>Wealth Statement</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ PHASE 1 ═══ -->
+    <div class="section-header" style="margin-top:40px;">
+      <div class="section-icon" style="background:#dcfce7;color:#16a34a;">🏗</div>
+      <div>
+        <h2>Implementation Phases — ধাপে ধাপে বাস্তবায়ন</h2>
+        <p>৬টি phase-এ সম্পূর্ণ Bangladesh tax system EPAL ERP-এ যুক্ত করা হবে</p>
+      </div>
+    </div>
+
+    <!-- Phase 1 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:#dcfce7;border-bottom:1px solid #bbf7d0;">
+        <div class="phase-header-left">
+          <div class="phase-num bg-green">1</div>
+          <div>
+            <div class="phase-title c-green">Foundation — ভিত্তি স্থাপন</div>
+            <div class="phase-subtitle">Tax configuration, BIN, company setup, database schema</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge bgL-green c-green">Month 1</span>
+          <span class="badge" style="background:#f0fdf4;color:#15803d;">Prerequisites</span>
+        </div>
+      </div>
+      <div class="phase-body">
+
+        <div class="alert-box" style="background:#f0fdf4;border-color:#16a34a;">
+          <div class="a-icon">ℹ️</div>
+          <div>
+            <div class="a-title c-green">এই Phase-এ কী করবেন?</div>
+            <div class="a-text">Company tax information সংগ্রহ করুন। BIN (Business Identification Number), TIN, Trade License নম্বর company settings-এ যোগ করুন। Database migration তৈরি করুন।</div>
+          </div>
+        </div>
+
+        <div class="task-grid">
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🗄</div>
+            <div class="task-text">
+              <div class="t-title">Tax Settings Table</div>
+              <div class="t-desc">Company-level tax configuration: BIN, TIN, VAT registration date, tax year</div>
+              <div class="t-file">Migration: create_tax_settings_table</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🏢</div>
+            <div class="task-text">
+              <div class="t-title">Company Settings Update</div>
+              <div class="t-desc">Existing company-settings-এ BIN, TIN, trade license, circle office field যোগ</div>
+              <div class="t-file">company-settings.blade.php → Tax Info tab</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">📦</div>
+            <div class="task-text">
+              <div class="t-title">Product Tax Configuration</div>
+              <div class="t-desc">প্রতিটি product-এ VAT rate, SD rate, HS Code যোগ করুন</div>
+              <div class="t-file">products table migration → add vat_rate, sd_rate, hs_code</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">👥</div>
+            <div class="task-text">
+              <div class="t-title">Customer/Supplier BIN-TIN</div>
+              <div class="t-desc">Customers ও suppliers table-এ BIN, TIN, address (VAT invoice requirement)</div>
+              <div class="t-file">customers, suppliers table → add bin, tin columns</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">⚙️</div>
+            <div class="task-text">
+              <div class="t-title">TDS Rate Master Table</div>
+              <div class="t-desc">ITA 2023 অনুযায়ী সব TDS section codes এবং rates একটি master table-এ</div>
+              <div class="t-file">create_tds_rates_table (sec_code, description, rate)</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🔢</div>
+            <div class="task-text">
+              <div class="t-title">Tax Number Sequences</div>
+              <div class="t-desc">Mushak invoice number, challan number auto-generate করার sequence</div>
+              <div class="t-file">config/tax.php → number_prefix settings</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DB Schema -->
+        <div style="font-size:12.5px;font-weight:700;margin-top:18px;margin-bottom:8px;">🗂 Database Schema — Phase 1</div>
+        <div class="schema-grid">
+          <div class="schema-box">
+            <div class="sb-header" style="background:#dcfce7;color:#16a34a;">tax_settings</div>
+            <div class="sb-body">
+              <div class="sb-field"><span><span class="field-key">id</span></span><span class="field-type">bigint PK</span></div>
+              <div class="sb-field"><span>company_id</span><span class="field-type">FK</span></div>
+              <div class="sb-field"><span>bin_number</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>tin_number</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>vat_registration_date</span><span class="field-type">date</span></div>
+              <div class="sb-field"><span>tax_circle</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>tax_zone</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>mushak_prefix</span><span class="field-type">varchar</span></div>
+            </div>
+          </div>
+          <div class="schema-box">
+            <div class="sb-header" style="background:#dcfce7;color:#16a34a;">tds_rates</div>
+            <div class="sb-body">
+              <div class="sb-field"><span><span class="field-key">id</span></span><span class="field-type">bigint PK</span></div>
+              <div class="sb-field"><span>section_code</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>description</span><span class="field-type">text</span></div>
+              <div class="sb-field"><span>rate</span><span class="field-type">decimal(5,2)</span></div>
+              <div class="sb-field"><span>min_threshold</span><span class="field-type">decimal(15,2)</span></div>
+              <div class="sb-field"><span>is_active</span><span class="field-type">boolean</span></div>
+            </div>
+          </div>
+          <div class="schema-box">
+            <div class="sb-header" style="background:#dcfce7;color:#16a34a;">products (alter)</div>
+            <div class="sb-body">
+              <div class="sb-field"><span>vat_rate</span><span class="field-type">decimal(5,2)</span></div>
+              <div class="sb-field"><span>sd_rate</span><span class="field-type">decimal(5,2)</span></div>
+              <div class="sb-field"><span>hs_code</span><span class="field-type">varchar</span></div>
+              <div class="sb-field"><span>vat_exempt</span><span class="field-type">boolean</span></div>
+              <div class="sb-field"><span>vat_type</span><span class="field-type">enum</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:#dbeafe;border-bottom:1px solid #bfdbfe;">
+        <div class="phase-header-left">
+          <div class="phase-num bg-blue">2</div>
+          <div>
+            <div class="phase-title c-blue">VAT Module — মূল্য সংযোজন কর</div>
+            <div class="phase-subtitle">Mushak 6.3 invoice, Input Tax Credit, VAT calculation on sales &amp; purchase</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge bgL-blue c-blue">Month 2–3</span>
+          <span class="badge" style="background:#eff6ff;color:#1e40af;">VAT Act 2012</span>
+        </div>
+      </div>
+      <div class="phase-body">
+
+        <div style="font-size:12.5px;font-weight:700;margin-top:14px;margin-bottom:10px;">📐 VAT Calculation Logic</div>
+        <table class="tax-table">
+          <thead><tr><th>Transaction Type</th><th>VAT Calculation</th><th>Module</th><th>Implementation File</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Sales Invoice</strong></td>
+              <td>Selling Price × VAT Rate% = VAT Amount<br><span style="color:#9ca3af;font-size:11px;">Output Tax — Mushak 6.3 generate</span></td>
+              <td>Sales</td>
+              <td><span class="mono">SaleController.php</span></td>
+            </tr>
+            <tr>
+              <td><strong>Purchase Invoice</strong></td>
+              <td>Purchase Price × VAT Rate% = Input Tax<br><span style="color:#9ca3af;font-size:11px;">Claimable against Output Tax</span></td>
+              <td>Purchase</td>
+              <td><span class="mono">PurchaseController.php</span></td>
+            </tr>
+            <tr>
+              <td><strong>VAT Payable</strong></td>
+              <td>Output Tax − Input Tax = Net VAT<br><span style="color:#9ca3af;font-size:11px;">Mushak 9.1 monthly return</span></td>
+              <td>Accounts</td>
+              <td><span class="mono">VatReturnController.php</span></td>
+            </tr>
+            <tr>
+              <td><strong>VDS (Source Deduction)</strong></td>
+              <td>Payment to contractor × 15% = VDS<br><span style="color:#9ca3af;font-size:11px;">Govt deducts, vendor gets net</span></td>
+              <td>Vendor Payment</td>
+              <td><span class="mono">VendorPaymentController.php</span></td>
+            </tr>
+            <tr>
+              <td><strong>Reverse Charge</strong></td>
+              <td>Import of services — buyer pays VAT<br><span style="color:#9ca3af;font-size:11px;">Rule 18 VAT Act</span></td>
+              <td>Purchase</td>
+              <td><span class="mono">PurchaseController.php</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="task-grid" style="margin-top:14px;">
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">🧾</div>
+            <div class="task-text">
+              <div class="t-title">Mushak 6.3 Invoice Generator</div>
+              <div class="t-desc">Sales invoice-এ VAT auto-calculate করে Mushak 6.3 format-এ PDF print</div>
+              <div class="t-file">views/tax/mushak-6-3.blade.php → PDF</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">📥</div>
+            <div class="task-text">
+              <div class="t-title">Input Tax Credit (ITC) Register</div>
+              <div class="t-desc">Purchase-এর VAT track করুন, মাসে যোগ করে output থেকে বাদ দিন</div>
+              <div class="t-file">vat_input_credits table + VatService.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">📊</div>
+            <div class="task-text">
+              <div class="t-title">VAT Register (Sales &amp; Purchase)</div>
+              <div class="t-desc">মাসিক VAT register — output tax, input tax, net payable এক জায়গায়</div>
+              <div class="t-file">VatRegisterController.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">📋</div>
+            <div class="task-text">
+              <div class="t-title">Mushak 9.1 Return Generator</div>
+              <div class="t-desc">মাসিক VAT return automatically fill করুন — NBR portal-এ submit করার জন্য</div>
+              <div class="t-file">views/tax/mushak-9-1.blade.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">🏦</div>
+            <div class="task-text">
+              <div class="t-title">VAT Account Integration</div>
+              <div class="t-desc">Journal-এ Output VAT Payable ও Input VAT Receivable account automatic entry</div>
+              <div class="t-file">JournalService.php → postVatEntry()</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dbeafe;color:#1d4ed8;">🔄</div>
+            <div class="task-text">
+              <div class="t-title">Credit/Debit Note (Mushak 6.6)</div>
+              <div class="t-desc">Return ও price adjustment-এ Mushak 6.6 generate করুন</div>
+              <div class="t-file">views/tax/mushak-6-6.blade.php</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert-box" style="background:#eff6ff;border-color:#1d4ed8;margin-top:16px;">
+          <div class="a-icon">💡</div>
+          <div>
+            <div class="a-title c-blue">VAT-exempt products</div>
+            <div class="a-text">কিছু পণ্য/সেবা VAT-exempt (medicine, agricultural goods, basic food, educational materials)। Product table-এ <span class="mono">vat_exempt = true</span> set করলে invoice-এ VAT charge হবে না, তবে invoice-এ "VAT Exempted" উল্লেখ থাকবে।</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 3 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:#ffedd5;border-bottom:1px solid #fed7aa;">
+        <div class="phase-header-left">
+          <div class="phase-num bg-orange">3</div>
+          <div>
+            <div class="phase-title c-orange">TDS Module — উৎসে কর কর্তন</div>
+            <div class="phase-subtitle">Income Tax Act 2023 অনুযায়ী vendor payment, rent, service-এ TDS কর্তন</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge bgL-orange c-orange">Month 3–4</span>
+          <span class="badge" style="background:#fff7ed;color:#c2410c;">ITA 2023</span>
+        </div>
+      </div>
+      <div class="phase-body">
+
+        <div style="font-size:12.5px;font-weight:700;margin-top:14px;margin-bottom:10px;">📌 Key TDS Sections (ITA 2023)</div>
+        <table class="tax-table">
+          <thead><tr><th>Section</th><th>Nature of Payment</th><th>TDS Rate</th><th>Threshold</th><th>ERP Trigger</th></tr></thead>
+          <tbody>
+            <tr><td><span class="mono">Sec 87</span></td><td>Salary income</td><td>Slab rate</td><td>৩,৫০,০০০+ annual</td><td>Payslip generation</td></tr>
+            <tr><td><span class="mono">Sec 88</span></td><td>Supply of goods</td><td>3% – 7%</td><td>Any amount</td><td>Purchase order</td></tr>
+            <tr><td><span class="mono">Sec 89</span></td><td>Service provider</td><td>10%</td><td>৫০,০০০+</td><td>Expense payment</td></tr>
+            <tr><td><span class="mono">Sec 93</span></td><td>Rent</td><td>5%</td><td>Any amount</td><td>Expense (rent category)</td></tr>
+            <tr><td><span class="mono">Sec 94</span></td><td>Commission / brokerage</td><td>10%</td><td>Any amount</td><td>Agent commission</td></tr>
+            <tr><td><span class="mono">Sec 96</span></td><td>Contractor / sub-contractor</td><td>3%</td><td>১,০০,০০০+</td><td>Purchase</td></tr>
+            <tr><td><span class="mono">Sec 113</span></td><td>Import</td><td>5%</td><td>At import</td><td>Purchase (import)</td></tr>
+          </tbody>
+        </table>
+
+        <div class="task-grid" style="margin-top:14px;">
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">⚡</div>
+            <div class="task-text">
+              <div class="t-title">TDS Auto-Calculate</div>
+              <div class="t-desc">Purchase/expense entry-তে vendor type ও amount দেখে TDS auto-suggest করুন</div>
+              <div class="t-file">TdsCalculatorService.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">📄</div>
+            <div class="task-text">
+              <div class="t-title">TDS Certificate</div>
+              <div class="t-desc">Vendor-কে দেওয়ার জন্য TDS deduction certificate generate করুন</div>
+              <div class="t-file">views/tax/tds-certificate.blade.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">🏦</div>
+            <div class="task-text">
+              <div class="t-title">Treasury Challan</div>
+              <div class="t-desc">মাসিক TDS amount Government treasury-তে জমা দেওয়ার challan</div>
+              <div class="t-file">views/tax/treasury-challan.blade.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">📊</div>
+            <div class="task-text">
+              <div class="t-title">TDS Register</div>
+              <div class="t-desc">মাসিক/বার্ষিক TDS register — কোন vendor-কে কত TDS করা হয়েছে</div>
+              <div class="t-file">TdsRegisterController.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">🔗</div>
+            <div class="task-text">
+              <div class="t-title">Vendor TIN Linking</div>
+              <div class="t-desc">Supplier-এর TIN না থাকলে higher rate TDS (ITA 2023 rule)</div>
+              <div class="t-file">SupplierController.php → TIN validation</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ffedd5;color:#ea580c;">💳</div>
+            <div class="task-text">
+              <div class="t-title">Journal Entry for TDS</div>
+              <div class="t-desc">TDS deduction-এ Dr: Expense, Cr: Vendor, Cr: TDS Payable — auto journal</div>
+              <div class="t-file">JournalService.php → postTdsEntry()</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 4 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:#ede9fe;border-bottom:1px solid #ddd6fe;">
+        <div class="phase-header-left">
+          <div class="phase-num bg-purple">4</div>
+          <div>
+            <div class="phase-title c-purple">Payroll Tax — বেতনের উপর আয়কর</div>
+            <div class="phase-subtitle">Employee salary থেকে monthly TDS deduction, annual tax calculation</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge bgL-purple c-purple">Month 5–6</span>
+          <span class="badge" style="background:#f5f3ff;color:#6d28d9;">HR + Payroll</span>
+        </div>
+      </div>
+      <div class="phase-body">
+
+        <div style="font-size:12.5px;font-weight:700;margin-top:14px;margin-bottom:10px;">🧮 Salary Tax Calculation Flow</div>
+        <div style="background:#f5f3ff;border-radius:12px;padding:16px;margin-bottom:14px;border:1px solid #ddd6fe;">
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px;">
+            <div style="background:white;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;text-align:center;">
+              <div style="font-weight:700;color:#7c3aed;">Gross Salary</div>
+              <div style="color:#9ca3af;font-size:11px;">Basic + Allowances</div>
+            </div>
+            <div style="color:#9ca3af;">→</div>
+            <div style="background:white;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;text-align:center;">
+              <div style="font-weight:700;color:#7c3aed;">Less: Exemptions</div>
+              <div style="color:#9ca3af;font-size:11px;">HRA, Medical, Conveyance</div>
+            </div>
+            <div style="color:#9ca3af;">→</div>
+            <div style="background:white;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;text-align:center;">
+              <div style="font-weight:700;color:#7c3aed;">Taxable Income</div>
+              <div style="color:#9ca3af;font-size:11px;">Annual figure</div>
+            </div>
+            <div style="color:#9ca3af;">→</div>
+            <div style="background:white;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;text-align:center;">
+              <div style="font-weight:700;color:#7c3aed;">Apply Slab</div>
+              <div style="color:#9ca3af;font-size:11px;">0% – 25%</div>
+            </div>
+            <div style="color:#9ca3af;">→</div>
+            <div style="background:white;border:1px solid #ddd6fe;border-radius:8px;padding:8px 12px;text-align:center;">
+              <div style="font-weight:700;color:#7c3aed;">Annual Tax</div>
+              <div style="color:#9ca3af;font-size:11px;">÷ 12 = Monthly TDS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="task-grid">
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">💰</div>
+            <div class="task-text">
+              <div class="t-title">Salary Tax Slab Engine</div>
+              <div class="t-desc">Annual income apply করে correct slab-এ tax calculate করার service class</div>
+              <div class="t-file">SalaryTaxService.php → calculate(employee)</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">🎁</div>
+            <div class="task-text">
+              <div class="t-title">Tax Exemption Management</div>
+              <div class="t-desc">HRA 50% exempt, Medical allowance ৫০,০০০ পর্যন্ত, Conveyance ৩০,০০০ পর্যন্ত</div>
+              <div class="t-file">employee_tax_exemptions table</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">📑</div>
+            <div class="task-text">
+              <div class="t-title">Payslip Tax Deduction</div>
+              <div class="t-desc">Monthly payslip-এ Income Tax Deducted line item যোগ করুন</div>
+              <div class="t-file">payslips.blade.php → add tax_deducted row</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">📝</div>
+            <div class="task-text">
+              <div class="t-title">Tax Projection Report</div>
+              <div class="t-desc">বছরের শুরুতে employee-কে projected tax দেখান, মাসে কত দিতে হবে</div>
+              <div class="t-file">EmployeeTaxProjectionController.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">🏆</div>
+            <div class="task-text">
+              <div class="t-title">Investment Rebate</div>
+              <div class="t-desc">Life insurance, provident fund, DPS investment-এ tax rebate (15% up to ৩৩,০০০)</div>
+              <div class="t-file">employee_investments table + RebateService.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#ede9fe;color:#7c3aed;">📋</div>
+            <div class="task-text">
+              <div class="t-title">Annual Tax Statement (IT-10B)</div>
+              <div class="t-desc">বছর শেষে প্রতিটি employee-এর জন্য salary certificate ও tax statement</div>
+              <div class="t-file">views/tax/salary-certificate.blade.php</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 5 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:#fee2e2;border-bottom:1px solid #fecaca;">
+        <div class="phase-header-left">
+          <div class="phase-num bg-red">5</div>
+          <div>
+            <div class="phase-title c-red">Tax Reports — প্রতিবেদন ও রিটার্ন</div>
+            <div class="phase-subtitle">NBR-এ জমা দেওয়ার জন্য সকল statutory reports ও returns generate করুন</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge bgL-red c-red">Month 6–7</span>
+          <span class="badge" style="background:#fff1f2;color:#be123c;">Reporting</span>
+        </div>
+      </div>
+      <div class="phase-body">
+        <div class="task-grid" style="margin-top:14px;">
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">📊</div>
+            <div class="task-text">
+              <div class="t-title">Mushak 9.1 — Monthly VAT Return</div>
+              <div class="t-desc">মাসিক Output/Input tax summary, net payable — NBR format-এ printable</div>
+              <div class="t-file">VatReturnController → mushak91(month, year)</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">🏛</div>
+            <div class="task-text">
+              <div class="t-title">Corporate Tax Return (IT-11GA)</div>
+              <div class="t-desc">বার্ষিক corporate income tax return — P&L ও balance sheet থেকে auto-fill</div>
+              <div class="t-file">CorporateTaxController → annualReturn(year)</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">📋</div>
+            <div class="task-text">
+              <div class="t-title">TDS Annual Statement</div>
+              <div class="t-desc">কোন vendor / employee কে কত TDS করা হয়েছে — বার্ষিক statement</div>
+              <div class="t-file">TdsAnnualStatementController.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">💵</div>
+            <div class="task-text">
+              <div class="t-title">VAT Payable Summary</div>
+              <div class="t-desc">Month-wise VAT collected vs paid — চালান ও treasury payment track</div>
+              <div class="t-file">Report → vat-payable-summary blade</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">📈</div>
+            <div class="task-text">
+              <div class="t-title">Tax Audit Trail</div>
+              <div class="t-desc">প্রতিটি tax transaction-এর log — NBR audit-এর জন্য সম্পূর্ণ trail</div>
+              <div class="t-file">tax_audit_logs table + middleware</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#fee2e2;color:#dc2626;">🔔</div>
+            <div class="task-text">
+              <div class="t-title">Tax Due Date Reminders</div>
+              <div class="t-desc">VAT return (মাসের ১৫ তারিখ), TDS challan deadline automatic reminder</div>
+              <div class="t-file">TaxReminderCommand.php (Laravel Scheduler)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Report sidebar integration note -->
+        <div class="alert-box" style="background:#fff1f2;border-color:#dc2626;margin-top:14px;">
+          <div class="a-icon">🔗</div>
+          <div>
+            <div class="a-title c-red">Existing Report Module-এ যোগ করুন</div>
+            <div class="a-text">বর্তমান sidebar-এর <strong>Report</strong> section-এ নতুন entries যোগ করুন: "VAT Return", "TDS Register", "Tax Summary"। sidebar.blade.php-এর <span class="mono">reportMenu</span> div-এ এই links যোগ করুন।</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 6 -->
+    <div class="phase-card">
+      <div class="phase-header" style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-bottom:1px solid #334155;">
+        <div class="phase-header-left">
+          <div class="phase-num" style="background:linear-gradient(135deg,#4ade80,#22c55e);">6</div>
+          <div>
+            <div class="phase-title" style="color:white;">NBR iBAS++ Integration — ডিজিটাল সংযোগ</div>
+            <div class="phase-subtitle" style="color:#94a3b8;">NBR online portal ও iBAS++ system-এর সাথে API integration (future)</div>
+          </div>
+        </div>
+        <div class="phase-badges">
+          <span class="badge" style="background:rgba(74,222,128,0.2);color:#4ade80;">Month 8–9</span>
+          <span class="badge" style="background:rgba(255,255,255,0.1);color:#94a3b8;">API / Advanced</span>
+        </div>
+      </div>
+      <div class="phase-body" style="background:#f8fafc;">
+        <div class="task-grid" style="margin-top:14px;">
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🌐</div>
+            <div class="task-text">
+              <div class="t-title">NBR VAT Online Portal Integration</div>
+              <div class="t-desc">Mushak 9.1 data NBR online portal-এ directly submit (XML/JSON format)</div>
+              <div class="t-file">NbrApiService.php → submitVatReturn()</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🔐</div>
+            <div class="task-text">
+              <div class="t-title">BIN Verification API</div>
+              <div class="t-desc">Vendor/customer BIN number NBR থেকে real-time verify করুন</div>
+              <div class="t-file">NbrApiService.php → verifyBin(bin_number)</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">📡</div>
+            <div class="task-text">
+              <div class="t-title">e-TDS Filing</div>
+              <div class="t-desc">Income Tax portal-এ TDS statement electronically submit</div>
+              <div class="t-file">IncomeTaxPortalService.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🖨</div>
+            <div class="task-text">
+              <div class="t-title">e-Challan Generation</div>
+              <div class="t-desc">Sonali Bank / iBAS++ challan — online payment reference generate</div>
+              <div class="t-file">eChallanService.php</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">📱</div>
+            <div class="task-text">
+              <div class="t-title">QR Code on Invoices</div>
+              <div class="t-desc">Mushak 6.3 invoice-এ NBR verification QR code — digital authentication</div>
+              <div class="t-file">QrCodeService.php → generateForInvoice()</div>
+            </div>
+          </div>
+          <div class="task-item">
+            <div class="task-icon" style="background:#dcfce7;color:#16a34a;">🤖</div>
+            <div class="task-text">
+              <div class="t-title">Tax AI Assistant</div>
+              <div class="t-desc">Transaction দেখে AI-suggest করবে কোন TDS section apply হবে</div>
+              <div class="t-file">TaxSuggestionService.php (ML/rules-based)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ IMPLEMENTATION TIMELINE ─ -->
+    <div class="section-header">
+      <div class="section-icon" style="background:#dbeafe;color:#1d4ed8;">📅</div>
+      <div>
+        <h2>Implementation Timeline — বাস্তবায়নের সময়সীমা</h2>
+        <p>Month-by-month কাজের ধারাবাহিকতা</p>
+      </div>
+    </div>
+
+    <div class="timeline">
+      <div class="timeline-item">
+        <div class="timeline-period">Month 1<span>Foundation</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#16a34a;">Phase 1 — Database ও Configuration</div>
+          <ul class="tc-items">
+            <li>tax_settings, tds_rates table migration তৈরি</li>
+            <li>company settings-এ BIN/TIN fields যোগ</li>
+            <li>Products-এ VAT rate, HS code column add</li>
+            <li>Customers/Suppliers-এ BIN/TIN field</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-period">Month 2–3<span>VAT Core</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#1d4ed8;">Phase 2 — VAT Module</div>
+          <ul class="tc-items">
+            <li>Sales invoice-এ VAT auto-calculate</li>
+            <li>Mushak 6.3 PDF template তৈরি</li>
+            <li>Input Tax Credit register</li>
+            <li>Purchase-এ VAT tracking</li>
+            <li>Journal entries auto-post for VAT</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-period">Month 3–4<span>TDS</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#ea580c;">Phase 3 — TDS Module</div>
+          <ul class="tc-items">
+            <li>TDS section master table populate (Sec 87-121)</li>
+            <li>Purchase/expense-এ TDS auto-suggest</li>
+            <li>TDS certificate template</li>
+            <li>Treasury challan generate</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-period">Month 5–6<span>Payroll Tax</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#7c3aed;">Phase 4 — Payroll Tax</div>
+          <ul class="tc-items">
+            <li>SalaryTaxService — slab calculation engine</li>
+            <li>Employee tax exemption management</li>
+            <li>Payslip-এ TDS row যোগ</li>
+            <li>Annual projection report</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-period">Month 6–7<span>Reports</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#dc2626;">Phase 5 — Tax Reports</div>
+          <ul class="tc-items">
+            <li>Mushak 9.1 monthly return generate</li>
+            <li>TDS annual statement</li>
+            <li>Corporate tax summary</li>
+            <li>Sidebar Report section-এ tax reports যোগ</li>
+          </ul>
+        </div>
+      </div>
+      <div class="timeline-item">
+        <div class="timeline-period">Month 8–9<span>NBR API</span></div>
+        <div class="timeline-content">
+          <div class="tc-title" style="color:#0f172a;">Phase 6 — Digital Integration</div>
+          <ul class="tc-items">
+            <li>NBR portal API integration</li>
+            <li>BIN verification service</li>
+            <li>e-Challan generation</li>
+            <li>QR code on Mushak invoices</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─ QUICK WINS ─ -->
+    <div class="section-header">
+      <div class="section-icon" style="background:#dcfce7;color:#16a34a;">⚡</div>
+      <div>
+        <h2>Quick Wins — আজই শুরু করুন</h2>
+        <p>Phase 1 শুরুর আগে এই ৫টি কাজ এখনই করা যাবে</p>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">1️⃣</div>
+        <div style="font-size:12px;font-weight:700;color:#15803d;">Company Settings-এ BIN/TIN Field যোগ করুন</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">30 মিনিটের কাজ</div>
+      </div>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">2️⃣</div>
+        <div style="font-size:12px;font-weight:700;color:#1e40af;">Product-এ VAT Rate Column Add করুন</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">1 ঘণ্টার কাজ</div>
+      </div>
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">3️⃣</div>
+        <div style="font-size:12px;font-weight:700;color:#c2410c;">Mushak 6.3 Invoice Template Design করুন</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">2 ঘণ্টার কাজ</div>
+      </div>
+      <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">4️⃣</div>
+        <div style="font-size:12px;font-weight:700;color:#6d28d9;">TDS Rate Master Table Seed করুন</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">1 ঘণ্টার কাজ</div>
+      </div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:24px;margin-bottom:8px;">5️⃣</div>
+        <div style="font-size:12px;font-weight:700;color:#b91c1c;">Tax Menu Sidebar-এ যোগ করুন</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:4px;">30 মিনিটের কাজ</div>
+      </div>
+    </div>
+
+    <!-- ─ KEY NOTES ─ -->
+    <div class="section-header">
+      <div class="section-icon" style="background:#ffedd5;color:#ea580c;">⚠️</div>
+      <div>
+        <h2>গুরুত্বপূর্ণ বিষয় — Key Considerations</h2>
+        <p>Implementation-এর সময় যেসব বিষয় মাথায় রাখতে হবে</p>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="alert-box" style="background:#fff7ed;border-color:#ea580c;margin-top:0;">
+        <div class="a-icon">📅</div>
+        <div>
+          <div class="a-title" style="color:#ea580c;">Tax Year বাংলাদেশে</div>
+          <div class="a-text">Bangladesh-এ income tax year হলো July 1 – June 30। কিন্তু VAT return calendar month অনুযায়ী (১ম – শেষ তারিখ)। System-এ দুটো period আলাদাভাবে handle করুন।</div>
+        </div>
+      </div>
+      <div class="alert-box" style="background:#fef2f2;border-color:#dc2626;margin-top:0;">
+        <div class="a-icon">⏰</div>
+        <div>
+          <div class="a-title" style="color:#dc2626;">Filing Deadlines</div>
+          <div class="a-text">VAT Return: প্রতি মাসের ১৫ তারিখের মধ্যে। TDS Challan: মাসের ২০ তারিখের মধ্যে। Corporate Tax Return: ৩১ জানুয়ারির মধ্যে। Reminder system অবশ্যই থাকতে হবে।</div>
+        </div>
+      </div>
+      <div class="alert-box" style="background:#eff6ff;border-color:#1d4ed8;margin-top:0;">
+        <div class="a-icon">🔢</div>
+        <div>
+          <div class="a-title" style="color:#1d4ed8;">Multiple VAT Rates</div>
+          <div class="a-text">Standard 15% ছাড়াও truncated VAT rates আছে — 5% (restaurant), 7.5% (AC service), 10% (hotel)। Product category অনুযায়ী সঠিক rate apply করুন।</div>
+        </div>
+      </div>
+      <div class="alert-box" style="background:#f5f3ff;border-color:#7c3aed;margin-top:0;">
+        <div class="a-icon">📊</div>
+        <div>
+          <div class="a-title" style="color:#7c3aed;">Existing Chart of Accounts</div>
+          <div class="a-text">বর্তমান Accounts module-এ নতুন accounts যোগ করুন: "Output VAT Payable", "Input VAT Receivable", "TDS Payable", "Advance Income Tax"। এগুলো liability accounts।</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- ══ FOOTER ══ -->
+  <div class="footer">
+    <div>
+      Generated for <strong>EPAL ERP</strong> · Bangladesh Tax Compliance Roadmap<br>
+      <span style="font-size:10px;">NBR VAT Act 2012 · Income Tax Act 2023 · FY 2024-25 rates</span>
+    </div>
+    <div style="text-align:right;">
+      <strong>EPAL IT Solutions</strong><br>
+      <span style="font-size:10px;">epalitsolutions.eng@gmail.com</span>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+</body>
+</html>

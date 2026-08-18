@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bangladesh Tax Module — Business Proposal</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1f2937;font-size:13px;}
+@media print{
+  .no-print{display:none!important;}
+  body{background:white;}
+  .page{box-shadow:none;margin:0;border-radius:0;max-width:100%;}
+  .phase-row{break-inside:avoid;}
+}
+
+.page{max-width:860px;margin:28px auto;background:white;border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.12);overflow:hidden;}
+
+/* Cover */
+.cover{background:linear-gradient(150deg,#0f172a 0%,#1e3a5f 60%,#0a3d1f 100%);padding:44px 48px 36px;position:relative;overflow:hidden;}
+.cover::after{content:'';position:absolute;right:-40px;top:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(74,222,128,0.12),transparent 70%);}
+.cover-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;}
+.cover-badge{background:rgba(74,222,128,0.15);border:1px solid rgba(74,222,128,0.3);border-radius:50px;padding:5px 14px;font-size:11px;font-weight:600;color:#4ade80;letter-spacing:0.5px;}
+.cover-date{font-size:11px;color:#64748b;}
+.cover h1{font-size:26px;font-weight:900;color:white;line-height:1.2;margin-bottom:8px;}
+.cover h1 em{color:#4ade80;font-style:normal;}
+.cover p{color:#94a3b8;font-size:13px;max-width:500px;line-height:1.6;}
+.cover-meta{display:flex;gap:12px;margin-top:22px;flex-wrap:wrap;}
+.cm{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:8px 14px;}
+.cm .cv{font-size:18px;font-weight:800;color:white;}
+.cm .cl{font-size:10px;color:#94a3b8;margin-top:2px;}
+
+/* PDF btn */
+.pdfbar{padding:14px 48px;background:#f8fafc;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center;}
+.pdf-btn{background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:white;border:none;border-radius:10px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;}
+.pdf-btn:hover{opacity:0.9;}
+
+/* Body */
+.body{padding:36px 48px 40px;}
+
+/* Executive Summary */
+.exec-box{background:linear-gradient(135deg,#f0fdf4,#eff6ff);border:1px solid #bbf7d0;border-radius:12px;padding:20px 24px;margin-bottom:28px;}
+.exec-box h3{font-size:13px;font-weight:700;color:#15803d;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.exec-box p{font-size:12.5px;color:#374151;line-height:1.7;}
+
+/* Section title */
+.sec-title{font-size:15px;font-weight:800;color:#111827;margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid #f3f4f6;display:flex;align-items:center;gap:8px;}
+.sec-title span{font-size:16px;}
+
+/* Problem table */
+.ptable{width:100%;border-collapse:collapse;margin-bottom:24px;}
+.ptable th{background:#f9fafb;padding:9px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#9ca3af;border:1px solid #f3f4f6;}
+.ptable td{padding:10px 14px;border:1px solid #f3f4f6;font-size:12px;vertical-align:top;}
+.ptable tr:hover td{background:#fafafa;}
+.pill{display:inline-block;padding:2px 8px;border-radius:50px;font-size:10.5px;font-weight:700;}
+.pill-red{background:#fee2e2;color:#dc2626;}
+.pill-orange{background:#ffedd5;color:#ea580c;}
+.pill-blue{background:#dbeafe;color:#1d4ed8;}
+.pill-gray{background:#f3f4f6;color:#6b7280;}
+
+/* Phase summary */
+.phases{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+.phase-row{display:grid;grid-template-columns:28px 120px 1fr 80px;gap:12px;align-items:center;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:12px 16px;}
+.ph-num{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0;}
+.ph-period{font-size:11px;font-weight:700;color:#374151;}
+.ph-period small{display:block;color:#9ca3af;font-weight:400;margin-top:1px;}
+.ph-title{font-size:12.5px;font-weight:700;color:#111827;}
+.ph-items{font-size:11px;color:#6b7280;margin-top:3px;line-height:1.5;}
+.ph-time{font-size:11px;font-weight:600;text-align:right;}
+
+/* Benefit cards */
+.benefit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+.bcard{border-radius:10px;padding:14px;border:1px solid;}
+.bcard .bicon{font-size:20px;margin-bottom:8px;}
+.bcard .btitle{font-size:12px;font-weight:700;margin-bottom:4px;}
+.bcard .bdesc{font-size:11px;line-height:1.5;}
+
+/* Budget table */
+.budget-table{width:100%;border-collapse:collapse;margin-bottom:24px;}
+.budget-table th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;background:#f9fafb;border-bottom:2px solid #e5e7eb;}
+.budget-table td{padding:10px 14px;border-bottom:1px solid #f3f4f6;font-size:12px;}
+.budget-table tfoot td{font-weight:700;background:#f0fdf4;color:#15803d;border-top:2px solid #bbf7d0;}
+
+/* CTA */
+.cta{background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:12px;padding:24px 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;}
+.cta h3{color:white;font-size:15px;font-weight:700;margin-bottom:4px;}
+.cta p{color:#94a3b8;font-size:12px;}
+.cta-btn{background:linear-gradient(135deg,#16a34a,#15803d);color:white;border:none;border-radius:10px;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+
+/* Footer */
+.footer{background:#f8fafc;border-top:1px solid #e5e7eb;padding:16px 48px;display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#9ca3af;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Cover -->
+  <div class="cover">
+    <div class="cover-top">
+      <span class="cover-badge">📋 Business Proposal</span>
+      <span class="cover-date">April 2026</span>
+    </div>
+    <h1>Bangladesh Tax Compliance<br><em>ERP Module</em> — Proposal</h1>
+    <p>EPAL ERP-এ NBR-approved VAT, TDS ও Income Tax module যোগ করার প্রস্তাব — আইনি compliance নিশ্চিত করতে এবং ম্যানুয়াল কাজ কমাতে।</p>
+  </div>
+
+  <!-- PDF Bar -->
+  <div class="pdfbar no-print">
+    <span style="font-size:12px;color:#6b7280;">Boss-কে present করার জন্য PDF করুন</span>
+    <button class="pdf-btn" onclick="window.print()">⬇ PDF Save করুন</button>
+  </div>
+
+  <div class="body">
+
+    <!-- Executive Summary -->
+    <div class="exec-box">
+      <h3>📌 Executive Summary</h3>
+      <p>বর্তমানে EPAL ERP-এ VAT calculation, TDS deduction এবং income tax সব manually করতে হচ্ছে, যা সময়সাপেক্ষ এবং human error-প্রবণ। প্রস্তাবিত <strong>Bangladesh Tax Module</strong> সম্পূর্ণ NBR আইন অনুযায়ী — VAT Act 2012 ও Income Tax Act 2023 মেনে — ERP-এর মধ্যেই Mushak invoice, TDS certificate, VAT return এবং payroll tax automatically handle করবে। এতে compliance risk কমবে, manual কাজ প্রায় ৮০% কমবে এবং NBR audit-এ সম্পূর্ণ documentation থাকবে।</p>
+    </div>
+
+    <!-- Problem Statement -->
+    <div class="sec-title"><span>⚠️</span> বর্তমান সমস্যা (Why We Need This)</div>
+    <table class="ptable">
+      <thead><tr><th>সমস্যা</th><th>বর্তমান পরিস্থিতি</th><th>ঝুঁকি</th><th>Priority</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>VAT Manual Calculation</strong></td>
+          <td>প্রতিটি invoice-এ হাতে VAT হিসাব, Mushak 6.3 manually তৈরি</td>
+          <td>ভুল হিসাব, NBR penalty</td>
+          <td><span class="pill pill-red">Critical</span></td>
+        </tr>
+        <tr>
+          <td><strong>TDS Track নেই</strong></td>
+          <td>Vendor payment-এ TDS কাটা হচ্ছে কিনা কোনো record নেই</td>
+          <td>Income Tax আইন লঙ্ঘন</td>
+          <td><span class="pill pill-red">Critical</span></td>
+        </tr>
+        <tr>
+          <td><strong>VAT Return Filing</strong></td>
+          <td>মাসিক Mushak 9.1 manually Excel-এ তৈরি</td>
+          <td>Late filing, ৫,০০০+ টাকা penalty/মাস</td>
+          <td><span class="pill pill-orange">High</span></td>
+        </tr>
+        <tr>
+          <td><strong>Audit Trail নেই</strong></td>
+          <td>NBR audit হলে document একত্রিত করা কঠিন</td>
+          <td>Compliance failure</td>
+          <td><span class="pill pill-blue">Medium</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Proposed Solution -->
+    <div class="sec-title"><span>✅</span> প্রস্তাবিত সমাধান — 5-Phase Implementation</div>
+    <div class="phases">
+      <div class="phase-row">
+        <div class="ph-num" style="background:#16a34a;">1</div>
+        <div class="ph-period"><small>Foundation</small></div>
+        <div>
+          <div class="ph-title">Database ও Tax Configuration Setup</div>
+          <div class="ph-items">Company BIN/TIN, Product VAT rate, TDS rate master, tax settings table</div>
+        </div>
+      </div>
+      <div class="phase-row">
+        <div class="ph-num" style="background:#1d4ed8;">2</div>
+        <div class="ph-period"><small>VAT Core</small></div>
+        <div>
+          <div class="ph-title">VAT Module — Mushak 6.3 Invoice, ITC, Monthly Return</div>
+          <div class="ph-items">Auto VAT calculation, Input Tax Credit register, Mushak 9.1 generate, journal auto-entry</div>
+        </div>
+      </div>
+      <div class="phase-row">
+        <div class="ph-num" style="background:#ea580c;">3</div>
+        <div class="ph-period"><small>TDS</small></div>
+        <div>
+          <div class="ph-title">TDS Module — Vendor Payment, Service, Rent</div>
+          <div class="ph-items">ITA 2023 Sec 87–121 rates, TDS certificate, treasury challan, TDS register</div>
+        </div>
+      </div>
+      <div class="phase-row">
+        <div class="ph-num" style="background:#dc2626;">4</div>
+        <div class="ph-period"><small>Reports</small></div>
+        <div>
+          <div class="ph-title">Tax Reports — VAT Return, TDS Statement, Corporate Tax</div>
+          <div class="ph-items">Mushak 9.1 auto-fill, TDS annual statement, corporate tax summary, due date reminders</div>
+        </div>
+      </div>
+      <div class="phase-row">
+        <div class="ph-num" style="background:#0f172a;">5</div>
+        <div class="ph-period"><small>NBR API</small></div>
+        <div>
+          <div class="ph-title">NBR Digital Integration — e-Filing, BIN Verify, QR Code</div>
+          <div class="ph-items">NBR portal API, BIN verification, e-challan, QR code on Mushak invoice</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Benefits -->
+    <div class="sec-title"><span>🎯</span> প্রস্তাবিত সুবিধা (Expected Benefits)</div>
+    <div class="benefit-grid">
+      <div class="bcard" style="background:#f0fdf4;border-color:#bbf7d0;">
+        <div class="bicon">⚡</div>
+        <div class="btitle" style="color:#15803d;">৮০% সময় সাশ্রয়</div>
+        <div class="bdesc" style="color:#374151;">Manual VAT calculation ও Mushak form তৈরির সময় প্রায় শূন্যে নামবে</div>
+      </div>
+      <div class="bcard" style="background:#eff6ff;border-color:#bfdbfe;">
+        <div class="bicon">🛡</div>
+        <div class="btitle" style="color:#1e40af;">Zero Penalty Risk</div>
+        <div class="bdesc" style="color:#374151;">Deadline reminder ও auto-calculation-এ late filing penalty এড়ানো সম্ভব</div>
+      </div>
+      <div class="bcard" style="background:#fff7ed;border-color:#fed7aa;">
+        <div class="bicon">📋</div>
+        <div class="btitle" style="color:#c2410c;">NBR Audit-Ready</div>
+        <div class="bdesc" style="color:#374151;">সব tax transaction-এর complete audit trail সবসময় available থাকবে</div>
+      </div>
+      <div class="bcard" style="background:#f5f3ff;border-color:#ddd6fe;">
+        <div class="bicon">🎯</div>
+        <div class="btitle" style="color:#6d28d9;">Accurate Calculations</div>
+        <div class="bdesc" style="color:#374151;">Human error শূন্য — system নিজেই সঠিক rate apply করবে</div>
+      </div>
+      <div class="bcard" style="background:#fef2f2;border-color:#fecaca;">
+        <div class="bicon">📊</div>
+        <div class="btitle" style="color:#b91c1c;">Real-time Tax Dashboard</div>
+        <div class="bdesc" style="color:#374151;">মাসে কত VAT, TDS, income tax দিতে হবে — একনজরে দেখা যাবে</div>
+      </div>
+      <div class="bcard" style="background:#f0fdf4;border-color:#bbf7d0;">
+        <div class="bicon">🚀</div>
+        <div class="btitle" style="color:#15803d;">Scalable Architecture</div>
+        <div class="bdesc" style="color:#374151;">নতুন tax rules NBR update করলে সহজে system-এ update করা যাবে</div>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <div>
+        <h3>✅ Approval ও Next Steps</h3>
+        <p> শুরু করতে approval দিন — 1 সপ্তাহেই প্রথম deliverable দেখা যাবে।</p>
+      </div>
+      <button class="cta-btn no-print" onclick="window.print()">📄 PDF Export করুন</button>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <span>EPAL ERP · Bangladesh Tax Module Proposal · April 2026</span>
+    <span>Prepared by: EPAL IT Solutions · epalitsolutions.eng@gmail.com</span>
+  </div>
+
+</div>
+</body>
+</html>

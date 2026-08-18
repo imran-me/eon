@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Employee Request & Requirement System — Roadmap</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 0.95rem;
+      margin-bottom: 40px;
+    }
+
+    /* ─── TYPE DISTINCTION ─── */
+    .type-distinction {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      max-width: 900px;
+      margin: 0 auto 60px;
+    }
+    @media(max-width: 600px) { .type-distinction { grid-template-columns: 1fr; } }
+
+    .type-card {
+      border-radius: 16px;
+      padding: 24px 28px;
+      border: 2px solid;
+    }
+    .type-card.request-type {
+      background: linear-gradient(135deg, #0c2240, #1e3a5f);
+      border-color: #3b82f6;
+    }
+    .type-card.require-type {
+      background: linear-gradient(135deg, #1a0c2e, #2e1a4a);
+      border-color: #a855f7;
+    }
+    .type-card .type-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+    .request-type .type-label { color: #60a5fa; }
+    .require-type .type-label { color: #c084fc; }
+
+    .type-card .type-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .request-type .type-name { color: #93c5fd; }
+    .require-type .type-name { color: #d8b4fe; }
+
+    .type-card .type-desc {
+      font-size: 0.85rem;
+      color: #94a3b8;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+    .type-card .type-initiator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+    .request-type .type-initiator { background: #1e3a5f; color: #60a5fa; }
+    .require-type .type-initiator { background: #2e1a4a; color: #c084fc; }
+
+    /* ─── FLOW HEADER ─── */
+    .flow-header {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+    .flow-step {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border: 1px solid #475569;
+      border-radius: 12px;
+      padding: 14px 22px;
+      text-align: center;
+      min-width: 130px;
+      position: relative;
+    }
+    .flow-step .icon { font-size: 1.6rem; }
+    .flow-step .label { font-size: 0.78rem; color: #cbd5e1; margin-top: 4px; font-weight: 600; }
+    .flow-arrow {
+      font-size: 1.4rem;
+      color: #64748b;
+      padding: 0 8px;
+    }
+
+    /* ─── SECTION TITLE ─── */
+    .section-title {
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+
+    /* ─── TYPE SECTION HEADER ─── */
+    .type-section-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 1200px;
+      margin: 0 auto 20px;
+      padding: 14px 22px;
+      border-radius: 12px;
+      border-left: 4px solid;
+    }
+    .type-section-header.request-header {
+      background: #0c1a2e;
+      border-color: #3b82f6;
+    }
+    .type-section-header.require-header {
+      background: #150c22;
+      border-color: #a855f7;
+    }
+    .type-section-header .tsh-badge {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+    .request-header .tsh-badge { background: #1e3a5f; color: #60a5fa; }
+    .require-header .tsh-badge { background: #2e1a4a; color: #c084fc; }
+
+    .type-section-header .tsh-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .type-section-header .tsh-desc {
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-left: auto;
+    }
+
+    /* ─── CARDS GRID ─── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto 40px auto;
+    }
+
+    .card {
+      background: #1e293b;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+    }
+    .card.request-card { border-top: 3px solid #3b82f6; }
+    .card.require-card { border-top: 3px solid #a855f7; }
+
+    .card-header {
+      padding: 18px 20px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #334155;
+    }
+    .card-icon {
+      font-size: 1.8rem;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; }
+    .card-meta { display: flex; gap: 6px; align-items: center; margin-left: auto; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+    .card-badge {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+    .badge-new    { background: #064e3b; color: #6ee7b7; }
+    .badge-exist  { background: #1e3a5f; color: #93c5fd; }
+    .badge-extend { background: #3b1f5e; color: #c4b5fd; }
+    .badge-request { background: #0c2240; color: #60a5fa; border: 1px solid #1d4ed8; }
+    .badge-require { background: #1a0c2e; color: #c084fc; border: 1px solid #7c3aed; }
+
+    .card-body { padding: 16px 20px; }
+    .feature-list { list-style: none; }
+    .feature-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid #1e293b;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      display: flex;
+      gap: 8px;
+    }
+    .feature-list li:last-child { border-bottom: none; }
+    .feature-list li::before { content: "▸"; flex-shrink: 0; }
+
+    .card-footer {
+      padding: 12px 20px;
+      background: #0f172a;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+    }
+
+    /* ─── STATUS FLOW ─── */
+    .status-flow {
+      max-width: 900px;
+      margin: 0 auto 60px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 30px;
+    }
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .status-node {
+      text-align: center;
+      padding: 12px 16px;
+      border-radius: 10px;
+      min-width: 110px;
+    }
+    .status-node .s-icon { font-size: 1.4rem; }
+    .status-node .s-label { font-size: 0.75rem; font-weight: 700; margin-top: 4px; }
+    .s-pending   { background: #292524; color: #fbbf24; border: 1px solid #78350f; }
+    .s-review    { background: #172554; color: #93c5fd; border: 1px solid #1d4ed8; }
+    .s-approved  { background: #052e16; color: #86efac; border: 1px solid #166534; }
+    .s-rejected  { background: #2d1515; color: #fca5a5; border: 1px solid #991b1b; }
+    .s-paid      { background: #0d2d2d; color: #5eead4; border: 1px solid #0f766e; }
+    .s-closed    { background: #1e293b; color: #94a3b8; border: 1px solid #475569; }
+    .s-arrow { color: #475569; padding: 0 6px; font-size: 1.2rem; }
+
+    /* ─── DB SCHEMA ─── */
+    .schema-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto 60px;
+    }
+    .schema-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .schema-head {
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      font-family: monospace;
+    }
+    .schema-body { padding: 10px 16px 14px; }
+    .schema-field {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.75rem;
+      border-bottom: 1px solid #1e293b;
+      color: #cbd5e1;
+      font-family: monospace;
+    }
+    .schema-field:last-child { border-bottom: none; }
+    .field-type { color: #67e8f9; }
+    .field-key  { color: #fbbf24; font-size: 0.65rem; margin-left: 4px; }
+    .field-highlight { color: #c084fc; }
+
+    /* ─── ROUTE TABLE ─── */
+    .route-table {
+      max-width: 1100px;
+      margin: 0 auto 60px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .route-table table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+    .route-table th {
+      background: #0f172a;
+      padding: 12px 16px;
+      text-align: left;
+      color: #64748b;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .route-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid #0f172a;
+      vertical-align: top;
+    }
+    .route-table tr:last-child td { border-bottom: none; }
+    .route-table tr:hover td { background: #0f172a; }
+    .method {
+      font-family: monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .m-get    { background: #052e16; color: #86efac; }
+    .m-post   { background: #172554; color: #93c5fd; }
+    .m-put    { background: #292524; color: #fbbf24; }
+    .m-delete { background: #2d1515; color: #fca5a5; }
+    .route-path { font-family: monospace; color: #e2e8f0; }
+    .route-desc { color: #94a3b8; font-size: 0.78rem; }
+    .route-type-req  { color: #60a5fa; font-size: 0.72rem; font-weight: 600; }
+    .route-type-requ { color: #c084fc; font-size: 0.72rem; font-weight: 600; }
+
+    .route-group-header td {
+      padding: 8px 16px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+    .route-group-header.rg-request td { background: #0c1a2e; color: #3b82f6; }
+    .route-group-header.rg-require td { background: #150c22; color: #a855f7; }
+
+    /* ─── PRIORITY ─── */
+    .priority-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto 60px;
+    }
+    @media(max-width: 640px) { .priority-grid { grid-template-columns: 1fr; } }
+    .priority-col {
+      background: #1e293b;
+      border-radius: 12px;
+      border-top: 4px solid;
+      padding: 20px;
+    }
+    .priority-col.p1 { border-color: #ef4444; }
+    .priority-col.p2 { border-color: #f59e0b; }
+    .priority-col.p3 { border-color: #22c55e; }
+    .priority-col h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 14px; color: #f1f5f9; }
+    .priority-col ul { list-style: none; }
+    .priority-col ul li {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      padding: 6px 0;
+      border-bottom: 1px solid #0f172a;
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .priority-col ul li:last-child { border-bottom: none; }
+    .tick { color: #22c55e; flex-shrink: 0; }
+    .li-req { color: #60a5fa; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; }
+    .li-requ { color: #c084fc; font-size: 0.65rem; font-weight: 700; flex-shrink: 0; }
+
+    .spacer-60 { height: 60px; }
+
+    footer {
+      text-align: center;
+      color: #334155;
+      font-size: 0.78rem;
+      padding-top: 20px;
+      border-top: 1px solid #1e293b;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Employee Request & Requirement System</h1>
+  <p class="subtitle">Roadmap — epal ERP · 2026</p>
+
+  <!-- ─── TYPE DISTINCTION ─── -->
+  <div class="section-title">System Types</div>
+  <div class="type-distinction">
+    <div class="type-card request-type">
+      <div class="type-label">Type 01</div>
+      <div class="type-name">📤 Request</div>
+      <div class="type-desc">
+        Employee initiates — asks the company for something.<br>
+        Money, documents, leave, equipment, benefits.
+      </div>
+      <span class="type-initiator">👤 Initiated by Employee</span>
+    </div>
+    <div class="type-card require-type">
+      <div class="type-label">Type 02</div>
+      <div class="type-name">📥 Require</div>
+      <div class="type-desc">
+        Company / Manager initiates — requires something from employee.<br>
+        Documents, actions, submissions, compliance tasks.
+      </div>
+      <span class="type-initiator">🏢 Initiated by Company / Manager</span>
+    </div>
+  </div>
+
+  <!-- ─── OVERALL FLOW ─── -->
+  <div class="section-title">Unified Lifecycle</div>
+  <div class="flow-header">
+    <div class="flow-step">
+      <div class="icon">📝</div>
+      <div class="label">Create<br>(Request/Require)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">🔍</div>
+      <div class="label">Manager<br>Review</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">🏦</div>
+      <div class="label">HR / Finance<br>Approval</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">⚡</div>
+      <div class="label">Action<br>(Pay / Fulfill)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">📒</div>
+      <div class="label">Journal /<br>Record</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step">
+      <div class="icon">✅</div>
+      <div class="label">Closed /<br>Resolved</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ─── REQUEST MODULES (Employee → Company) ─── -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section-title">Modules</div>
+
+  <div class="type-section-header request-header">
+    <span class="tsh-badge">REQUEST</span>
+    <span class="tsh-title">📤 Employee → Company</span>
+    <span class="tsh-desc">Employee asks for something</span>
+  </div>
+  <div class="cards">
+
+    <!-- 1. Advance Salary -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1c2d1c">💰</div>
+        <div>
+          <div class="card-title">Advance Salary</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-exist">Exists</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Employee submits amount & reason</li>
+          <li>Manager approval workflow</li>
+          <li>Auto-deduct from next payslip</li>
+          <li>Installment recovery option</li>
+          <li>Balance tracker per employee</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">advance-salaries</span>
+        <span class="tag">payslip deduct</span>
+      </div>
+    </div>
+
+    <!-- 2. Loan -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1c1c2d">🏦</div>
+        <div>
+          <div class="card-title">Loan Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-exist">Exists</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Loan amount, tenure, purpose</li>
+          <li>Interest rate config (0% internal)</li>
+          <li>EMI schedule auto-generation</li>
+          <li>Monthly deduction from salary</li>
+          <li>Outstanding balance report</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">loans</span>
+        <span class="tag">EMI</span>
+        <span class="tag">interest</span>
+      </div>
+    </div>
+
+    <!-- 3. Project Payment -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2d1c1c">📁</div>
+        <div>
+          <div class="card-title">Project Payment Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Link request to specific project</li>
+          <li>Expense type: travel, procurement, misc</li>
+          <li>Bill/receipt upload attachment</li>
+          <li>Finance team approval + disbursement</li>
+          <li>Project cost tracking integration</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">projects</span>
+        <span class="tag">expense</span>
+        <span class="tag">attachment</span>
+      </div>
+    </div>
+
+    <!-- 4. Salary Dispute -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2d2a1c">⚠️</div>
+        <div>
+          <div class="card-title">Salary Dispute / Issue</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Report wrong deduction / missing amount</li>
+          <li>HR marks issue as under review</li>
+          <li>Correction entry on next payslip</li>
+          <li>Dispute history log per employee</li>
+          <li>Resolution comment + timestamp</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">payslip</span>
+        <span class="tag">dispute</span>
+        <span class="tag">HR</span>
+      </div>
+    </div>
+
+    <!-- 5. Equipment / Tool Request -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1c2a2d">🖥️</div>
+        <div>
+          <div class="card-title">Equipment / Resource Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Request laptop, tools, supplies</li>
+          <li>Quantity & urgency level</li>
+          <li>Procurement team routing</li>
+          <li>Asset assigned to employee</li>
+          <li>Return tracking on exit</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">assets</span>
+        <span class="tag">procurement</span>
+      </div>
+    </div>
+
+    <!-- 6. Travel / Allowance -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1c2d2a">✈️</div>
+        <div>
+          <div class="card-title">Travel & Allowance Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Trip purpose, destination, dates</li>
+          <li>Pre-approved travel budget</li>
+          <li>Per-diem auto-calculation</li>
+          <li>Post-trip bill submission</li>
+          <li>Reimbursement to next salary</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">travel</span>
+        <span class="tag">allowance</span>
+        <span class="tag">reimbursement</span>
+      </div>
+    </div>
+
+    <!-- 7. Bonus / Incentive Request -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2a1c2d">🎁</div>
+        <div>
+          <div class="card-title">Bonus / Incentive Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-extend">Extend</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Manager nominates employee</li>
+          <li>Performance basis or festival bonus</li>
+          <li>Finance approval + payslip merge</li>
+          <li>Tax consideration flag</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">bonus</span>
+        <span class="tag">incentive</span>
+        <span class="tag">payslip</span>
+      </div>
+    </div>
+
+    <!-- 8. Emergency Fund -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2d1c1c">🆘</div>
+        <div>
+          <div class="card-title">Emergency Fund Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Medical / family emergency category</li>
+          <li>Fast-track approval (≤24h)</li>
+          <li>One-time grant or deductible</li>
+          <li>CEO/MD final authority</li>
+          <li>Separate fund limit per year</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">emergency</span>
+        <span class="tag">fast-track</span>
+      </div>
+    </div>
+
+    <!-- 9. NOC / Certificate -->
+    <div class="card request-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1a1a1a">📄</div>
+        <div>
+          <div class="card-title">Document / NOC Request</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-request">Request</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Experience letter, salary certificate</li>
+          <li>NOC for visa / bank / loan</li>
+          <li>PDF auto-generation with seal</li>
+          <li>HR sign-off + issue date</li>
+          <li>Download from employee portal</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">NOC</span>
+        <span class="tag">certificate</span>
+        <span class="tag">PDF</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ─── REQUIRE MODULES (Company → Employee) ─── -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <div class="type-section-header require-header">
+    <span class="tsh-badge">REQUIRE</span>
+    <span class="tsh-title">📥 Company → Employee</span>
+    <span class="tsh-desc">Company requires action from employee</span>
+  </div>
+  <div class="cards">
+
+    <!-- R1. Document Submission -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1a122a">📋</div>
+        <div>
+          <div class="card-title">Document Submission</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>HR requires NID, TIN, certificates</li>
+          <li>Deadline with reminder notification</li>
+          <li>Employee uploads via portal</li>
+          <li>HR verifies & marks fulfilled</li>
+          <li>Missing doc alert on payslip</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">compliance</span>
+        <span class="tag">NID</span>
+        <span class="tag">upload</span>
+      </div>
+    </div>
+
+    <!-- R2. Training Completion -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1a1a12">🎓</div>
+        <div>
+          <div class="card-title">Training / Course Completion</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Manager assigns mandatory training</li>
+          <li>Deadline + escalation if missed</li>
+          <li>Employee submits certificate/proof</li>
+          <li>Completion status in profile</li>
+          <li>Linked to appraisal score</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">training</span>
+        <span class="tag">appraisal</span>
+        <span class="tag">mandatory</span>
+      </div>
+    </div>
+
+    <!-- R3. Asset Return -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2a121a">🔄</div>
+        <div>
+          <div class="card-title">Asset Return Requirement</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Triggered on resignation / exit</li>
+          <li>Checklist: laptop, ID card, keys</li>
+          <li>Each item marked returned by HR</li>
+          <li>Final settlement blocked until clear</li>
+          <li>Condition report at return</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">exit</span>
+        <span class="tag">assets</span>
+        <span class="tag">settlement</span>
+      </div>
+    </div>
+
+    <!-- R4. Policy Acknowledgment -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#121a2a">📜</div>
+        <div>
+          <div class="card-title">Policy Acknowledgment</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>HR publishes new policy document</li>
+          <li>All employees required to sign</li>
+          <li>Digital signature / checkbox confirm</li>
+          <li>Timestamp of acknowledgment stored</li>
+          <li>Overdue list visible to HR/admin</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">policy</span>
+        <span class="tag">signature</span>
+        <span class="tag">compliance</span>
+      </div>
+    </div>
+
+    <!-- R5. Performance Review Submission -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1a2a12">📊</div>
+        <div>
+          <div class="card-title">Performance Self-Review</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>HR opens review cycle with deadline</li>
+          <li>Employee fills self-assessment form</li>
+          <li>Manager adds rating + comments</li>
+          <li>Both parties sign off on review</li>
+          <li>Data feeds into appraisal module</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">appraisal</span>
+        <span class="tag">self-review</span>
+        <span class="tag">KPI</span>
+      </div>
+    </div>
+
+    <!-- R6. Timesheet / Log Submission -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#2a1a12">⏱️</div>
+        <div>
+          <div class="card-title">Timesheet / Work Log</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Weekly/monthly timesheet required</li>
+          <li>Project-wise hours breakdown</li>
+          <li>Manager reviews & approves</li>
+          <li>Late submission auto-flagged</li>
+          <li>Linked to billing/project cost</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">timesheet</span>
+        <span class="tag">projects</span>
+        <span class="tag">billing</span>
+      </div>
+    </div>
+
+    <!-- R7. Office Requisition -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#12201a">🏢</div>
+        <div>
+          <div class="card-title">Office Requisition</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Office needs item/service (stationery, furniture, maintenance)</li>
+          <li>Department head raises requisition</li>
+          <li>Category: supplies / equipment / repair / service</li>
+          <li>Estimated cost + vendor suggestion</li>
+          <li>Admin/Finance approves & assigns procurement</li>
+          <li>Delivery confirmed → requisition closed</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">office</span>
+        <span class="tag">supplies</span>
+        <span class="tag">maintenance</span>
+        <span class="tag">procurement</span>
+      </div>
+    </div>
+
+    <!-- R8. Interior Project Requirement -->
+    <div class="card require-card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#1a1220">🛋️</div>
+        <div>
+          <div class="card-title">Interior Project Requirement</div>
+        </div>
+        <div class="card-meta">
+          <span class="card-badge badge-require">Require</span>
+          <span class="card-badge badge-new">New</span>
+        </div>
+      </div>
+      <div class="card-body">
+        <ul class="feature-list">
+          <li>Linked to specific interior project</li>
+          <li>Material / item requirement with specs</li>
+          <li>Quantity, unit, estimated cost</li>
+          <li>Site manager raises — admin approves</li>
+          <li>Vendor quotation upload support</li>
+          <li>Delivery schedule + milestone tracking</li>
+          <li>Cost mapped to project budget</li>
+        </ul>
+      </div>
+      <div class="card-footer">
+        <span class="tag">interior</span>
+        <span class="tag">materials</span>
+        <span class="tag">project-cost</span>
+        <span class="tag">milestone</span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="spacer-60"></div>
+
+  <!-- ─── STATUS FLOW ─── -->
+  <div class="section-title">Unified Status Flow</div>
+  <div class="status-flow">
+    <div class="status-row">
+      <div class="status-node s-pending">
+        <div class="s-icon">🕐</div>
+        <div class="s-label">PENDING</div>
+      </div>
+      <div class="s-arrow">→</div>
+      <div class="status-node s-review">
+        <div class="s-icon">🔍</div>
+        <div class="s-label">UNDER REVIEW</div>
+      </div>
+      <div class="s-arrow">→</div>
+      <div class="status-node s-approved">
+        <div class="s-icon">✅</div>
+        <div class="s-label">APPROVED</div>
+      </div>
+      <div class="s-arrow">→</div>
+      <div class="status-node s-paid">
+        <div class="s-icon">⚡</div>
+        <div class="s-label">FULFILLED</div>
+      </div>
+      <div class="s-arrow">→</div>
+      <div class="status-node s-closed">
+        <div class="s-icon">🔒</div>
+        <div class="s-label">CLOSED</div>
+      </div>
+    </div>
+    <br>
+    <div class="status-row">
+      <div class="status-node s-review" style="opacity:0.3; min-width:110px; text-align:center">invisible</div>
+      <div class="s-arrow" style="opacity:0">→</div>
+      <div class="status-node s-rejected">
+        <div class="s-icon">❌</div>
+        <div class="s-label">REJECTED</div>
+      </div>
+      <div class="s-arrow" style="color:#ef4444">↓</div>
+      <div class="status-node s-pending" style="font-size:0.7rem; padding:8px 12px">
+        <div class="s-icon" style="font-size:1rem">🔄</div>
+        <div class="s-label">RE-SUBMIT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── DB SCHEMA ─── -->
+  <div class="section-title">Database Tables</div>
+  <div class="schema-grid">
+
+    <div class="schema-card">
+      <div class="schema-head" style="background:#1a2a1a; color:#86efac">employee_requests</div>
+      <div class="schema-body">
+        <div class="schema-field"><span>id</span><span><span class="field-type">bigint</span><span class="field-key">PK</span></span></div>
+        <div class="schema-field"><span>employee_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span class="field-highlight">category</span><span><span class="field-type">enum</span><span class="field-key">★</span></span></div>
+        <div class="schema-field"><span>request_type</span><span><span class="field-type">enum</span></span></div>
+        <div class="schema-field"><span>amount</span><span><span class="field-type">decimal</span></span></div>
+        <div class="schema-field"><span>reason</span><span><span class="field-type">text</span></span></div>
+        <div class="schema-field"><span>status</span><span><span class="field-type">enum</span></span></div>
+        <div class="schema-field"><span>deadline</span><span><span class="field-type">date</span></span></div>
+        <div class="schema-field"><span>requested_at</span><span><span class="field-type">datetime</span></span></div>
+        <div class="schema-field"><span>approved_by</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>approved_at</span><span><span class="field-type">datetime</span></span></div>
+        <div class="schema-field"><span>remarks</span><span><span class="field-type">text</span></span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-head" style="background:#1a122a; color:#c084fc">require_assignments</div>
+      <div class="schema-body">
+        <div class="schema-field"><span>id</span><span><span class="field-type">bigint</span><span class="field-key">PK</span></span></div>
+        <div class="schema-field"><span>request_id</span><span><span class="field-type">FK → employee_requests</span></span></div>
+        <div class="schema-field"><span>assigned_to</span><span><span class="field-type">FK → employees</span></span></div>
+        <div class="schema-field"><span>assigned_by</span><span><span class="field-type">FK → users</span></span></div>
+        <div class="schema-field"><span>due_date</span><span><span class="field-type">date</span></span></div>
+        <div class="schema-field"><span>reminder_at</span><span><span class="field-type">datetime</span></span></div>
+        <div class="schema-field"><span>fulfilled_at</span><span><span class="field-type">datetime</span></span></div>
+        <div class="schema-field"><span>escalated</span><span><span class="field-type">boolean</span></span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-head" style="background:#1a1a2a; color:#93c5fd">request_disbursements</div>
+      <div class="schema-body">
+        <div class="schema-field"><span>id</span><span><span class="field-type">bigint</span><span class="field-key">PK</span></span></div>
+        <div class="schema-field"><span>request_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>payment_method</span><span><span class="field-type">enum</span></span></div>
+        <div class="schema-field"><span>disbursed_amount</span><span><span class="field-type">decimal</span></span></div>
+        <div class="schema-field"><span>disbursed_by</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>disbursed_at</span><span><span class="field-type">datetime</span></span></div>
+        <div class="schema-field"><span>journal_entry_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>attachment</span><span><span class="field-type">varchar</span></span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-head" style="background:#2a1a1a; color:#fca5a5">request_recoveries</div>
+      <div class="schema-body">
+        <div class="schema-field"><span>id</span><span><span class="field-type">bigint</span><span class="field-key">PK</span></span></div>
+        <div class="schema-field"><span>request_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>payslip_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>installment_no</span><span><span class="field-type">int</span></span></div>
+        <div class="schema-field"><span>deducted_amount</span><span><span class="field-type">decimal</span></span></div>
+        <div class="schema-field"><span>remaining_balance</span><span><span class="field-type">decimal</span></span></div>
+        <div class="schema-field"><span>deducted_at</span><span><span class="field-type">date</span></span></div>
+      </div>
+    </div>
+
+    <div class="schema-card">
+      <div class="schema-head" style="background:#2a2a1a; color:#fbbf24">request_attachments</div>
+      <div class="schema-body">
+        <div class="schema-field"><span>id</span><span><span class="field-type">bigint</span><span class="field-key">PK</span></span></div>
+        <div class="schema-field"><span>request_id</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>file_path</span><span><span class="field-type">varchar</span></span></div>
+        <div class="schema-field"><span>file_type</span><span><span class="field-type">varchar</span></span></div>
+        <div class="schema-field"><span>uploaded_by</span><span><span class="field-type">FK</span></span></div>
+        <div class="schema-field"><span>uploaded_at</span><span><span class="field-type">datetime</span></span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ─── ROUTE TABLE ─── -->
+  <div class="section-title">Suggested Routes</div>
+  <div class="route-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Method</th>
+          <th>URI</th>
+          <th>Action</th>
+          <th>Who</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- REQUEST routes -->
+        <tr class="route-group-header rg-request">
+          <td colspan="5">📤 REQUEST — Employee-Initiated</td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/employee/requests</td>
+          <td class="route-desc">View own requests</td>
+          <td class="route-desc">Employee</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/employee/requests</td>
+          <td class="route-desc">Submit new request</td>
+          <td class="route-desc">Employee</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/dashboard/requests</td>
+          <td class="route-desc">All requests list (HR/Admin)</td>
+          <td class="route-desc">HR / Admin</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-put">PUT</span></td>
+          <td class="route-path">/dashboard/requests/{id}/approve</td>
+          <td class="route-desc">Approve request</td>
+          <td class="route-desc">Manager / HR</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-put">PUT</span></td>
+          <td class="route-path">/dashboard/requests/{id}/reject</td>
+          <td class="route-desc">Reject with reason</td>
+          <td class="route-desc">Manager / HR</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/dashboard/requests/{id}/disburse</td>
+          <td class="route-desc">Mark disbursed + journal entry</td>
+          <td class="route-desc">Finance</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/dashboard/requests/{id}/recover</td>
+          <td class="route-desc">Add recovery installment</td>
+          <td class="route-desc">Finance</td>
+          <td><span class="route-type-req">Request</span></td>
+        </tr>
+
+        <!-- REQUIRE routes -->
+        <tr class="route-group-header rg-require">
+          <td colspan="5">📥 REQUIRE — Company-Initiated</td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/dashboard/requires</td>
+          <td class="route-desc">Create requirement (assign to employee)</td>
+          <td class="route-desc">HR / Manager</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/employee/requires</td>
+          <td class="route-desc">View requirements assigned to me</td>
+          <td class="route-desc">Employee</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/employee/requires/{id}/fulfill</td>
+          <td class="route-desc">Submit fulfillment (upload / confirm)</td>
+          <td class="route-desc">Employee</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-put">PUT</span></td>
+          <td class="route-path">/dashboard/requires/{id}/verify</td>
+          <td class="route-desc">Verify employee fulfillment</td>
+          <td class="route-desc">HR / Manager</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-put">PUT</span></td>
+          <td class="route-path">/dashboard/requires/{id}/escalate</td>
+          <td class="route-desc">Escalate overdue requirement</td>
+          <td class="route-desc">HR / Manager</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/dashboard/requires/overdue</td>
+          <td class="route-desc">List overdue requirements</td>
+          <td class="route-desc">HR / Admin</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/dashboard/requires/office</td>
+          <td class="route-desc">Create office requisition</td>
+          <td class="route-desc">Dept Head / Admin</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-put">PUT</span></td>
+          <td class="route-path">/dashboard/requires/office/{id}/fulfill</td>
+          <td class="route-desc">Mark office requisition delivered</td>
+          <td class="route-desc">Admin / Procurement</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-post">POST</span></td>
+          <td class="route-path">/dashboard/requires/interior/{project_id}</td>
+          <td class="route-desc">Add material requirement to interior project</td>
+          <td class="route-desc">Site Manager</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/dashboard/requires/interior/{project_id}</td>
+          <td class="route-desc">All requirements for an interior project</td>
+          <td class="route-desc">Admin / Finance</td>
+          <td><span class="route-type-requ">Require</span></td>
+        </tr>
+
+        <!-- Shared -->
+        <tr class="route-group-header" style="">
+          <td colspan="5" style="background:#0f172a; color:#475569; font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;">⚙️ Shared</td>
+        </tr>
+        <tr>
+          <td><span class="method m-get">GET</span></td>
+          <td class="route-path">/dashboard/requests/report</td>
+          <td class="route-desc">Summary report by type/status/category</td>
+          <td class="route-desc">Admin</td>
+          <td><span style="color:#94a3b8; font-size:0.72rem">Both</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── PRIORITY ─── -->
+  <div class="section-title">Build Priority</div>
+  <div class="priority-grid">
+    <div class="priority-col p1">
+      <h3>🔴 Phase 1 — Core</h3>
+      <ul>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Unified request table + category field</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Advance salary (enhance existing)</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Loan EMI schedule</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Approval / reject workflow</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>require_assignments table</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Document submission requirement</li>
+      </ul>
+    </div>
+    <div class="priority-col p2">
+      <h3>🟡 Phase 2 — Financial + Compliance</h3>
+      <ul>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Salary dispute / correction</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Project payment request</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Travel & allowance</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Disbursement + journal entry</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Policy acknowledgment</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Training completion tracking</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Overdue escalation + reminders</li>
+      </ul>
+    </div>
+    <div class="priority-col p3">
+      <h3>🟢 Phase 3 — Extended</h3>
+      <ul>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Emergency fund fast-track</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>NOC / certificate PDF gen</li>
+        <li><span class="tick">✓</span><span class="li-req">REQ</span>Bonus / incentive flow</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Asset return checklist (exit)</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Performance self-review cycle</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Timesheet / work log submission</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Office requisition + procurement flow</li>
+        <li><span class="tick">✓</span><span class="li-requ">REQU</span>Interior project material requirements</li>
+        <li><span class="tick">✓</span>Employee self-service portal</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>
+    epal ERP &nbsp;·&nbsp; Employee Request &amp; Requirement System Roadmap &nbsp;·&nbsp; Generated 2026-05-09
+    &nbsp;·&nbsp;
+    <span style="color:#3b82f6">■ Request</span> &nbsp;
+    <span style="color:#a855f7">■ Require</span>
+  </footer>
+
+</body>
+</html>

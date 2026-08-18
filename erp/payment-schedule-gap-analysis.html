@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Schedule – Gap Analysis | EPAL ERP</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+.page-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+  color: #fff; padding: 28px 40px;
+}
+.page-header h1 { font-size: 22px; font-weight: 800; }
+.page-header p { opacity: .75; font-size: 13px; margin-top: 5px; }
+.header-badges { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.hbadge {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; gap: 6px;
+}
+.hbadge-done { background: rgba(16,185,129,.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,.4); }
+.hbadge-miss { background: rgba(239,68,68,.25); color: #fca5a5; border: 1px solid rgba(239,68,68,.4); }
+.hbadge-part { background: rgba(245,158,11,.25); color: #fcd34d; border: 1px solid rgba(245,158,11,.4); }
+
+.container { max-width: 1020px; margin: 0 auto; padding: 32px 16px 70px; }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 15px; font-weight: 800; color: #1e293b;
+  margin: 36px 0 16px; display: flex; align-items: center; gap: 10px;
+  padding-bottom: 10px; border-bottom: 2px solid #e2e8f0;
+}
+.section-title .num {
+  width: 30px; height: 30px; border-radius: 50%; font-size: 13px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0;
+}
+.num-green  { background: #059669; }
+.num-red    { background: #dc2626; }
+.num-yellow { background: #d97706; }
+.num-blue   { background: #2563eb; }
+
+/* ── Status overview grid ── */
+.overview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 8px; }
+.ov-card {
+  background: #fff; border-radius: 10px; padding: 18px 20px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.07); border-left: 5px solid;
+}
+.ov-card.green  { border-color: #10b981; }
+.ov-card.red    { border-color: #ef4444; }
+.ov-card.yellow { border-color: #f59e0b; }
+.ov-card h3 { font-size: 11px; font-weight: 800; text-transform: uppercase;
+              letter-spacing: .5px; margin-bottom: 6px; }
+.ov-card.green  h3 { color: #059669; }
+.ov-card.red    h3 { color: #dc2626; }
+.ov-card.yellow h3 { color: #d97706; }
+.ov-card .val { font-size: 26px; font-weight: 800; }
+.ov-card.green  .val { color: #059669; }
+.ov-card.red    .val { color: #dc2626; }
+.ov-card.yellow .val { color: #d97706; }
+.ov-card p { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+/* ── Item cards (done / missing / partial) ── */
+.item-list { display: flex; flex-direction: column; gap: 10px; }
+
+.item-card {
+  background: #fff; border-radius: 10px; padding: 16px 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06); display: flex; gap: 14px;
+  align-items: flex-start; border-left: 5px solid;
+}
+.item-card.done    { border-color: #10b981; }
+.item-card.missing { border-color: #ef4444; }
+.item-card.partial { border-color: #f59e0b; }
+
+.item-icon {
+  width: 36px; height: 36px; border-radius: 8px; display: flex;
+  align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
+}
+.item-card.done    .item-icon { background: #d1fae5; color: #059669; }
+.item-card.missing .item-icon { background: #fee2e2; color: #dc2626; }
+.item-card.partial .item-icon { background: #fef3c7; color: #d97706; }
+
+.item-body { flex: 1; }
+.item-title { font-weight: 700; font-size: 14px; margin-bottom: 4px;
+              display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.item-desc  { font-size: 13px; color: #475569; line-height: 1.65; }
+.item-file  { margin-top: 7px; display: flex; flex-wrap: wrap; gap: 6px; }
+
+.file-chip {
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 5px;
+  padding: 2px 8px; font-size: 11px; font-family: monospace; color: #334155;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.file-chip.add  { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+.file-chip.edit { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+.file-chip.ok   { background: #f0fdf4; border-color: #bbf7d0; color: #065f46; }
+
+.badge-tag {
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+.tag-done    { background: #d1fae5; color: #065f46; }
+.tag-missing { background: #fee2e2; color: #991b1b; }
+.tag-partial { background: #fef3c7; color: #92400e; }
+
+/* ── Code block ── */
+.code-block {
+  background: #0f172a; color: #e2e8f0; border-radius: 8px;
+  padding: 14px 16px; font-family: 'Consolas', monospace; font-size: 12px;
+  line-height: 1.8; margin-top: 10px; overflow-x: auto; white-space: pre;
+}
+.kw  { color: #7dd3fc; }
+.fn  { color: #a78bfa; }
+.str { color: #86efac; }
+.cm  { color: #475569; }
+.rd  { color: #fca5a5; }
+
+/* ── Action table ── */
+.action-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.action-table thead th {
+  background: #1e293b; color: #e2e8f0; padding: 9px 14px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; text-align: left;
+}
+.action-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+.action-table tbody tr:hover { background: #f8fafc; }
+.action-table tbody td { padding: 10px 14px; vertical-align: top; }
+.priority { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.p-high   { background: #fee2e2; color: #991b1b; }
+.p-med    { background: #fef3c7; color: #92400e; }
+.p-low    { background: #dbeafe; color: #1e40af; }
+.effort { padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.e-big  { background: #f3e8ff; color: #6b21a8; }
+.e-med  { background: #e0f2fe; color: #075985; }
+.e-sm   { background: #dcfce7; color: #14532d; }
+
+/* ── Divider ── */
+.divider { height: 1px; background: #e2e8f0; margin: 28px 0; }
+
+@media (max-width:640px) {
+  .overview-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1><i class="fas fa-microscope" style="margin-right:10px;"></i>Payment Schedule — Gap Analysis</h1>
+  <p>Existing code vs. what's needed &nbsp;|&nbsp; EPAL ERP project &nbsp;·&nbsp; 26 Apr 2026</p>
+  <div class="header-badges">
+    <span class="hbadge hbadge-done"><i class="fas fa-check"></i> 9 টা আছে (Done)</span>
+    <span class="hbadge hbadge-miss"><i class="fas fa-times"></i> 7 টা নেই (Missing)</span>
+    <span class="hbadge hbadge-part"><i class="fas fa-exclamation"></i> 3 টা আধা-করা (Partial)</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Overview -->
+  <div class="overview-grid">
+    <div class="ov-card green">
+      <h3><i class="fas fa-check-circle" style="margin-right:5px;"></i>Already Done</h3>
+      <div class="val">9</div>
+      <p>Table, Model, Controller, Command, Scheduler সব আছে</p>
+    </div>
+    <div class="ov-card red">
+      <h3><i class="fas fa-times-circle" style="margin-right:5px;"></i>Missing / নেই</h3>
+      <div class="val">7</div>
+      <p>View file, Approval, Reschedule, markPaid, Sidebar link, এগুলো নেই</p>
+    </div>
+    <div class="ov-card yellow">
+      <h3><i class="fas fa-exclamation-circle" style="margin-right:5px;"></i>Partial / আধা-করা</h3>
+      <div class="val">3</div>
+      <p>Model fillable, Sale/Purchase form, Status enum — কিছুটা আছে বাকি দরকার</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════ SECTION A: DONE ═══════════════════════════════ -->
+  <div class="section-title">
+    <div class="num num-green">A</div>
+    যা আলরেডি আছে — Already Exists ✅
+  </div>
+
+  <div class="item-list">
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-table"></i></div>
+      <div class="item-body">
+        <div class="item-title">Database Table — <code>payment_schedules</code> <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Migration আছে। Fields: <code>schedulable_type</code>, <code>schedulable_id</code>, <code>type</code> (receive/pay), <code>party_type</code>, <code>party_id</code>, <code>amount</code>, <code>scheduled_date</code>, <code>status</code> (pending/paid/overdue/cancelled), <code>paid_date</code>, <code>transaction_id</code>, <code>note</code>, <code>created_by</code>.
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> database/migrations/2026_04_21_000002_create_payment_schedules_table.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-cube"></i></div>
+      <div class="item-body">
+        <div class="item-title">PaymentSchedule Model <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Polymorphic <code>schedulable()</code> morphTo আছে। <code>transaction()</code> belongsTo আছে।
+          Scopes আছে: <code>scopeOverdue()</code>, <code>scopeToday()</code>, <code>scopePending()</code>, <code>scopeReceive()</code>, <code>scopePay()</code>.
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Models/PaymentSchedule.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-code"></i></div>
+      <div class="item-body">
+        <div class="item-title">PaymentScheduleController — Basic Methods <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>index()</code> — list with filters (type, status, date_from, date_to).<br>
+          <code>store()</code> — due_amount validation, polymorphic party map, multiple schedules per form.<br>
+          <code>cancel()</code> — status = cancelled.<br>
+          <code>destroy()</code> — delete if not paid.
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Http/Controllers/Dashboard/PaymentScheduleController.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-route"></i></div>
+      <div class="item-body">
+        <div class="item-title">Routes — web.php <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Line 188–189 এ আছে:<br>
+          <code>Route::resource('payment-schedules', ...)->only(['index','store','destroy'])</code><br>
+          <code>Route::patch('payment-schedules/{schedule}/cancel', ...)</code>
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> routes/web.php — line 188–189</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-calendar-plus"></i></div>
+      <div class="item-body">
+        <div class="item-title">due_date Column — Sales / Purchases / TicketSales / TicketPurchases <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Migration <code>2026_04_21_000001</code> দিয়ে চারটা টেবিলে <code>due_date</code> কলাম add হয়েছে।
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> database/migrations/2026_04_21_000001_add_due_date_to_sales_purchases.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-link"></i></div>
+      <div class="item-body">
+        <div class="item-title">schedules() morphMany — Sale, Purchase, TicketSale, TicketPurchase <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          চারটা model-এই <code>schedules()</code> morphMany relationship আছে।
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Models/Sale.php — line 67</span>
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Models/Purchase.php — line 63</span>
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Models/TicketSale.php — line 68</span>
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Models/TicketPurchase.php — line 98</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-clock"></i></div>
+      <div class="item-body">
+        <div class="item-title">MarkOverdueSchedules Command <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>php artisan schedules:mark-overdue</code> — pending records যাদের <code>scheduled_date &lt; today</code>, তাদের automatically overdue করে।
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> app/Console/Commands/MarkOverdueSchedules.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-calendar-check"></i></div>
+      <div class="item-body">
+        <div class="item-title">Laravel Scheduler — Daily at 00:05 <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>routes/console.php</code> এ registered: <code>Schedule::command('schedules:mark-overdue')->dailyAt('00:05')</code>
+          — Server cron দিয়ে <code>php artisan schedule:run</code> চালালেই হবে।
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> routes/console.php — line 11</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item-card done">
+      <div class="item-icon"><i class="fas fa-window-restore"></i></div>
+      <div class="item-body">
+        <div class="item-title">Schedule Creation Form — Ticket Direct Sales <span class="badge-tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>resources/views/dashboard/ticket_direct_sales/index.blade.php</code> এ একটা modal আছে যেখানে schedule create করা যায়। Route: <code>role.payment-schedules.store</code>.
+        </div>
+        <div class="item-file">
+          <span class="file-chip ok"><i class="fas fa-file"></i> resources/views/dashboard/ticket_direct_sales/index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /done list -->
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════ SECTION B: MISSING ═══════════════════════════════ -->
+  <div class="section-title">
+    <div class="num num-red">B</div>
+    যা নেই — Must Add ❌
+  </div>
+
+  <div class="item-list">
+
+    <!-- MISSING 1: VIEW -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-file-code"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">Critical</span>
+          Index View — <code>resources/views/payment-schedules/index.blade.php</code>
+        </div>
+        <div class="item-desc">
+          Controller এ <code>return view('payment-schedules.index')</code> আছে কিন্তু <strong>view file টাই নেই</strong>!
+          এখন route এ গেলে error পাবে। এই view তে থাকবে:
+          filter panel (date, type, status), summary cards (today payable/receivable, overdue), schedule table,
+          print button, action buttons (approve/reject/reschedule/mark paid).
+        </div>
+        <div class="item-file">
+          <span class="file-chip add"><i class="fas fa-plus"></i> CREATE: resources/views/payment-schedules/index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 2: APPROVAL -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-user-check"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">Critical</span>
+          Boss Approval System — Migration + Controller Methods + Routes
+        </div>
+        <div class="item-desc">
+          সম্পূর্ণ approval workflow নেই। যা add করতে হবে:
+        </div>
+        <div class="code-block"><span class="cm">-- নতুন migration: add_approval_fields_to_payment_schedules</span>
+$table-><span class="fn">foreignId</span>(<span class="str">'approved_by'</span>)->nullable()->constrained(<span class="str">'users'</span>);
+$table-><span class="fn">timestamp</span>(<span class="str">'approved_at'</span>)->nullable();
+$table-><span class="fn">string</span>(<span class="str">'approval_note'</span>)->nullable();
+<span class="cm">-- status enum তে 'approved' এবং 'rejected' add করতে হবে</span>
+<span class="cm">-- current: pending | paid | overdue | cancelled</span>
+<span class="cm">-- needed:  pending | paid | overdue | cancelled | approved | rejected</span></div>
+        <div class="item-desc" style="margin-top:10px;">Controller এ নতুন methods দরকার:</div>
+        <div class="code-block"><span class="kw">public function</span> <span class="fn">approve</span>(PaymentSchedule $schedule, Request $request)
+{
+    $schedule-><span class="fn">update</span>([
+        <span class="str">'status'</span>       => <span class="str">'approved'</span>,
+        <span class="str">'approved_by'</span>  => auth()-><span class="fn">id</span>(),
+        <span class="str">'approved_at'</span>  => now(),
+        <span class="str">'approval_note'</span>=> $request->note,
+    ]);
+    return back()-><span class="fn">with</span>(<span class="str">'success'</span>, <span class="str">'Payment approved.'</span>);
+}
+
+<span class="kw">public function</span> <span class="fn">reject</span>(PaymentSchedule $schedule, Request $request)
+{
+    $schedule-><span class="fn">update</span>([
+        <span class="str">'status'</span>       => <span class="str">'rejected'</span>,
+        <span class="str">'approval_note'</span>=> $request->note,
+    ]);
+    return back()-><span class="fn">with</span>(<span class="str">'success'</span>, <span class="str">'Payment rejected.'</span>);
+}</div>
+        <div class="item-file" style="margin-top:10px;">
+          <span class="file-chip add"><i class="fas fa-plus"></i> NEW migration: add_approval_fields_to_payment_schedules</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentScheduleController.php — add approve(), reject()</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: routes/web.php — add approve/reject patch routes</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentSchedule.php — add approved_by/approved_at to fillable</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 3: RESCHEDULE -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-calendar-alt"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">Critical</span>
+          Reschedule Feature — Date Change + History Log
+        </div>
+        <div class="item-desc">
+          Date miss হলে নতুন date দেওয়ার কোনো system নেই। দুটো জিনিস দরকার:
+        </div>
+        <div class="code-block"><span class="cm">-- 1. payment_schedules table এ নতুন fields</span>
+$table-><span class="fn">date</span>(<span class="str">'original_scheduled_date'</span>)->nullable();  <span class="cm">// প্রথম date টা preserve</span>
+$table-><span class="fn">unsignedTinyInteger</span>(<span class="str">'reschedule_count'</span>)->default(0); <span class="cm">// কতবার change হয়েছে</span>
+$table-><span class="fn">string</span>(<span class="str">'reschedule_reason'</span>)->nullable();   <span class="cm">// কেন change</span>
+
+<span class="cm">-- 2. নতুন table: payment_schedule_logs (reschedule history)</span>
+Schema::<span class="fn">create</span>(<span class="str">'payment_schedule_logs'</span>, function (Blueprint $table) {
+    $table-><span class="fn">id</span>();
+    $table-><span class="fn">foreignId</span>(<span class="str">'payment_schedule_id'</span>)->constrained()-><span class="fn">cascadeOnDelete</span>();
+    $table-><span class="fn">enum</span>(<span class="str">'action'</span>, [<span class="str">'rescheduled'</span>, <span class="str">'approved'</span>, <span class="str">'rejected'</span>, <span class="str">'paid'</span>]);
+    $table-><span class="fn">date</span>(<span class="str">'old_date'</span>)->nullable();
+    $table-><span class="fn">date</span>(<span class="str">'new_date'</span>)->nullable();
+    $table-><span class="fn">string</span>(<span class="str">'reason'</span>)->nullable();
+    $table-><span class="fn">foreignId</span>(<span class="str">'done_by'</span>)->constrained(<span class="str">'users'</span>);
+    $table-><span class="fn">timestamps</span>();
+});</div>
+        <div class="code-block"><span class="cm">-- Controller method</span>
+<span class="kw">public function</span> <span class="fn">reschedule</span>(PaymentSchedule $schedule, Request $request)
+{
+    $request-><span class="fn">validate</span>([
+        <span class="str">'new_date'</span> => <span class="str">'required|date|after_or_equal:today'</span>,
+        <span class="str">'reason'</span>   => <span class="str">'required|string|max:500'</span>,
+    ]);
+
+    PaymentScheduleLog::<span class="fn">create</span>([        <span class="cm">// history save</span>
+        <span class="str">'payment_schedule_id'</span> => $schedule->id,
+        <span class="str">'action'</span>              => <span class="str">'rescheduled'</span>,
+        <span class="str">'old_date'</span>            => $schedule->scheduled_date,
+        <span class="str">'new_date'</span>            => $request->new_date,
+        <span class="str">'reason'</span>              => $request->reason,
+        <span class="str">'done_by'</span>             => auth()-><span class="fn">id</span>(),
+    ]);
+
+    $schedule-><span class="fn">update</span>([
+        <span class="str">'scheduled_date'</span>       => $request->new_date,
+        <span class="str">'original_scheduled_date'</span> => $schedule->original_scheduled_date ?? $schedule->scheduled_date,
+        <span class="str">'reschedule_count'</span>     => $schedule->reschedule_count + 1,
+        <span class="str">'reschedule_reason'</span>    => $request->reason,
+        <span class="str">'status'</span>               => <span class="str">'pending'</span>, <span class="cm">// overdue থেকে pending এ ফিরিয়ে আনে</span>
+    ]);
+
+    return back()-><span class="fn">with</span>(<span class="str">'success'</span>, <span class="str">'Payment rescheduled.'</span>);
+}</div>
+        <div class="item-file" style="margin-top:10px;">
+          <span class="file-chip add"><i class="fas fa-plus"></i> NEW migration: add_reschedule_fields_to_payment_schedules</span>
+          <span class="file-chip add"><i class="fas fa-plus"></i> NEW migration: create_payment_schedule_logs_table</span>
+          <span class="file-chip add"><i class="fas fa-plus"></i> NEW model: app/Models/PaymentScheduleLog.php</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentScheduleController.php — add reschedule()</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: routes/web.php — add reschedule patch route</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 4: MARK PAID -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-money-bill-wave"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">High</span>
+          markPaid() Method — Schedule paid করার পর transaction record
+        </div>
+        <div class="item-desc">
+          Controller এ <code>cancel()</code> আছে কিন্তু <code>markPaid()</code> নেই।
+          Approval হওয়ার পর actual payment এর সময় status paid করা এবং <code>paid_date</code>, <code>transaction_id</code> set করার method দরকার।
+        </div>
+        <div class="code-block"><span class="kw">public function</span> <span class="fn">markPaid</span>(PaymentSchedule $schedule, Request $request)
+{
+    $request-><span class="fn">validate</span>([
+        <span class="str">'payment_method'</span> => <span class="str">'required|string'</span>,
+        <span class="str">'payment_date'</span>   => <span class="str">'required|date'</span>,
+        <span class="str">'note'</span>           => <span class="str">'nullable|string'</span>,
+    ]);
+
+    $schedule-><span class="fn">update</span>([
+        <span class="str">'status'</span>    => <span class="str">'paid'</span>,
+        <span class="str">'paid_date'</span> => $request->payment_date,
+    ]);
+
+    <span class="cm">// optionally create a Transaction/JournalEntry here</span>
+
+    return back()-><span class="fn">with</span>(<span class="str">'success'</span>, <span class="str">'Marked as paid.'</span>);
+}</div>
+        <div class="item-file" style="margin-top:10px;">
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentScheduleController.php — add markPaid()</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: routes/web.php — add markPaid patch route</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 5: SIDEBAR -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-bars"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">High</span>
+          Sidebar Navigation Link নেই
+        </div>
+        <div class="item-desc">
+          <code>resources/views/layout/sidebar.blade.php</code> এ payment-schedules এর কোনো link নেই।
+          Accounts submenu তে add করতে হবে।
+        </div>
+        <div class="code-block"><span class="cm">&lt;!-- sidebar.blade.php — Accounts submenu এর ভেতরে add করো --&gt;</span>
+&lt;<span class="kw">a</span> href="{{ <span class="fn">route</span>(<span class="str">'role.payment-schedules.index'</span>, [<span class="str">'role'</span> => $role]) }}"
+   class="submenu-item {{ <span class="fn">request</span>()-><span class="fn">routeIs</span>(<span class="str">'role.payment-schedules.*'</span>) ? <span class="str">'active'</span> : <span class="str">''</span> }}"&gt;
+    &lt;<span class="kw">i</span> class="fas fa-calendar-alt text-xs w-3"&gt;&lt;/i&gt; Payment Schedules
+&lt;/<span class="kw">a</span>&gt;</div>
+        <div class="item-file" style="margin-top:10px;">
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: resources/views/layout/sidebar.blade.php — Accounts submenu</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 6: PRINT VIEW -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-print"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">Medium</span>
+          Daily Print Report — Boss Approval Sheet
+        </div>
+        <div class="item-desc">
+          Boss কে দেওয়ার জন্য printable daily schedule নেই। Index view এ একটা "Print" button থাকবে যেটা
+          <code>@media print</code> CSS দিয়ে clean table print করবে — payable section, receivable section,
+          এবং নিচে signature box (boss sign করবে approve/reject এর জন্য)।
+        </div>
+        <div class="item-file">
+          <span class="file-chip add"><i class="fas fa-plus"></i> ADD: @media print section inside index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 7: createdBy relationship -->
+    <div class="item-card missing">
+      <div class="item-icon"><i class="fas fa-user"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-missing">Low</span>
+          PaymentSchedule Model — <code>createdBy()</code> relationship নেই
+        </div>
+        <div class="item-desc">
+          Model এ <code>created_by</code> field আছে কিন্তু <code>createdBy()</code> belongsTo User relationship নেই।
+          View এ "Created By" দেখাতে গেলে এটা দরকার।
+        </div>
+        <div class="code-block"><span class="kw">public function</span> <span class="fn">createdBy</span>()
+{
+    return $this-><span class="fn">belongsTo</span>(User::class, <span class="str">'created_by'</span>);
+}
+
+<span class="kw">public function</span> <span class="fn">approvedBy</span>()   <span class="cm">// approval add করার পর</span>
+{
+    return $this-><span class="fn">belongsTo</span>(User::class, <span class="str">'approved_by'</span>);
+}</div>
+        <div class="item-file" style="margin-top:8px;">
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: app/Models/PaymentSchedule.php</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /missing list -->
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════ SECTION C: PARTIAL ═══════════════════════════════ -->
+  <div class="section-title">
+    <div class="num num-yellow">C</div>
+    আধা-করা — Needs Update / Fix ⚠️
+  </div>
+
+  <div class="item-list">
+
+    <!-- PARTIAL 1: fillable -->
+    <div class="item-card partial">
+      <div class="item-icon"><i class="fas fa-list-check"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-partial">Fix</span>
+          Sale ও Purchase Model — <code>due_date</code> fillable এ নেই
+        </div>
+        <div class="item-desc">
+          Migration দিয়ে <code>due_date</code> column add হয়েছে কিন্তু <code>Sale.php</code> এবং <code>Purchase.php</code> এর
+          <code>$fillable</code> array তে <code>due_date</code> নেই। এটা না থাকলে Sale/Purchase create/update করার সময় due_date save হবে না।
+        </div>
+        <div class="code-block"><span class="cm">// app/Models/Sale.php — $fillable এ add করো</span>
+protected $fillable = [
+    <span class="str">'bank_id'</span>, <span class="str">'customer_id'</span>, <span class="str">'branch_id'</span>, <span class="str">'invoice_no'</span>,
+    <span class="str">'sale_date'</span>, <span class="rd">'due_date'</span>,   <span class="cm">// ← এটা add করো</span>
+    <span class="str">'total_amount'</span>, <span class="str">'paid_amount'</span>, <span class="str">'due_amount'</span>,
+    ...
+];
+
+<span class="cm">// app/Models/Purchase.php — same</span>
+protected $fillable = [
+    ..., <span class="rd">'due_date'</span>, ...   <span class="cm">// ← এটা add করো</span>
+];</div>
+        <div class="item-file" style="margin-top:8px;">
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: app/Models/Sale.php — $fillable</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: app/Models/Purchase.php — $fillable</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTIAL 2: Schedule form only in ticket -->
+    <div class="item-card partial">
+      <div class="item-icon"><i class="fas fa-window-maximize"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-partial">Extend</span>
+          Schedule Create Form — শুধু Ticket Direct Sales এ আছে, Regular Sales/Purchases এ নেই
+        </div>
+        <div class="item-desc">
+          Schedule creation modal শুধু <code>ticket_direct_sales/index.blade.php</code> এ আছে।
+          Regular Sales list এবং Purchase list এ একই ধরনের "Schedule Payment" button add করতে হবে।
+        </div>
+        <div class="item-file">
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: resources/views/sales/index.blade.php — schedule modal add</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: resources/views/purchases/index.blade.php — schedule modal add</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- PARTIAL 3: party_name not stored -->
+    <div class="item-card partial">
+      <div class="item-icon"><i class="fas fa-address-card"></i></div>
+      <div class="item-body">
+        <div class="item-title">
+          <span class="badge-tag tag-partial">Improvement</span>
+          <code>party_name</code> Store হয় না — শুধু <code>party_id</code> আছে
+        </div>
+        <div class="item-desc">
+          Table এ শুধু <code>party_id</code> আছে। Customer বা Supplier delete হলে schedule list এ নাম দেখা যাবে না।
+          <code>party_name</code> string field add করে create করার সময় নাম save করে রাখা উচিত।
+        </div>
+        <div class="code-block"><span class="cm">-- migration: add party_name to payment_schedules</span>
+$table-><span class="fn">string</span>(<span class="str">'party_name'</span>)->nullable()->after(<span class="str">'party_id'</span>);
+
+<span class="cm">// Controller store() এ — party_name fill করো</span>
+<span class="str">'party_name'</span> => match($request->schedulable_type) {
+    <span class="str">'sale'</span>     => $model->customer?->name,
+    <span class="str">'purchase'</span> => $model->supplier?->name,
+    default    => null,
+},</div>
+        <div class="item-file" style="margin-top:8px;">
+          <span class="file-chip add"><i class="fas fa-plus"></i> NEW migration: add_party_name_to_payment_schedules</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentScheduleController.php store() — party_name add</span>
+          <span class="file-chip edit"><i class="fas fa-pen"></i> EDIT: PaymentSchedule.php — $fillable এ party_name add</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /partial list -->
+
+  <div class="divider"></div>
+
+  <!-- ═══════════════════════════════ SECTION D: ACTION PLAN ═══════════════════════════════ -->
+  <div class="section-title">
+    <div class="num num-blue">D</div>
+    Action Plan — কোনটা আগে করবো
+  </div>
+
+  <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:20px;">
+    <table class="action-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Task</th>
+          <th>File(s)</th>
+          <th>Priority</th>
+          <th>Effort</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td><strong>Index View তৈরি করো</strong><br><small style="color:#64748b;">payment-schedules/index.blade.php — filter, table, action buttons</small></td>
+          <td><code style="font-size:11px;">resources/views/payment-schedules/index.blade.php</code></td>
+          <td><span class="priority p-high">Critical</span></td>
+          <td><span class="effort e-big">3–4 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td><strong>Sidebar link add</strong><br><small style="color:#64748b;">Accounts submenu তে Payment Schedules link</small></td>
+          <td><code style="font-size:11px;">resources/views/layout/sidebar.blade.php</code></td>
+          <td><span class="priority p-high">Critical</span></td>
+          <td><span class="effort e-sm">5 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td><strong>Sale ও Purchase $fillable fix</strong><br><small style="color:#64748b;">due_date যোগ করো</small></td>
+          <td><code style="font-size:11px;">Sale.php, Purchase.php</code></td>
+          <td><span class="priority p-high">High</span></td>
+          <td><span class="effort e-sm">5 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td><strong>Reschedule feature</strong><br><small style="color:#64748b;">migration (fields + log table) + model + controller method + route</small></td>
+          <td><code style="font-size:11px;">migration, PaymentScheduleLog.php, Controller, web.php</code></td>
+          <td><span class="priority p-high">High</span></td>
+          <td><span class="effort e-med">2 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td><strong>Approval system</strong><br><small style="color:#64748b;">migration (approved_by/at/note) + approve() + reject() + routes</small></td>
+          <td><code style="font-size:11px;">migration, Controller, web.php, Model</code></td>
+          <td><span class="priority p-high">High</span></td>
+          <td><span class="effort e-med">2 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td>
+          <td><strong>markPaid() method</strong><br><small style="color:#64748b;">status=paid, paid_date set, optional transaction create</small></td>
+          <td><code style="font-size:11px;">Controller, web.php</code></td>
+          <td><span class="priority p-med">Medium</span></td>
+          <td><span class="effort e-sm">45 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>7</strong></td>
+          <td><strong>createdBy() + approvedBy() relationships</strong><br><small style="color:#64748b;">PaymentSchedule model এ belongsTo</small></td>
+          <td><code style="font-size:11px;">PaymentSchedule.php</code></td>
+          <td><span class="priority p-med">Medium</span></td>
+          <td><span class="effort e-sm">5 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>8</strong></td>
+          <td><strong>party_name store করো</strong><br><small style="color:#64748b;">migration + controller store() fix</small></td>
+          <td><code style="font-size:11px;">migration, Controller</code></td>
+          <td><span class="priority p-med">Medium</span></td>
+          <td><span class="effort e-sm">30 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>9</strong></td>
+          <td><strong>Print daily report (boss approval sheet)</strong><br><small style="color:#64748b;">@media print section inside index view</small></td>
+          <td><code style="font-size:11px;">index.blade.php (print section)</code></td>
+          <td><span class="priority p-med">Medium</span></td>
+          <td><span class="effort e-sm">1 hr</span></td>
+        </tr>
+        <tr>
+          <td><strong>10</strong></td>
+          <td><strong>Sales/Purchases view এ schedule modal</strong><br><small style="color:#64748b;">ticket_direct_sales এর মতো regular sale/purchase এ button add</small></td>
+          <td><code style="font-size:11px;">sales/index.blade.php, purchases/index.blade.php</code></td>
+          <td><span class="priority p-low">Low</span></td>
+          <td><span class="effort e-med">1–2 hrs</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Quick wins box -->
+  <div style="background:#fff;border-radius:10px;padding:20px 24px;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:5px solid #2563eb;margin-bottom:20px;">
+    <h3 style="font-size:14px;font-weight:800;color:#1d4ed8;margin-bottom:12px;"><i class="fas fa-bolt" style="margin-right:7px;"></i>Quick Wins — আজই করা যাবে (30 min)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>Sidebar link add</strong> — sidebar.blade.php তে 1 line</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>Sale + Purchase $fillable</strong> — due_date add করো 2 files</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>createdBy() relationship</strong> — PaymentSchedule.php তে 5 lines</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>cancel() → status enum check</strong> — approved status আগে cancel হওয়া উচিত না</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:#94a3b8;font-size:12px;padding:10px 0;">
+    EPAL ERP — Payment Schedule Gap Analysis &nbsp;·&nbsp; 26 Apr 2026
+  </p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR/AP & Payment Scheduling — epal_erp Specific Roadmap</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.6; }
+  .container { max-width: 1260px; margin: 0 auto; padding: 30px 20px; }
+  h1 { font-size: 1.9rem; color: #38bdf8; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 6px; }
+  .subtitle { color: #94a3b8; margin-bottom: 28px; font-size: 0.9rem; }
+  h2 { font-size: 1.2rem; color: #fbbf24; margin-bottom: 14px; }
+  h3 { font-size: 0.97rem; color: #a78bfa; margin: 12px 0 6px; }
+  .section { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 20px; margin-bottom: 22px; }
+  .section.green  { border-left: 4px solid #10b981; }
+  .section.red    { border-left: 4px solid #f43f5e; }
+  .section.blue   { border-left: 4px solid #3b82f6; }
+  .section.yellow { border-left: 4px solid #f59e0b; }
+  .section.purple { border-left: 4px solid #8b5cf6; }
+  .section.orange { border-left: 4px solid #f97316; }
+  .section.teal   { border-left: 4px solid #14b8a6; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px; }
+  .card.ar { border-color: #10b981; }
+  .card.ap { border-color: #f43f5e; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; margin-right: 4px; }
+  .tag.exists  { background: #064e3b; color: #10b981; }
+  .tag.new     { background: #1e3a8a; color: #60a5fa; }
+  .tag.extend  { background: #451a03; color: #fb923c; }
+  .tag.ar      { background: #064e3b; color: #34d399; }
+  .tag.ap      { background: #4c0519; color: #f87171; }
+  code { background: #020617; border: 1px solid #334155; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 0.82rem; color: #7dd3fc; }
+  pre { background: #020617; border: 1px solid #1e3a8a; border-radius: 8px; padding: 15px; overflow-x: auto; margin: 10px 0; font-size: 0.8rem; }
+  pre code { background: none; border: none; color: #e2e8f0; padding: 0; }
+  .flow { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .fb { background: #0f172a; border: 1px solid #475569; border-radius: 6px; padding: 7px 11px; font-size: 0.8rem; text-align: center; }
+  .fb.t  { border-color: #f59e0b; color: #fbbf24; }
+  .fb.a  { border-color: #3b82f6; color: #60a5fa; }
+  .fb.d  { border-color: #8b5cf6; color: #c4b5fd; }
+  .fb.ok { border-color: #10b981; color: #34d399; }
+  .fb.ex { border-color: #10b981; color: #6ee7b7; background: #022c22; }
+  .arrow { color: #475569; font-size: 1.1rem; }
+  ul { padding-left: 18px; }
+  li { margin-bottom: 4px; font-size: 0.87rem; color: #cbd5e1; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.83rem; }
+  th { background: #1e3a8a; color: #bfdbfe; padding: 7px 11px; text-align: left; }
+  td { border-bottom: 1px solid #1e293b; padding: 7px 11px; color: #cbd5e1; vertical-align: top; }
+  tr:hover td { background: #162032; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 12px; font-size: 0.73rem; }
+  .badge.done    { background: #064e3b; color: #10b981; }
+  .badge.crit    { background: #450a0a; color: #f87171; }
+  .badge.high    { background: #431407; color: #fb923c; }
+  .badge.med     { background: #1c1917; color: #a8a29e; }
+  .warn { background: #431407; border: 1px solid #f97316; border-radius: 6px; padding: 10px 14px; margin: 10px 0; font-size: 0.86rem; color: #fed7aa; }
+  .info { background: #0c2340; border: 1px solid #1e40af; border-radius: 6px; padding: 10px 14px; margin: 10px 0; font-size: 0.86rem; color: #93c5fd; }
+  .phase { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .pnum { background: #1e3a8a; color: #60a5fa; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.85rem; flex-shrink: 0; margin-top: 2px; }
+  .pcontent { flex: 1; }
+  .file-ref { color: #7dd3fc; font-size: 0.8rem; margin-bottom: 6px; }
+  .divider { border: none; border-top: 1px solid #334155; margin: 18px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>💰 AR/AP & Payment Scheduling — epal_erp Specific Roadmap</h1>
+<p class="subtitle">Actual codebase analyzed. Based on existing models, journals, transactions, accounts. Generated 2026-04-21.</p>
+
+<!-- ===== WHAT ALREADY EXISTS ===== -->
+<div class="section green">
+  <h2>✅ ইতিমধ্যে যা আছে (তোমার ERP তে)</h2>
+  <div class="grid2">
+    <div class="card ar">
+      <h3><span class="tag exists">EXISTS</span> AR already in Journal</h3>
+      <ul>
+        <li>Account code <code>1130</code> = Accounts Receivable</li>
+        <li>Sale create হলেই → <code>due_amount > 0</code> হলে → <strong>Debit AR 1130</strong> Journal entry auto-হয়</li>
+        <li>TicketSale তেও একই journal চলে</li>
+        <li>Sale model এ <code>paid_amount</code>, <code>due_amount</code>, <code>payment_status</code> আছে</li>
+      </ul>
+    </div>
+    <div class="card ap">
+      <h3><span class="tag exists">EXISTS</span> AP already in Journal</h3>
+      <ul>
+        <li>Account code <code>2110</code> = Accounts Payable</li>
+        <li>Purchase create হলেই → <code>due_amount > 0</code> হলে → <strong>Credit AP 2110</strong> Journal entry auto-হয়</li>
+        <li>TicketPurchase তেও একই</li>
+        <li>Purchase model এ <code>paid_amount</code>, <code>due_amount</code>, <code>payment_status</code> আছে</li>
+      </ul>
+    </div>
+  </div>
+  <br>
+  <div class="grid2">
+    <div class="card">
+      <h3><span class="tag exists">EXISTS</span> Transaction Model</h3>
+      <ul>
+        <li><code>transactions</code> table আছে (2026-02-17)</li>
+        <li>Fields: <code>type, user_type, invoice_id, payment_date, payment_method, debit, credit, balance</code></li>
+        <li>Sale ও Purchase payment tracking এখানে হয়</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3><span class="tag exists">EXISTS</span> Bank Integration</h3>
+      <ul>
+        <li>Bank balance auto-update হয় payment এ</li>
+        <li>BankTransfer → pending→completed workflow আছে</li>
+        <li>Bank account linked to chart-of-accounts</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="info">
+    💡 মানে হলো: তোমার AR/AP এর <strong>accounting foundation ইতিমধ্যে তৈরি</strong>। শুধু <strong>Payment Recording UI</strong> আর <strong>Payment Scheduling</strong> নেই।
+  </div>
+</div>
+
+<!-- ===== WHAT'S MISSING ===== -->
+<div class="section red">
+  <h2>❌ যা নেই — Build করতে হবে</h2>
+  <table>
+    <tr><th>Missing Feature</th><th>Impact</th><th>Solution</th></tr>
+    <tr>
+      <td>Sale/Purchase এর <code>due_date</code> নেই</td>
+      <td>কবে টাকা পাবো/দেবো জানা যায় না</td>
+      <td><span class="badge crit">Critical</span> Migration: add <code>due_date</code> column</td>
+    </tr>
+    <tr>
+      <td>Payment Recording UI নেই</td>
+      <td>Due amount থেকে partial/full payment record করা যায় না</td>
+      <td><span class="badge crit">Critical</span> <code>recordPayment()</code> method + modal</td>
+    </tr>
+    <tr>
+      <td>Payment Schedule নেই</td>
+      <td>কিস্তিতে দেওয়া/নেওয়ার plan করা যায় না</td>
+      <td><span class="badge crit">Critical</span> নতুন <code>payment_schedules</code> table</td>
+    </tr>
+    <tr>
+      <td>AR/AP Aging Report নেই</td>
+      <td>কে কত দিন ধরে বাকি — জানা যায় না</td>
+      <td><span class="badge high">High</span> Report view build করতে হবে</td>
+    </tr>
+    <tr>
+      <td>Overdue notification নেই</td>
+      <td>Due date পার হলে কোনো alert নেই</td>
+      <td><span class="badge high">High</span> Laravel Scheduler command</td>
+    </tr>
+    <tr>
+      <td>Vendor/Agent manual AR/AP নেই</td>
+      <td>Sale/Purchase ছাড়া vendor/agent এর পাওনা/দেনা track করা যায় না</td>
+      <td><span class="badge med">Medium</span> Manual entry form</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ===== PHASE 1: MIGRATIONS ===== -->
+<div class="section purple">
+  <h2>🗄️ Phase 1 — Database Changes (Minimal, Non-Breaking)</h2>
+
+  <div class="phase">
+    <div class="pnum">1A</div>
+    <div class="pcontent">
+      <h3><span class="tag extend">EXTEND</span> due_date যোগ করো — Sales ও Purchases এ</h3>
+      <p class="file-ref">নতুন migration file বানাও</p>
+      <pre><code>// database/migrations/2026_04_21_000001_add_due_date_to_sales_purchases.php
+
+public function up(): void
+{
+    Schema::table('sales', function (Blueprint $table) {
+        $table->date('due_date')->nullable()->after('sale_date');
+    });
+
+    Schema::table('purchases', function (Blueprint $table) {
+        $table->date('due_date')->nullable()->after('purchase_date');
+    });
+
+    Schema::table('ticket_sales', function (Blueprint $table) {
+        $table->date('due_date')->nullable()->after('sale_date');
+    });
+
+    Schema::table('ticket_purchases', function (Blueprint $table) {
+        $table->date('due_date')->nullable()->after('purchase_date');
+    });
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="pnum">1B</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> payment_schedules table — কিস্তি/সময়সূচী</h3>
+      <pre><code>// database/migrations/2026_04_21_000002_create_payment_schedules_table.php
+
+public function up(): void
+{
+    Schema::create('payment_schedules', function (Blueprint $table) {
+        $table->id();
+
+        // polymorphic: Sale | Purchase | TicketSale | TicketPurchase
+        $table->string('schedulable_type'); // e.g. 'App\Models\Sale'
+        $table->unsignedBigInteger('schedulable_id');
+
+        $table->string('type');              // 'receive' (AR) | 'pay' (AP)
+        $table->string('party_type');        // 'customer' | 'vendor' | 'agent'
+        $table->unsignedBigInteger('party_id'); // customer_id / vendor_id / agent_id
+
+        $table->decimal('amount', 15, 2);
+        $table->date('scheduled_date');
+
+        // pending | paid | overdue | cancelled
+        $table->string('status')->default('pending');
+        $table->date('paid_date')->nullable();    // আসলে কবে হলো
+        $table->unsignedBigInteger('transaction_id')->nullable(); // payment হলে transaction ref
+        $table->text('note')->nullable();
+
+        $table->unsignedBigInteger('created_by');
+        $table->timestamps();
+
+        $table->index(['schedulable_type', 'schedulable_id']);
+        $table->index('scheduled_date');
+        $table->index('status');
+    });
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="warn">
+    ⚠️ আলাদা <strong>receivables / payables</strong> table বানানোর দরকার নেই। তোমার existing Sale/Purchase model এই AR/AP এর source of truth। Journal account 1130 (AR) ও 2110 (AP) তে balance track হচ্ছে।
+  </div>
+</div>
+
+<!-- ===== PHASE 2: RECORD PAYMENT ===== -->
+<div class="section yellow">
+  <h2>⚡ Phase 2 — Payment Recording (Due → Paid)</h2>
+
+  <div class="info" style="margin-bottom:14px;">
+    🔍 <strong>Actual codebase scan result (2026-04-21):</strong><br>
+    ✅ <code>SaleController::make_payment()</code> — <strong>ইতিমধ্যে আছে</strong> (line 1086). Route: <code>POST sales/make/payment/{id}</code> (name: <code>sales.make.payment</code>). Transaction ✓ Bank update ✓ Journal (Debit Bank / Credit AR 1130) ✓ Sale.due_amount update ✓<br>
+    ❌ <code>PurchaseController</code> — payment method <strong>নেই</strong>. Build করতে হবে.<br>
+    ❌ <code>TicketSaleController</code> — আলাদা payment method <strong>নেই</strong>. Build করতে হবে.<br>
+    ❌ <code>TicketPurchaseController</code> — payment method <strong>নেই</strong>. Build করতে হবে.
+  </div>
+
+  <div class="phase">
+    <div class="pnum">2A</div>
+    <div class="pcontent">
+      <h3><span class="tag exists">EXISTS ✓</span> SaleController::make_payment() — পুরো complete</h3>
+      <p class="file-ref">app/Http/Controllers/SaleController.php — line 1086 | Route: POST sales/make/payment/{id}</p>
+      <div style="background:#022c22; border:1px solid #10b981; border-radius:6px; padding:10px 14px; font-size:0.85rem; color:#6ee7b7; margin:8px 0;">
+        ইতিমধ্যে করে: Transaction create → Bank balance update → Sale paid_amount/due_amount/payment_status update → Journal Entry (Debit Bank Account / Credit AR 1130)
+      </div>
+      <p style="color:#94a3b8; font-size:0.85rem; margin-top:8px;">
+        <strong>শুধু একটা জিনিস যোগ করতে হবে</strong> — schedule_id support। Payment করার সময় schedule mark-paid হবে:
+      </p>
+      <pre><code>// SaleController::make_payment() এর DB::transaction() এর শেষে যোগ করো:
+
+// Schedule mark paid (if payment was against a schedule)
+if (!empty($validated['schedule_id'])) {
+    \App\Models\PaymentSchedule::where('id', $validated['schedule_id'])
+        ->where('schedulable_type', \App\Models\Sale::class)
+        ->where('schedulable_id', $sale->id)
+        ->update([
+            'status'   => 'paid',
+            'paid_date' => $validated['payment_date'],
+        ]);
+}
+
+// Validation এও যোগ করো:
+'schedule_id' => 'nullable|exists:payment_schedules,id',</code></pre>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="pnum">2B</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> PurchaseController::make_payment() — SaleController এর exact pattern অনুসরণ</h3>
+      <p class="file-ref">app/Http/Controllers/PurchaseController.php — নতুন method যোগ করো</p>
+      <pre><code>// POST /purchases/make/payment/{id}
+
+public function make_payment(Request $request, $role, $id)
+{
+    $validated = $request->validate([
+        'payment_method' => 'required|in:cash,card,advance,checque,bank_transfer,mobile_banking,other',
+        'bank_id'        => 'required|exists:banks,id',
+        'payment_date'   => 'required|date',
+        'reference_no'   => 'nullable|string|max:255',
+        'payment_amount' => 'required|numeric|min:0.01',
+        'schedule_id'    => 'nullable|exists:payment_schedules,id',
+    ]);
+
+    $purchase = Purchase::findOrFail($id);
+
+    if ($validated['payment_amount'] > $purchase->due_amount) {
+        return redirect()->back()->with('error', 'Payment amount cannot exceed due amount!');
+    }
+
+    try {
+        DB::transaction(function () use ($validated, $purchase) {
+
+            $acc = Bank::find($validated['bank_id']);
+            $opening_balance = $acc?->balance ?? 0;
+
+            // 1. Transaction record (money going OUT)
+            Transaction::create([
+                'user_id'        => $purchase->supplier_id,
+                'user_type'      => 'supplier',
+                'type'           => 'purchase',
+                'account_id'     => $validated['bank_id'],
+                'payment_date'   => $validated['payment_date'],
+                'reference_no'   => $validated['reference_no'],
+                'payment_method' => $validated['payment_method'],
+                'invoice_id'     => $purchase->id,
+                'old_balance'    => $opening_balance,
+                'debit'          => $validated['payment_amount'],
+                'credit'         => 0,
+                'balance'        => $opening_balance - $validated['payment_amount'],
+                'note'           => 'Payment from Make Payment.',
+            ]);
+
+            // 2. Bank balance update (money going out → decrement)
+            if ($acc) {
+                $acc->update(['balance' => $opening_balance - $validated['payment_amount']]);
+            }
+
+            // 3. Purchase update
+            $newPaidTotal = min($purchase->paid_amount + $validated['payment_amount'], $purchase->total_amount);
+            $newDueAmount = max($purchase->due_amount - $validated['payment_amount'], 0);
+            $purchase->update([
+                'paid_amount'    => $newPaidTotal,
+                'due_amount'     => $newDueAmount,
+                'payment_status' => $newDueAmount <= 0 ? 'paid' : 'partial',
+            ]);
+
+            // 4. Journal Entry: Debit AP 2110 / Credit Bank
+            $apAccount   = \App\Models\Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
+            $bank        = Bank::find($validated['bank_id']);
+            if (!$bank || !$bank->account_id) {
+                throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+            }
+
+            $journal = \App\Models\JournalEntry::create([
+                'company_id'  => auth()->user()->company_id ?? 2,
+                'created_by'  => auth()->id(),
+                'date'        => $validated['payment_date'],
+                'reference'   => $validated['reference_no'] ?? $purchase->purchase_no,
+                'source'      => 'purchase',
+                'source_id'   => $purchase->id,
+                'description' => 'Payment made — ' . $purchase->purchase_no,
+            ]);
+
+            // Debit: AP account (reducing payable)
+            \App\Models\JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id'       => $apAccount->id,
+                'debit'            => $validated['payment_amount'],
+                'credit'           => 0,
+                'note'             => 'Payable cleared — ' . $purchase->purchase_no,
+            ]);
+
+            // Credit: Bank account (money leaving)
+            \App\Models\JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id'       => $bank->account_id,
+                'debit'            => 0,
+                'credit'           => $validated['payment_amount'],
+                'note'             => 'Payment sent',
+            ]);
+
+            // 5. Schedule mark paid
+            if (!empty($validated['schedule_id'])) {
+                \App\Models\PaymentSchedule::where('id', $validated['schedule_id'])
+                    ->where('schedulable_type', \App\Models\Purchase::class)
+                    ->where('schedulable_id', $purchase->id)
+                    ->update(['status' => 'paid', 'paid_date' => $validated['payment_date']]);
+            }
+        });
+    } catch (\Throwable $th) {
+        DB::rollBack();
+        return redirect()->back()->with('error', $th->getMessage());
+    }
+
+    return redirect()->back()->with('success', 'Payment of ৳' . number_format($validated['payment_amount'], 2) . ' sent successfully!');
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="pnum">2C</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> TicketSaleController::make_payment()</h3>
+      <p class="file-ref">app/Http/Controllers/Dashboard/TicketSaleController.php</p>
+      <pre><code>// POST /ticket-sales/make/payment/{id}
+// SaleController::make_payment() এর exact same pattern
+// পার্থক্য: user_type = 'agent', invoice_id = ticketSale->id
+// Journal: Debit Bank Account / Credit AR 1130 (same as Sale)
+
+public function make_payment(Request $request, $role, $id)
+{
+    $validated = $request->validate([
+        'payment_method' => 'required|string',
+        'bank_id'        => 'required|exists:banks,id',
+        'payment_date'   => 'required|date',
+        'reference_no'   => 'nullable|string|max:255',
+        'payment_amount' => 'required|numeric|min:0.01',
+        'schedule_id'    => 'nullable|exists:payment_schedules,id',
+    ]);
+
+    $ticketSale = TicketSale::findOrFail($id);
+
+    if ($validated['payment_amount'] > $ticketSale->due_amount) {
+        return redirect()->back()->with('error', 'Payment amount cannot exceed due amount!');
+    }
+
+    DB::transaction(function () use ($validated, $ticketSale) {
+        $this->manageBankPayment(
+            (object) ['bank_id' => $validated['bank_id'], 'payment_method' => $validated['payment_method'], 'payment_date' => $validated['payment_date'], 'reference_no' => $validated['reference_no']],
+            $ticketSale->id,
+            $validated['payment_amount']
+        );
+
+        $newPaid = min($ticketSale->paid_amount + $validated['payment_amount'], $ticketSale->total_amount);
+        $newDue  = max($ticketSale->due_amount  - $validated['payment_amount'], 0);
+        $ticketSale->update([
+            'paid_amount'    => $newPaid,
+            'due_amount'     => $newDue,
+            'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
+        ]);
+
+        // Journal: Debit Bank / Credit AR 1130
+        $arAccount = \App\Models\Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
+        $bank      = Bank::findOrFail($validated['bank_id']);
+        $journal   = \App\Models\JournalEntry::create([
+            'company_id'  => auth()->user()->company_id ?? 2,
+            'created_by'  => auth()->id(),
+            'date'        => $validated['payment_date'],
+            'reference'   => $ticketSale->invoice_no,
+            'source'      => 'ticket_sale',
+            'source_id'   => $ticketSale->id,
+            'description' => 'Ticket sale payment received — ' . $ticketSale->invoice_no,
+        ]);
+        \App\Models\JournalItem::create(['journal_entry_id' => $journal->id, 'account_id' => $bank->account_id, 'debit' => $validated['payment_amount'], 'credit' => 0, 'note' => 'Payment received']);
+        \App\Models\JournalItem::create(['journal_entry_id' => $journal->id, 'account_id' => $arAccount->id, 'debit' => 0, 'credit' => $validated['payment_amount'], 'note' => 'AR cleared']);
+
+        if (!empty($validated['schedule_id'])) {
+            \App\Models\PaymentSchedule::where('id', $validated['schedule_id'])
+                ->update(['status' => 'paid', 'paid_date' => $validated['payment_date']]);
+        }
+    });
+
+    return redirect()->back()->with('success', 'Payment recorded!');
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="pnum">2D</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> TicketPurchaseController::make_payment()</h3>
+      <p class="file-ref">app/Http/Controllers/Dashboard/TicketPurchaseController.php</p>
+      <ul>
+        <li>PurchaseController::make_payment() এর exact pattern</li>
+        <li>user_type = <code>'vendor'</code>, invoice_id = ticketPurchase->id</li>
+        <li>Journal: Debit AP 2110 / Credit Bank</li>
+        <li>Portal payment হলে: bank_id নেই — <code>managePortalPayment()</code> use করো (already in controller)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PHASE 3: SCHEDULING ===== -->
+<div class="section orange">
+  <h2>📅 Phase 3 — Payment Scheduling Controller</h2>
+
+  <div class="phase">
+    <div class="pnum">3A</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> PaymentScheduleController</h3>
+      <p class="file-ref">app/Http/Controllers/Dashboard/PaymentScheduleController.php</p>
+      <pre><code>class PaymentScheduleController extends Controller
+{
+    // GET /payment-schedules?type=receive|pay&status=pending|overdue&date_from=&date_to=
+    public function index(Request $request)
+    {
+        $query = PaymentSchedule::with('schedulable')
+            ->when($request->type, fn($q) => $q->where('type', $request->type))
+            ->when($request->status, fn($q) => $q->where('status', $request->status))
+            ->when($request->date_from, fn($q) => $q->where('scheduled_date', '>=', $request->date_from))
+            ->when($request->date_to, fn($q) => $q->where('scheduled_date', '<=', $request->date_to))
+            ->orderBy('scheduled_date');
+
+        $schedules  = $query->paginate(20);
+        $todayCount = PaymentSchedule::where('scheduled_date', today())->where('status', 'pending')->count();
+        $overdueAmt = PaymentSchedule::where('status', 'overdue')->sum('amount');
+
+        return view('payment-schedules.index', compact('schedules', 'todayCount', 'overdueAmt'));
+    }
+
+    // POST /payment-schedules — Schedule তৈরি করো
+    public function store(Request $request)
+    {
+        $request->validate([
+            'schedulable_type' => 'required|in:sale,purchase,ticket_sale,ticket_purchase',
+            'schedulable_id'   => 'required|integer',
+            'schedules'        => 'required|array|min:1',
+            'schedules.*.amount' => 'required|numeric|min:0.01',
+            'schedules.*.date'   => 'required|date',
+        ]);
+
+        // Model resolve
+        $modelMap = [
+            'sale'             => \App\Models\Sale::class,
+            'purchase'         => \App\Models\Purchase::class,
+            'ticket_sale'      => \App\Models\TicketSale::class,
+            'ticket_purchase'  => \App\Models\TicketPurchase::class,
+        ];
+        $model = $modelMap[$request->schedulable_type]::findOrFail($request->schedulable_id);
+
+        // Total scheduled ≤ due_amount
+        $alreadyScheduled = PaymentSchedule::where('schedulable_type', get_class($model))
+            ->where('schedulable_id', $model->id)
+            ->whereIn('status', ['pending', 'overdue'])
+            ->sum('amount');
+
+        $newTotal = collect($request->schedules)->sum('amount');
+        if (($alreadyScheduled + $newTotal) > $model->due_amount) {
+            return back()->withErrors(['amount' => 'Schedule total exceeds due amount: ' . $model->due_amount]);
+        }
+
+        // Party info
+        $partyInfo = $this->resolveParty($request->schedulable_type, $model);
+        $type = in_array($request->schedulable_type, ['sale', 'ticket_sale']) ? 'receive' : 'pay';
+
+        foreach ($request->schedules as $sched) {
+            PaymentSchedule::create([
+                'schedulable_type' => get_class($model),
+                'schedulable_id'   => $model->id,
+                'type'             => $type,
+                'party_type'       => $partyInfo['type'],
+                'party_id'         => $partyInfo['id'],
+                'amount'           => $sched['amount'],
+                'scheduled_date'   => $sched['date'],
+                'status'           => 'pending',
+                'note'             => $sched['note'] ?? null,
+                'created_by'       => auth()->id(),
+            ]);
+        }
+
+        return back()->with('success', count($request->schedules) . ' schedule(s) created.');
+    }
+
+    private function resolveParty(string $type, $model): array
+    {
+        return match($type) {
+            'sale'            => ['type' => 'customer', 'id' => $model->customer_id],
+            'purchase'        => ['type' => 'vendor',   'id' => $model->supplier_id],
+            'ticket_sale'     => ['type' => 'agent',    'id' => $model->agent_id],
+            'ticket_purchase' => ['type' => 'vendor',   'id' => $model->vendor_id],
+        };
+    }
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="phase">
+    <div class="pnum">3B</div>
+    <div class="pcontent">
+      <h3><span class="tag new">NEW</span> Overdue Mark — Laravel Scheduled Command</h3>
+      <p class="file-ref">app/Console/Commands/MarkOverdueSchedules.php</p>
+      <pre><code>public function handle(): void
+{
+    $count = PaymentSchedule::where('status', 'pending')
+        ->where('scheduled_date', '<', today())
+        ->update(['status' => 'overdue']);
+
+    $this->info("Marked {$count} schedules as overdue.");
+}
+
+// app/Console/Kernel.php
+protected function schedule(Schedule $schedule): void
+{
+    $schedule->command('schedules:mark-overdue')->dailyAt('00:05');
+}</code></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PHASE 4: MODEL ===== -->
+<div class="section teal">
+  <h2>🏗️ Phase 4 — PaymentSchedule Model</h2>
+  <p class="file-ref">app/Models/PaymentSchedule.php</p>
+  <pre><code>class PaymentSchedule extends Model
+{
+    protected $fillable = [
+        'schedulable_type', 'schedulable_id',
+        'type', 'party_type', 'party_id',
+        'amount', 'scheduled_date', 'status',
+        'paid_date', 'transaction_id', 'note', 'created_by',
+    ];
+
+    protected $casts = ['scheduled_date' => 'date', 'paid_date' => 'date'];
+
+    // polymorphic — Sale | Purchase | TicketSale | TicketPurchase
+    public function schedulable()
+    {
+        return $this->morphTo();
+    }
+
+    public function transaction()
+    {
+        return $this->belongsTo(Transaction::class);
+    }
+
+    // Scopes
+    public function scopeOverdue($q)  { return $q->where('status', 'overdue'); }
+    public function scopeToday($q)    { return $q->where('scheduled_date', today())->where('status', 'pending'); }
+    public function scopePending($q)  { return $q->where('status', 'pending'); }
+    public function scopeReceive($q)  { return $q->where('type', 'receive'); }
+    public function scopePay($q)      { return $q->where('type', 'pay'); }
+}
+
+// Sale Model এ যোগ করো:
+public function schedules() { return $this->morphMany(PaymentSchedule::class, 'schedulable'); }
+
+// Purchase Model এ যোগ করো:
+public function schedules() { return $this->morphMany(PaymentSchedule::class, 'schedulable'); }
+
+// TicketSale, TicketPurchase এও একই</code></pre>
+</div>
+
+<!-- ===== PHASE 5: ROUTES ===== -->
+<div class="section blue">
+  <h2>🗺️ Phase 5 — Routes (routes/web.php)</h2>
+  <pre><code>// Existing sale route group এর ভেতরে যোগ করো:
+Route::post('sales/{sale}/record-payment', [SaleController::class, 'recordPayment'])->name('sales.record-payment');
+Route::post('sales/{sale}/due-date', [SaleController::class, 'updateDueDate'])->name('sales.due-date');
+
+// Existing purchase route group এ:
+Route::post('purchases/{purchase}/record-payment', [PurchaseController::class, 'recordPayment'])->name('purchases.record-payment');
+
+// TicketSale:
+Route::post('ticket-sales/{ticketSale}/record-payment', [TicketSaleController::class, 'recordPayment'])->name('ticket-sales.record-payment');
+
+// TicketPurchase:
+Route::post('ticket-purchase/{ticketPurchase}/record-payment', [TicketPurchaseController::class, 'recordPayment'])->name('ticket-purchase.record-payment');
+
+// Payment Schedules (নতুন resource):
+Route::resource('payment-schedules', PaymentScheduleController::class)->only(['index', 'store', 'destroy']);
+Route::patch('payment-schedules/{schedule}/cancel', [PaymentScheduleController::class, 'cancel'])->name('payment-schedules.cancel');</code></pre>
+</div>
+
+<!-- ===== PHASE 6: DASHBOARD ===== -->
+<div class="section green">
+  <h2>📊 Phase 6 — Dashboard Widget (DashboardController)</h2>
+  <p class="file-ref">app/Http/Controllers/Dashboard/DashboardController.php</p>
+
+  <div class="warn" style="margin-bottom:12px;">
+    ⚠️ <strong>আগের roadmap ভুল ছিল।</strong> <code>Sale::sum('due_amount')</code> use করলে Journal এর সাথে conflict হবে।
+    কারণ: কেউ manually Journal এ account 1130/2110 তে entry দিলে Sale.due_amount আপডেট হয় না — mismatch।
+    <br><br>
+    ✅ <strong>Correct approach:</strong> Journal account balance use করো — একই pattern যা <code>BankControllerV2</code> line 28 তে করছে।
+  </div>
+
+  <table style="margin-bottom:14px;">
+    <tr><th>Purpose</th><th>Source</th><th>কেন</th></tr>
+    <tr>
+      <td>Dashboard <strong>Total AR/AP টাকা</strong></td>
+      <td><code>JournalItem</code> account 1130 / 2110</td>
+      <td>Accounting truth — manual journal entries ও ধরে</td>
+    </tr>
+    <tr>
+      <td><strong>কোন Sale এর কত বাকি</strong> (list/table)</td>
+      <td><code>Sale.due_amount</code></td>
+      <td>Operational — fast, per-invoice view</td>
+    </tr>
+    <tr>
+      <td><strong>কে কবে pay করবে</strong></td>
+      <td><code>payment_schedules</code></td>
+      <td>Schedule tracking</td>
+    </tr>
+  </table>
+
+  <pre><code>// DashboardController::index() তে যোগ করো:
+
+// ── Journal account resolve (config/accounts.php থেকে) ──────────────────
+$arAccount = Account::where('code', config('accounts.accounts_receivable'))->first(); // 1130
+$apAccount = Account::where('code', config('accounts.accounts_payable'))->first();    // 2110
+
+// ── Total AR — Journal account 1130 balance ──────────────────────────────
+// AR = Asset account → normal balance = Debit side
+// Formula: opening_balance + SUM(debit) - SUM(credit)
+$arJournalBalance = JournalItem::where('account_id', $arAccount->id)
+    ->whereNull('deleted_at')
+    ->selectRaw('COALESCE(SUM(debit) - SUM(credit), 0) as bal')
+    ->value('bal');
+$data['total_ar'] = $arAccount->opening_balance + $arJournalBalance;
+
+// ── Total AP — Journal account 2110 balance ──────────────────────────────
+// AP = Liability account → normal balance = Credit side
+// Formula: opening_balance + SUM(credit) - SUM(debit)
+$apJournalBalance = JournalItem::where('account_id', $apAccount->id)
+    ->whereNull('deleted_at')
+    ->selectRaw('COALESCE(SUM(credit) - SUM(debit), 0) as bal')
+    ->value('bal');
+$data['total_ap'] = $apAccount->opening_balance + $apJournalBalance;
+
+// ── আজকের scheduled payments ─────────────────────────────────────────────
+$data['today_receive'] = PaymentSchedule::today()->receive()->sum('amount');
+$data['today_pay']     = PaymentSchedule::today()->pay()->sum('amount');
+
+// ── Overdue ───────────────────────────────────────────────────────────────
+$data['overdue_receive'] = PaymentSchedule::overdue()->receive()->sum('amount');
+$data['overdue_pay']     = PaymentSchedule::overdue()->pay()->sum('amount');
+
+// ── 7 দিনের আসন্ন payments ───────────────────────────────────────────────
+$data['upcoming_schedules'] = PaymentSchedule::pending()
+    ->whereBetween('scheduled_date', [today(), today()->addDays(7)])
+    ->orderBy('scheduled_date')
+    ->with('schedulable')
+    ->get();
+
+// ── Operational: per-sale due list (Sale model থেকে — list view এর জন্য) ─
+// (Dashboard এ total এর জন্য নয়, list/report page এর জন্য)
+// $unpaidSales     = Sale::where('payment_status', '!=', 'paid')->with('customer')->get();
+// $unpaidPurchases = Purchase::where('payment_status', '!=', 'paid')->with('supplier')->get();</code></pre>
+
+  <div class="info">
+    💡 <strong>এটা BankControllerV2 এর মতোই:</strong> Bank এর balance ও Journal থেকে আসে
+    (<code>SUM(debit) - SUM(credit)</code> — line 28)। AR/AP ও same pattern।
+  </div>
+</div>
+
+<!-- ===== FULL WORKFLOW ===== -->
+<div class="section yellow">
+  <h2>🔄 Complete Flow — তোমার ERP এ কীভাবে কাজ করবে</h2>
+
+  <h3 style="color:#10b981; margin-bottom:8px;">SALE → AR → Payment Receive</h3>
+  <div class="flow">
+    <div class="fb t">Sale Create (due &gt; 0)</div>
+    <div class="arrow">→</div>
+    <div class="fb ex">Auto: Journal Debit AR 1130 ✓ (already works)</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Optional: Schedule তৈরি করো</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Customer pay করলে → recordPayment()</div>
+    <div class="arrow">→</div>
+    <div class="fb d">Transaction + Journal (Debit Bank / Credit AR)</div>
+    <div class="arrow">→</div>
+    <div class="fb ok">Sale.due_amount কমলো, Bank বাড়লো</div>
+  </div>
+
+  <hr class="divider">
+
+  <h3 style="color:#f43f5e; margin-bottom:8px;">PURCHASE → AP → Payment Send</h3>
+  <div class="flow">
+    <div class="fb t">Purchase Create (due &gt; 0)</div>
+    <div class="arrow">→</div>
+    <div class="fb ex">Auto: Journal Credit AP 2110 ✓ (already works)</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Optional: Schedule তৈরি করো (কিস্তি)</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Vendor কে pay করলে → recordPayment()</div>
+    <div class="arrow">→</div>
+    <div class="fb d">Transaction + Journal (Debit AP / Credit Bank)</div>
+    <div class="arrow">→</div>
+    <div class="fb ok">Purchase.due_amount কমলো, Bank কমলো</div>
+  </div>
+
+  <hr class="divider">
+
+  <h3 style="color:#f59e0b; margin-bottom:8px;">SCHEDULING Flow</h3>
+  <div class="flow">
+    <div class="fb t">Sale/Purchase এ due আছে</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Schedule add করো (কবে কত)</div>
+    <div class="arrow">→</div>
+    <div class="fb d">payment_schedules table এ save</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Daily cron: overdue mark করে</div>
+    <div class="arrow">→</div>
+    <div class="fb a">Payment আসলে: recordPayment() + schedule_id pass</div>
+    <div class="arrow">→</div>
+    <div class="fb ok">Schedule status = paid</div>
+  </div>
+</div>
+
+<!-- ===== IMPLEMENTATION ORDER ===== -->
+<div class="section blue">
+  <h2>🗓️ Implementation Order — epal_erp Specific</h2>
+  <table>
+    <tr><th>#</th><th>Task</th><th>File</th><th>Priority</th><th>Est.</th></tr>
+    <tr>
+      <td>1</td>
+      <td>Migration: due_date → sales, purchases, ticket_sales, ticket_purchases</td>
+      <td><code>database/migrations/2026_04_21_add_due_date.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>30 min</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Migration: payment_schedules table</td>
+      <td><code>database/migrations/2026_04_21_create_payment_schedules.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>30 min</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>PaymentSchedule Model + morphMany in Sale/Purchase/TicketSale/TicketPurchase</td>
+      <td><code>app/Models/PaymentSchedule.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>30 min</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><span style="color:#10b981;">✅ DONE</span> SaleController::make_payment() — আছে (line 1086). শুধু <code>schedule_id</code> support যোগ করো</td>
+      <td><code>app/Http/Controllers/SaleController.php</code></td>
+      <td><span class="badge done">Exists</span></td>
+      <td>15 min</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>PurchaseController::make_payment() — নতুন method, SaleController এর exact pattern</td>
+      <td><code>app/Http/Controllers/PurchaseController.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>1 hr</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td>TicketSaleController::make_payment() — manageBankPayment() reuse + Journal</td>
+      <td><code>Dashboard/TicketSaleController.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>1 hr</td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>TicketPurchaseController::make_payment() — Portal payment path ও handle করো</td>
+      <td><code>Dashboard/TicketPurchaseController.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>1 hr</td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>Routes: purchases/make/payment + ticket routes + payment-schedules resource</td>
+      <td><code>routes/web.php</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>20 min</td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td>Purchase show/index view → "Make Payment" modal (Sales view এর copy করো)</td>
+      <td><code>resources/views/purchases/</code></td>
+      <td><span class="badge crit">Critical</span></td>
+      <td>2 hrs</td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td>PaymentScheduleController (index + store + cancel)</td>
+      <td><code>Dashboard/PaymentScheduleController.php</code></td>
+      <td><span class="badge high">High</span></td>
+      <td>2 hrs</td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td>Schedule UI — Sale/Purchase/Ticket show page এ "Add Schedule" form</td>
+      <td><code>resources/views/payment-schedules/</code></td>
+      <td><span class="badge high">High</span></td>
+      <td>3 hrs</td>
+    </tr>
+    <tr>
+      <td>12</td>
+      <td>Overdue mark command + Kernel scheduler daily</td>
+      <td><code>app/Console/Commands/MarkOverdueSchedules.php</code></td>
+      <td><span class="badge high">High</span></td>
+      <td>30 min</td>
+    </tr>
+    <tr>
+      <td>13</td>
+      <td>Dashboard widgets — Journal AR/AP balance + today/overdue schedules</td>
+      <td><code>Dashboard/DashboardController.php</code></td>
+      <td><span class="badge high">High</span></td>
+      <td>1 hr</td>
+    </tr>
+    <tr>
+      <td>14</td>
+      <td>AR Aging Report — Sale/TicketSale due_date ভিত্তিক current/30+/60+/90+ days</td>
+      <td><code>resources/views/reports/ar-aging.blade.php</code></td>
+      <td><span class="badge med">Medium</span></td>
+      <td>2 hrs</td>
+    </tr>
+    <tr>
+      <td>15</td>
+      <td>AP Aging Report — Purchase/TicketPurchase ভিত্তিক</td>
+      <td><code>resources/views/reports/ap-aging.blade.php</code></td>
+      <td><span class="badge med">Medium</span></td>
+      <td>1 hr</td>
+    </tr>
+  </table>
+
+  <div class="info" style="margin-top:14px;">
+    💡 <strong>শুরু করো:</strong>
+    <code>php artisan make:migration add_due_date_to_tables</code> →
+    <code>php artisan make:migration create_payment_schedules_table</code> →
+    <code>php artisan migrate</code> →
+    SaleController::make_payment() এ schedule_id যোগ করো →
+    PurchaseController::make_payment() বানাও
+  </div>
+</div>
+
+<div style="text-align:center; padding:20px 0; color:#334155; font-size:0.78rem;">
+  epal_erp — AR/AP Roadmap (codebase-specific) — Analyzed & Generated 2026-04-21
+</div>
+
+</div>
+</body>
+</html>

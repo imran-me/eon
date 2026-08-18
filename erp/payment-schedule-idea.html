@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Schedule System – Idea Mockup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+/* ── Page header ── */
+.page-header {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #fff; padding: 28px 36px;
+}
+.page-header h1 { font-size: 22px; font-weight: 700; }
+.page-header p  { opacity: .75; margin-top: 5px; font-size: 13px; }
+
+.container { max-width: 1000px; margin: 0 auto; padding: 28px 16px 60px; }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 15px; font-weight: 800; color: #1e293b;
+  margin: 36px 0 14px; display: flex; align-items: center; gap: 9px;
+  border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;
+}
+.section-title .num {
+  width: 28px; height: 28px; border-radius: 50%; background: #2563eb;
+  color: #fff; font-size: 13px; font-weight: 800; display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── Info box ── */
+.info-box {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+  padding: 15px 18px; margin-bottom: 24px;
+  display: flex; gap: 11px; align-items: flex-start;
+}
+.info-box i { color: #2563eb; font-size: 17px; margin-top: 2px; }
+.info-box p { line-height: 1.65; color: #1d4ed8; font-size: 13px; }
+
+/* ── White card ── */
+.card {
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 3px 12px rgba(0,0,0,.07); padding: 22px 24px; margin-bottom: 20px;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 18px; flex-wrap: wrap; gap: 10px;
+}
+.card-header h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+/* ── Form ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+label { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .4px; }
+label .req { color: #ef4444; }
+.form-control {
+  border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 8px 11px;
+  font-size: 13px; outline: none; background: #f8fafc; transition: border .2s;
+}
+.form-control:focus { border-color: #3b82f6; background: #fff; }
+
+/* ── Entry table (multi-row input) ── */
+.entry-table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13px; }
+.entry-table th {
+  background: #f1f5f9; padding: 8px 10px; text-align: left; border-bottom: 2px solid #e2e8f0;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b;
+}
+.entry-table td { padding: 7px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.entry-table td input, .entry-table td select {
+  width: 100%; border: 1.5px solid #e2e8f0; border-radius: 6px; padding: 6px 8px;
+  font-size: 12px; background: #f8fafc;
+}
+.entry-table td input[type="date"] { color: #1e293b; }
+.highlight-due { background: #fffbeb !important; }
+.highlight-due input[type="date"] { border-color: #f59e0b !important; background: #fffbeb !important; color: #92400e !important; font-weight: 700; }
+
+.add-row-btn {
+  margin-top: 8px; padding: 6px 14px; background: #eff6ff; border: 1.5px dashed #93c5fd;
+  color: #2563eb; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.del-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 14px; padding: 0 4px; }
+
+/* ── Status badges ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.badge-pending   { background: #fef3c7; color: #92400e; }
+.badge-approved  { background: #d1fae5; color: #065f46; }
+.badge-rejected  { background: #fee2e2; color: #991b1b; }
+.badge-paid      { background: #dbeafe; color: #1e40af; }
+.badge-overdue   { background: #fce7f3; color: #9d174d; }
+.badge-rescheduled { background: #e0e7ff; color: #3730a3; }
+.badge-today     { background: #fef9c3; color: #713f12; border: 1px solid #fcd34d; }
+.badge-rcv       { background: #dbeafe; color: #1d4ed8; }
+.badge-pay       { background: #fef3c7; color: #92400e; }
+
+/* ── Schedule table ── */
+.sched-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sched-table thead th {
+  background: #1e293b; color: #e2e8f0; padding: 10px 12px; text-align: left;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+}
+.sched-table tbody tr { border-bottom: 1px solid #f1f5f9; }
+.sched-table tbody tr:hover { background: #f8fafc; }
+.sched-table tbody td { padding: 10px 12px; vertical-align: middle; }
+.sched-table tfoot td { padding: 10px 12px; background: #f8fafc; font-weight: 700; }
+.overdue-row { background: #fff5f5 !important; }
+.today-row   { background: #fffbeb !important; }
+
+/* ── Action buttons ── */
+.btn-xs {
+  padding: 4px 10px; border-radius: 5px; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-approve   { background: #d1fae5; color: #065f46; }
+.btn-reject    { background: #fee2e2; color: #991b1b; }
+.btn-reschedule { background: #e0e7ff; color: #3730a3; }
+.btn-mark-paid { background: #dbeafe; color: #1e40af; }
+.btn-print     { background: #1e293b; color: #fff; padding: 8px 18px; border-radius: 7px;
+                 border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+                 display: inline-flex; align-items: center; gap: 7px; }
+.btn-submit    { background: #2563eb; color: #fff; padding: 8px 18px; border-radius: 7px;
+                 border: none; cursor: pointer; font-size: 13px; font-weight: 700;
+                 display: inline-flex; align-items: center; gap: 7px; }
+
+/* ── Summary bar ── */
+.summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.sum-card { background: #fff; border-radius: 9px; padding: 15px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06); border-left: 4px solid; }
+.sum-card.today-pay { border-color: #f59e0b; }
+.sum-card.today-rcv { border-color: #2563eb; }
+.sum-card.overdue   { border-color: #ef4444; }
+.sum-card.upcoming  { border-color: #8b5cf6; }
+.sum-card h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 5px; }
+.sum-card .val { font-size: 20px; font-weight: 800; }
+.sum-card.today-pay .val { color: #d97706; }
+.sum-card.today-rcv .val { color: #2563eb; }
+.sum-card.overdue   .val { color: #ef4444; }
+.sum-card.upcoming  .val { color: #7c3aed; }
+.sum-card small { font-size: 11px; color: #94a3b8; }
+
+/* ── Filter row ── */
+.filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+.filter-row .form-group { min-width: 150px; }
+.filter-row label { margin-bottom: 4px; }
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box { background: #fff; border-radius: 12px; width: 460px; max-width: 95vw;
+             box-shadow: 0 20px 60px rgba(0,0,0,.2); overflow: hidden; }
+.modal-header { padding: 16px 20px; color: #fff; display: flex; justify-content: space-between; align-items: center; }
+.modal-header h4 { font-size: 15px; font-weight: 700; }
+.modal-close { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 14px 20px; background: #f8fafc; display: flex; gap: 10px; justify-content: flex-end;
+                border-top: 1px solid #e2e8f0; }
+.modal-footer button { padding: 8px 20px; border-radius: 7px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn-cancel { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+
+/* ── Print area ── */
+#printArea { display: none; }
+@media print {
+  body > *:not(#printArea) { display: none !important; }
+  #printArea { display: block !important; font-family: 'Segoe UI', sans-serif; font-size: 12px; }
+  .print-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 12px; }
+  .print-header h2 { font-size: 18px; font-weight: 800; }
+  .print-header p  { font-size: 12px; color: #555; margin-top: 3px; }
+  .print-meta { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 11px; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 20px; }
+  .print-table th { background: #1e293b; color: #fff; padding: 7px 10px; text-align: left; font-size: 11px; }
+  .print-table td { padding: 7px 10px; border-bottom: 1px solid #ddd; }
+  .print-section-head { font-size: 13px; font-weight: 800; padding: 8px 0 4px; margin-top: 12px; }
+  .print-totals { border-top: 2px solid #000; font-weight: 800; }
+  .approval-box { margin-top: 30px; border: 1px solid #ccc; padding: 16px; border-radius: 6px; }
+  .approval-box h4 { margin-bottom: 12px; font-size: 13px; }
+  .approval-sig { display: flex; gap: 40px; margin-top: 16px; }
+  .sig-line { flex: 1; border-top: 1px solid #999; padding-top: 4px; font-size: 11px; color: #666; text-align: center; }
+  .text-right { text-align: right; }
+  .badge-print-rcv { color: #1d4ed8; font-weight: 700; }
+  .badge-print-pay { color: #d97706; font-weight: 700; }
+}
+
+/* ── DB Schema ── */
+.schema-box { background: #0f172a; border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.schema-box pre { color: #e2e8f0; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.8; white-space: pre-wrap; }
+.schema-box .kw  { color: #7dd3fc; }
+.schema-box .fn  { color: #a78bfa; }
+.schema-box .str { color: #86efac; }
+.schema-box .cm  { color: #64748b; }
+
+/* ── Flow diagram ── */
+.flow-diagram { display: flex; align-items: flex-start; gap: 0; margin: 16px 0; overflow-x: auto; }
+.flow-step { text-align: center; min-width: 110px; }
+.flow-step .circle {
+  width: 50px; height: 50px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; margin: 0 auto 6px;
+  font-size: 18px; font-weight: 800; border: 3px solid;
+}
+.flow-step p { font-size: 11px; font-weight: 700; color: #475569; line-height: 1.4; }
+.flow-arrow-h { display: flex; align-items: center; padding-top: 14px; color: #94a3b8; font-size: 22px; }
+
+.step-create  .circle { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+.step-pending .circle { background: #fef3c7; border-color: #f59e0b; color: #d97706; }
+.step-submit  .circle { background: #f3e8ff; border-color: #8b5cf6; color: #7c3aed; }
+.step-approve .circle { background: #d1fae5; border-color: #059669; color: #059669; }
+.step-reject  .circle { background: #fee2e2; border-color: #ef4444; color: #ef4444; }
+.step-paid    .circle { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
+.step-resched .circle { background: #e0e7ff; border-color: #6366f1; color: #4f46e5; }
+
+@media (max-width: 640px) {
+  .form-grid, .summary-bar { grid-template-columns: 1fr; }
+  .filter-row .form-group { min-width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<!-- Print area (hidden on screen) -->
+<div id="printArea">
+  <div class="print-header">
+    <h2>EPAL ERP – Daily Payment Schedule</h2>
+    <p>Generated: <span id="p_date"></span> &nbsp;|&nbsp; Prepared by: Account Team</p>
+  </div>
+  <div class="print-meta">
+    <span>Report Date: <strong id="p_report_date"></strong></span>
+    <span>Print Time: <strong id="p_time"></strong></span>
+  </div>
+
+  <div class="print-section-head">PAYABLE — Amounts Due to Suppliers</div>
+  <table class="print-table">
+    <thead><tr>
+      <th>#</th><th>Supplier</th><th>Reference</th><th>Due Date</th>
+      <th>Original Due</th><th>Status</th><th class="text-right">Amount (৳)</th>
+      <th>Approve ✓</th><th>Reject ✗</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td><td>Dhaka Printing Press</td><td>BILL-2026-012</td>
+        <td>26 Apr 2026 <strong>(TODAY)</strong></td><td>—</td>
+        <td>Pending</td><td class="text-right">35,000.00</td>
+        <td style="width:60px;border-bottom:1px solid #999;">&nbsp;</td>
+        <td style="width:60px;border-bottom:1px solid #999;">&nbsp;</td>
+      </tr>
+      <tr>
+        <td>2</td><td>IT Hardware Ltd.</td><td>PO-2026-007</td>
+        <td>26 Apr 2026 <strong>(TODAY)</strong></td><td>—</td>
+        <td>Pending</td><td class="text-right">12,800.00</td>
+        <td style="width:60px;border-bottom:1px solid #999;">&nbsp;</td>
+        <td style="width:60px;border-bottom:1px solid #999;">&nbsp;</td>
+      </tr>
+      <tr class="print-totals">
+        <td colspan="6">Total Payable Today</td>
+        <td class="text-right">47,800.00</td><td></td><td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="print-section-head">RECEIVABLE — Amounts Due from Customers</div>
+  <table class="print-table">
+    <thead><tr>
+      <th>#</th><th>Customer</th><th>Reference</th><th>Due Date</th>
+      <th>Original Due</th><th>Status</th><th class="text-right">Amount (৳)</th>
+      <th>Note</th>
+    </tr></thead>
+    <tbody>
+      <tr>
+        <td>1</td><td>Ahmed Corporation</td><td>INV-2026-045</td>
+        <td>26 Apr 2026 <strong>(TODAY)</strong></td><td>—</td>
+        <td>Pending</td><td class="text-right">25,000.00</td><td></td>
+      </tr>
+      <tr class="print-totals">
+        <td colspan="6">Total Receivable Today</td>
+        <td class="text-right">25,000.00</td><td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="approval-box">
+    <h4>APPROVAL SECTION</h4>
+    <p style="font-size:12px;color:#555;">Please review the above payment schedule and sign below to approve or reject each item.</p>
+    <div class="approval-sig">
+      <div class="sig-line">Prepared By &nbsp;/&nbsp; Date</div>
+      <div class="sig-line">Reviewed By &nbsp;/&nbsp; Date</div>
+      <div class="sig-line">Approved By (Boss) &nbsp;/&nbsp; Date</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════ SCREEN VIEW -->
+<div class="page-header">
+  <h1><i class="fas fa-calendar-alt" style="margin-right:10px;"></i>Payment Schedule System – Design Idea</h1>
+  <p>Due Date Tracking · Daily Schedule · Boss Approval · Reschedule &nbsp;|&nbsp; For Payables & Receivables</p>
+</div>
+
+<div class="container">
+
+  <!-- INFO -->
+  <div class="info-box">
+    <i class="fas fa-lightbulb"></i>
+    <p>
+      <strong>Core Idea:</strong> Each payable/receivable entry gets a <code>due_date</code>.
+      A new <strong>Payment Schedules</strong> page shows today's dues, lets you submit the list to
+      your boss for approval, and lets you reschedule any missed dates. The whole flow is linked
+      back to your existing <code>journal_entries</code> table via a new <code>payment_schedules</code> table.
+    </p>
+  </div>
+
+  <!-- ── SECTION 1: Approval flow ── -->
+  <div class="section-title"><div class="num">1</div> Approval Flow — How It Works</div>
+
+  <div class="card">
+    <div class="flow-diagram">
+      <div class="flow-step step-create">
+        <div class="circle"><i class="fas fa-plus"></i></div>
+        <p>Entry Created<br><small>with due date</small></p>
+      </div>
+      <div class="flow-arrow-h">→</div>
+      <div class="flow-step step-pending">
+        <div class="circle"><i class="fas fa-clock"></i></div>
+        <p>Pending<br><small>in schedule</small></p>
+      </div>
+      <div class="flow-arrow-h">→</div>
+      <div class="flow-step step-submit">
+        <div class="circle"><i class="fas fa-paper-plane"></i></div>
+        <p>Print &amp;<br>Submit to Boss</p>
+      </div>
+      <div class="flow-arrow-h">→</div>
+      <div class="flow-step step-approve">
+        <div class="circle"><i class="fas fa-check"></i></div>
+        <p>Boss<br>Approves</p>
+      </div>
+      <div class="flow-arrow-h">→</div>
+      <div class="flow-step step-paid">
+        <div class="circle"><i class="fas fa-money-bill-wave"></i></div>
+        <p>Mark as<br>Paid / Collected</p>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;">
+        <div style="width:14px;height:14px;border-radius:3px;background:#fee2e2;border:1.5px solid #ef4444;"></div>
+        If boss <strong>Rejects</strong> → stays pending, can be rescheduled
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;font-size:12px;">
+        <div style="width:14px;height:14px;border-radius:3px;background:#e0e7ff;border:1.5px solid #6366f1;"></div>
+        If date <strong>Missed</strong> → auto-marked overdue, reschedule with reason
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SECTION 2: Database schema ── -->
+  <div class="section-title"><div class="num">2</div> Database — New Table: <code>payment_schedules</code></div>
+
+  <div class="schema-box">
+<pre><span class="cm">-- New migration: create_payment_schedules_table.php</span>
+<span class="kw">Schema</span>::<span class="fn">create</span>(<span class="str">'payment_schedules'</span>, function (Blueprint $table) {
+    $table-><span class="fn">id</span>();
+    $table-><span class="fn">foreignId</span>(<span class="str">'company_id'</span>)->constrained();
+    $table-><span class="fn">foreignId</span>(<span class="str">'journal_entry_id'</span>)->constrained(); <span class="cm">// links back to journal</span>
+    $table-><span class="fn">foreignId</span>(<span class="str">'journal_item_id'</span>)->nullable()->constrained(); <span class="cm">// specific line item</span>
+
+    $table-><span class="fn">enum</span>(<span class="str">'type'</span>, [<span class="str">'payable'</span>, <span class="str">'receivable'</span>]);
+    $table-><span class="fn">string</span>(<span class="str">'party_type'</span>);           <span class="cm">// 'customer' | 'supplier'</span>
+    $table-><span class="fn">unsignedBigInteger</span>(<span class="str">'party_id'</span>)->nullable(); <span class="cm">// customer_id or supplier_id</span>
+    $table-><span class="fn">string</span>(<span class="str">'party_name'</span>);           <span class="cm">// stored name (in case record deleted)</span>
+    $table-><span class="fn">string</span>(<span class="str">'reference'</span>)->nullable();  <span class="cm">// invoice/bill reference</span>
+    $table-><span class="fn">decimal</span>(<span class="str">'amount'</span>, 15, 2);
+
+    $table-><span class="fn">date</span>(<span class="str">'due_date'</span>);                <span class="cm">// current scheduled date</span>
+    $table-><span class="fn">date</span>(<span class="str">'original_due_date'</span>)->nullable(); <span class="cm">// first due date before any reschedule</span>
+    $table-><span class="fn">unsignedTinyInteger</span>(<span class="str">'reschedule_count'</span>)->default(0);
+    $table-><span class="fn">string</span>(<span class="str">'reschedule_reason'</span>)->nullable();
+
+    $table-><span class="fn">enum</span>(<span class="str">'status'</span>, [
+        <span class="str">'pending'</span>, <span class="str">'submitted'</span>, <span class="str">'approved'</span>,
+        <span class="str">'rejected'</span>, <span class="str">'paid'</span>, <span class="str">'overdue'</span>, <span class="str">'rescheduled'</span>
+    ])->default(<span class="str">'pending'</span>);
+
+    $table-><span class="fn">foreignId</span>(<span class="str">'approved_by'</span>)->nullable()->constrained(<span class="str">'users'</span>);
+    $table-><span class="fn">timestamp</span>(<span class="str">'approved_at'</span>)->nullable();
+    $table-><span class="fn">string</span>(<span class="str">'approval_note'</span>)->nullable();
+
+    $table-><span class="fn">foreignId</span>(<span class="str">'created_by'</span>)->constrained(<span class="str">'users'</span>);
+    $table-><span class="fn">text</span>(<span class="str">'notes'</span>)->nullable();
+    $table-><span class="fn">timestamps</span>();
+    $table-><span class="fn">softDeletes</span>();
+});
+
+<span class="cm">-- Also add reschedule history table (optional but recommended)</span>
+<span class="kw">Schema</span>::<span class="fn">create</span>(<span class="str">'payment_schedule_logs'</span>, function (Blueprint $table) {
+    $table-><span class="fn">id</span>();
+    $table-><span class="fn">foreignId</span>(<span class="str">'payment_schedule_id'</span>)->constrained();
+    $table-><span class="fn">enum</span>(<span class="str">'action'</span>, [<span class="str">'rescheduled'</span>, <span class="str">'approved'</span>, <span class="str">'rejected'</span>, <span class="str">'paid'</span>]);
+    $table-><span class="fn">date</span>(<span class="str">'old_date'</span>)->nullable();
+    $table-><span class="fn">date</span>(<span class="str">'new_date'</span>)->nullable();
+    $table-><span class="fn">string</span>(<span class="str">'reason'</span>)->nullable();
+    $table-><span class="fn">foreignId</span>(<span class="str">'done_by'</span>)->constrained(<span class="str">'users'</span>);
+    $table-><span class="fn">timestamps</span>();
+});</pre>
+  </div>
+
+  <!-- ── SECTION 3: Modified entry form ── -->
+  <div class="section-title"><div class="num">3</div> Modified Entry Form — Due Date per Row</div>
+
+  <div class="info-box">
+    <i class="fas fa-info-circle"></i>
+    <p>
+      Add a <strong>Due Date</strong> column (highlighted in yellow) to each row of the
+      Receivable / Payable opening balance forms. When the journal is saved, the system
+      automatically creates a <code>payment_schedule</code> record for each row.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-hand-holding-usd" style="color:#d97706;"></i> Add Supplier Payables — with Due Date</h3>
+    </div>
+    <table class="entry-table">
+      <thead>
+        <tr>
+          <th style="width:28%">Supplier</th>
+          <th style="width:20%">Bill / PO Ref</th>
+          <th style="width:16%">Amount (৳)</th>
+          <th style="width:19%" style="background:#fffbeb;color:#92400e;">
+            <i class="fas fa-calendar" style="margin-right:4px;color:#f59e0b;"></i>
+            Due Date ★
+          </th>
+          <th style="width:13%">Note</th>
+          <th style="width:4%"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;">
+            <option selected>Dhaka Printing Press</option>
+          </select></td>
+          <td><input type="text" value="BILL-2026-012" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td><input type="number" value="35000" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td class="highlight-due"><input type="date" value="2026-04-26" style="width:100%;border:1.5px solid #f59e0b;border-radius:6px;padding:6px 8px;font-size:12px;background:#fffbeb;color:#92400e;font-weight:700;"></td>
+          <td><input type="text" value="Print bill due" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+        </tr>
+        <tr>
+          <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;">
+            <option selected>IT Hardware Ltd.</option>
+          </select></td>
+          <td><input type="text" value="PO-2026-007" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td><input type="number" value="12800" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td class="highlight-due"><input type="date" value="2026-04-28" style="width:100%;border:1.5px solid #f59e0b;border-radius:6px;padding:6px 8px;font-size:12px;background:#fffbeb;color:#92400e;font-weight:700;"></td>
+          <td><input type="text" value="Laptop balance" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;background:#f8fafc;"></td>
+          <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:10px;padding:10px 12px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d;font-size:12px;color:#92400e;">
+      <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+      <strong>Note:</strong> If Due Date is left blank, the system sets it to today's date.
+      Each row auto-creates a <code>payment_schedule</code> record with status = <code>pending</code>.
+    </div>
+  </div>
+
+  <!-- ── SECTION 4: Daily Schedule Page ── -->
+  <div class="section-title"><div class="num">4</div> Daily Schedule Dashboard Page</div>
+
+  <!-- Summary bar -->
+  <div class="summary-bar">
+    <div class="sum-card today-pay">
+      <h4><i class="fas fa-arrow-up" style="margin-right:4px;"></i> Payable Today</h4>
+      <div class="val">৳ 47,800</div>
+      <small>2 items due today</small>
+    </div>
+    <div class="sum-card today-rcv">
+      <h4><i class="fas fa-arrow-down" style="margin-right:4px;"></i> Receivable Today</h4>
+      <div class="val">৳ 25,000</div>
+      <small>1 item due today</small>
+    </div>
+    <div class="sum-card overdue">
+      <h4><i class="fas fa-exclamation-triangle" style="margin-right:4px;"></i> Overdue</h4>
+      <div class="val">৳ 18,500</div>
+      <small>1 item past due</small>
+    </div>
+    <div class="sum-card upcoming">
+      <h4><i class="fas fa-calendar-week" style="margin-right:4px;"></i> Next 7 Days</h4>
+      <div class="val">৳ 92,100</div>
+      <small>5 items upcoming</small>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3><i class="fas fa-calendar-day" style="color:#2563eb;"></i> Payment Schedule — 26 Apr 2026</h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-print" onclick="printSchedule()">
+          <i class="fas fa-print"></i> Print for Approval
+        </button>
+        <button class="btn-submit">
+          <i class="fas fa-paper-plane"></i> Submit to Boss
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" class="form-control" value="2026-04-26">
+      </div>
+      <div class="form-group">
+        <label>Type</label>
+        <select class="form-control">
+          <option>All</option>
+          <option>Payable</option>
+          <option>Receivable</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select class="form-control">
+          <option>All</option>
+          <option>Pending</option>
+          <option>Approved</option>
+          <option>Overdue</option>
+          <option>Paid</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Party</label>
+        <input type="text" class="form-control" placeholder="Customer / Supplier name…">
+      </div>
+      <div style="padding-bottom:1px;">
+        <button style="padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px;">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div style="overflow-x:auto;">
+      <table class="sched-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Type</th>
+            <th>Party</th>
+            <th>Reference</th>
+            <th>Due Date</th>
+            <th>Rescheduled?</th>
+            <th>Status</th>
+            <th class="text-right">Amount (৳)</th>
+            <th style="text-align:center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Overdue row -->
+          <tr class="overdue-row">
+            <td>1</td>
+            <td><span class="badge badge-pay"><i class="fas fa-arrow-up"></i> Payable</span></td>
+            <td><strong>Dhaka Printing Press</strong></td>
+            <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">BILL-2026-010</code></td>
+            <td>
+              <span style="color:#dc2626;font-weight:700;"><i class="fas fa-exclamation-circle" style="margin-right:4px;"></i>20 Apr 2026</span><br>
+              <small style="color:#ef4444;">6 days overdue</small>
+            </td>
+            <td><span class="badge badge-rescheduled">× 1 time</span></td>
+            <td><span class="badge badge-overdue"><i class="fas fa-clock"></i> Overdue</span></td>
+            <td style="text-align:right;font-weight:700;color:#dc2626;">22,000.00</td>
+            <td style="text-align:center;">
+              <button class="btn-xs btn-reschedule" onclick="openReschedule()"><i class="fas fa-calendar-alt"></i> Reschedule</button>
+            </td>
+          </tr>
+          <!-- Today rows -->
+          <tr class="today-row">
+            <td>2</td>
+            <td><span class="badge badge-pay"><i class="fas fa-arrow-up"></i> Payable</span></td>
+            <td><strong>Dhaka Printing Press</strong></td>
+            <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">BILL-2026-012</code></td>
+            <td>
+              <span style="font-weight:700;"><span class="badge badge-today">Today</span></span>
+            </td>
+            <td><span style="color:#94a3b8;font-size:12px;">—</span></td>
+            <td><span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span></td>
+            <td style="text-align:right;font-weight:700;">35,000.00</td>
+            <td style="text-align:center;">
+              <button class="btn-xs btn-approve" onclick="openApprove(this,'Dhaka Printing Press','35,000')"><i class="fas fa-check"></i> Approve</button>
+              <button class="btn-xs btn-reject" onclick="openReject()"><i class="fas fa-times"></i> Reject</button>
+              <button class="btn-xs btn-reschedule" onclick="openReschedule()"><i class="fas fa-calendar-alt"></i></button>
+            </td>
+          </tr>
+          <tr class="today-row">
+            <td>3</td>
+            <td><span class="badge badge-pay"><i class="fas fa-arrow-up"></i> Payable</span></td>
+            <td><strong>IT Hardware Ltd.</strong></td>
+            <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">PO-2026-007</code></td>
+            <td><span class="badge badge-today">Today</span></td>
+            <td>—</td>
+            <td><span class="badge badge-approved"><i class="fas fa-check"></i> Approved</span></td>
+            <td style="text-align:right;font-weight:700;">12,800.00</td>
+            <td style="text-align:center;">
+              <button class="btn-xs btn-mark-paid"><i class="fas fa-money-bill-wave"></i> Mark Paid</button>
+            </td>
+          </tr>
+          <tr class="today-row">
+            <td>4</td>
+            <td><span class="badge badge-rcv"><i class="fas fa-arrow-down"></i> Receivable</span></td>
+            <td><strong>Ahmed Corporation</strong></td>
+            <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">INV-2026-045</code></td>
+            <td><span class="badge badge-today">Today</span></td>
+            <td>—</td>
+            <td><span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span></td>
+            <td style="text-align:right;font-weight:700;">25,000.00</td>
+            <td style="text-align:center;">
+              <button class="btn-xs btn-reschedule" onclick="openReschedule()"><i class="fas fa-calendar-alt"></i> Reschedule</button>
+              <button class="btn-xs btn-mark-paid"><i class="fas fa-check-double"></i> Collected</button>
+            </td>
+          </tr>
+          <!-- Upcoming row -->
+          <tr>
+            <td>5</td>
+            <td><span class="badge badge-rcv"><i class="fas fa-arrow-down"></i> Receivable</span></td>
+            <td><strong>Rahman &amp; Sons</strong></td>
+            <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">INV-2026-038</code></td>
+            <td>28 Apr 2026</td>
+            <td>—</td>
+            <td><span class="badge badge-pending"><i class="fas fa-clock"></i> Pending</span></td>
+            <td style="text-align:right;font-weight:700;">18,500.00</td>
+            <td style="text-align:center;">
+              <button class="btn-xs btn-reschedule" onclick="openReschedule()"><i class="fas fa-calendar-alt"></i> Reschedule</button>
+            </td>
+          </tr>
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="7" style="text-align:right;padding-right:12px;">Today Total (Payable):</td>
+            <td style="text-align:right;color:#d97706;">৳ 47,800.00</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td colspan="7" style="text-align:right;padding-right:12px;">Today Total (Receivable):</td>
+            <td style="text-align:right;color:#2563eb;">৳ 25,000.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION 5: Reschedule History ── -->
+  <div class="section-title"><div class="num">5</div> Reschedule History — Audit Trail</div>
+  <div class="card">
+    <p style="color:#64748b;font-size:13px;margin-bottom:14px;">
+      Every reschedule is logged in <code>payment_schedule_logs</code>.
+      Shows original date, new date, who changed it, and why.
+    </p>
+    <table class="sched-table">
+      <thead>
+        <tr>
+          <th>Date of Action</th>
+          <th>Party</th>
+          <th>Reference</th>
+          <th>Old Due Date</th>
+          <th>New Due Date</th>
+          <th>Reason</th>
+          <th>Changed By</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>24 Apr 2026 10:32 AM</td>
+          <td>Dhaka Printing Press</td>
+          <td><code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;font-size:11px;">BILL-2026-010</code></td>
+          <td style="color:#ef4444;font-weight:700;text-decoration:line-through;">18 Apr 2026</td>
+          <td style="color:#059669;font-weight:700;">20 Apr 2026</td>
+          <td style="color:#64748b;font-size:12px;">Cash flow issue – delayed by 2 days</td>
+          <td>Omit Hasan</td>
+          <td><span class="badge badge-rescheduled">rescheduled</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── SECTION 6: Implementation plan ── -->
+  <div class="section-title"><div class="num">6</div> Implementation Plan — Step by Step</div>
+  <div class="card">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">1</div>
+        <div>
+          <strong>Migration</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            Run <code>php artisan make:migration create_payment_schedules_table</code> and
+            <code>create_payment_schedule_logs_table</code>. Schema is shown in Section 2 above.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">2</div>
+        <div>
+          <strong>Models</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            Create <code>PaymentSchedule</code> and <code>PaymentScheduleLog</code> models.
+            <code>PaymentSchedule</code> belongsTo <code>JournalEntry</code>, <code>Company</code>, <code>User (approved_by)</code>.
+            Add <code>hasMany(PaymentSchedule::class)</code> on <code>JournalEntry</code> model.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">3</div>
+        <div>
+          <strong>Modify Opening Balance Store Logic</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            In your journal store controller, after saving the <code>JournalEntry</code>,
+            loop through the items array. If <code>type = opening_balance</code> AND the item has a
+            <code>due_date</code> + <code>party_id</code>, create a <code>PaymentSchedule</code> record automatically.
+            Add <code>due_date</code>, <code>party_type</code>, <code>party_id</code>, <code>party_name</code>
+            to each row's payload.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">4</div>
+        <div>
+          <strong>PaymentScheduleController</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            New controller with these methods:
+            <code>index()</code> — list with filters (date, type, status),
+            <code>approve()</code> — set status=approved + approved_by + approved_at,
+            <code>reject()</code> — set status=rejected + note,
+            <code>reschedule()</code> — update due_date, log old date to history table,
+            <code>markPaid()</code> — set status=paid, optionally create payment journal.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">5</div>
+        <div>
+          <strong>Overdue Auto-detection</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            Add a scheduled command: <code>php artisan make:command MarkOverdueSchedules</code>.
+            Run daily via scheduler — marks all <code>status=pending</code> records where
+            <code>due_date &lt; today</code> as <code>status=overdue</code>.
+            Register in <code>app/Console/Kernel.php</code>: <code>$schedule->command('schedules:mark-overdue')->dailyAt('00:05')</code>.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">6</div>
+        <div>
+          <strong>Print View</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            The <strong>Print for Approval</strong> button (see Section 4) uses <code>window.print()</code>
+            with a <code>@media print</code> CSS block that hides everything except the print table.
+            The printed sheet has blank approval/signature boxes at the bottom for boss to sign.
+            No separate PDF library needed — browser print is clean enough.
+          </p>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:14px;align-items:flex-start;">
+        <div style="min-width:32px;height:32px;border-radius:50%;background:#2563eb;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;">7</div>
+        <div>
+          <strong>Permissions (Spatie)</strong>
+          <p style="color:#475569;font-size:13px;margin-top:3px;line-height:1.7;">
+            Add permissions: <code>'view payment schedule'</code>, <code>'approve payment schedule'</code>,
+            <code>'reschedule payment'</code>, <code>'mark payment paid'</code>.
+            Only users with <code>'approve payment schedule'</code> see the Approve/Reject buttons — boss gets this role.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <p style="text-align:center;color:#94a3b8;font-size:12px;padding:10px 0 20px;">
+    Payment Schedule Idea – EPAL ERP &nbsp;·&nbsp; 26 Apr 2026
+  </p>
+</div>
+
+<!-- ══ APPROVE MODAL ══ -->
+<div class="modal-overlay" id="approveModal">
+  <div class="modal-box">
+    <div class="modal-header" style="background:#059669;">
+      <h4><i class="fas fa-check-circle" style="margin-right:8px;"></i>Approve Payment</h4>
+      <button class="modal-close" onclick="closeModal('approveModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="color:#475569;margin-bottom:16px;font-size:13px;">
+        Approve this payment for: <strong id="approve_party">—</strong><br>
+        Amount: <strong id="approve_amount" style="color:#059669;">—</strong>
+      </p>
+      <div class="form-group">
+        <label>Approval Note (Optional)</label>
+        <textarea class="form-control" rows="3" placeholder="Any remarks for this approval…" style="resize:vertical;"></textarea>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:#d1fae5;border-radius:7px;font-size:12px;color:#065f46;">
+        <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+        After approval, the accountant can <strong>Mark as Paid</strong> once actual payment is made.
+        This logs <code>approved_by</code> and <code>approved_at</code>.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('approveModal')">Cancel</button>
+      <button style="background:#059669;color:#fff;padding:8px 22px;border-radius:7px;border:none;cursor:pointer;font-weight:700;">
+        <i class="fas fa-check" style="margin-right:5px;"></i>Confirm Approval
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ REJECT MODAL ══ -->
+<div class="modal-overlay" id="rejectModal">
+  <div class="modal-box">
+    <div class="modal-header" style="background:#dc2626;">
+      <h4><i class="fas fa-times-circle" style="margin-right:8px;"></i>Reject Payment</h4>
+      <button class="modal-close" onclick="closeModal('rejectModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Reason for Rejection <span class="req">*</span></label>
+        <textarea class="form-control" rows="3" placeholder="Why is this payment being rejected?…" style="resize:vertical;"></textarea>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:#fee2e2;border-radius:7px;font-size:12px;color:#991b1b;">
+        <i class="fas fa-exclamation-triangle" style="margin-right:5px;"></i>
+        Rejected items stay in the schedule as <code>rejected</code> status.
+        You can reschedule them to a new date if needed.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('rejectModal')">Cancel</button>
+      <button style="background:#dc2626;color:#fff;padding:8px 22px;border-radius:7px;border:none;cursor:pointer;font-weight:700;">
+        <i class="fas fa-times" style="margin-right:5px;"></i>Confirm Rejection
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESCHEDULE MODAL ══ -->
+<div class="modal-overlay" id="rescheduleModal">
+  <div class="modal-box">
+    <div class="modal-header" style="background:#4f46e5;">
+      <h4><i class="fas fa-calendar-alt" style="margin-right:8px;"></i>Reschedule Payment</h4>
+      <button class="modal-close" onclick="closeModal('rescheduleModal')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div style="padding:10px 12px;background:#f1f5f9;border-radius:8px;margin-bottom:16px;font-size:13px;">
+        <strong>Current Due Date:</strong>
+        <span style="color:#dc2626;font-weight:700;margin-left:8px;">20 Apr 2026</span>
+        <span class="badge badge-overdue" style="margin-left:8px;">Overdue</span>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>New Due Date <span class="req">*</span></label>
+          <input type="date" class="form-control" value="2026-04-30">
+        </div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Reason for Reschedule <span class="req">*</span></label>
+          <textarea class="form-control" rows="2" placeholder="e.g. Cash flow delay, awaiting bank clearance…" style="resize:vertical;">Cash flow issue – bank transfer delayed</textarea>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px;background:#e0e7ff;border-radius:7px;font-size:12px;color:#3730a3;">
+        <i class="fas fa-history" style="margin-right:5px;"></i>
+        Old date and reason are saved to the <strong>reschedule log</strong> automatically.
+        Boss will see this history on the next print.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal('rescheduleModal')">Cancel</button>
+      <button style="background:#4f46e5;color:#fff;padding:8px 22px;border-radius:7px;border:none;cursor:pointer;font-weight:700;">
+        <i class="fas fa-calendar-check" style="margin-right:5px;"></i>Save New Date
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function openApprove(btn, party, amount) {
+    document.getElementById('approve_party').textContent = party;
+    document.getElementById('approve_amount').textContent = '৳ ' + amount;
+    document.getElementById('approveModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function openReject() {
+    document.getElementById('rejectModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function openReschedule() {
+    document.getElementById('rescheduleModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
+    document.body.style.overflow = '';
+  }
+  function printSchedule() {
+    const now = new Date();
+    document.getElementById('p_date').textContent = now.toLocaleDateString('en-BD', {day:'2-digit',month:'long',year:'numeric'});
+    document.getElementById('p_report_date').textContent = '26 April 2026';
+    document.getElementById('p_time').textContent = now.toLocaleTimeString('en-BD');
+    window.print();
+  }
+</script>
+</body>
+</html>

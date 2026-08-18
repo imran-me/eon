@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Schedule — Remaining Status | EPAL ERP</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;color:#1e293b;font-size:14px}
+
+.page-header{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:#fff;padding:28px 40px}
+.page-header h1{font-size:22px;font-weight:800}
+.page-header p{opacity:.75;font-size:13px;margin-top:5px}
+.hbadge-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.hbadge{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px}
+.hb-done{background:rgba(16,185,129,.25);color:#6ee7b7;border:1px solid rgba(16,185,129,.4)}
+.hb-miss{background:rgba(239,68,68,.25);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+.hb-low {background:rgba(245,158,11,.25);color:#fcd34d;border:1px solid rgba(245,158,11,.4)}
+
+.container{max-width:1020px;margin:0 auto;padding:28px 16px 70px}
+
+/* ── Section title ── */
+.sec-title{font-size:15px;font-weight:800;margin:34px 0 14px;display:flex;align-items:center;gap:10px;
+           border-bottom:2px solid #e2e8f0;padding-bottom:10px}
+.sec-num{width:30px;height:30px;border-radius:50%;font-size:13px;font-weight:800;
+         display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0}
+.n-green{background:#059669} .n-red{background:#dc2626} .n-yellow{background:#d97706}
+
+/* ── Status overview grid ── */
+.ov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:8px}
+.ov-card{background:#fff;border-radius:10px;padding:16px 20px;
+         box-shadow:0 2px 10px rgba(0,0,0,.07);border-left:5px solid}
+.ov-card h3{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.ov-card .val{font-size:28px;font-weight:800}
+.ov-card p{font-size:12px;color:#64748b;margin-top:4px}
+.ov-card.g{border-color:#10b981} .ov-card.g h3{color:#059669} .ov-card.g .val{color:#059669}
+.ov-card.r{border-color:#ef4444} .ov-card.r h3{color:#dc2626} .ov-card.r .val{color:#dc2626}
+.ov-card.y{border-color:#f59e0b} .ov-card.y h3{color:#d97706} .ov-card.y .val{color:#d97706}
+
+/* ── Item cards ── */
+.items{display:flex;flex-direction:column;gap:10px}
+.item{background:#fff;border-radius:10px;padding:15px 18px;
+      box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;gap:14px;
+      align-items:flex-start;border-left:5px solid}
+.item.done  {border-color:#10b981}
+.item.miss  {border-color:#ef4444}
+.item.low   {border-color:#f59e0b}
+.item-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;
+           justify-content:center;font-size:16px;flex-shrink:0}
+.item.done .item-icon{background:#d1fae5;color:#059669}
+.item.miss .item-icon{background:#fee2e2;color:#dc2626}
+.item.low  .item-icon{background:#fef3c7;color:#d97706}
+.item-body{flex:1}
+.item-title{font-weight:700;font-size:14px;margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.item-desc{font-size:13px;color:#475569;line-height:1.7}
+.item-files{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:#f1f5f9;border:1px solid #e2e8f0;border-radius:5px;padding:2px 8px;
+      font-size:11px;font-family:monospace;color:#334155;display:inline-flex;align-items:center;gap:4px}
+.chip.add {background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.chip.edit{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.chip.ok  {background:#f0fdf4;border-color:#bbf7d0;color:#065f46}
+.tag{padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.tag-done{background:#d1fae5;color:#065f46}
+.tag-miss{background:#fee2e2;color:#991b1b}
+.tag-low {background:#fef3c7;color:#92400e}
+
+/* ── Code block ── */
+.code{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:14px 16px;
+      font-family:'Consolas',monospace;font-size:12px;line-height:1.8;margin-top:10px;overflow-x:auto;white-space:pre}
+.kw{color:#7dd3fc}.fn{color:#a78bfa}.str{color:#86efac}.cm{color:#475569}.rd{color:#fca5a5}
+
+/* ── Action table ── */
+.act-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+.act-table thead th{background:#1e293b;color:#e2e8f0;padding:9px 14px;
+                    font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;text-align:left}
+.act-table tbody tr{border-bottom:1px solid #f1f5f9}
+.act-table tbody tr:hover{background:#f8fafc}
+.act-table tbody td{padding:10px 14px;vertical-align:top}
+.pri{padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700}
+.p-hi{background:#fee2e2;color:#991b1b}
+.p-md{background:#fef3c7;color:#92400e}
+.p-lo{background:#dbeafe;color:#1e40af}
+.eff{padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700}
+.e-big{background:#f3e8ff;color:#6b21a8}
+.e-med{background:#e0f2fe;color:#075985}
+.e-sm {background:#dcfce7;color:#14532d}
+
+.divider{height:1px;background:#e2e8f0;margin:28px 0}
+
+@media(max-width:640px){.ov-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1><i class="fas fa-tasks" style="margin-right:10px;"></i>Payment Schedule — Remaining Status Report</h1>
+  <p>payment-schedule-idea.html vs existing codebase &nbsp;·&nbsp; Checked: 26 Apr 2026</p>
+  <div class="hbadge-row">
+    <span class="hbadge hb-done"><i class="fas fa-check"></i> 18 Done</span>
+    <span class="hbadge hb-miss"><i class="fas fa-times"></i> 4 Missing (Critical)</span>
+    <span class="hbadge hb-low"><i class="fas fa-exclamation"></i> 3 Minor / Nice-to-have</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- overview -->
+  <div class="ov-grid" style="margin-top:24px;">
+    <div class="ov-card g">
+      <h3><i class="fas fa-check-circle mr-1"></i>Done</h3>
+      <div class="val">18</div>
+      <p>idea-র বড় সব feature implement হয়ে গেছে</p>
+    </div>
+    <div class="ov-card r">
+      <h3><i class="fas fa-times-circle mr-1"></i>Critical Missing</h3>
+      <div class="val">4</div>
+      <p>Permissions, Submit workflow, Opening Balance link, History View</p>
+    </div>
+    <div class="ov-card y">
+      <h3><i class="fas fa-info-circle mr-1"></i>Minor / Optional</h3>
+      <div class="val">3</div>
+      <p>softDeletes, overdue days count, dashboard widget</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ SECTION A: DONE ═══════════ -->
+  <div class="sec-title"><div class="sec-num n-green">A</div>Already Done — Idea-র সাথে Match করছে ✅</div>
+  <div class="items">
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-database"></i></div>
+      <div class="item-body">
+        <div class="item-title">payment_schedules Table <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Idea-র schema-র প্রায় সব field আছে: <code>type, party_type, party_id, party_name, amount,
+          scheduled_date, original_scheduled_date, reschedule_count, reschedule_reason, status,
+          paid_date, transaction_id, note, approved_by, approved_at, approval_note, created_by</code>
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_21_000002_create_payment_schedules_table.php</span>
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_26_142503 (reschedule fields)</span>
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_26_142504 (approval fields)</span>
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_26_144640 (party_name)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-table"></i></div>
+      <div class="item-body">
+        <div class="item-title">payment_schedule_logs Table <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">Reschedule history log table আছে। Fields: <code>action, old_date, new_date, reason, done_by</code></div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_26_142504_create_payment_schedule_logs_table.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-cube"></i></div>
+      <div class="item-body">
+        <div class="item-title">PaymentSchedule Model + PaymentScheduleLog Model <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Polymorphic <code>schedulable()</code>, <code>createdBy()</code>, <code>approvedBy()</code>,
+          <code>transaction()</code>, <code>logs()</code> relationships সব আছে। Scopes:
+          <code>overdue, today, pending, receive, pay</code>।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> app/Models/PaymentSchedule.php</span>
+          <span class="chip ok"><i class="fas fa-check"></i> app/Models/PaymentScheduleLog.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-route"></i></div>
+      <div class="item-body">
+        <div class="item-title">সব Routes (8টা) <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          index, store, destroy, cancel, approve, reject, reschedule, mark-paid — সব 8টা PATCH/GET/POST/DELETE route আছে।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> routes/web.php — line 188–192</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-code"></i></div>
+      <div class="item-body">
+        <div class="item-title">Controller — সব Methods <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>index()</code> filter+summary, <code>store()</code> party_name সহ,
+          <code>approve()</code> log entry, <code>reject()</code> validation,
+          <code>reschedule()</code> status reset, <code>markPaid()</code> DB transaction + parent due_amount update,
+          <code>cancel()</code> log entry, <code>destroy()</code> — সব আছে।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> app/Http/Controllers/Dashboard/PaymentScheduleController.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-eye"></i></div>
+      <div class="item-body">
+        <div class="item-title">Index View — Schedule Dashboard <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          4 summary cards (Today Pay/Rcv/Overdue/Upcoming), filter panel (date/type/status/party),
+          full table (overdue লাল, today হলুদ), approve/reject/reschedule/mark-paid/cancel/delete buttons,
+          4 modals — সব আছে।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> resources/views/payment-schedules/index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-print"></i></div>
+      <div class="item-body">
+        <div class="item-title">Print Daily Sheet — Boss Approval <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Payable ও Receivable আলাদা section, ✓ Pay / ✗ Hold checkbox columns, original due date,
+          reschedule count, grand summary, 3-signature approval box — সব আছে। <code>window.print()</code> দিয়ে browser print।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> @media print section — index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-clock"></i></div>
+      <div class="item-body">
+        <div class="item-title">Overdue Auto-detection — Daily Scheduler <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          <code>php artisan schedules:mark-overdue</code> command আছে। <code>routes/console.php</code>
+          এ daily 00:05 এ register করা। pending → overdue automatic।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> app/Console/Commands/MarkOverdueSchedules.php</span>
+          <span class="chip ok"><i class="fas fa-check"></i> routes/console.php — line 11</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-bars"></i></div>
+      <div class="item-body">
+        <div class="item-title">Sidebar Link — Accounts মেনুতে <span class="tag tag-done">Done</span></div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> resources/views/layout/sidebar.blade.php — line 454</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-calendar-plus"></i></div>
+      <div class="item-body">
+        <div class="item-title">due_date — Sales / Purchases / TicketSales / TicketPurchases <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">4 টেবিলে <code>due_date</code> column আছে। Sale ও Purchase model-এর <code>$fillable</code> এ আছে।</div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> 2026_04_21_000001_add_due_date_to_sales_purchases.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-link"></i></div>
+      <div class="item-body">
+        <div class="item-title">Polymorphic schedules() — Sale, Purchase, TicketSale, TicketPurchase <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">4টা model-এই <code>schedules()</code> morphMany relationship আছে।</div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-tag"></i></div>
+      <div class="item-body">
+        <div class="item-title">party_name Store — store() এ save হয় <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Customer/Supplier delete হলেও schedule list এ নাম দেখা যাবে।
+          DB column আছে, <code>store()</code> এ relationship থেকে নাম নিয়ে save করে।
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-window-restore"></i></div>
+      <div class="item-body">
+        <div class="item-title">Schedule Modal — Sales ও Purchases View <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          Regular Sales list এ indigo calendar button, Purchases list এ amber calendar button।
+          Multi-row date input (Add Another Date) সহ। due_amount > 0 হলে দেখায়।
+        </div>
+        <div class="item-files">
+          <span class="chip ok"><i class="fas fa-check"></i> resources/views/sales/index.blade.php</span>
+          <span class="chip ok"><i class="fas fa-check"></i> resources/views/purchases/index.blade.php</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-money-bill-wave"></i></div>
+      <div class="item-body">
+        <div class="item-title">markPaid() — Transaction create + due_amount reduce <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          DB::transaction() এ: Transaction record, parent due_amount কমে, payment_status update,
+          log entry, transaction_id লিঙ্ক — সব এক atomic operation এ।
+        </div>
+      </div>
+    </div>
+
+    <div class="item done">
+      <div class="item-icon"><i class="fas fa-history"></i></div>
+      <div class="item-body">
+        <div class="item-title">Log Entries — সব action এ <span class="tag tag-done">Done</span></div>
+        <div class="item-desc">
+          approve, reject, reschedule, cancel, paid — প্রতিটা action এ <code>PaymentScheduleLog</code> record তৈরি হয়।
+          <code>done_by</code>, <code>old_date</code>, <code>new_date</code>, <code>reason</code> সহ।
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════ SECTION B: MISSING CRITICAL ═══════════ -->
+  <div class="sec-title"><div class="sec-num n-red">B</div>Critical Missing — এগুলো করতে হবে ❌</div>
+  <div class="items">
+
+    <!-- MISSING 1: Permissions -->
+    <div class="item miss">
+      <div class="item-icon"><i class="fas fa-shield-alt"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-miss">Critical</span> Spatie Permissions — idea-র Step 7</div>
+        <div class="item-desc">
+          Idea-তে স্পষ্ট বলা আছে: <em>"Only users with 'approve payment schedule' see the Approve/Reject buttons — boss gets this role."</em>
+          এখন কোনো <code>@can</code> guard নেই — যেকেউ approve/reject/markPaid করতে পারছে। 4টা permission seed করতে হবে এবং view-এ guard বসাতে হবে।
+        </div>
+        <div class="code"><span class="cm">// 4টা permission seeder এ add করতে হবে:</span>
+<span class="str">'view payment schedule'</span>     <span class="cm">// schedule page দেখতে পারবে</span>
+<span class="str">'approve payment schedule'</span>  <span class="cm">// boss — approve/reject করতে পারবে</span>
+<span class="str">'reschedule payment'</span>        <span class="cm">// accountant — date change করতে পারবে</span>
+<span class="str">'mark payment paid'</span>         <span class="cm">// accountant — paid mark করতে পারবে</span>
+
+<span class="cm">// index.blade.php তে button গুলোতে @can guard বসাতে হবে:</span>
+@<span class="kw">can</span>(<span class="str">'approve payment schedule'</span>)
+    <span class="cm">&lt;!-- Approve / Reject buttons --&gt;</span>
+@<span class="kw">endcan</span>
+
+@<span class="kw">can</span>(<span class="str">'mark payment paid'</span>)
+    <span class="cm">&lt;!-- Mark Paid button --&gt;</span>
+@<span class="kw">endcan</span>
+
+@<span class="kw">can</span>(<span class="str">'reschedule payment'</span>)
+    <span class="cm">&lt;!-- Reschedule button --&gt;</span>
+@<span class="kw">endcan</span></div>
+        <div class="item-files" style="margin-top:10px;">
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: database/seeders/PermissionSeeder.php — 4 permissions add</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: index.blade.php — @can guards on buttons</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: PaymentScheduleController — middleware/authorize checks</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 2: Submit to Boss workflow -->
+    <div class="item miss">
+      <div class="item-icon"><i class="fas fa-paper-plane"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-miss">Critical</span> "Submit to Boss" Workflow — idea Section 4</div>
+        <div class="item-desc">
+          Idea-তে Schedule Dashboard এ দুটো button ছিল: <strong>Print for Approval</strong> ও <strong>Submit to Boss</strong>।
+          Print button আছে, কিন্তু <strong>Submit to Boss</strong> নেই। এটা হবে:
+          selected pending schedules গুলোর status → <code>submitted</code> করা,
+          তারপর boss-এর কাছে notification পাঠানো।
+          <br><br>
+          এই কারণে idea-র status enum এ <code>submitted</code> ছিল — আমাদের table এ নেই।
+        </div>
+        <div class="code"><span class="cm">-- 1. status enum এ 'submitted' add করো (migration)</span>
+<span class="cm">-- 2. নতুন route:</span>
+<span class="kw">Route</span>::<span class="fn">post</span>(<span class="str">'payment-schedules/submit-batch'</span>, [..., <span class="str">'submitBatch'</span>])
+    -><span class="fn">name</span>(<span class="str">'payment-schedules.submit-batch'</span>);
+
+<span class="cm">-- 3. Controller method:</span>
+<span class="kw">public function</span> <span class="fn">submitBatch</span>(Request $request)
+{
+    <span class="cm">// checkbox দিয়ে selected schedule IDs</span>
+    PaymentSchedule::<span class="fn">whereIn</span>(<span class="str">'id'</span>, $request->ids)
+        -><span class="fn">whereIn</span>(<span class="str">'status'</span>, [<span class="str">'pending'</span>, <span class="str">'overdue'</span>])
+        -><span class="fn">update</span>([<span class="str">'status'</span> => <span class="str">'submitted'</span>]);
+
+    <span class="cm">// optional: notify boss via notification</span>
+    <span class="cm">// Notification::send($boss, new ScheduleSubmittedNotification(...));</span>
+}</div>
+        <div class="item-files" style="margin-top:10px;">
+          <span class="chip add"><i class="fas fa-plus"></i> NEW migration: add_submitted_to_payment_schedules_status</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: Controller — submitBatch() method</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: routes/web.php — submit-batch route</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: index.blade.php — checkbox per row + Submit button</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 3: Opening Balance auto-create schedules -->
+    <div class="item miss">
+      <div class="item-icon"><i class="fas fa-book"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-miss">Critical</span> Opening Balance → Auto-create PaymentSchedule — idea Section 3 + Step 3</div>
+        <div class="item-desc">
+          Idea-তে Section 3 এ বলা ছিল: Journal store এ opening balance entry save হওয়ার পর
+          প্রতিটা customer/supplier row এর জন্য automatically একটা <code>PaymentSchedule</code> record তৈরি হবে।
+          এখন <code>JournalController.store()</code> এ এই logic নেই।
+          Opening balance form (payment-schedule-idea.html এ দেখানো) এখনো কোনো view এ নেই।
+        </div>
+        <div class="code"><span class="cm">// JournalController.store() শেষে add করতে হবে:</span>
+<span class="kw">if</span> ($request->source === <span class="str">'opening_balance'</span>) {
+    <span class="kw">foreach</span> ($request->items <span class="kw">as</span> $item) {
+        <span class="kw">if</span> (isset($item[<span class="str">'due_date'</span>]) && isset($item[<span class="str">'party_id'</span>])) {
+            PaymentSchedule::<span class="fn">create</span>([
+                <span class="str">'schedulable_type'</span> => JournalEntry::class,
+                <span class="str">'schedulable_id'</span>   => $journalEntry->id,
+                <span class="str">'type'</span>             => $item[<span class="str">'debit'</span>] > 0 ? <span class="str">'receive'</span> : <span class="str">'pay'</span>,
+                <span class="str">'party_type'</span>       => $item[<span class="str">'party_type'</span>],
+                <span class="str">'party_id'</span>         => $item[<span class="str">'party_id'</span>],
+                <span class="str">'party_name'</span>       => $item[<span class="str">'party_name'</span>],
+                <span class="str">'amount'</span>           => $item[<span class="str">'debit'</span>] ?: $item[<span class="str">'credit'</span>],
+                <span class="str">'scheduled_date'</span>   => $item[<span class="str">'due_date'</span>],
+                <span class="str">'status'</span>           => <span class="str">'pending'</span>,
+                <span class="str">'created_by'</span>       => auth()-><span class="fn">id</span>(),
+            ]);
+        }
+    }
+}</div>
+        <div class="item-files" style="margin-top:10px;">
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: JournalController.store() — auto-create logic</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: journals/index.blade.php — due_date field per row in opening balance modal</span>
+          <span class="chip add"><i class="fas fa-plus"></i> ADD: JournalEntry model এ schedules() hasMany relationship</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSING 4: Reschedule History View -->
+    <div class="item miss">
+      <div class="item-icon"><i class="fas fa-history"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-miss">High</span> Reschedule History View — idea Section 5</div>
+        <div class="item-desc">
+          Idea-তে Section 5 এ একটা পুরো audit trail table ছিল:
+          <em>Date of Action, Party, Reference, Old Due Date → New Due Date, Reason, Changed By, Action badge।</em>
+          <code>payment_schedule_logs</code> table আছে, data save হচ্ছে, কিন্তু <strong>এই data দেখার কোনো view নেই।</strong>
+          Schedule এর detail page বা একটা history modal দরকার।
+        </div>
+        <div class="code"><span class="cm">// দুটো approach সম্ভব:</span>
+
+<span class="cm">// Option A: index view এ প্রতিটা row এ একটা "History" button →</span>
+<span class="cm">// click করলে Ajax দিয়ে log গুলো load করে modal এ দেখায়</span>
+
+<span class="cm">// Option B: আলাদা একটা logs/index view</span>
+<span class="cm">// Route: GET payment-schedules/{schedule}/logs</span>
+<span class="cm">// Controller: logsIndex(PaymentSchedule $schedule)</span>
+<span class="cm">// { return view('payment-schedules.logs', ['logs' => $schedule->logs()->with('doneBy')->get()]); }</span></div>
+        <div class="item-files" style="margin-top:10px;">
+          <span class="chip add"><i class="fas fa-plus"></i> ADD: "History" button in index table (icon button)</span>
+          <span class="chip add"><i class="fas fa-plus"></i> ADD: History modal — AJAX load logs per schedule</span>
+          <span class="chip add"><i class="fas fa-plus"></i> EDIT: Controller — logs() method + route</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════ SECTION C: MINOR ═══════════ -->
+  <div class="sec-title"><div class="sec-num n-yellow">C</div>Minor / Nice-to-have ⚠️</div>
+  <div class="items">
+
+    <div class="item low">
+      <div class="item-icon"><i class="fas fa-trash-alt"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-low">Low</span> SoftDeletes — idea schema তে ছিল</div>
+        <div class="item-desc">
+          Idea-র schema তে <code>$table->softDeletes()</code> ছিল।
+          আমাদের table এ <code>deleted_at</code> column নেই।
+          Model এ <code>SoftDeletes</code> trait নেই।
+          এখন hard delete হয়। Payment history নষ্ট হয়ে যেতে পারে।
+        </div>
+        <div class="code"><span class="cm">-- migration: add_soft_deletes_to_payment_schedules</span>
+$table-><span class="fn">softDeletes</span>();
+
+<span class="cm">// PaymentSchedule model:</span>
+<span class="kw">use</span> Illuminate\Database\Eloquent\SoftDeletes;
+<span class="kw">class</span> PaymentSchedule <span class="kw">extends</span> Model {
+    <span class="kw">use</span> SoftDeletes;
+    ...
+}</div>
+        <div class="item-files" style="margin-top:8px;">
+          <span class="chip edit"><i class="fas fa-pen"></i> NEW migration: add_soft_deletes_to_payment_schedules</span>
+          <span class="chip edit"><i class="fas fa-pen"></i> EDIT: PaymentSchedule.php — use SoftDeletes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item low">
+      <div class="item-icon"><i class="fas fa-calendar-times"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-low">Low</span> "N days overdue" count — idea table এ ছিল</div>
+        <div class="item-desc">
+          Idea-র table এ overdue row এ <em>"6 days overdue"</em> text দেখাচ্ছিল।
+          আমাদের view এ শুধু <span style="color:#dc2626;font-weight:700;">OVERDUE</span> tag দেখায়, দিনের count নেই।
+          এটা Blade এ সহজেই add করা যায়।
+        </div>
+        <div class="code"><span class="cm">{{-- index.blade.php date cell এ add করো --}}</span>
+@<span class="kw">if</span>($isOverdue)
+    &lt;small style="color:#ef4444;"&gt;
+        {{ now()->diffInDays($schedule->scheduled_date) }} days overdue
+    &lt;/small&gt;
+@<span class="kw">endif</span></div>
+        <div class="item-files" style="margin-top:8px;">
+          <span class="chip edit"><i class="fas fa-pen"></i> EDIT: index.blade.php — date cell, add diffInDays text</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="item low">
+      <div class="item-icon"><i class="fas fa-tachometer-alt"></i></div>
+      <div class="item-body">
+        <div class="item-title"><span class="tag tag-low">Low</span> Dashboard Widget — Today's Schedule Summary</div>
+        <div class="item-desc">
+          Idea-তে এটা সরাসরি উল্লেখ না থাকলেও, একটা ভালো ERP-এ dashboard এ আজকের
+          "৳ 47,800 payable today" এবং "৳ 25,000 receivable today" widget থাকা উচিত।
+          User login করলেই দেখতে পাবে।
+        </div>
+        <div class="item-files">
+          <span class="chip edit"><i class="fas fa-pen"></i> EDIT: Dashboard controller — schedule summary data pass করো</span>
+          <span class="chip edit"><i class="fas fa-pen"></i> EDIT: dashboard view — schedule widget card add করো</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ═══════════ SECTION D: ACTION PLAN ═══════════ -->
+  <div class="sec-title"><div class="sec-num" style="background:#2563eb;">D</div>Action Plan — কোন order এ করবো</div>
+  <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;margin-bottom:20px;">
+    <table class="act-table">
+      <thead>
+        <tr><th>#</th><th>Task</th><th>What to Change</th><th>Priority</th><th>Effort</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1</strong></td>
+          <td><strong>Spatie Permissions seed + @can guards</strong><br>
+              <small style="color:#64748b;">Security hole বন্ধ করো — এখন সবাই approve/reject/pay করতে পারছে</small></td>
+          <td><code style="font-size:11px;">PermissionSeeder.php, index.blade.php, Controller middleware</code></td>
+          <td><span class="pri p-hi">Critical</span></td>
+          <td><span class="eff e-med">1.5 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>2</strong></td>
+          <td><strong>Reschedule History View (modal)</strong><br>
+              <small style="color:#64748b;">Log data আছে — শুধু দেখার view দরকার</small></td>
+          <td><code style="font-size:11px;">Controller logs(), route, index.blade.php history modal</code></td>
+          <td><span class="pri p-hi">High</span></td>
+          <td><span class="eff e-med">1 hr</span></td>
+        </tr>
+        <tr>
+          <td><strong>3</strong></td>
+          <td><strong>"N days overdue" count</strong><br>
+              <small style="color:#64748b;">index.blade.php এ একটা line</small></td>
+          <td><code style="font-size:11px;">resources/views/payment-schedules/index.blade.php</code></td>
+          <td><span class="pri p-md">Medium</span></td>
+          <td><span class="eff e-sm">10 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>4</strong></td>
+          <td><strong>Submit to Boss workflow</strong><br>
+              <small style="color:#64748b;">'submitted' status + batch submit button + row checkboxes</small></td>
+          <td><code style="font-size:11px;">migration, Controller.submitBatch(), routes, index.blade.php</code></td>
+          <td><span class="pri p-md">Medium</span></td>
+          <td><span class="eff e-big">3 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>5</strong></td>
+          <td><strong>SoftDeletes</strong><br>
+              <small style="color:#64748b;">paid records hard delete হওয়া ঠিক না</small></td>
+          <td><code style="font-size:11px;">migration + PaymentSchedule.php use SoftDeletes</code></td>
+          <td><span class="pri p-md">Medium</span></td>
+          <td><span class="eff e-sm">20 min</span></td>
+        </tr>
+        <tr>
+          <td><strong>6</strong></td>
+          <td><strong>Opening Balance → Auto PaymentSchedule</strong><br>
+              <small style="color:#64748b;">Journal store + due_date field in opening balance modals</small></td>
+          <td><code style="font-size:11px;">JournalController.store(), journals/index.blade.php modal rows</code></td>
+          <td><span class="pri p-lo">Low</span></td>
+          <td><span class="eff e-big">3 hrs</span></td>
+        </tr>
+        <tr>
+          <td><strong>7</strong></td>
+          <td><strong>Dashboard Widget</strong><br>
+              <small style="color:#64748b;">Today payable/receivable summary on homepage</small></td>
+          <td><code style="font-size:11px;">Dashboard Controller + dashboard view</code></td>
+          <td><span class="pri p-lo">Low</span></td>
+          <td><span class="eff e-med">1 hr</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Quick wins -->
+  <div style="background:#fff;border-radius:10px;padding:18px 22px;box-shadow:0 2px 8px rgba(0,0,0,.07);border-left:5px solid #2563eb;margin-bottom:20px;">
+    <h3 style="font-size:14px;font-weight:800;color:#1d4ed8;margin-bottom:12px;"><i class="fas fa-bolt" style="margin-right:7px;"></i>আজই 30 মিনিটে করো — Quick Wins</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>"N days overdue" text</strong> — index.blade.php তে 1 line add করো</span>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <i class="fas fa-check-circle" style="color:#059669;margin-top:2px;"></i>
+        <span><strong>SoftDeletes migration</strong> — 2টা file, 15 মিনিট কাজ</span>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:#94a3b8;font-size:12px;padding:10px 0;">
+    EPAL ERP — Payment Schedule Remaining Status &nbsp;·&nbsp; 26 Apr 2026
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Schedule — Full System Roadmap</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+/* ── Hero ── */
+.hero {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e293b 100%);
+  color: #fff; padding: 40px 40px 32px;
+  border-bottom: 3px solid #2563eb;
+}
+.hero h1 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+.hero h1 span { color: #38bdf8; }
+.hero p { opacity: .75; margin-top: 8px; font-size: 13.5px; max-width: 720px; line-height: 1.6; }
+.hero-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 18px; }
+.hero-badge { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+              border-radius: 999px; padding: 4px 14px; font-size: 12px; color: #bae6fd;
+              display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Container ── */
+.container { max-width: 1060px; margin: 0 auto; padding: 32px 16px 80px; }
+
+/* ── Section title ── */
+.section-title {
+  font-size: 15px; font-weight: 800; color: #1e293b;
+  margin: 40px 0 16px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;
+}
+.section-title .num {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.num-blue   { background: #2563eb; }
+.num-green  { background: #059669; }
+.num-orange { background: #d97706; }
+.num-purple { background: #7c3aed; }
+.num-red    { background: #dc2626; }
+
+/* ── Card ── */
+.card {
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 3px 14px rgba(0,0,0,.07); padding: 24px 26px; margin-bottom: 22px;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between;
+               margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+.card-header h3 { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+/* ── Info / warn / success boxes ── */
+.infobox {
+  border-radius: 10px; padding: 14px 18px; margin-bottom: 20px;
+  display: flex; gap: 12px; align-items: flex-start; font-size: 13px; line-height: 1.7;
+}
+.infobox i { font-size: 16px; margin-top: 2px; flex-shrink: 0; }
+.infobox-blue   { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.infobox-blue i { color: #2563eb; }
+.infobox-green  { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+.infobox-green i{ color: #059669; }
+.infobox-orange { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.infobox-orange i{ color: #d97706; }
+.infobox-red    { background: #fff5f5; border: 1px solid #fecaca; color: #991b1b; }
+.infobox-red i  { color: #dc2626; }
+
+/* ── Status tags ── */
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.tag-done    { background: #d1fae5; color: #065f46; }
+.tag-partial { background: #dbeafe; color: #1e40af; }
+.tag-todo    { background: #fef3c7; color: #92400e; }
+.tag-missing { background: #fee2e2; color: #991b1b; }
+.tag-phase1  { background: #f3e8ff; color: #6d28d9; }
+.tag-phase2  { background: #fffbeb; color: #d97706; border: 1px solid #fcd34d; }
+.tag-phase3  { background: #f0fdf4; color: #059669; border: 1px solid #86efac; }
+
+/* ── Feature matrix table ── */
+.matrix { width: 100%; border-collapse: collapse; font-size: 13px; }
+.matrix thead th { background: #1e293b; color: #e2e8f0; padding: 10px 14px;
+                   text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.matrix tbody tr { border-bottom: 1px solid #f1f5f9; }
+.matrix tbody tr:hover { background: #f8fafc; }
+.matrix tbody td { padding: 11px 14px; vertical-align: middle; }
+.matrix tbody td:first-child { font-weight: 600; color: #1e293b; }
+
+/* ── Flow diagram ── */
+.flow { display: flex; align-items: flex-start; gap: 0; overflow-x: auto; padding: 4px 0 8px; }
+.flow-step { text-align: center; min-width: 110px; }
+.flow-step .circle {
+  width: 52px; height: 52px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; margin: 0 auto 8px;
+  font-size: 19px; font-weight: 800; border: 3px solid;
+}
+.flow-step p { font-size: 11px; font-weight: 700; color: #475569; line-height: 1.4; }
+.flow-arrow { display: flex; align-items: center; padding-top: 15px; color: #94a3b8; font-size: 22px; }
+
+.step-c1  .circle { background: #eff6ff; border-color: #2563eb; color: #2563eb; }
+.step-c2  .circle { background: #fef3c7; border-color: #f59e0b; color: #d97706; }
+.step-c3  .circle { background: #f3e8ff; border-color: #8b5cf6; color: #7c3aed; }
+.step-c4  .circle { background: #d1fae5; border-color: #059669; color: #059669; }
+.step-c5  .circle { background: #fee2e2; border-color: #ef4444; color: #ef4444; }
+.step-c6  .circle { background: #dbeafe; border-color: #2563eb; color: #1d4ed8; }
+.step-c7  .circle { background: #e0e7ff; border-color: #6366f1; color: #4f46e5; }
+.step-cg  .circle { background: #f0fdf4; border-color: #059669; color: #059669; }
+
+/* ── Two-column grid ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+/* ── Mini card ── */
+.mini-card {
+  background: #fff; border-radius: 10px; padding: 18px 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06); border-top: 4px solid;
+}
+.mini-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 7px; }
+.mini-card ul { padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.mini-card ul li { font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px; }
+.mini-card ul li i { margin-top: 1px; flex-shrink: 0; }
+
+/* ── DB code block ── */
+.code-block { background: #0f172a; border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
+.code-block pre { color: #e2e8f0; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.9; white-space: pre-wrap; }
+.kw  { color: #7dd3fc; } .fn  { color: #a78bfa; } .str { color: #86efac; }
+.cm  { color: #64748b; } .ht  { color: #fcd34d; } .op  { color: #f472b6; }
+
+/* ── Phase bar ── */
+.phase-bar {
+  border-radius: 10px; padding: 16px 20px; margin-bottom: 22px;
+  display: flex; align-items: flex-start; gap: 16px;
+}
+.phase-bar-blue   { background: #eff6ff; border: 1.5px solid #bfdbfe; }
+.phase-bar-orange { background: #fffbeb; border: 1.5px solid #fcd34d; }
+.phase-bar-green  { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+.phase-icon { width: 44px; height: 44px; border-radius: 10px; display: flex;
+              align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+.phase-icon-blue   { background: #2563eb; color: #fff; }
+.phase-icon-orange { background: #d97706; color: #fff; }
+.phase-icon-green  { background: #059669; color: #fff; }
+.phase-content h4 { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.phase-content p  { font-size: 12.5px; line-height: 1.65; color: #475569; }
+
+/* ── Step list ── */
+.step-list { display: flex; flex-direction: column; gap: 18px; margin-top: 4px; }
+.step-item { display: flex; gap: 14px; align-items: flex-start; }
+.step-num {
+  min-width: 34px; height: 34px; border-radius: 50%;
+  background: #2563eb; color: #fff; font-weight: 800; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.step-num.orange { background: #d97706; }
+.step-num.green  { background: #059669; }
+.step-num.purple { background: #7c3aed; }
+.step-body strong { display: block; font-size: 13.5px; margin-bottom: 4px; }
+.step-body p  { color: #475569; font-size: 13px; line-height: 1.7; }
+.step-body code { background: #f1f5f9; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+
+/* ── Legend ── */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+@media (max-width: 640px) {
+  .two-col, .three-col { grid-template-columns: 1fr; }
+  .flow { flex-wrap: wrap; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <h1><i class="fas fa-map" style="margin-right:12px;color:#38bdf8;"></i>Payment Schedule — <span>Full System Roadmap</span></h1>
+  <p>Complete picture of the existing payment scheduling system, gap analysis, and step-by-step build plan
+     for general-purpose scheduling (supplier payable, customer receivable, and any custom payment for any service).</p>
+  <div class="hero-badges">
+    <span class="hero-badge"><i class="fas fa-check-circle"></i> What's Already Built</span>
+    <span class="hero-badge"><i class="fas fa-exclamation-circle"></i> What's Missing</span>
+    <span class="hero-badge"><i class="fas fa-road"></i> 3 Build Phases</span>
+    <span class="hero-badge"><i class="fas fa-code"></i> Laravel · Blade · MySQL</span>
+    <span class="hero-badge"><i class="fas fa-calendar-alt"></i> 27 Apr 2026</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ══ SECTION 1: CURRENT STATE ══ -->
+  <div class="section-title"><div class="num num-green"><i class="fas fa-check"></i></div> Current System — What's Already Built</div>
+
+  <div class="infobox infobox-green">
+    <i class="fas fa-check-circle"></i>
+    <div>
+      <strong>Good news:</strong> The core payment scheduling engine is already implemented.
+      The <code>payment_schedules</code> table, model, controller, routes, and view all exist.
+      The overdue auto-detection command (<code>schedules:mark-overdue</code>) is also ready.
+      The gaps are: <strong>general-purpose (ad-hoc) scheduling</strong> and <strong>journal/opening-balance integration</strong>.
+    </div>
+  </div>
+
+  <div class="card">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th style="width:30%">Component</th>
+          <th style="width:40%">Details</th>
+          <th style="width:30%">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><i class="fas fa-database" style="color:#2563eb;margin-right:6px;"></i>payment_schedules table</td>
+          <td>polymorphic, type (receive/pay), status, reschedule fields, approval fields</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-database" style="color:#2563eb;margin-right:6px;"></i>payment_schedule_logs table</td>
+          <td>Action audit trail: rescheduled, approved, rejected, paid, cancelled</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-cube" style="color:#7c3aed;margin-right:6px;"></i>PaymentSchedule model</td>
+          <td>morphTo, scopes (overdue, today, pending, receive, pay), logs relation</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-cube" style="color:#7c3aed;margin-right:6px;"></i>PaymentScheduleLog model</td>
+          <td>Tracks every action with old/new date, reason, done_by</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-cogs" style="color:#059669;margin-right:6px;"></i>PaymentScheduleController</td>
+          <td>index, store, approve, reject, reschedule, markPaid, cancel, destroy</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-route" style="color:#d97706;margin-right:6px;"></i>Routes (web.php)</td>
+          <td>resource + approve, reject, reschedule, mark-paid, cancel patch routes</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-desktop" style="color:#0ea5e9;margin-right:6px;"></i>Index view (Blade)</td>
+          <td>Summary cards, filter row, schedule table, status badges, print CSS</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-terminal" style="color:#64748b;margin-right:6px;"></i>MarkOverdueSchedules command</td>
+          <td><code>schedules:mark-overdue</code> — marks pending past-due → overdue</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-link" style="color:#dc2626;margin-right:6px;"></i>Sale → Schedule link</td>
+          <td>Schedule store() accepts sale / purchase / ticket_sale / ticket_purchase</td>
+          <td><span class="tag tag-done"><i class="fas fa-check"></i> Done</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-file-invoice" style="color:#dc2626;margin-right:6px;"></i>Opening balance → Schedule</td>
+          <td>JournalEntry opening balance does NOT auto-create payment_schedule</td>
+          <td><span class="tag tag-missing"><i class="fas fa-times"></i> Missing</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-plus-circle" style="color:#dc2626;margin-right:6px;"></i>Ad-hoc / General scheduling</td>
+          <td>No way to schedule payment NOT linked to a document (rent, utility, service)</td>
+          <td><span class="tag tag-missing"><i class="fas fa-times"></i> Missing</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-shield-alt" style="color:#dc2626;margin-right:6px;"></i>Spatie permissions</td>
+          <td>approve/reject buttons visible to everyone — no role-based gating</td>
+          <td><span class="tag tag-missing"><i class="fas fa-times"></i> Missing</span></td>
+        </tr>
+        <tr>
+          <td><i class="fas fa-clock" style="color:#d97706;margin-right:6px;"></i>Scheduler registration</td>
+          <td>MarkOverdueSchedules command not verified in Kernel.php $schedule</td>
+          <td><span class="tag tag-todo"><i class="fas fa-exclamation"></i> Verify</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ══ SECTION 2: HOW IT CURRENTLY WORKS ══ -->
+  <div class="section-title"><div class="num num-blue"><i class="fas fa-project-diagram"></i></div> Existing Flow — Sale / Purchase → Payment Schedule</div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#475569;margin-bottom:18px;">
+      Current system ties every schedule to a <strong>parent document</strong> (Sale, Purchase, TicketSale, TicketPurchase)
+      via polymorphic <code>schedulable_type / schedulable_id</code>. The amount scheduled cannot exceed the document's
+      <code>due_amount</code>.
+    </p>
+    <div class="flow">
+      <div class="flow-step step-c1">
+        <div class="circle"><i class="fas fa-file-invoice"></i></div>
+        <p>Sale/Purchase<br><small>Created with due amount</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c2">
+        <div class="circle"><i class="fas fa-calendar-plus"></i></div>
+        <p>Add Schedule<br><small>Date + amount</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c2">
+        <div class="circle"><i class="fas fa-clock"></i></div>
+        <p>Status: Pending<br><small>In schedule list</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c3">
+        <div class="circle"><i class="fas fa-paper-plane"></i></div>
+        <p>Print &amp; Submit<br><small>to Boss</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c4">
+        <div class="circle"><i class="fas fa-check"></i></div>
+        <p>Boss Approves<br><small>approved_by logged</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c6">
+        <div class="circle"><i class="fas fa-money-bill-wave"></i></div>
+        <p>Mark Paid<br><small>Transaction created</small></p>
+      </div>
+    </div>
+    <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <div style="width:12px;height:12px;border-radius:3px;background:#fee2e2;border:1.5px solid #ef4444;"></div>
+        Reject → stays pending, reschedule with reason
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <div style="width:12px;height:12px;border-radius:3px;background:#e0e7ff;border:1.5px solid #6366f1;"></div>
+        Missed date → auto-overdue via artisan command at midnight
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px;">
+        <div style="width:12px;height:12px;border-radius:3px;background:#fff5f5;border:1.5px solid #f87171;"></div>
+        Overdue → can reschedule → log saved to payment_schedule_logs
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 3: WHAT NEEDS TO BE BUILT ══ -->
+  <div class="section-title"><div class="num num-orange"><i class="fas fa-wrench"></i></div> Gap Analysis — Three New Flows to Build</div>
+
+  <div class="three-col">
+
+    <div class="mini-card" style="border-color:#2563eb;">
+      <h4 style="color:#2563eb;"><i class="fas fa-file-alt"></i> Flow A — Supplier Payable (Opening Balance)</h4>
+      <ul>
+        <li><i class="fas fa-times-circle" style="color:#ef4444;"></i> JournalEntry (type: opening_balance) saves rows but does NOT create PaymentSchedule</li>
+        <li><i class="fas fa-arrow-right" style="color:#2563eb;"></i> Need: JournalController store() → auto-creates schedule when row has due_date + party</li>
+        <li><i class="fas fa-arrow-right" style="color:#2563eb;"></i> schedulable_type = JournalEntry, type = 'pay'</li>
+        <li><i class="fas fa-check-circle" style="color:#059669;"></i> Once linked, full approve/reschedule/paid flow works</li>
+      </ul>
+    </div>
+
+    <div class="mini-card" style="border-color:#059669;">
+      <h4 style="color:#059669;"><i class="fas fa-hand-holding-usd"></i> Flow B — Customer Receivable (Opening Balance)</h4>
+      <ul>
+        <li><i class="fas fa-times-circle" style="color:#ef4444;"></i> Same gap — customer AR opening entries have no schedule</li>
+        <li><i class="fas fa-arrow-right" style="color:#059669;"></i> JournalController → auto-creates schedule, type = 'receive'</li>
+        <li><i class="fas fa-arrow-right" style="color:#059669;"></i> schedulable_type = JournalEntry, party_type = 'customer'</li>
+        <li><i class="fas fa-check-circle" style="color:#059669;"></i> Full flow works once linked</li>
+      </ul>
+    </div>
+
+    <div class="mini-card" style="border-color:#7c3aed;">
+      <h4 style="color:#7c3aed;"><i class="fas fa-plus-circle"></i> Flow C — Ad-hoc / Any Purpose</h4>
+      <ul>
+        <li><i class="fas fa-times-circle" style="color:#ef4444;"></i> No way to schedule "office rent", "ISP bill", "govt fee" not tied to a document</li>
+        <li><i class="fas fa-arrow-right" style="color:#7c3aed;"></i> New form: party_name (free text), purpose, amount, date — no parent doc</li>
+        <li><i class="fas fa-arrow-right" style="color:#7c3aed;"></i> schedulable_type = NULL, add nullable source label field</li>
+        <li><i class="fas fa-check-circle" style="color:#059669;"></i> Same approve/reschedule/paid flow applies</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ══ SECTION 4: DATABASE CHANGES ══ -->
+  <div class="section-title"><div class="num num-blue"><i class="fas fa-database"></i></div> Database — Required Changes</div>
+
+  <div class="infobox infobox-orange">
+    <i class="fas fa-exclamation-triangle"></i>
+    <div>
+      The <code>payment_schedules</code> table already has the right structure.
+      Two small additions are needed: (1) add <code>JournalEntry</code> to the morphable list,
+      (2) add a <code>source_label</code> column for ad-hoc entries where no parent document exists.
+    </div>
+  </div>
+
+  <div class="code-block">
+<pre><span class="cm">-- Migration 1: add source_label for ad-hoc schedules (nullable)</span>
+<span class="kw">Schema</span>::<span class="fn">table</span>(<span class="str">'payment_schedules'</span>, function (Blueprint $table) {
+    <span class="cm">// Free-text label when schedulable_type is null (ad-hoc)</span>
+    $table-><span class="fn">string</span>(<span class="str">'source_label'</span>)-><span class="fn">nullable</span>()-><span class="fn">after</span>(<span class="str">'party_name'</span>);
+    <span class="cm">// e.g. "Office Rent - May 2026", "ISP Bill", "Govt VAT Deposit"</span>
+});
+
+<span class="cm">-- No new table needed. JournalEntry is already a model — just register it</span>
+<span class="cm">-- in PaymentSchedule's $morphMap (MorphMap in AppServiceProvider):</span>
+<span class="kw">Relation</span>::<span class="fn">morphMap</span>([
+    <span class="str">'sale'</span>             => \App\Models\Sale::class,
+    <span class="str">'purchase'</span>         => \App\Models\Purchase::class,
+    <span class="str">'ticket_sale'</span>      => \App\Models\TicketSale::class,
+    <span class="str">'ticket_purchase'</span>  => \App\Models\TicketPurchase::class,
+    <span class="str">'journal_entry'</span>    => \App\Models\JournalEntry::class,  <span class="ht">// ← add this</span>
+    <span class="cm">// null = ad-hoc (no parent document)</span>
+]);</pre>
+  </div>
+
+  <!-- ══ SECTION 5: PHASE 1 ══ -->
+  <div class="section-title"><div class="num num-blue">1</div> Phase 1 — General Purpose / Ad-hoc Scheduling</div>
+
+  <div class="phase-bar phase-bar-blue">
+    <div class="phase-icon phase-icon-blue"><i class="fas fa-plus"></i></div>
+    <div class="phase-content">
+      <h4>Goal: Schedule a payment to ANYONE for ANY purpose — no parent document needed</h4>
+      <p>Handles: office rent, utility bills, ISP charges, government fees, advance payments, loan instalments, supplier ad-hoc payments, any custom obligation — all go through the same approve → paid flow.</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-plus-circle" style="color:#7c3aed;"></i> Ad-hoc Schedule Form Fields</h3>
+        </div>
+        <table class="matrix">
+          <thead><tr><th>Field</th><th>Type</th><th>Required</th></tr></thead>
+          <tbody>
+            <tr><td>type</td><td>select: pay / receive</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>party_name</td><td>text input (free text)</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>party_type</td><td>select: supplier / customer / employee / other</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>source_label</td><td>text (e.g. "Office Rent – May 2026")</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>amount</td><td>decimal</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>scheduled_date</td><td>date</td><td><span class="tag tag-done">Yes</span></td></tr>
+            <tr><td>note</td><td>textarea</td><td><span class="tag tag-todo">Optional</span></td></tr>
+            <tr><td>schedulable_type</td><td>NULL (no parent doc)</td><td><span class="tag tag-done">Auto</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fas fa-code" style="color:#2563eb;"></i> Controller Change — storeAdHoc()</h3>
+        </div>
+        <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// Add new method in PaymentScheduleController</span>
+<span class="kw">public function</span> <span class="fn">storeAdHoc</span>(Request $request)
+{
+    $request-><span class="fn">validate</span>([
+        <span class="str">'type'</span>           => <span class="str">'required|in:pay,receive'</span>,
+        <span class="str">'party_name'</span>     => <span class="str">'required|string|max:200'</span>,
+        <span class="str">'party_type'</span>     => <span class="str">'required|string|max:50'</span>,
+        <span class="str">'source_label'</span>   => <span class="str">'required|string|max:200'</span>,
+        <span class="str">'amount'</span>         => <span class="str">'required|numeric|min:0.01'</span>,
+        <span class="str">'scheduled_date'</span> => <span class="str">'required|date'</span>,
+        <span class="str">'note'</span>           => <span class="str">'nullable|string|max:500'</span>,
+    ]);
+
+    PaymentSchedule::<span class="fn">create</span>([
+        <span class="str">'schedulable_type'</span> => <span class="op">null</span>,  <span class="cm">// no parent doc</span>
+        <span class="str">'schedulable_id'</span>   => <span class="op">null</span>,
+        <span class="str">'type'</span>             => $request->type,
+        <span class="str">'party_type'</span>       => $request->party_type,
+        <span class="str">'party_id'</span>         => <span class="op">null</span>,
+        <span class="str">'party_name'</span>       => $request->party_name,
+        <span class="str">'source_label'</span>     => $request->source_label,
+        <span class="str">'amount'</span>           => $request->amount,
+        <span class="str">'scheduled_date'</span>   => $request->scheduled_date,
+        <span class="str">'status'</span>           => <span class="str">'pending'</span>,
+        <span class="str">'note'</span>             => $request->note,
+        <span class="str">'created_by'</span>       => auth()-><span class="fn">id</span>(),
+    ]);
+
+    return <span class="fn">back</span>()-><span class="fn">with</span>(<span class="str">'success'</span>, <span class="str">'Schedule created.'</span>);
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3><i class="fas fa-route" style="color:#d97706;"></i> New Route to Add</h3></div>
+    <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// routes/web.php — add inside the authenticated group</span>
+Route::<span class="fn">post</span>(<span class="str">'payment-schedules/adhoc'</span>, [PaymentScheduleController::class, <span class="str">'storeAdHoc'</span>])
+      -><span class="fn">name</span>(<span class="str">'payment-schedules.adhoc'</span>);</pre>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 6: PHASE 2 ══ -->
+  <div class="section-title"><div class="num num-orange">2</div> Phase 2 — Opening Balance / Journal Entry Integration</div>
+
+  <div class="phase-bar phase-bar-orange">
+    <div class="phase-icon phase-icon-orange"><i class="fas fa-book-open"></i></div>
+    <div class="phase-content">
+      <h4>Goal: When a Supplier Payable or Customer Receivable opening balance entry is saved, auto-create a PaymentSchedule record for each due-date row</h4>
+      <p>This connects the existing Journal Entry system to the payment schedule. The accountant enters "Supplier X owes ৳50,000 due on 15 May" in the opening balance form — the schedule is created automatically without extra steps.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><h3><i class="fas fa-project-diagram" style="color:#d97706;"></i> Flow — Opening Balance → Auto Schedule</h3></div>
+    <div class="flow">
+      <div class="flow-step step-c1">
+        <div class="circle"><i class="fas fa-book"></i></div>
+        <p>Opening Balance<br><small>Journal Entry form</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c2">
+        <div class="circle"><i class="fas fa-calendar"></i></div>
+        <p>Enter Due Date<br><small>per row (highlighted)</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-cg">
+        <div class="circle"><i class="fas fa-save"></i></div>
+        <p>Journal Saved<br><small>JournalController::store()</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c4">
+        <div class="circle"><i class="fas fa-magic"></i></div>
+        <p>Auto-create<br><small>PaymentSchedule</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c2">
+        <div class="circle"><i class="fas fa-clock"></i></div>
+        <p>Status: Pending<br><small>appears in dashboard</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c6">
+        <div class="circle"><i class="fas fa-money-bill-wave"></i></div>
+        <p>Approve &amp; Pay<br><small>normal flow</small></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><h3><i class="fas fa-code" style="color:#d97706;"></i> JournalController::store() Change</h3></div>
+      <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// After $journalEntry is saved, in the items loop:</span>
+<span class="kw">foreach</span> ($request->items <span class="kw">as</span> $item) {
+    JournalItem::<span class="fn">create</span>([...]);
+
+    <span class="cm">// ← NEW: auto-schedule if opening balance row has due_date</span>
+    <span class="kw">if</span> (
+        $request->source === <span class="str">'opening_balance'</span> &&
+        ! <span class="fn">empty</span>($item[<span class="str">'due_date'</span>]) &&
+        ! <span class="fn">empty</span>($item[<span class="str">'party_type'</span>]) &&
+        ! <span class="fn">empty</span>($item[<span class="str">'party_name'</span>])
+    ) {
+        PaymentSchedule::<span class="fn">create</span>([
+            <span class="str">'schedulable_type'</span> => JournalEntry::class,
+            <span class="str">'schedulable_id'</span>   => $journalEntry->id,
+            <span class="str">'type'</span>    => $item[<span class="str">'account_type'</span>] === <span class="str">'liability'</span>
+                           ? <span class="str">'pay'</span> : <span class="str">'receive'</span>,
+            <span class="str">'party_type'</span>       => $item[<span class="str">'party_type'</span>],
+            <span class="str">'party_id'</span>         => $item[<span class="str">'party_id'</span>] ?? null,
+            <span class="str">'party_name'</span>       => $item[<span class="str">'party_name'</span>],
+            <span class="str">'source_label'</span>     => $item[<span class="str">'reference'</span>] ?? null,
+            <span class="str">'amount'</span>           => $item[<span class="str">'credit'</span>] ?: $item[<span class="str">'debit'</span>],
+            <span class="str">'scheduled_date'</span>   => $item[<span class="str">'due_date'</span>],
+            <span class="str">'status'</span>           => <span class="str">'pending'</span>,
+            <span class="str">'created_by'</span>       => auth()-><span class="fn">id</span>(),
+        ]);
+    }
+}</pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><i class="fas fa-table" style="color:#d97706;"></i> Opening Balance Form — Extra Columns</h3></div>
+      <p style="font-size:13px;color:#475569;margin-bottom:14px;">
+        Add these highlighted columns to each row of the Supplier Payable / Customer Receivable opening balance entry form:
+      </p>
+      <table class="matrix">
+        <thead><tr><th>New Column</th><th>Input Type</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr>
+            <td style="background:#fffbeb;"><i class="fas fa-calendar" style="color:#f59e0b;margin-right:5px;"></i><strong>Due Date ★</strong></td>
+            <td><code>date</code> input (yellow highlight)</td>
+            <td>When this amount must be paid/collected</td>
+          </tr>
+          <tr>
+            <td>Party Type</td>
+            <td>hidden / auto from form context</td>
+            <td>'supplier' or 'customer'</td>
+          </tr>
+          <tr>
+            <td>Party ID</td>
+            <td>hidden from supplier/customer select</td>
+            <td>FK to suppliers / customers table</td>
+          </tr>
+          <tr>
+            <td>Reference</td>
+            <td>text input (already exists)</td>
+            <td>Used as source_label in schedule</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:12px;padding:10px 13px;background:#fffbeb;border-radius:8px;border:1px solid #fcd34d;font-size:12px;color:#92400e;">
+        <i class="fas fa-info-circle" style="margin-right:5px;"></i>
+        If Due Date is left blank → no schedule is created. Schedule can always be added manually later from the PaymentSchedule page.
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 7: PHASE 3 ══ -->
+  <div class="section-title"><div class="num num-green">3</div> Phase 3 — Permissions, Scheduler & Notifications</div>
+
+  <div class="phase-bar phase-bar-green">
+    <div class="phase-icon phase-icon-green"><i class="fas fa-shield-alt"></i></div>
+    <div class="phase-content">
+      <h4>Goal: Role-based access control, reliable overdue detection, and optional notifications</h4>
+      <p>Restrict who can approve/reject payments, ensure the artisan command runs daily, and optionally alert the boss when the daily list is ready.</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header"><h3><i class="fas fa-shield-alt" style="color:#059669;"></i> Spatie Permissions to Add</h3></div>
+      <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// In a seeder / migration:</span>
+$permissions = [
+    <span class="str">'view payment schedule'</span>,
+    <span class="str">'create payment schedule'</span>,
+    <span class="str">'approve payment schedule'</span>,  <span class="cm">// Boss only</span>
+    <span class="str">'reject payment schedule'</span>,   <span class="cm">// Boss only</span>
+    <span class="str">'reschedule payment'</span>,
+    <span class="str">'mark payment paid'</span>,
+    <span class="str">'cancel payment schedule'</span>,
+];
+<span class="kw">foreach</span> ($permissions <span class="kw">as</span> $perm) {
+    Permission::<span class="fn">firstOrCreate</span>([<span class="str">'name'</span> => $perm]);
+}
+
+<span class="cm">// In blade view — wrap Approve/Reject buttons:</span>
+@<span class="fn">can</span>(<span class="str">'approve payment schedule'</span>)
+    &lt;button class="btn-approve" ...&gt;Approve&lt;/button&gt;
+@<span class="fn">endcan</span>
+
+<span class="cm">// In controller — add middleware:</span>
+$this-><span class="fn">middleware</span>(<span class="str">'can:approve payment schedule'</span>)
+     -><span class="fn">only</span>([<span class="str">'approve'</span>, <span class="str">'reject'</span>]);</pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3><i class="fas fa-clock" style="color:#059669;"></i> Scheduler Registration (Kernel.php)</h3></div>
+      <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// app/Console/Kernel.php</span>
+<span class="kw">protected function</span> <span class="fn">schedule</span>(Schedule $schedule): <span class="op">void</span>
+{
+    <span class="cm">// Mark overdue daily at 00:05 AM</span>
+    $schedule-><span class="fn">command</span>(<span class="str">'schedules:mark-overdue'</span>)
+             -><span class="fn">dailyAt</span>(<span class="str">'00:05'</span>)
+             -><span class="fn">withoutOverlapping</span>();
+}
+
+<span class="cm">// Server cron (add to crontab):</span>
+<span class="ht">* * * * * php /path/to/artisan schedule:run >> /dev/null 2>&1</span>
+
+<span class="cm">// Test manually anytime:</span>
+<span class="ht">php artisan schedules:mark-overdue</span></pre>
+      </div>
+      <div style="margin-top:14px;">
+        <div class="card-header"><h3><i class="fas fa-bell" style="color:#7c3aed;"></i> Optional: Daily Email/Notification</h3></div>
+        <div class="code-block" style="margin-bottom:0;">
+<pre><span class="cm">// Add second scheduled task — daily summary email to boss:</span>
+$schedule-><span class="fn">command</span>(<span class="str">'schedules:daily-summary'</span>)
+         -><span class="fn">dailyAt</span>(<span class="str">'08:00'</span>);
+
+<span class="cm">// Command sends email/notification with today's payable + receivable list</span>
+<span class="cm">// Uses existing Mail or Notification facade</span></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 8: COMPLETE FLOW MAP ══ -->
+  <div class="section-title"><div class="num num-purple"><i class="fas fa-sitemap"></i></div> Complete System Flow — All Entry Points</div>
+
+  <div class="card">
+    <p style="font-size:13px;color:#475569;margin-bottom:18px;">
+      After all three phases are complete, payment schedules can come from <strong>5 entry points</strong>. All share the same status lifecycle and dashboard.
+    </p>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;background:#f8fafc;border-radius:10px;border-left:4px solid #2563eb;">
+        <div style="font-size:22px;color:#2563eb;width:36px;text-align:center;"><i class="fas fa-file-invoice-dollar"></i></div>
+        <div>
+          <strong style="font-size:13px;">Entry Point 1 — Sale (Customer Invoice)</strong>
+          <p style="font-size:12.5px;color:#475569;margin-top:3px;">
+            Sale created → accountant schedules part/full due amount with date → type = <code>receive</code> → party = customer.
+            Amount cannot exceed sale's <code>due_amount</code>. Marking paid reduces <code>sale.due_amount</code> and sets <code>payment_status = partial/paid</code>.
+          </p>
+        </div>
+        <span class="tag tag-done" style="flex-shrink:0;"><i class="fas fa-check"></i> Built</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;background:#f8fafc;border-radius:10px;border-left:4px solid #d97706;">
+        <div style="font-size:22px;color:#d97706;width:36px;text-align:center;"><i class="fas fa-shopping-cart"></i></div>
+        <div>
+          <strong style="font-size:13px;">Entry Point 2 — Purchase (Supplier Bill)</strong>
+          <p style="font-size:12.5px;color:#475569;margin-top:3px;">
+            Purchase created → accountant schedules payment installments → type = <code>pay</code> → party = supplier.
+            Also works for TicketPurchase (vendor payable).
+          </p>
+        </div>
+        <span class="tag tag-done" style="flex-shrink:0;"><i class="fas fa-check"></i> Built</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;background:#fffbeb;border-radius:10px;border-left:4px solid #f59e0b;">
+        <div style="font-size:22px;color:#f59e0b;width:36px;text-align:center;"><i class="fas fa-book-open"></i></div>
+        <div>
+          <strong style="font-size:13px;">Entry Point 3 — Opening Balance Journal (Supplier Payable / Customer Receivable)</strong>
+          <p style="font-size:12.5px;color:#475569;margin-top:3px;">
+            JournalEntry (source = opening_balance) saved with per-row <code>due_date</code> → auto-creates PaymentSchedule linked to JournalEntry.
+            Handles existing AP/AR balances that were entered before the schedule system existed.
+          </p>
+        </div>
+        <span class="tag tag-phase1" style="flex-shrink:0;"><i class="fas fa-hammer"></i> Phase 2</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;background:#f5f3ff;border-radius:10px;border-left:4px solid #7c3aed;">
+        <div style="font-size:22px;color:#7c3aed;width:36px;text-align:center;"><i class="fas fa-plus-circle"></i></div>
+        <div>
+          <strong style="font-size:13px;">Entry Point 4 — Ad-hoc (Any Purpose, Any Party)</strong>
+          <p style="font-size:12.5px;color:#475569;margin-top:3px;">
+            Manual schedule creation from the PaymentSchedule page — no parent document.
+            <code>schedulable_type = null</code>. Use for: office rent, electricity bill, ISP charges, loan instalments,
+            government taxes, service provider payments, advance to employee, custom receivable from anyone.
+          </p>
+        </div>
+        <span class="tag tag-phase1" style="flex-shrink:0;"><i class="fas fa-hammer"></i> Phase 1</span>
+      </div>
+
+      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px;background:#f0fdf4;border-radius:10px;border-left:4px solid #059669;">
+        <div style="font-size:22px;color:#059669;width:36px;text-align:center;"><i class="fas fa-plane"></i></div>
+        <div>
+          <strong style="font-size:13px;">Entry Point 5 — Ticket Sale / Ticket Purchase</strong>
+          <p style="font-size:12.5px;color:#475569;margin-top:3px;">
+            Same as Entry Points 1 &amp; 2 but for the travel/ticketing module. TicketSale → receive from agent.
+            TicketPurchase → pay to vendor. Already supported in the existing controller.
+          </p>
+        </div>
+        <span class="tag tag-done" style="flex-shrink:0;"><i class="fas fa-check"></i> Built</span>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ SECTION 9: FULL IMPLEMENTATION STEPS ══ -->
+  <div class="section-title"><div class="num num-blue"><i class="fas fa-list-ol"></i></div> Implementation Plan — Ordered Steps</div>
+
+  <div class="card">
+    <div class="step-list">
+
+      <div class="step-item">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <strong>Migration: add source_label column</strong>
+          <p>
+            Run <code>php artisan make:migration add_source_label_to_payment_schedules_table</code>.
+            Add <code>$table->string('source_label')->nullable()->after('party_name')</code>.
+            Run <code>php artisan migrate</code>. Add <code>'source_label'</code> to <code>PaymentSchedule::$fillable</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <strong>Register JournalEntry in MorphMap (AppServiceProvider)</strong>
+          <p>
+            In <code>AppServiceProvider::boot()</code>, add <code>Relation::morphMap(['journal_entry' => JournalEntry::class])</code>
+            alongside the existing sale/purchase entries. This allows polymorphic resolution of journal-linked schedules.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <strong>Add storeAdHoc() to PaymentScheduleController (Phase 1)</strong>
+          <p>
+            New method accepts type, party_name, party_type, source_label, amount, scheduled_date, note.
+            Sets <code>schedulable_type = null</code>. Add route: <code>Route::post('payment-schedules/adhoc', [...]->name('payment-schedules.adhoc'))</code>.
+            Add button/modal in the existing index view.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <strong>Update index view — show source_label for ad-hoc rows</strong>
+          <p>
+            In the schedule table, show <code>$schedule->source_label</code> when <code>schedulable_type</code> is null
+            (instead of linking to a parent document). Add "New Schedule" button that opens the ad-hoc creation modal.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num orange">5</div>
+        <div class="step-body">
+          <strong>Add due_date input to Opening Balance form rows (Phase 2)</strong>
+          <p>
+            In the Blade form for opening balance journal entry, add a highlighted <code>date</code> input column
+            per row (yellow background like the idea mockup). Also add hidden fields for <code>party_type</code>,
+            <code>party_id</code>, <code>party_name</code>. These are already available from the supplier/customer select.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num orange">6</div>
+        <div class="step-body">
+          <strong>Modify JournalController::store() — auto-create schedule (Phase 2)</strong>
+          <p>
+            After saving journal items, loop through items. If <code>source === 'opening_balance'</code>
+            and the item has <code>due_date</code> + <code>party_name</code>, create a <code>PaymentSchedule</code>
+            linked to the JournalEntry. Determine type from account type (liability → pay, asset → receive).
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num green">7</div>
+        <div class="step-body">
+          <strong>Register MarkOverdueSchedules in Kernel.php (Phase 3)</strong>
+          <p>
+            Verify <code>app/Console/Kernel.php</code> has
+            <code>$schedule->command('schedules:mark-overdue')->dailyAt('00:05')->withoutOverlapping()</code>.
+            Ensure the server cron is running: <code>* * * * * php /path/artisan schedule:run</code>.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num green">8</div>
+        <div class="step-body">
+          <strong>Add Spatie permissions (Phase 3)</strong>
+          <p>
+            Create permissions: view/create/approve/reject/reschedule/mark-paid/cancel payment schedule.
+            Wrap Approve and Reject buttons in <code>@can('approve payment schedule')</code>.
+            Add controller middleware. Assign "approve payment schedule" permission to the Boss role.
+          </p>
+        </div>
+      </div>
+
+      <div class="step-item">
+        <div class="step-num purple">9</div>
+        <div class="step-body">
+          <strong>Optional: Daily summary notification to Boss</strong>
+          <p>
+            Create <code>php artisan make:command SendDailyScheduleSummary</code>.
+            Command fetches today's pending payable + receivable list and sends a notification/email.
+            Register in Kernel at <code>dailyAt('08:00')</code>. Boss can click "View All" link to the schedule page.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══ SECTION 10: QUICK REFERENCE ══ -->
+  <div class="section-title"><div class="num num-blue"><i class="fas fa-bookmark"></i></div> Quick Reference — Status Lifecycle</div>
+
+  <div class="card">
+    <div class="flow">
+      <div class="flow-step step-c1">
+        <div class="circle"><i class="fas fa-plus"></i></div>
+        <p><strong>pending</strong><br><small>Just created</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c5">
+        <div class="circle"><i class="fas fa-exclamation"></i></div>
+        <p><strong>overdue</strong><br><small>Past due date, not paid</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c4">
+        <div class="circle"><i class="fas fa-check"></i></div>
+        <p><strong>approved</strong><br><small>Boss approved</small></p>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step step-c6">
+        <div class="circle"><i class="fas fa-money-bill"></i></div>
+        <p><strong>paid</strong><br><small>Marked as paid</small></p>
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:18px;">
+      <div style="padding:10px 14px;background:#fee2e2;border-radius:8px;font-size:12px;color:#991b1b;flex:1;min-width:160px;">
+        <strong>rejected</strong> — Boss rejected. Can be rescheduled → goes back to pending.
+      </div>
+      <div style="padding:10px 14px;background:#e0e7ff;border-radius:8px;font-size:12px;color:#3730a3;flex:1;min-width:160px;">
+        <strong>rescheduled</strong> — Not a real status. After reschedule the status becomes <em>pending</em>. Log entry records old → new date.
+      </div>
+      <div style="padding:10px 14px;background:#f3f4f6;border-radius:8px;font-size:12px;color:#6b7280;flex:1;min-width:160px;">
+        <strong>cancelled</strong> — Manually cancelled. Cannot be paid. Stays for audit trail.
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:#94a3b8;font-size:12px;padding:14px 0 20px;">
+    Payment Schedule Roadmap — EPAL ERP &nbsp;·&nbsp; 27 Apr 2026 &nbsp;·&nbsp; Phases: 3 total · Built: 1 &amp; 5 partially · Todo: Phases 1, 2, 3
+  </p>
+
+</div>
+</body>
+</html>

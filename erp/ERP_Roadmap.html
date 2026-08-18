@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPAL ERP - System Analysis & Development Roadmap</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #f0f2f5; }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+  /* Cover */
+  .cover {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: white; text-align: center; padding: 60px 40px; border-radius: 12px;
+    margin-bottom: 30px; position: relative; overflow: hidden;
+  }
+  .cover::before {
+    content: ''; position: absolute; top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle, rgba(229,57,53,0.1) 0%, transparent 60%);
+  }
+  .cover h1 { font-size: 36px; font-weight: 700; letter-spacing: 2px; margin-bottom: 10px; }
+  .cover h2 { font-size: 18px; font-weight: 300; opacity: 0.85; margin-bottom: 20px; }
+  .cover .meta { display: flex; justify-content: center; gap: 40px; font-size: 12px; opacity: 0.7; }
+  .cover .meta span { background: rgba(255,255,255,0.1); padding: 6px 16px; border-radius: 20px; }
+
+  /* Section headers */
+  .section { margin-bottom: 28px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 20px; border-radius: 8px 8px 0 0; color: white; font-weight: 700;
+    font-size: 15px; letter-spacing: 0.5px;
+  }
+  .section-header .icon { font-size: 20px; }
+  .section-body { background: white; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+  /* Colors */
+  .bg-blue    { background: linear-gradient(90deg, #1565c0, #1976d2); }
+  .bg-green   { background: linear-gradient(90deg, #2e7d32, #388e3c); }
+  .bg-orange  { background: linear-gradient(90deg, #e65100, #ef6c00); }
+  .bg-red     { background: linear-gradient(90deg, #b71c1c, #c62828); }
+  .bg-purple  { background: linear-gradient(90deg, #4527a0, #512da8); }
+  .bg-teal    { background: linear-gradient(90deg, #00695c, #00796b); }
+  .bg-brown   { background: linear-gradient(90deg, #4e342e, #5d4037); }
+  .bg-indigo  { background: linear-gradient(90deg, #283593, #303f9f); }
+  .bg-pink    { background: linear-gradient(90deg, #880e4f, #ad1457); }
+  .bg-cyan    { background: linear-gradient(90deg, #006064, #00838f); }
+
+  /* Status badges */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .badge-ok      { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+  .badge-partial { background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; }
+  .badge-missing { background: #fce4ec; color: #b71c1c; border: 1px solid #f48fb1; }
+  .badge-improve { background: #e3f2fd; color: #0d47a1; border: 1px solid #90caf9; }
+  .badge-new     { background: #f3e5f5; color: #4527a0; border: 1px solid #ce93d8; }
+  .badge-phase1  { background: #e8f5e9; color: #1b5e20; }
+  .badge-phase2  { background: #e3f2fd; color: #0d47a1; }
+  .badge-phase3  { background: #fff3e0; color: #e65100; }
+
+  /* Feature grid */
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .feature-card {
+    padding: 16px 18px; border-right: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0;
+  }
+  .feature-card:nth-child(3n) { border-right: none; }
+  .feature-card h4 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+  .feature-card ul { list-style: none; }
+  .feature-card ul li { font-size: 11px; color: #555; padding: 2px 0; padding-left: 10px; position: relative; }
+  .feature-card ul li::before { content: '›'; position: absolute; left: 0; color: #999; }
+
+  /* Issue table */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: #f5f5f5; padding: 10px 14px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: #666; border-bottom: 2px solid #e0e0e0;
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 12px; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+  td.feature-name { font-weight: 600; color: #1a1a2e; }
+
+  /* Roadmap phases */
+  .phase-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 20px; }
+  .phase-card {
+    border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0;
+  }
+  .phase-header {
+    padding: 14px 16px; color: white; font-weight: 700;
+  }
+  .phase-body { padding: 14px 16px; background: white; }
+  .task-item {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid #f5f5f5; font-size: 11.5px;
+  }
+  .task-item:last-child { border-bottom: none; }
+  .task-num {
+    min-width: 20px; height: 20px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-size: 10px;
+    font-weight: 700; color: white; flex-shrink: 0;
+  }
+  .t1 { background: #2e7d32; }
+  .t2 { background: #1565c0; }
+  .t3 { background: #e65100; }
+
+  /* Implementation detail */
+  .impl-block { padding: 20px; }
+  .impl-section { margin-bottom: 20px; }
+  .impl-section h4 { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid #e3f2fd; }
+  .code-block {
+    background: #1e1e2e; color: #cdd6f4; padding: 14px; border-radius: 6px;
+    font-family: 'Cascadia Code', 'Courier New', monospace; font-size: 11px;
+    line-height: 1.6; overflow-x: auto; margin-bottom: 8px;
+  }
+  .code-block .kw  { color: #cba6f7; }
+  .code-block .str { color: #a6e3a1; }
+  .code-block .cm  { color: #6c7086; }
+  .code-block .fn  { color: #89b4fa; }
+  .code-block .num { color: #fab387; }
+
+  /* DB Schema */
+  .schema-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 20px; }
+  .schema-card { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+  .schema-title {
+    padding: 10px 14px; font-weight: 700; font-size: 12px;
+    letter-spacing: 0.5px; background: #1a1a2e; color: white;
+  }
+  .schema-body { padding: 10px 14px; background: white; }
+  .field-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #f5f5f5; font-size: 11px; }
+  .field-row:last-child { border-bottom: none; }
+  .field-name { color: #1565c0; font-weight: 600; }
+  .field-type { color: #888; font-style: italic; }
+  .field-note { color: #2e7d32; font-size: 10px; }
+  .field-new { color: #e65100; font-size: 10px; font-weight: 700; }
+
+  /* Flow diagram */
+  .flow { padding: 20px; }
+  .flow-steps { display: flex; align-items: stretch; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+  .flow-step {
+    flex: 1; min-width: 120px; background: #e3f2fd; border-radius: 8px;
+    padding: 12px 10px; text-align: center; font-size: 11px; font-weight: 600;
+    color: #1565c0; position: relative;
+  }
+  .flow-step::after {
+    content: '→'; position: absolute; right: -14px; top: 50%;
+    transform: translateY(-50%); color: #90caf9; font-size: 18px;
+    z-index: 1;
+  }
+  .flow-step:last-child::after { display: none; }
+  .flow-step .step-num { font-size: 18px; display: block; margin-bottom: 4px; }
+
+  /* Priority matrix */
+  .priority-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 20px; }
+  .priority-card { border-radius: 8px; padding: 16px; }
+  .p-high   { background: #fce4ec; border-left: 4px solid #c62828; }
+  .p-medium { background: #fff8e1; border-left: 4px solid #f57f17; }
+  .priority-card h4 { font-size: 12px; font-weight: 700; margin-bottom: 10px; }
+  .priority-card li { font-size: 11px; color: #555; margin-bottom: 4px; padding-left: 12px; list-style: none; position: relative; }
+  .priority-card li::before { content: '●'; position: absolute; left: 0; font-size: 8px; top: 2px; }
+  .p-high li::before   { color: #c62828; }
+  .p-medium li::before { color: #f57f17; }
+
+  /* Summary stats */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 20px; }
+  .stat-card {
+    text-align: center; padding: 20px; border-radius: 8px; background: white;
+    border: 1px solid #e0e0e0;
+  }
+  .stat-num { font-size: 36px; font-weight: 700; }
+  .stat-label { font-size: 11px; color: #888; margin-top: 4px; }
+  .stat-ok     { color: #2e7d32; }
+  .stat-warn   { color: #f57f17; }
+  .stat-bad    { color: #c62828; }
+  .stat-new    { color: #4527a0; }
+
+  /* Print */
+  @media print {
+    body { background: white; font-size: 11px; }
+    .page { max-width: 100%; padding: 10px; }
+    .cover { padding: 30px 20px; }
+    .cover h1 { font-size: 26px; }
+    .feature-grid { grid-template-columns: repeat(3, 1fr); }
+    .phase-grid { grid-template-columns: repeat(3, 1fr); }
+    .section { page-break-inside: avoid; }
+    @page { margin: 1.5cm; size: A4 portrait; }
+    .no-print { display: none; }
+  }
+
+  /* Page break helper */
+  .page-break { page-break-before: always; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════════ COVER ═══════════════ -->
+<div class="cover">
+  <div>
+    <h1>🏢 EPAL ERP SYSTEM</h1>
+    <h2>Complete Analysis & Development Roadmap</h2>
+    <div class="meta">
+      <span>📅 Generated: 05 May 2026</span>
+      <span>🔧 Framework: Laravel</span>
+      <span>📊 Total Controllers: 192</span>
+      <span>🗃️ Total Models: 119</span>
+      <span>📋 Migrations: 133</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ STATS OVERVIEW ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-blue">
+    <span class="icon">📊</span>
+    <span>System Overview — Current State</span>
+  </div>
+  <div class="section-body">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num stat-ok">8</div>
+        <div class="stat-label">সম্পূর্ণ কাজ করছে<br>(Fully Working)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num stat-warn">5</div>
+        <div class="stat-label">আংশিক সম্পন্ন<br>(Partially Done)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num stat-bad">4</div>
+        <div class="stat-label">গুরুত্বপূর্ণ ঘাটতি<br>(Critical Missing)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num stat-new">6</div>
+        <div class="stat-label">নতুন ফিচার দরকার<br>(New Features Needed)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FEATURE STATUS ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-green">
+    <span class="icon">✅</span>
+    <span>বর্তমান ফিচার স্ট্যাটাস — Feature-by-Feature Analysis</span>
+  </div>
+  <div class="section-body">
+    <table>
+      <tr>
+        <th style="width:20%">Feature</th>
+        <th style="width:10%">Status</th>
+        <th style="width:35%">কি আছে (What Exists)</th>
+        <th style="width:35%">কি নেই / কি সমস্যা (Issues / Missing)</th>
+      </tr>
+
+      <tr>
+        <td class="feature-name">📔 Journal Entry<br>(Credit &amp; Debit)</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          Double-entry accounting সহ JournalEntry + JournalItem model আছে।
+          Debit/Credit column আছে। Party-wise tracking (party_type, party_id) আছে।
+          Voucher print আছে। Web + API দুটোই আছে।
+        </td>
+        <td>
+          <strong>Opening balance entry</strong> কোনো dedicated UI নেই — Journal দিয়ে manually করতে হয়।
+          Party-wise ledger report (কোন party-র কত debit/credit) নেই।
+          Journal থেকে auto payment schedule link নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">📅 Payment Schedule<br>(Regular)</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+        <td>
+          PaymentSchedule model আছে। Approval workflow আছে। Reschedule আছে।
+          Pay/Receive type আছে। Ad-hoc route আছে। Log/audit trail আছে।
+          Company-wise filter আছে।
+        </td>
+        <td>
+          <strong style="color:#b71c1c">Partial Payment নেই!</strong> — একটি schedule-এ
+          paid_amount, due_amount, remaining_amount নেই। একটি schedule পুরো paid বা unpaid।
+          Installment-wise payment track করা যায় না।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">💸 Ad-hoc Schedule</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+        <td>
+          PaymentScheduleController::storeAdHoc() method আছে।
+          Route 'payment-schedules.adhoc' আছে।
+          Type: pay/receive সাপোর্ট আছে।
+        </td>
+        <td>
+          <strong style="color:#b71c1c">Partial Pay/Receive নেই।</strong>
+          Same PaymentSchedule model use করে, তাই paid_amount field নেই।
+          Ad-hoc service/item description detail store হয় না।
+          Party (customer/supplier) link optional — গেলে কার কাছ থেকে/কাকে বোঝা কঠিন।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">🛒 Sales</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          Sale + SaleItem model আছে। paid_amount, due_amount, payment_status আছে।
+          Payment modal (partial payment) view আছে। Transaction history linked।
+          PaymentSchedule morphMany relationship আছে।
+        </td>
+        <td>
+          Partial payment করলে due_amount update হয় কিনা controller-এ verify করতে হবে।
+          Customer profile থেকে সব sales + dues একসাথে দেখার পেজ নেই।
+          Sales return কতটা AR-এ reflect হয় unclear।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">📦 Purchase</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          Purchase + PurchaseItem model আছে। paid_amount, due_amount, payment_status আছে।
+          make_payment route আছে। Transaction linked।
+          PaymentSchedule morphMany আছে।
+        </td>
+        <td>
+          Supplier profile page নেই — কোন supplier-এর কত payable, কত paid, কত due
+          একসাথে দেখা যায় না।
+          Purchase return AP-এ কিভাবে adjust হয় unclear।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">🎫 Ticket Sales<br>(Air/Bus/Train)</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          TicketSale + TicketSaleItem model। paid_amount, due_amount, payment_status।
+          Agent commission। Bank account tracking। Soft delete।
+          PaymentSchedule morphMany আছে।
+        </td>
+        <td>
+          Customer (passenger) link নেই — ticket কার নামে কোনো customer_id নেই TicketSale-এ।
+          Partial payment UI আছে কিনা check করতে হবে।
+          Ticket purchase (cost) vs sale (revenue) reconciliation report নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">🎫 Ticket Direct Sale</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+        <td>
+          TicketDirectSaleController আছে। Create + Index view আছে।
+        </td>
+        <td>
+          Model অস্পষ্ট — আলাদা model আছে কিনা unclear।
+          Partial payment, due tracking unclear।
+          Direct sale-এর জন্য Invoice/Receipt নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">🛂 Visa Processing</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          VisaProcess, VisaCategory, VisaAttachment, VisaRequiredDocument model।
+          LeadVisa, LeadVisaDocument CRM-এর সাথে linked।
+          Web + API উভয়ে আছে।
+        </td>
+        <td>
+          Visa processing fee/payment tracking নেই।
+          Visa-র জন্য payment schedule link নেই।
+          Applicant (customer) profile-এ visa history নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">💰 Opening Receivable<br>&amp; Opening Payable</td>
+        <td><span class="badge badge-partial">Partial</span></td>
+        <td>
+          Account model-এ opening_balance field আছে।
+          Chart of accounts-এ AR/AP account তৈরি করা যায়।
+          Journal entry দিয়ে opening balance দেওয়া যায়।
+        </td>
+        <td>
+          <strong style="color:#b71c1c">Dedicated Opening Balance UI নেই।</strong>
+          Customer-wise opening receivable import নেই।
+          Supplier-wise opening payable import নেই।
+          Opening balance date নেই account-এ।
+          Party-wise aging report নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">👨‍💼 Salary Management</td>
+        <td><span class="badge badge-ok">Working</span></td>
+        <td>
+          SalaryTemplate, EmployeeSalary, Payslip model।
+          Advance salary, Loan (employee)।
+          PDF payslip generation। Bank details।
+          Scheduled payroll date। Payment status tracking।
+        </td>
+        <td>
+          Employee Loan model শুধু employee-এর জন্য (user_id)।
+          <strong>Business/Bank Loan আলাদা module নেই।</strong>
+          Loan installment auto-deduct হয় কিনা unclear।
+          Advance salary remaining balance track করে কিনা unclear।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">🏦 Bank Loan<br>(Long-term)</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+        <td>
+          Loan model আছে কিন্তু শুধু employee-এর জন্য।
+          Bank model আছে।
+        </td>
+        <td>
+          <strong style="color:#b71c1c">Business bank loan/long-term loan কোনো model নেই।</strong>
+          Loan disbursement, installment schedule, interest calculation নেই।
+          কত paid, কত outstanding, কত interest — কিছুই track করা যাচ্ছে না।
+          Loan account → Journal auto-post নেই।
+        </td>
+      </tr>
+
+      <tr>
+        <td class="feature-name">👤 Customer/Supplier<br>Profile Page</td>
+        <td><span class="badge badge-missing">Missing</span></td>
+        <td>
+          Customer + Supplier model আছে। List page আছে।
+        </td>
+        <td>
+          <strong style="color:#b71c1c">Profile page নেই।</strong>
+          Customer model-এ sales(), ticketSales(), visa() relationship নেই।
+          Supplier model-এ purchases() relationship নেই।
+          একজন customer-এর total invoice, total paid, total due, ledger — কিছুই নেই।
+          Payment history দেখার পেজ নেই।
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════ PARTIAL PAYMENT ANALYSIS ═══════════════ -->
+<div class="section page-break">
+  <div class="section-header bg-orange">
+    <span class="icon">💳</span>
+    <span>Partial Payment &amp; Receive — বিস্তারিত বিশ্লেষণ</span>
+  </div>
+  <div class="section-body">
+    <div style="padding: 20px;">
+
+      <table>
+        <tr>
+          <th>Module</th>
+          <th>Partial Pay UI</th>
+          <th>paid_amount Field</th>
+          <th>due_amount Field</th>
+          <th>Payment History</th>
+          <th>Auto Schedule Update</th>
+          <th>সমস্যা</th>
+        </tr>
+        <tr>
+          <td class="feature-name">Sales</td>
+          <td><span class="badge badge-ok">আছে (payment-modal)</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">Transaction table</span></td>
+          <td><span class="badge badge-partial">Manual</span></td>
+          <td>Controller-এ due_amount update validation verify করুন</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Purchase</td>
+          <td><span class="badge badge-ok">আছে (make_payment)</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">Transaction table</span></td>
+          <td><span class="badge badge-partial">Manual</span></td>
+          <td>Supplier-wise AP aging report নেই</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Ticket Sale</td>
+          <td><span class="badge badge-partial">Unclear</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">Transaction table</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td>Partial payment UI add করতে হবে</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Ticket Purchase</td>
+          <td><span class="badge badge-partial">Unclear</span></td>
+          <td><span class="badge badge-partial">Probably</span></td>
+          <td><span class="badge badge-partial">Probably</span></td>
+          <td><span class="badge badge-partial">Maybe</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td>Investigate controller</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Payment Schedule</td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td><span class="badge badge-missing">নেই!</span></td>
+          <td><span class="badge badge-missing">নেই!</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td style="color:#b71c1c;font-weight:700">Critical: Migration + Model + UI সব দরকার</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Ad-hoc Schedule</td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td><span class="badge badge-missing">নেই!</span></td>
+          <td><span class="badge badge-missing">নেই!</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td><span class="badge badge-missing">নেই</span></td>
+          <td style="color:#b71c1c;font-weight:700">PaymentSchedule-এ partial payment যোগ করলে সয়ংক্রিয়ভাবে হবে</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Salary/Payslip</td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-ok">আছে</span></td>
+          <td><span class="badge badge-partial">Implicit</span></td>
+          <td><span class="badge badge-ok">Payslip records</span></td>
+          <td><span class="badge badge-partial">Via payslip</span></td>
+          <td>ভালো</td>
+        </tr>
+      </table>
+
+      <div style="margin-top:20px; padding:16px; background:#fff3e0; border-left:4px solid #e65100; border-radius:4px;">
+        <strong>🔑 সমাধান: PaymentSchedule-এ Partial Payment যোগ করার উপায়</strong><br><br>
+        payment_schedules table-এ নিচের fields যোগ করতে হবে:<br>
+        <code style="background:#1e1e2e;color:#cdd6f4;padding:4px 8px;border-radius:4px;font-size:11px;">
+          paid_amount (decimal, default 0) | remaining_amount (decimal) | partial_payments (JSON log) | payment_mode (bank/cash/mobile)
+        </code>
+        <br><br>
+        তাহলে একটি schedule-এ multiple partial payments করা যাবে এবং remaining automatically calculate হবে।
+        এই একটা change-এ Sales Schedule, Purchase Schedule, এবং Ad-hoc Schedule তিনটাই সমাধান হবে।
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ BANK LOAN MODULE ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-purple">
+    <span class="icon">🏦</span>
+    <span>Long-term Bank Loan &amp; Business Loan — সম্পূর্ণ Implementation Plan</span>
+  </div>
+  <div class="section-body">
+    <div class="impl-block">
+
+      <div class="impl-section">
+        <h4>📌 বর্তমান সমস্যা</h4>
+        <p style="font-size:12px; color:#555; margin-bottom:12px;">
+          বর্তমান <code>loans</code> table শুধু employee loan (user_id) সাপোর্ট করে।
+          Business bank loan, long-term loan, বা কারো কাছ থেকে নেওয়া ধারের কোনো tracking নেই।
+          কত টাকা নিয়েছি, কত পরিশোধ হয়েছে, কত বাকি, কত সুদ — এই তথ্য কোথাও নেই।
+        </p>
+      </div>
+
+      <div class="impl-section">
+        <h4>🗃️ নতুন Database Schema — business_loans table</h4>
+        <div class="schema-grid">
+          <div class="schema-card">
+            <div class="schema-title">business_loans (নতুন table)</div>
+            <div class="schema-body">
+              <div class="field-row"><span class="field-name">id</span><span class="field-type">bigint PK</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">company_id</span><span class="field-type">FK companies</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">lender_type</span><span class="field-type">enum: bank, person, institution</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">lender_name</span><span class="field-type">string — ব্যাংক/ব্যক্তির নাম</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">bank_id</span><span class="field-type">FK banks (nullable)</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">loan_no</span><span class="field-type">string — reference</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">loan_type</span><span class="field-type">enum: term, revolving, overdraft</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">principal_amount</span><span class="field-type">decimal — মূল পরিমাণ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">disbursed_amount</span><span class="field-type">decimal — প্রকৃত প্রাপ্ত</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">paid_principal</span><span class="field-type">decimal — পরিশোধিত আসল</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">paid_interest</span><span class="field-type">decimal — পরিশোধিত সুদ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">outstanding_amount</span><span class="field-type">decimal — বাকি পরিমাণ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">interest_rate</span><span class="field-type">decimal — সুদের হার %</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">interest_type</span><span class="field-type">enum: flat, reducing</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">disbursement_date</span><span class="field-type">date — প্রাপ্তির তারিখ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">maturity_date</span><span class="field-type">date — শেষ তারিখ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">repayment_frequency</span><span class="field-type">enum: monthly, quarterly, yearly</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">installment_amount</span><span class="field-type">decimal — কিস্তির পরিমাণ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">account_id</span><span class="field-type">FK accounts — loan GL account</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">status</span><span class="field-type">enum: active, closed, defaulted</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">note</span><span class="field-type">text (nullable)</span><span class="field-new">NEW</span></div>
+            </div>
+          </div>
+          <div class="schema-card">
+            <div class="schema-title">loan_repayments (নতুন table — প্রতিটি কিস্তি)</div>
+            <div class="schema-body">
+              <div class="field-row"><span class="field-name">id</span><span class="field-type">bigint PK</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">business_loan_id</span><span class="field-type">FK business_loans</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">installment_no</span><span class="field-type">integer — কিস্তি নম্বর</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">due_date</span><span class="field-type">date — কিস্তির তারিখ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">principal_due</span><span class="field-type">decimal — আসলের অংশ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">interest_due</span><span class="field-type">decimal — সুদের অংশ</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">total_due</span><span class="field-type">decimal — মোট কিস্তি</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">paid_amount</span><span class="field-type">decimal default 0</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">paid_date</span><span class="field-type">date nullable</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">payment_method</span><span class="field-type">enum: cash, bank, mobile</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">bank_id</span><span class="field-type">FK banks — কোন account থেকে দেওয়া হলো</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">journal_entry_id</span><span class="field-type">FK journal_entries (auto-post)</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">status</span><span class="field-type">enum: pending, partial, paid, overdue</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">note</span><span class="field-type">text nullable</span><span class="field-new">NEW</span></div>
+              <div class="field-row"><span class="field-name">created_by</span><span class="field-type">FK users</span><span class="field-new">NEW</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="impl-section">
+        <h4>📊 Loan Account Journal Entries — কিভাবে হবে</h4>
+        <table>
+          <tr><th>Transaction</th><th>Debit</th><th>Credit</th><th>ব্যাখ্যা</th></tr>
+          <tr>
+            <td>Loan Disbursement<br>(ঋণ প্রাপ্তি)</td>
+            <td>Bank Account (Cash/Bank)</td>
+            <td>Long-term Loan Payable</td>
+            <td>ব্যাংক থেকে টাকা পেলে Bank Dr, Loan Payable Cr</td>
+          </tr>
+          <tr>
+            <td>Monthly Installment<br>(কিস্তি পরিশোধ)</td>
+            <td>Loan Payable (Principal)<br>+ Interest Expense</td>
+            <td>Bank Account</td>
+            <td>Bank থেকে কিস্তি গেলে — আসল + সুদ আলাদা account-এ</td>
+          </tr>
+          <tr>
+            <td>Loan Closure<br>(ঋণ সম্পূর্ণ পরিশোধ)</td>
+            <td>Loan Payable (remaining)</td>
+            <td>Bank Account</td>
+            <td>Loan account balance zero হয়ে যাবে</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="impl-section">
+        <h4>📋 Loan Dashboard — কি কি দেখাবে</h4>
+        <div class="feature-grid" style="border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
+          <div class="feature-card">
+            <h4>📊 Summary Cards</h4>
+            <ul>
+              <li>মোট ঋণ (Total Loans)</li>
+              <li>মোট আসল পরিমাণ</li>
+              <li>এ পর্যন্ত পরিশোধ</li>
+              <li>বর্তমান বকেয়া</li>
+              <li>এই মাসের কিস্তি</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>📅 Installment Schedule</h4>
+            <ul>
+              <li>সব কিস্তির তালিকা</li>
+              <li>Due date অনুযায়ী</li>
+              <li>Pending / Paid / Overdue</li>
+              <li>আসল + সুদ আলাদা</li>
+              <li>Partial payment show</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>📈 Reports</h4>
+            <ul>
+              <li>Loan-wise ledger</li>
+              <li>Outstanding balance aging</li>
+              <li>Interest paid summary</li>
+              <li>Lender-wise total exposure</li>
+              <li>Monthly repayment schedule</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ CUSTOMER / SUPPLIER PROFILE ═══════════════ -->
+<div class="section page-break">
+  <div class="section-header bg-teal">
+    <span class="icon">👤</span>
+    <span>Customer &amp; Supplier Profile Page — সম্পূর্ণ Implementation Plan</span>
+  </div>
+  <div class="section-body">
+    <div class="impl-block">
+
+      <div class="impl-section">
+        <h4>📌 সমস্যা</h4>
+        <p style="font-size:12px;color:#555;">
+          Customer model-এ Sales, TicketSales, Visa-র সাথে কোনো relationship নেই।
+          Supplier model-এ Purchases-এর সাথে relationship নেই। কোনো profile page নেই।
+          একজন customer-এর profile-এ গিয়ে তার সব transaction, dues, invoices দেখা যায় না।
+        </p>
+      </div>
+
+      <div class="impl-section">
+        <h4>🔗 Model-এ যা যোগ করতে হবে</h4>
+        <div class="code-block">
+<span class="cm">// app/Models/Customer.php — এই relationships যোগ করুন</span>
+<span class="kw">public function</span> <span class="fn">sales</span>() {
+    <span class="kw">return</span> $this-><span class="fn">hasMany</span>(Sale::<span class="kw">class</span>);
+}
+<span class="kw">public function</span> <span class="fn">visaProcesses</span>() {
+    <span class="kw">return</span> $this-><span class="fn">hasMany</span>(VisaProcess::<span class="kw">class</span>);
+}
+<span class="kw">public function</span> <span class="fn">paymentSchedules</span>() {
+    <span class="kw">return</span> $this-><span class="fn">morphMany</span>(PaymentSchedule::<span class="kw">class</span>, <span class="str">'party'</span>);
+}
+<span class="kw">public function</span> <span class="fn">totalReceivable</span>(): <span class="fn">float</span> {
+    <span class="kw">return</span> $this-><span class="fn">sales</span>()-><span class="fn">sum</span>(<span class="str">'due_amount'</span>);
+}
+
+<span class="cm">// app/Models/Supplier.php — এই relationships যোগ করুন</span>
+<span class="kw">public function</span> <span class="fn">purchases</span>() {
+    <span class="kw">return</span> $this-><span class="fn">hasMany</span>(Purchase::<span class="kw">class</span>);
+}
+<span class="kw">public function</span> <span class="fn">paymentSchedules</span>() {
+    <span class="kw">return</span> $this-><span class="fn">morphMany</span>(PaymentSchedule::<span class="kw">class</span>, <span class="str">'party'</span>);
+}
+<span class="kw">public function</span> <span class="fn">totalPayable</span>(): <span class="fn">float</span> {
+    <span class="kw">return</span> $this-><span class="fn">purchases</span>()-><span class="fn">sum</span>(<span class="str">'due_amount'</span>);
+}</div>
+      </div>
+
+      <div class="impl-section">
+        <h4>🖥️ Customer Profile Page — কি কি দেখাবে</h4>
+        <div class="feature-grid" style="border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
+          <div class="feature-card">
+            <h4>📊 Summary (Top Cards)</h4>
+            <ul>
+              <li>মোট Invoice পরিমাণ</li>
+              <li>মোট Received</li>
+              <li>মোট Due (Receivable)</li>
+              <li>Overdue invoices count</li>
+              <li>Last payment date</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>📄 Transaction Tabs</h4>
+            <ul>
+              <li>Tab 1: Sales Invoices (with status)</li>
+              <li>Tab 2: Ticket Sales</li>
+              <li>Tab 3: Visa Processing</li>
+              <li>Tab 4: Payment History</li>
+              <li>Tab 5: Payment Schedules</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>🎯 Actions</h4>
+            <ul>
+              <li>Quick Payment Receive button</li>
+              <li>Add Payment Schedule</li>
+              <li>View Ledger (AR Ledger)</li>
+              <li>Export Statement PDF</li>
+              <li>Send Statement Email</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="impl-section">
+        <h4>🖥️ Supplier Profile Page — কি কি দেখাবে</h4>
+        <div class="feature-grid" style="border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;">
+          <div class="feature-card">
+            <h4>📊 Summary (Top Cards)</h4>
+            <ul>
+              <li>মোট Purchase পরিমাণ</li>
+              <li>মোট Paid</li>
+              <li>মোট Due (Payable)</li>
+              <li>Overdue count</li>
+              <li>Last payment date</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>📄 Transaction Tabs</h4>
+            <ul>
+              <li>Tab 1: Purchase Invoices</li>
+              <li>Tab 2: Payment History</li>
+              <li>Tab 3: Payment Schedules</li>
+              <li>Tab 4: Returns</li>
+              <li>Tab 5: AP Ledger</li>
+            </ul>
+          </div>
+          <div class="feature-card">
+            <h4>🎯 Actions</h4>
+            <ul>
+              <li>Quick Payment button</li>
+              <li>Schedule Payment</li>
+              <li>View AP Ledger</li>
+              <li>Export Statement PDF</li>
+              <li>Print Remittance</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ IMPROVEMENT AREAS ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-indigo">
+    <span class="icon">🔧</span>
+    <span>প্রতিটি Feature-এ Improvement — বিস্তারিত তালিকা</span>
+  </div>
+  <div class="section-body">
+    <div class="feature-grid" style="border:1px solid #e0e0e0; border-radius:0 0 8px 8px; overflow:hidden;">
+
+      <div class="feature-card">
+        <h4>📔 Journal Entry</h4>
+        <ul>
+          <li>Party-wise Ledger Report যোগ করুন</li>
+          <li>Journal থেকে সরাসরি Payment Schedule তৈরি করার option</li>
+          <li>Recurring journal entry (monthly auto-post)</li>
+          <li>Journal approval workflow (maker-checker)</li>
+          <li>Bulk import via Excel</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>📅 Payment Schedule</h4>
+        <ul>
+          <li><strong>paid_amount, remaining_amount field যোগ করুন</strong></li>
+          <li>Partial payment receive/pay করার modal</li>
+          <li>Overdue auto-mark (scheduled command)</li>
+          <li>Email/SMS reminder for upcoming schedules</li>
+          <li>Calendar view of schedules</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>💸 Ad-hoc Schedule</h4>
+        <ul>
+          <li>Partial payment support (PaymentSchedule fix হলে সয়ংক্রিয়)</li>
+          <li>Service/item description field যোগ করুন</li>
+          <li>Recurring ad-hoc schedule option</li>
+          <li>Category tag করার option</li>
+          <li>Attachment (invoice scan) upload</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>🛒 Sales</h4>
+        <ul>
+          <li>Customer profile page-এ link করুন</li>
+          <li>AR aging report (0-30, 31-60, 61-90, 90+ days)</li>
+          <li>Auto-generate payment schedule from due date</li>
+          <li>Overdue notification</li>
+          <li>Sales vs Collection dashboard widget</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>📦 Purchase</h4>
+        <ul>
+          <li>Supplier profile page-এ link করুন</li>
+          <li>AP aging report</li>
+          <li>Auto-generate payment schedule from due date</li>
+          <li>Supplier statement print/email</li>
+          <li>3-way matching (PO, GRN, Invoice)</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>🎫 Ticket Sales</h4>
+        <ul>
+          <li>Customer (passenger) link করুন</li>
+          <li>Partial payment modal যোগ করুন</li>
+          <li>Ticket profit margin report (sale - purchase cost)</li>
+          <li>Agent commission auto-calculate</li>
+          <li>Airline-wise sales summary</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>🎫 Ticket Direct Sale</h4>
+        <ul>
+          <li>Model clarify করুন</li>
+          <li>Invoice/Receipt generation</li>
+          <li>Payment tracking যোগ করুন</li>
+          <li>Customer link করুন</li>
+          <li>Daily cash collection report</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>🛂 Visa Processing</h4>
+        <ul>
+          <li>Processing fee payment tracking</li>
+          <li>Payment schedule link</li>
+          <li>Status timeline (Applied → Processing → Approved/Rejected)</li>
+          <li>Document checklist with upload status</li>
+          <li>Customer profile-এ visa history</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>💰 Opening Balance</h4>
+        <ul>
+          <li>Dedicated Opening Balance UI তৈরি করুন</li>
+          <li>Customer-wise opening receivable bulk import</li>
+          <li>Supplier-wise opening payable bulk import</li>
+          <li>Opening date field যোগ করুন</li>
+          <li>Opening balance confirmation/lock</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>👨‍💼 Salary Management</h4>
+        <ul>
+          <li>Loan installment auto-deduct from salary</li>
+          <li>Advance salary remaining balance show</li>
+          <li>Salary hold/partial payment option</li>
+          <li>Payslip email auto-send</li>
+          <li>Tax calculation integration</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>📊 Reports (নতুন দরকার)</h4>
+        <ul>
+          <li>AR Aging Report (Customer-wise)</li>
+          <li>AP Aging Report (Supplier-wise)</li>
+          <li>Party Ledger (Customer/Supplier)</li>
+          <li>Loan Outstanding Report</li>
+          <li>Cash Flow Statement</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <h4>🔔 Notifications</h4>
+        <ul>
+          <li>Payment overdue alert</li>
+          <li>Schedule due today/tomorrow</li>
+          <li>Loan installment reminder</li>
+          <li>Salary processing reminder</li>
+          <li>WhatsApp/Email integration</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PRIORITY MATRIX ═══════════════ -->
+<div class="section page-break">
+  <div class="section-header bg-red">
+    <span class="icon">🎯</span>
+    <span>Priority Matrix — কোনটা আগে করবেন</span>
+  </div>
+  <div class="section-body">
+    <div class="priority-grid">
+      <div class="priority-card p-high">
+        <h4 style="color:#b71c1c;">🔴 High Priority — এখনই করুন</h4>
+        <ul>
+          <li>PaymentSchedule-এ partial payment (paid_amount, remaining_amount) যোগ করুন — এটা করলে Ad-hoc schedule-ও সমাধান হয়</li>
+          <li>Customer Model-এ sales(), totalReceivable() relationship যোগ করুন</li>
+          <li>Supplier Model-এ purchases(), totalPayable() relationship যোগ করুন</li>
+          <li>Customer Profile page তৈরি করুন (sales + dues + history)</li>
+          <li>Supplier Profile page তৈরি করুন (purchases + dues + history)</li>
+          <li>Business Loan (long-term) module তৈরি করুন</li>
+          <li>AR Aging Report যোগ করুন</li>
+          <li>AP Aging Report যোগ করুন</li>
+        </ul>
+      </div>
+      <div class="priority-card p-medium">
+        <h4 style="color:#f57f17;">🟡 Medium Priority — পরের sprint</h4>
+        <ul>
+          <li>Opening Balance dedicated UI</li>
+          <li>Ticket Sale-এ customer link এবং partial payment</li>
+          <li>Visa Processing fee tracking</li>
+          <li>Party-wise Ledger Report</li>
+          <li>Overdue auto-mark scheduled command</li>
+          <li>Payment schedule email/SMS reminder</li>
+          <li>Loan installment auto-deduct from salary</li>
+          <li>Ticket Direct Sale model/invoice clarification</li>
+        </ul>
+      </div>
+      <div class="priority-card p-medium" style="background:#f3e5f5; border-left-color:#4527a0;">
+        <h4 style="color:#4527a0;">🟣 Low Priority — পরে করুন</h4>
+        <ul>
+          <li>Recurring journal entry</li>
+          <li>Journal approval workflow</li>
+          <li>3-way PO matching</li>
+          <li>Bulk opening balance import</li>
+          <li>Sales vs Collection dashboard widget</li>
+          <li>Payslip auto email</li>
+          <li>Cash Flow Statement report</li>
+          <li>Tax calculation</li>
+        </ul>
+      </div>
+      <div class="priority-card p-medium" style="background:#e8f5e9; border-left-color:#2e7d32;">
+        <h4 style="color:#2e7d32;">🟢 Quick Wins — ১-২ ঘণ্টায় করা যাবে</h4>
+        <ul>
+          <li>Customer model-এ relationships যোগ (code only, ১৫ মিনিট)</li>
+          <li>Supplier model-এ relationships যোগ (code only, ১৫ মিনিট)</li>
+          <li>Payment schedule overdue scope already আছে — cron job connect করুন</li>
+          <li>Sales invoice-এ customer profile link button যোগ করুন</li>
+          <li>Purchase invoice-এ supplier profile link button যোগ করুন</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DEVELOPMENT ROADMAP PHASES ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-cyan">
+    <span class="icon">🗺️</span>
+    <span>Development Roadmap — Phase-wise Implementation</span>
+  </div>
+  <div class="section-body">
+    <div class="phase-grid">
+
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(90deg,#2e7d32,#388e3c);">
+          Phase 1 — Foundation Fixes<br>
+          <small style="font-weight:300;font-size:11px;">সময়: ১-২ সপ্তাহ</small>
+        </div>
+        <div class="phase-body">
+          <div class="task-item">
+            <div class="task-num t1">1</div>
+            <div><strong>Migration:</strong> payment_schedules table-এ paid_amount, remaining_amount, partial_payments (JSON) যোগ করুন</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">2</div>
+            <div><strong>Model:</strong> PaymentSchedule model update, pay() method যোগ করুন</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">3</div>
+            <div><strong>Controller:</strong> PaymentScheduleController-এ partialPay() method</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">4</div>
+            <div><strong>View:</strong> Payment schedule-এ partial payment modal</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">5</div>
+            <div><strong>Model:</strong> Customer + Supplier model-এ relationships যোগ</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">6</div>
+            <div><strong>View:</strong> Customer profile page (basic — sales list + total due)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t1">7</div>
+            <div><strong>View:</strong> Supplier profile page (basic — purchase list + total payable)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(90deg,#1565c0,#1976d2);">
+          Phase 2 — Business Loan Module<br>
+          <small style="font-weight:300;font-size:11px;">সময়: ২-৩ সপ্তাহ</small>
+        </div>
+        <div class="phase-body">
+          <div class="task-item">
+            <div class="task-num t2">1</div>
+            <div><strong>Migration:</strong> business_loans table তৈরি করুন</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">2</div>
+            <div><strong>Migration:</strong> loan_repayments table তৈরি করুন</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">3</div>
+            <div><strong>Model:</strong> BusinessLoan + LoanRepayment model</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">4</div>
+            <div><strong>Controller:</strong> BusinessLoanController CRUD</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">5</div>
+            <div><strong>Feature:</strong> Loan disbursement → auto Journal Entry</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">6</div>
+            <div><strong>Feature:</strong> Auto installment schedule generate on loan creation</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">7</div>
+            <div><strong>Feature:</strong> Repayment → auto Journal Entry (Principal + Interest split)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">8</div>
+            <div><strong>View:</strong> Loan list, detail, installment schedule, repayment history</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t2">9</div>
+            <div><strong>Report:</strong> Loan outstanding + interest paid report</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-header" style="background:linear-gradient(90deg,#e65100,#ef6c00);">
+          Phase 3 — Reports &amp; Advanced Features<br>
+          <small style="font-weight:300;font-size:11px;">সময়: ৩-৪ সপ্তাহ</small>
+        </div>
+        <div class="phase-body">
+          <div class="task-item">
+            <div class="task-num t3">1</div>
+            <div><strong>Report:</strong> AR Aging Report (customer-wise 0-30/31-60/61-90/90+ days)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">2</div>
+            <div><strong>Report:</strong> AP Aging Report (supplier-wise)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">3</div>
+            <div><strong>Report:</strong> Party Ledger (Customer/Supplier statement)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">4</div>
+            <div><strong>Feature:</strong> Opening Balance dedicated UI (customer + supplier bulk)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">5</div>
+            <div><strong>Feature:</strong> Ticket Sale-এ customer link + partial payment</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">6</div>
+            <div><strong>Feature:</strong> Visa processing fee tracking</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">7</div>
+            <div><strong>Automation:</strong> Overdue auto-mark cron job</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">8</div>
+            <div><strong>Notification:</strong> Payment due reminder (email/SMS)</div>
+          </div>
+          <div class="task-item">
+            <div class="task-num t3">9</div>
+            <div><strong>Report:</strong> Cash Flow Statement</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FLOW: HOW PARTIAL PAYMENT WORKS ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-brown">
+    <span class="icon">🔄</span>
+    <span>Partial Payment Flow — Sales, Purchase, Schedule সবার জন্য একই Flow</span>
+  </div>
+  <div class="section-body">
+    <div class="flow">
+      <h4 style="margin-bottom:14px;font-size:13px;color:#1a1a2e;">📥 Sales Partial Payment Receive Flow</h4>
+      <div class="flow-steps">
+        <div class="flow-step"><span class="step-num">📄</span>Invoice তৈরি<br>(due_amount = total)</div>
+        <div class="flow-step"><span class="step-num">💰</span>Partial Payment<br>Modal Open</div>
+        <div class="flow-step"><span class="step-num">✍️</span>Amount Enter<br>+ Bank/Cash select</div>
+        <div class="flow-step"><span class="step-num">⚡</span>Transaction save<br>+ Due update</div>
+        <div class="flow-step"><span class="step-num">📊</span>Status update<br>(partial/paid)</div>
+        <div class="flow-step"><span class="step-num">📔</span>Journal Entry<br>auto-post</div>
+      </div>
+
+      <h4 style="margin-bottom:14px;margin-top:20px;font-size:13px;color:#1a1a2e;">📅 Payment Schedule Partial Payment Flow (নতুন)</h4>
+      <div class="flow-steps">
+        <div class="flow-step"><span class="step-num">📅</span>Schedule দেখুন<br>(pending/overdue)</div>
+        <div class="flow-step"><span class="step-num">💳</span>Partial Pay<br>button click</div>
+        <div class="flow-step"><span class="step-num">✍️</span>Amount Enter<br>(≤ remaining)</div>
+        <div class="flow-step"><span class="step-num">⚡</span>paid_amount +<br>remaining update</div>
+        <div class="flow-step"><span class="step-num">📊</span>Status: partial<br>বা paid</div>
+        <div class="flow-step"><span class="step-num">📔</span>Journal auto<br>+ Log save</div>
+      </div>
+
+      <h4 style="margin-bottom:14px;margin-top:20px;font-size:13px;color:#1a1a2e;">🏦 Business Loan Repayment Flow (নতুন)</h4>
+      <div class="flow-steps">
+        <div class="flow-step"><span class="step-num">🏦</span>Loan নিন<br>(disbursement)</div>
+        <div class="flow-step"><span class="step-num">📅</span>Auto installment<br>schedule generate</div>
+        <div class="flow-step"><span class="step-num">⏰</span>Due date আসলে<br>overdue alert</div>
+        <div class="flow-step"><span class="step-num">💰</span>Repayment করুন<br>(principal + interest)</div>
+        <div class="flow-step"><span class="step-num">📔</span>Journal Entry<br>auto-post</div>
+        <div class="flow-step"><span class="step-num">📊</span>Outstanding<br>balance update</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FINAL SUMMARY ═══════════════ -->
+<div class="section">
+  <div class="section-header bg-pink">
+    <span class="icon">📋</span>
+    <span>Final Summary — সংক্ষেপে সব কিছু</span>
+  </div>
+  <div class="section-body" style="padding:20px;">
+    <table>
+      <tr>
+        <th>#</th>
+        <th>বিষয়</th>
+        <th>বর্তমান অবস্থা</th>
+        <th>সমাধান</th>
+        <th>Priority</th>
+      </tr>
+      <tr>
+        <td>1</td>
+        <td>Journal / Credit / Debit Journal</td>
+        <td><span class="badge badge-ok">Working ✓</span></td>
+        <td>Party ledger report + opening balance UI যোগ করুন</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td>Payment Schedule (Regular)</td>
+        <td><span class="badge badge-partial">Partial — no partial pay</span></td>
+        <td>paid_amount, remaining_amount migration + partial pay modal</td>
+        <td><span class="badge badge-phase1">Phase 1 🔴</span></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td>Ad-hoc Schedule</td>
+        <td><span class="badge badge-partial">Partial — same issue</span></td>
+        <td>Payment Schedule fix হলে automatically সমাধান</td>
+        <td><span class="badge badge-phase1">Phase 1 🔴</span></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td>Sales (Partial Pay)</td>
+        <td><span class="badge badge-ok">Mostly Working ✓</span></td>
+        <td>Controller validate করুন + customer profile link</td>
+        <td><span class="badge badge-phase1">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td>Purchase (Partial Pay)</td>
+        <td><span class="badge badge-ok">Mostly Working ✓</span></td>
+        <td>Supplier profile link যোগ করুন</td>
+        <td><span class="badge badge-phase1">Phase 1</span></td>
+      </tr>
+      <tr>
+        <td>6</td>
+        <td>Ticket Sales</td>
+        <td><span class="badge badge-partial">Partial — no customer link</span></td>
+        <td>Customer (passenger) link + partial payment modal</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td>Ticket Direct Sales</td>
+        <td><span class="badge badge-partial">Incomplete</span></td>
+        <td>Model clarify + invoice + payment tracking</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td>Visa Processing</td>
+        <td><span class="badge badge-ok">Working ✓</span></td>
+        <td>Fee payment tracking + customer profile link</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td>Opening Receivable / Payable</td>
+        <td><span class="badge badge-partial">Partial — only via Journal</span></td>
+        <td>Dedicated Opening Balance UI + customer/supplier bulk</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td>Salary Management</td>
+        <td><span class="badge badge-ok">Working ✓</span></td>
+        <td>Loan auto-deduct + advance salary balance tracking</td>
+        <td><span class="badge badge-phase2">Phase 3</span></td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td>Long-term Bank / Business Loan</td>
+        <td><span class="badge badge-missing">Missing ✗</span></td>
+        <td>নতুন business_loans + loan_repayments table + full module</td>
+        <td><span class="badge badge-phase1">Phase 2 🔴</span></td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td>Customer Profile Page</td>
+        <td><span class="badge badge-missing">Missing ✗</span></td>
+        <td>Customer model relationships + profile view + ledger</td>
+        <td><span class="badge badge-phase1">Phase 1 🔴</span></td>
+      </tr>
+      <tr>
+        <td>13</td>
+        <td>Supplier Profile Page</td>
+        <td><span class="badge badge-missing">Missing ✗</span></td>
+        <td>Supplier model relationships + profile view + ledger</td>
+        <td><span class="badge badge-phase1">Phase 1 🔴</span></td>
+      </tr>
+      <tr>
+        <td>14</td>
+        <td>AR / AP Aging Reports</td>
+        <td><span class="badge badge-missing">Missing ✗</span></td>
+        <td>New report views with age buckets</td>
+        <td><span class="badge badge-phase2">Phase 3 🔴</span></td>
+      </tr>
+    </table>
+
+    <div style="margin-top:24px; padding:20px; background:linear-gradient(135deg,#1a1a2e,#0f3460); color:white; border-radius:8px;">
+      <h3 style="margin-bottom:12px; font-size:16px;">💡 সবচেয়ে গুরুত্বপূর্ণ ৩টি কাজ যা এখনই করুন</h3>
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+        <div style="background:rgba(255,255,255,0.1); padding:14px; border-radius:8px;">
+          <div style="font-size:24px; margin-bottom:8px;">1️⃣</div>
+          <strong>PaymentSchedule Partial Payment</strong><br>
+          <small style="opacity:0.8;">Migration যোগ করুন: paid_amount, remaining_amount। Controller-এ partialPay()। View-এ modal।
+          এই একটা কাজে Regular Schedule এবং Ad-hoc Schedule দুটোই ঠিক হবে।</small>
+        </div>
+        <div style="background:rgba(255,255,255,0.1); padding:14px; border-radius:8px;">
+          <div style="font-size:24px; margin-bottom:8px;">2️⃣</div>
+          <strong>Customer + Supplier Profile</strong><br>
+          <small style="opacity:0.8;">Model-এ relationships যোগ করুন, profile page বানান।
+          এতে কার কাছে কত receivable/payable তা একনজরে দেখা যাবে।
+          AR/AP aging report-ও এখানে link করুন।</small>
+        </div>
+        <div style="background:rgba(255,255,255,0.1); padding:14px; border-radius:8px;">
+          <div style="font-size:24px; margin-bottom:8px;">3️⃣</div>
+          <strong>Business Loan Module</strong><br>
+          <small style="opacity:0.8;">business_loans + loan_repayments table তৈরি করুন।
+          Loan নেওয়া থেকে শুরু করে প্রতিটি কিস্তি এবং সুদ সহ সম্পূর্ণ tracking।
+          Journal auto-post সহ।</small>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px; text-align:center; color:#888; font-size:11px; padding:10px;">
+      📅 Generated on 05 May 2026 &nbsp;|&nbsp; EPAL ERP System Analysis &nbsp;|&nbsp;
+      Built with Laravel &nbsp;|&nbsp; Total: 192 Controllers, 119 Models, 133 Migrations
+    </div>
+  </div>
+</div>
+
+</div><!-- /page -->
+</body>
+</html>

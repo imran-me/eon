@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Journal Management Roadmap — EPAL ERP</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media print {
+      body { background: white; font-size: 11px; }
+      .no-print { display: none; }
+      .page-break { page-break-before: always; }
+      .card { break-inside: avoid; }
+    }
+
+    .print-btn {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+    }
+    .print-btn:hover { background: #2563eb; }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f4c75 40%, #1b6ca8 100%);
+      color: white;
+      padding: 60px 80px;
+      min-height: 220px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cover-left h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; }
+    .cover-left h2 { font-size: 16px; font-weight: 400; opacity: 0.8; margin-top: 6px; }
+    .cover-left .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      margin-top: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .cover-right {
+      text-align: right;
+      opacity: 0.7;
+      font-size: 12px;
+    }
+    .cover-right .big { font-size: 48px; font-weight: 800; opacity: 0.3; }
+
+    /* Main container */
+    .container { max-width: 1100px; margin: 0 auto; padding: 40px 30px; }
+
+    /* Section headers */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin: 40px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid #3b82f6;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title .icon {
+      width: 32px; height: 32px;
+      background: #3b82f6;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+    }
+    .card h3 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e3a5f;
+      margin-bottom: 10px;
+    }
+
+    /* Grid */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* Concept boxes */
+    .concept-box {
+      border-radius: 10px;
+      padding: 18px 20px;
+      border-left: 5px solid;
+    }
+    .concept-box.blue  { background: #eff6ff; border-color: #3b82f6; }
+    .concept-box.green { background: #f0fdf4; border-color: #22c55e; }
+    .concept-box.red   { background: #fff1f2; border-color: #ef4444; }
+    .concept-box.amber { background: #fffbeb; border-color: #f59e0b; }
+    .concept-box.purple{ background: #faf5ff; border-color: #a855f7; }
+    .concept-box h4 { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+    .concept-box.blue h4   { color: #1d4ed8; }
+    .concept-box.green h4  { color: #15803d; }
+    .concept-box.red h4    { color: #dc2626; }
+    .concept-box.amber h4  { color: #b45309; }
+    .concept-box.purple h4 { color: #7c3aed; }
+
+    /* Double-entry table */
+    table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+    th {
+      background: #1e3a5f;
+      color: white;
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 12px;
+    }
+    tr:nth-child(even) td { background: #f8fafc; }
+    tr:hover td { background: #eff6ff; }
+    .dr { color: #dc2626; font-weight: 700; }
+    .cr { color: #16a34a; font-weight: 700; }
+    .amount { font-weight: 600; text-align: right; }
+
+    /* Flow diagram */
+    .flow {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .flow-box {
+      background: #1e3a5f;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 110px;
+    }
+    .flow-box.green { background: #15803d; }
+    .flow-box.blue  { background: #1d4ed8; }
+    .flow-box.amber { background: #b45309; }
+    .flow-box.red   { background: #dc2626; }
+    .flow-arrow {
+      font-size: 20px;
+      color: #94a3b8;
+      padding: 0 8px;
+    }
+
+    /* Steps */
+    .steps { counter-reset: step; }
+    .step {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+    .step-num {
+      counter-increment: step;
+      width: 28px; height: 28px;
+      background: #3b82f6;
+      color: white;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .step-content h4 { font-size: 13px; font-weight: 700; color: #1e3a5f; margin-bottom: 4px; }
+    .step-content p  { font-size: 12px; color: #64748b; }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin: 2px;
+    }
+    .tag.blue   { background: #dbeafe; color: #1d4ed8; }
+    .tag.green  { background: #dcfce7; color: #15803d; }
+    .tag.red    { background: #fee2e2; color: #dc2626; }
+    .tag.amber  { background: #fef3c7; color: #b45309; }
+    .tag.purple { background: #f3e8ff; color: #7c3aed; }
+    .tag.gray   { background: #f1f5f9; color: #475569; }
+
+    /* Phase timeline */
+    .phase {
+      display: flex;
+      gap: 0;
+      margin: 16px 0;
+    }
+    .phase-item {
+      flex: 1;
+      padding: 16px 12px;
+      text-align: center;
+      position: relative;
+    }
+    .phase-item:not(:last-child)::after {
+      content: '▶';
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      font-size: 14px;
+      z-index: 1;
+    }
+    .phase-item.p1 { background: #eff6ff; border-radius: 10px 0 0 10px; border: 1px solid #bfdbfe; }
+    .phase-item.p2 { background: #f0fdf4; border: 1px solid #bbf7d0; border-left: none; }
+    .phase-item.p3 { background: #fffbeb; border: 1px solid #fde68a; border-left: none; }
+    .phase-item.p4 { background: #faf5ff; border: 1px solid #e9d5ff; border-left: none; }
+    .phase-item.p5 { background: #fff1f2; border-radius: 0 10px 10px 0; border: 1px solid #fecdd3; border-left: none; }
+    .phase-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.7; }
+    .phase-title { font-size: 12px; font-weight: 700; margin: 4px 0; color: #1e3a5f; }
+    .phase-time  { font-size: 10px; color: #94a3b8; }
+
+    /* COA tree */
+    .coa-root { font-weight: 700; color: #1e3a5f; font-size: 13px; padding: 6px 0; }
+    .coa-l1 { padding-left: 20px; color: #1d4ed8; font-weight: 600; font-size: 12px; padding-top: 3px; }
+    .coa-l2 { padding-left: 40px; color: #475569; font-size: 11px; padding-top: 2px; }
+    .coa-l2::before { content: '└─ '; color: #94a3b8; }
+
+    /* Module matrix */
+    .matrix { border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .matrix th { background: #1e3a5f; }
+    .matrix .yes { color: #16a34a; font-weight: 700; text-align: center; }
+    .matrix .no  { color: #dc2626; text-align: center; }
+    .matrix .partial { color: #d97706; font-weight: 600; text-align: center; }
+
+    /* Alert boxes */
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 10px 0;
+      font-size: 12px;
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+    .alert.info    { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .alert.success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+    .alert.warning { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+    .alert.danger  { background: #fff1f2; color: #991b1b; border: 1px solid #fecdd3; }
+    .alert-icon { font-size: 16px; flex-shrink: 0; }
+
+    hr.divider { border: none; border-top: 2px dashed #e2e8f0; margin: 30px 0; }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: #94a3b8;
+      font-size: 11px;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Print / Save PDF</button>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-left">
+    <div style="font-size:11px;opacity:0.6;text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;">EPAL ERP — Accounting Module</div>
+    <h1>Journal Management</h1>
+    <h2>Double-Entry Bookkeeping — সম্পূর্ণ রোডম্যাপ</h2>
+    <div class="badge">Implementation Roadmap · v1.0</div>
+  </div>
+  <div class="cover-right">
+    <div class="big">📒</div>
+    <div>Prepared: April 2026</div>
+    <div>EPAL IT Solutions</div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 1: CORE CONCEPT -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">📚</div>
+    ১. Journal কী এবং Double-Entry কীভাবে কাজ করে?
+  </div>
+
+  <div class="grid-2">
+    <div class="concept-box blue">
+      <h4>📖 Journal Entry কী?</h4>
+      <p>প্রতিটি আর্থিক লেনদেন (transaction) রেকর্ড করার নিয়মকে Journal Entry বলে।
+      প্রতিটি এন্ট্রিতে অন্তত দুটি অ্যাকাউন্ট থাকে — একটি Debit হয়, একটি Credit হয়।
+      <br><br>
+      <strong>মূল নিয়ম:</strong> মোট Debit সবসময় মোট Credit এর সমান হতে হবে।
+      <br><code style="background:#dbeafe;padding:2px 6px;border-radius:4px;font-size:11px;">Dr Amount = Cr Amount</code></p>
+    </div>
+    <div class="concept-box green">
+      <h4>⚖️ Double-Entry কেন দরকার?</h4>
+      <ul style="padding-left:16px;font-size:12px;">
+        <li>প্রতিটি টাকা কোথা থেকে এলো ও কোথায় গেলো ট্র্যাক করা যায়</li>
+        <li>Balance Sheet সবসময় balance থাকে</li>
+        <li>ভুল এন্ট্রি ধরা পড়ে</li>
+        <li>Audit trail তৈরি হয়</li>
+        <li>Financial report automatic generate হয়</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Accounting Equation -->
+  <div class="card" style="background: linear-gradient(135deg, #1e3a5f, #1d4ed8); color: white; text-align: center; padding: 24px;">
+    <div style="font-size:12px;opacity:0.7;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">The Fundamental Accounting Equation</div>
+    <div style="font-size:22px;font-weight:800;letter-spacing:1px;">Assets = Liabilities + Equity</div>
+    <div style="font-size:12px;opacity:0.7;margin-top:8px;">সম্পদ = দায় + মালিকানা — এই equation সবসময় সমান থাকতে হবে</div>
+  </div>
+
+  <!-- Debit/Credit Rules -->
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <h3>🔴 Debit (Dr) — কখন বাড়ে / কমে?</h3>
+      <table>
+        <tr><th>Account Type</th><th>Debit করলে</th><th>Credit করলে</th></tr>
+        <tr><td><span class="tag blue">Assets</span> সম্পদ</td><td style="color:#16a34a">📈 বাড়ে</td><td style="color:#dc2626">📉 কমে</td></tr>
+        <tr><td><span class="tag red">Expenses</span> খরচ</td><td style="color:#16a34a">📈 বাড়ে</td><td style="color:#dc2626">📉 কমে</td></tr>
+        <tr><td><span class="tag green">Liabilities</span> দায়</td><td style="color:#dc2626">📉 কমে</td><td style="color:#16a34a">📈 বাড়ে</td></tr>
+        <tr><td><span class="tag purple">Equity</span> মূলধন</td><td style="color:#dc2626">📉 কমে</td><td style="color:#16a34a">📈 বাড়ে</td></tr>
+        <tr><td><span class="tag amber">Revenue</span> আয়</td><td style="color:#dc2626">📉 কমে</td><td style="color:#16a34a">📈 বাড়ে</td></tr>
+      </table>
+      <div class="alert info" style="margin-top:10px;">
+        <div class="alert-icon">💡</div>
+        <div>মনে রাখার সহজ উপায়: <strong>DEAD</strong> = Debit বাড়ায় (Drawings, Expenses, Assets, Dividends)</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>🟢 Real-World Examples</h3>
+      <div class="concept-box green" style="margin-bottom:10px;">
+        <h4>💰 কেউ আপনাকে ৫০,০০০ টাকা দিল (Cash পাওয়া)</h4>
+        <table>
+          <tr><th>Account</th><th>Dr/Cr</th><th>Amount</th></tr>
+          <tr><td>Cash / Bank</td><td class="dr">Dr</td><td class="amount cr">৳৫০,০০০</td></tr>
+          <tr><td>Income / Accounts Receivable</td><td class="cr">Cr</td><td class="amount cr">৳৫০,০০০</td></tr>
+        </table>
+      </div>
+      <div class="concept-box red">
+        <h4>💸 আপনি কাউকে ৩০,০০০ টাকা দিলেন (Cash দেওয়া)</h4>
+        <table>
+          <tr><th>Account</th><th>Dr/Cr</th><th>Amount</th></tr>
+          <tr><td>Expense / Accounts Payable</td><td class="dr">Dr</td><td class="amount">৳৩০,০০০</td></tr>
+          <tr><td>Cash / Bank</td><td class="cr">Cr</td><td class="amount">৳৩০,০০০</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 2: JOURNAL TYPES -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">📂</div>
+    ২. Journal Types — কোন ধরনের Journal লাগবে?
+  </div>
+
+  <div class="grid-3">
+    <div class="concept-box blue card">
+      <h4>📥 Receipt Journal</h4>
+      <p><strong>কখন:</strong> কেউ টাকা দিলে<br>
+      <strong>Dr:</strong> Cash / Bank<br>
+      <strong>Cr:</strong> Customer / Income<br><br>
+      <span class="tag blue">Customer Payment</span>
+      <span class="tag blue">Loan Received</span>
+      <span class="tag blue">Investment</span></p>
+    </div>
+    <div class="concept-box red card">
+      <h4>📤 Payment Journal</h4>
+      <p><strong>কখন:</strong> আপনি টাকা দিলে<br>
+      <strong>Dr:</strong> Supplier / Expense<br>
+      <strong>Cr:</strong> Cash / Bank<br><br>
+      <span class="tag red">Supplier Payment</span>
+      <span class="tag red">Salary</span>
+      <span class="tag red">Utility Bills</span></p>
+    </div>
+    <div class="concept-box green card">
+      <h4>🛒 Sales Journal</h4>
+      <p><strong>কখন:</strong> বিক্রয় হলে<br>
+      <strong>Dr:</strong> Accounts Receivable<br>
+      <strong>Cr:</strong> Sales Revenue<br><br>
+      <span class="tag green">Invoice Generated</span>
+      <span class="tag green">Credit Sales</span></p>
+    </div>
+    <div class="concept-box amber card">
+      <h4>📦 Purchase Journal</h4>
+      <p><strong>কখন:</strong> ক্রয় হলে<br>
+      <strong>Dr:</strong> Inventory / Expense<br>
+      <strong>Cr:</strong> Accounts Payable<br><br>
+      <span class="tag amber">Stock Purchase</span>
+      <span class="tag amber">Credit Purchase</span></p>
+    </div>
+    <div class="concept-box purple card">
+      <h4>🔄 General Journal</h4>
+      <p><strong>কখন:</strong> অন্য যেকোনো এন্ট্রি<br>
+      <strong>Dr/Cr:</strong> যেকোনো অ্যাকাউন্ট<br><br>
+      <span class="tag purple">Depreciation</span>
+      <span class="tag purple">Adjustment</span>
+      <span class="tag purple">Opening Entry</span></p>
+    </div>
+    <div class="concept-box blue card" style="background:#f0fdf4;border-color:#22c55e;">
+      <h4>↩️ Contra Entry</h4>
+      <p><strong>কখন:</strong> Bank ↔ Cash transfer<br>
+      <strong>Dr:</strong> Cash / Bank (A)<br>
+      <strong>Cr:</strong> Cash / Bank (B)<br><br>
+      <span class="tag green">Cash Deposit</span>
+      <span class="tag green">Cash Withdrawal</span></p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 3: PRACTICAL SCENARIOS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">💡</div>
+    ৩. Practical Scenarios — Real-Life উদাহরণ
+  </div>
+
+  <div class="card">
+    <h3>🎯 আপনার ERP-এ সম্ভাব্য Transaction Flow</h3>
+    <table>
+      <tr>
+        <th>Scenario</th>
+        <th>Journal Type</th>
+        <th>Debit Account</th>
+        <th>Credit Account</th>
+        <th>Amount</th>
+      </tr>
+      <tr>
+        <td>Client ABC invoice করলাম</td>
+        <td><span class="tag blue">Sales</span></td>
+        <td class="dr">Accounts Receivable – ABC</td>
+        <td class="cr">Sales Revenue</td>
+        <td class="amount">৳1,00,000</td>
+      </tr>
+      <tr>
+        <td>ABC cash দিল</td>
+        <td><span class="tag green">Receipt</span></td>
+        <td class="dr">Cash / Bank</td>
+        <td class="cr">Accounts Receivable – ABC</td>
+        <td class="amount">৳1,00,000</td>
+      </tr>
+      <tr>
+        <td>Supplier XYZ থেকে মাল কিনলাম (বাকিতে)</td>
+        <td><span class="tag amber">Purchase</span></td>
+        <td class="dr">Inventory / Stock</td>
+        <td class="cr">Accounts Payable – XYZ</td>
+        <td class="amount">৳50,000</td>
+      </tr>
+      <tr>
+        <td>XYZ কে টাকা দিলাম</td>
+        <td><span class="tag red">Payment</span></td>
+        <td class="dr">Accounts Payable – XYZ</td>
+        <td class="cr">Bank Account</td>
+        <td class="amount">৳50,000</td>
+      </tr>
+      <tr>
+        <td>Office rent দিলাম</td>
+        <td><span class="tag red">Payment</span></td>
+        <td class="dr">Rent Expense</td>
+        <td class="cr">Cash / Bank</td>
+        <td class="amount">৳20,000</td>
+      </tr>
+      <tr>
+        <td>Staff salary দিলাম</td>
+        <td><span class="tag red">Payment</span></td>
+        <td class="dr">Salary Expense</td>
+        <td class="cr">Bank Account</td>
+        <td class="amount">৳80,000</td>
+      </tr>
+      <tr>
+        <td>Cash থেকে Bank-এ জমা দিলাম</td>
+        <td><span class="tag green">Contra</span></td>
+        <td class="dr">Bank Account</td>
+        <td class="cr">Cash in Hand</td>
+        <td class="amount">৳30,000</td>
+      </tr>
+      <tr>
+        <td>Machine কিনলাম (Asset)</td>
+        <td><span class="tag purple">General</span></td>
+        <td class="dr">Machinery (Fixed Asset)</td>
+        <td class="cr">Bank Account</td>
+        <td class="amount">৳5,00,000</td>
+      </tr>
+      <tr>
+        <td>Monthly Depreciation</td>
+        <td><span class="tag purple">Adjustment</span></td>
+        <td class="dr">Depreciation Expense</td>
+        <td class="cr">Accumulated Depreciation</td>
+        <td class="amount">৳5,000</td>
+      </tr>
+      <tr>
+        <td>Owner নিজে টাকা invest করলেন</td>
+        <td><span class="tag purple">General</span></td>
+        <td class="dr">Cash / Bank</td>
+        <td class="cr">Owner's Capital / Equity</td>
+        <td class="amount">৳10,00,000</td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 4: CHART OF ACCOUNTS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title page-break">
+    <div class="icon">🗂️</div>
+    ৪. Chart of Accounts (CoA) Structure
+  </div>
+
+  <div class="alert info">
+    <div class="alert-icon">ℹ️</div>
+    <div>Chart of Accounts হলো সব অ্যাকাউন্টের master list। Journal entry করার আগে এটি সেটআপ করতে হবে। প্রতিটি account-এর একটি unique code থাকে।</div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3>📊 Recommended CoA Structure (EPAL ERP)</h3>
+      <div class="coa-root">1000 — Assets (সম্পদ)</div>
+      <div class="coa-l1">1100 — Current Assets</div>
+      <div class="coa-l2">1110 — Cash in Hand</div>
+      <div class="coa-l2">1120 — Bank Account (Sonali)</div>
+      <div class="coa-l2">1130 — Accounts Receivable</div>
+      <div class="coa-l2">1140 — Inventory / Stock</div>
+      <div class="coa-l1">1200 — Fixed Assets</div>
+      <div class="coa-l2">1210 — Land & Building</div>
+      <div class="coa-l2">1220 — Machinery & Equipment</div>
+      <div class="coa-l2">1230 — Computer & IT Assets</div>
+
+      <div class="coa-root" style="margin-top:12px;">2000 — Liabilities (দায়)</div>
+      <div class="coa-l1">2100 — Current Liabilities</div>
+      <div class="coa-l2">2110 — Accounts Payable</div>
+      <div class="coa-l2">2120 — Short-term Loans</div>
+      <div class="coa-l2">2130 — Tax Payable</div>
+      <div class="coa-l1">2200 — Long-term Liabilities</div>
+      <div class="coa-l2">2210 — Bank Loan</div>
+
+      <div class="coa-root" style="margin-top:12px;">3000 — Equity (মূলধন)</div>
+      <div class="coa-l1">3100 — Owner's Capital</div>
+      <div class="coa-l1">3200 — Retained Earnings</div>
+    </div>
+    <div class="card">
+      <div class="coa-root">4000 — Revenue (আয়)</div>
+      <div class="coa-l1">4100 — Sales Revenue</div>
+      <div class="coa-l2">4110 — Product Sales</div>
+      <div class="coa-l2">4120 — Service Revenue</div>
+      <div class="coa-l1">4200 — Other Income</div>
+      <div class="coa-l2">4210 — Interest Income</div>
+      <div class="coa-l2">4220 — Discount Received</div>
+
+      <div class="coa-root" style="margin-top:12px;">5000 — Expenses (খরচ)</div>
+      <div class="coa-l1">5100 — COGS (বিক্রীত পণ্যের মূল্য)</div>
+      <div class="coa-l1">5200 — Operating Expenses</div>
+      <div class="coa-l2">5210 — Salary & Wages</div>
+      <div class="coa-l2">5220 — Rent Expense</div>
+      <div class="coa-l2">5230 — Utility (Electricity, Internet)</div>
+      <div class="coa-l2">5240 — Transportation</div>
+      <div class="coa-l1">5300 — Administrative Expenses</div>
+      <div class="coa-l2">5310 — Office Supplies</div>
+      <div class="coa-l2">5320 — Marketing & Advertising</div>
+      <div class="coa-l1">5400 — Financial Expenses</div>
+      <div class="coa-l2">5410 — Bank Charges</div>
+      <div class="coa-l2">5420 — Interest Expense</div>
+      <div class="coa-l2">5430 — Depreciation Expense</div>
+
+      <div class="alert warning" style="margin-top:16px;">
+        <div class="alert-icon">⚠️</div>
+        <div>CoA numbering system consistent রাখতে হবে। একবার define করলে সহজে change করা যাবে না।</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 5: ERP FLOW -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">🔄</div>
+    ৫. ERP-তে Journal Entry Flow
+  </div>
+
+  <div class="card">
+    <h3>📌 Complete Transaction Lifecycle</h3>
+    <div class="flow" style="justify-content:center;">
+      <div class="flow-box">Source Document<br><small style="opacity:0.7;">(Invoice/Bill/Voucher)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box blue">Journal Entry<br><small style="opacity:0.7;">(Dr / Cr)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box amber">Post to Ledger<br><small style="opacity:0.7;">(T-Account)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box green">Trial Balance<br><small style="opacity:0.7;">(Verify)</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box" style="background:#7c3aed;">Financial Reports<br><small style="opacity:0.7;">(P&L / BS)</small></div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <h3>🖥️ ERP Journal Module — Key Features</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Manual Journal Entry</h4>
+            <p>User manually Dr/Cr account select করে entry দেবে — General, Adjustment, Opening entries এর জন্য</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Auto Journal (Module Integration)</h4>
+            <p>Sales invoice save করলে → auto Debit AR, Credit Sales. Purchase bill save করলে → auto Debit Stock, Credit AP</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Journal Approval Workflow</h4>
+            <p>Draft → Pending Approval → Approved/Posted → Locked. Posted entry edit করা যাবে না, শুধু Reversal করতে হবে</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Journal Reversal</h4>
+            <p>ভুল entry reverse করার সুবিধা — এতে original entry delete হয় না, নতুন opposite entry তৈরি হয়</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Recurring Journal</h4>
+            <p>প্রতি মাসে একই entry (যেমন salary, rent) — একবার template তৈরি করলে auto-generate হবে</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📋 Journal Entry Form Design</h3>
+      <table>
+        <tr><th>Field</th><th>Description</th><th>Required?</th></tr>
+        <tr><td>Journal No.</td><td>Auto-generated (JV-2026-0001)</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Date</td><td>Transaction date (not posting date)</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Journal Type</td><td>Receipt / Payment / General etc.</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Reference No.</td><td>Invoice/Cheque/PO number</td><td><span class="tag amber">Optional</span></td></tr>
+        <tr><td>Description / Narration</td><td>কী কারণে এন্ট্রি হচ্ছে</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Account (Dr)</td><td>CoA থেকে select</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Account (Cr)</td><td>CoA থেকে select</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Amount</td><td>Dr = Cr হতে হবে</td><td><span class="tag green">Yes</span></td></tr>
+        <tr><td>Party (Customer/Vendor)</td><td>Ledger reconciliation এর জন্য</td><td><span class="tag amber">Optional</span></td></tr>
+        <tr><td>Cost Center</td><td>Department-wise tracking</td><td><span class="tag amber">Optional</span></td></tr>
+        <tr><td>Attachment</td><td>Scan of voucher/invoice</td><td><span class="tag amber">Optional</span></td></tr>
+        <tr><td>Status</td><td>Draft / Posted / Reversed</td><td><span class="tag green">Auto</span></td></tr>
+        <tr><td>Created By / Approved By</td><td>Audit trail</td><td><span class="tag green">Auto</span></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 6: DATABASE DESIGN -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title page-break">
+    <div class="icon">🗄️</div>
+    ৬. Database Schema Design
+  </div>
+
+  <div class="grid-2">
+    <div class="card" style="font-size:11px;">
+      <h3>📦 Table: <code>journal_vouchers</code></h3>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+        <tr><td>id</td><td>BIGINT PK</td><td>Primary Key</td></tr>
+        <tr><td>voucher_no</td><td>VARCHAR UNIQUE</td><td>JV-2026-0001</td></tr>
+        <tr><td>voucher_date</td><td>DATE</td><td>Transaction date</td></tr>
+        <tr><td>journal_type</td><td>ENUM</td><td>receipt/payment/general...</td></tr>
+        <tr><td>reference_no</td><td>VARCHAR NULL</td><td>Cheque/Invoice ref</td></tr>
+        <tr><td>narration</td><td>TEXT</td><td>Description</td></tr>
+        <tr><td>total_amount</td><td>DECIMAL(15,2)</td><td>Total Dr = Total Cr</td></tr>
+        <tr><td>status</td><td>ENUM</td><td>draft/posted/reversed</td></tr>
+        <tr><td>fiscal_year</td><td>VARCHAR</td><td>2025-2026</td></tr>
+        <tr><td>period</td><td>VARCHAR</td><td>2026-04</td></tr>
+        <tr><td>created_by</td><td>FK → users</td><td>Who created</td></tr>
+        <tr><td>approved_by</td><td>FK → users NULL</td><td>Who approved</td></tr>
+        <tr><td>posted_at</td><td>TIMESTAMP NULL</td><td>When posted</td></tr>
+        <tr><td>reversed_by</td><td>FK NULL</td><td>Reversal voucher</td></tr>
+      </table>
+    </div>
+    <div class="card" style="font-size:11px;">
+      <h3>📦 Table: <code>journal_entries</code> (Line Items)</h3>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+        <tr><td>id</td><td>BIGINT PK</td><td>Primary Key</td></tr>
+        <tr><td>voucher_id</td><td>FK → journal_vouchers</td><td>Parent voucher</td></tr>
+        <tr><td>account_id</td><td>FK → chart_of_accounts</td><td>Which account</td></tr>
+        <tr><td>type</td><td>ENUM('dr','cr')</td><td>Debit or Credit</td></tr>
+        <tr><td>amount</td><td>DECIMAL(15,2)</td><td>Amount</td></tr>
+        <tr><td>party_type</td><td>VARCHAR NULL</td><td>Customer/Vendor</td></tr>
+        <tr><td>party_id</td><td>BIGINT NULL</td><td>Who (polymorphic)</td></tr>
+        <tr><td>cost_center_id</td><td>FK NULL</td><td>Department</td></tr>
+        <tr><td>description</td><td>VARCHAR NULL</td><td>Line description</td></tr>
+      </table>
+
+      <h3 style="margin-top:16px;">📦 Table: <code>chart_of_accounts</code></h3>
+      <table>
+        <tr><th>Column</th><th>Type</th><th>Purpose</th></tr>
+        <tr><td>id</td><td>BIGINT PK</td><td></td></tr>
+        <tr><td>code</td><td>VARCHAR UNIQUE</td><td>1110, 5210...</td></tr>
+        <tr><td>name</td><td>VARCHAR</td><td>Cash in Hand</td></tr>
+        <tr><td>type</td><td>ENUM</td><td>asset/liability/equity/income/expense</td></tr>
+        <tr><td>parent_id</td><td>FK self NULL</td><td>Hierarchical structure</td></tr>
+        <tr><td>is_active</td><td>BOOLEAN</td><td></td></tr>
+        <tr><td>normal_balance</td><td>ENUM('dr','cr')</td><td>Default balance side</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 7: REPORTS -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">📊</div>
+    ৭. Financial Reports — Journal থেকে কী রিপোর্ট পাবেন?
+  </div>
+
+  <div class="grid-3">
+    <div class="concept-box blue card">
+      <h4>📒 General Ledger</h4>
+      <p>প্রতিটি account-এর সব transactions chronologically। Balance running হয়।</p>
+      <div style="margin-top:8px;"><span class="tag blue">Account-wise</span> <span class="tag blue">Date Filter</span></div>
+    </div>
+    <div class="concept-box green card">
+      <h4>⚖️ Trial Balance</h4>
+      <p>সব account-এর Total Dr vs Total Cr। দুটো সমান হলে books balanced।</p>
+      <div style="margin-top:8px;"><span class="tag green">Monthly</span> <span class="tag green">Yearly</span></div>
+    </div>
+    <div class="concept-box amber card">
+      <h4>💹 Profit & Loss</h4>
+      <p>Income − Expenses = Net Profit/Loss। Revenue vs খরচের হিসাব।</p>
+      <div style="margin-top:8px;"><span class="tag amber">Monthly</span> <span class="tag amber">Quarterly</span></div>
+    </div>
+    <div class="concept-box red card">
+      <h4>🏦 Balance Sheet</h4>
+      <p>Assets = Liabilities + Equity। একটি নির্দিষ্ট তারিখে company-র financial position।</p>
+      <div style="margin-top:8px;"><span class="tag red">Year End</span> <span class="tag red">Period End</span></div>
+    </div>
+    <div class="concept-box purple card">
+      <h4>💰 Cash Flow Statement</h4>
+      <p>Cash কোথায় থেকে এলো, কোথায় গেলো। Operating, Investing, Financing।</p>
+      <div style="margin-top:8px;"><span class="tag purple">Monthly</span></div>
+    </div>
+    <div class="concept-box blue card" style="background:#f0fdf4;border-color:#22c55e;">
+      <h4>👥 Party Ledger</h4>
+      <p>নির্দিষ্ট Customer বা Vendor-এর সাথে সব লেনদেন ও outstanding balance।</p>
+      <div style="margin-top:8px;"><span class="tag green">Receivable</span> <span class="tag red">Payable</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 8: IMPLEMENTATION ROADMAP -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title page-break">
+    <div class="icon">🗺️</div>
+    ৮. Implementation Roadmap — Laravel / EPAL ERP
+  </div>
+
+  <div class="phase">
+    <div class="phase-item p1">
+      <div class="phase-label">Phase 1</div>
+      <div class="phase-title">Foundation</div>
+      <div class="phase-time">Week 1–2</div>
+    </div>
+    <div class="phase-item p2">
+      <div class="phase-label">Phase 2</div>
+      <div class="phase-title">Core Journal</div>
+      <div class="phase-time">Week 3–4</div>
+    </div>
+    <div class="phase-item p3">
+      <div class="phase-label">Phase 3</div>
+      <div class="phase-title">Integration</div>
+      <div class="phase-time">Week 5–6</div>
+    </div>
+    <div class="phase-item p4">
+      <div class="phase-label">Phase 4</div>
+      <div class="phase-title">Reports</div>
+      <div class="phase-time">Week 7–8</div>
+    </div>
+    <div class="phase-item p5">
+      <div class="phase-label">Phase 5</div>
+      <div class="phase-title">Advanced</div>
+      <div class="phase-time">Week 9+</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px;">
+    <div class="card">
+      <h3><span class="tag blue">Phase 1</span> Foundation Setup (Week 1–2)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Chart of Accounts Module</h4>
+            <p>Migration: <code>chart_of_accounts</code> table, seeder দিয়ে default CoA, CRUD UI (tree view), parent-child hierarchy</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Fiscal Year & Period Setup</h4>
+            <p>Fiscal year define, accounting period lock/unlock feature, period closing mechanism</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Opening Balance Entry</h4>
+            <p>Business শুরুতে সব account-এর opening balance enter করার সুবিধা</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Permissions & Roles</h4>
+            <p>journal.view, journal.create, journal.approve, journal.post, journal.reverse permissions</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag green">Phase 2</span> Core Journal Engine (Week 3–4)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Journal Voucher CRUD</h4>
+            <p>Create/Edit/View Journal Voucher, dynamic line items (Dr/Cr), real-time balance check</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Validation Logic</h4>
+            <p>Dr = Cr enforce, account active check, period open check, duplicate entry prevention</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Approval Workflow</h4>
+            <p>Draft → Submit → Approve → Post states, email/notification on approval</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Journal Reversal</h4>
+            <p>Posted journal reverse করার feature, reversal journal auto-create with reference</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag amber">Phase 3</span> Module Integration (Week 5–6)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Sales → Auto Journal</h4>
+            <p>Invoice post হলে → Dr: AR, Cr: Sales Revenue — auto journal create</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Purchase → Auto Journal</h4>
+            <p>Purchase bill → Dr: Stock/Expense, Cr: AP. Payment → Dr: AP, Cr: Bank</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Payment/Receipt Integration</h4>
+            <p>Bank module, cash module এর সাথে sync। Bank reconciliation support।</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Payroll → Auto Journal</h4>
+            <p>Salary process করলে → Dr: Salary Expense, Cr: Bank/Cash auto journal</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="tag purple">Phase 4</span> Reports & Analytics (Week 7–8)</h3>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>General Ledger Report</h4>
+            <p>Account/date filter, running balance, export to PDF/Excel</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Trial Balance</h4>
+            <p>All accounts, Dr vs Cr totals, net balance, period filter</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Profit & Loss Statement</h4>
+            <p>Revenue - Expenses = Net Profit, comparative view, department-wise</p>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num"></div>
+          <div class="step-content">
+            <h4>Balance Sheet</h4>
+            <p>Assets = Liabilities + Equity, hierarchical view, period comparison</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="card" style="border: 2px solid #7c3aed;">
+    <h3><span class="tag purple">Phase 5</span> Advanced Features (Week 9+)</h3>
+    <div class="grid-3">
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">🔄 Recurring Journals</h4>
+        <p style="font-size:11px;">Template তৈরি করুন, frequency set করুন (daily/weekly/monthly), auto-create হবে</p>
+      </div>
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">🏢 Multi-Company / Branch</h4>
+        <p style="font-size:11px;">আলাদা company বা branch-এর জন্য আলাদা books, inter-company journal</p>
+      </div>
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">💱 Multi-Currency</h4>
+        <p style="font-size:11px;">Foreign currency transactions, exchange gain/loss auto-calculate</p>
+      </div>
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">📊 Budget vs Actual</h4>
+        <p style="font-size:11px;">Budget define করুন, actual spending compare করুন, variance report</p>
+      </div>
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">🔒 Audit Trail</h4>
+        <p style="font-size:11px;">কে কখন কী change করেছে সম্পূর্ণ log, tamper-proof</p>
+      </div>
+      <div>
+        <h4 style="color:#7c3aed;font-size:12px;margin-bottom:6px;">📤 Export / API</h4>
+        <p style="font-size:11px;">Tax authority, external accounting software এর সাথে data exchange</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 9: BEST PRACTICES -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">✅</div>
+    ৯. Best Practices & Common Mistakes
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="color:#15803d;">✅ করণীয় (Do's)</h3>
+      <ul style="padding-left:16px;font-size:12px;line-height:2;">
+        <li>প্রতিটি জার্নালে স্পষ্ট narration লিখুন</li>
+        <li>Source document attach করুন (scan/photo)</li>
+        <li>Posted journal delete না করে Reverse করুন</li>
+        <li>নিয়মিত Bank Reconciliation করুন</li>
+        <li>মাস শেষে Period Lock করুন</li>
+        <li>Approval workflow মেনে চলুন</li>
+        <li>Double-check করুন Dr = Cr সবসময়</li>
+        <li>Year-end Closing Entries দিন</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="color:#dc2626;">❌ করবেন না (Don'ts)</h3>
+      <ul style="padding-left:16px;font-size:12px;line-height:2;">
+        <li>Posted journal সরাসরি edit/delete করবেন না</li>
+        <li>Wrong account-এ entry করবেন না (always verify CoA)</li>
+        <li>Backdated entry নিয়মিত করবেন না</li>
+        <li>Cash ও Bank mix করবেন না</li>
+        <li>Personal expense company account-এ দেবেন না</li>
+        <li>Period close করার পর entry করবেন না</li>
+        <li>Same voucher duplicate করবেন না</li>
+        <li>Approval ছাড়া large entries post করবেন না</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SECTION 10: LARAVEL FILE STRUCTURE -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="section-title">
+    <div class="icon">📁</div>
+    ১০. Laravel File Structure (EPAL ERP)
+  </div>
+
+  <div class="card" style="font-family:monospace;font-size:11px;background:#1e293b;color:#e2e8f0;padding:20px 24px;border-radius:12px;">
+    <div style="color:#94a3b8;margin-bottom:12px;">// Proposed file structure for Journal Module</div>
+    <div style="color:#60a5fa;">app/Http/Controllers/Accounts/</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── ChartOfAccountController.php</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── JournalVoucherController.php</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── JournalApprovalController.php</div>
+    <div style="padding-left:20px;color:#a78bfa;">└── Reports/</div>
+    <div style="padding-left:40px;color:#34d399;">├── GeneralLedgerController.php</div>
+    <div style="padding-left:40px;color:#34d399;">├── TrialBalanceController.php</div>
+    <div style="padding-left:40px;color:#34d399;">├── ProfitLossController.php</div>
+    <div style="padding-left:40px;color:#34d399;">└── BalanceSheetController.php</div>
+    <br>
+    <div style="color:#60a5fa;">app/Models/</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── ChartOfAccount.php</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── JournalVoucher.php</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── JournalEntry.php (line items)</div>
+    <div style="padding-left:20px;color:#a78bfa;">└── FiscalYear.php</div>
+    <br>
+    <div style="color:#60a5fa;">app/Services/Accounts/</div>
+    <div style="padding-left:20px;color:#fbbf24;">├── JournalService.php       <span style="color:#64748b;">// business logic</span></div>
+    <div style="padding-left:20px;color:#fbbf24;">├── LedgerService.php        <span style="color:#64748b;">// ledger calculations</span></div>
+    <div style="padding-left:20px;color:#fbbf24;">└── AutoJournalService.php   <span style="color:#64748b;">// for Sales/Purchase auto-journal</span></div>
+    <br>
+    <div style="color:#60a5fa;">database/migrations/</div>
+    <div style="padding-left:20px;color:#34d399;">├── create_chart_of_accounts_table.php</div>
+    <div style="padding-left:20px;color:#34d399;">├── create_journal_vouchers_table.php</div>
+    <div style="padding-left:20px;color:#34d399;">└── create_journal_entries_table.php</div>
+    <br>
+    <div style="color:#60a5fa;">resources/views/accounts/journals/</div>
+    <div style="padding-left:20px;color:#a78bfa;">├── index.blade.php   <span style="color:#64748b;">// list view</span></div>
+    <div style="padding-left:20px;color:#a78bfa;">├── create.blade.php  <span style="color:#64748b;">// new entry form</span></div>
+    <div style="padding-left:20px;color:#a78bfa;">├── show.blade.php    <span style="color:#64748b;">// view + print</span></div>
+    <div style="padding-left:20px;color:#a78bfa;">└── reports/</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- Summary -->
+  <div class="card" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 2px solid #22c55e;">
+    <h3 style="color:#15803d;font-size:16px;margin-bottom:12px;">🎯 সারসংক্ষেপ — মূল কথা</h3>
+    <div class="grid-3">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:4px;">কেউ টাকা দিলে:</div>
+        <div style="font-size:11px;background:white;padding:8px;border-radius:6px;">
+          <span class="dr">Dr: Cash/Bank</span><br>
+          <span class="cr">Cr: Party / Income</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:4px;">আপনি কাউকে দিলে:</div>
+        <div style="font-size:11px;background:white;padding:8px;border-radius:6px;">
+          <span class="dr">Dr: Party / Expense</span><br>
+          <span class="cr">Cr: Cash/Bank</span>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:4px;">সবসময় মনে রাখুন:</div>
+        <div style="font-size:11px;background:white;padding:8px;border-radius:6px;">
+          Total Dr = Total Cr<br>
+          <span style="color:#94a3b8;">এটাই double-entry নিয়ম</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <strong>EPAL ERP — Journal Management Roadmap</strong><br>
+    Prepared by EPAL IT Solutions · April 2026 · epalitsolutions.eng@gmail.com<br>
+    <span style="color:#cbd5e1;">This document is confidential and intended for internal use only.</span>
+  </footer>
+
+</div>
+</body>
+</html>

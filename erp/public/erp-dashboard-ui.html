@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPAL ERP – Modern Dashboard UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --indigo:#4f46e5;--violet:#7c3aed;--pink:#ec4899;
+  --slate-900:#0f172a;--slate-800:#1e293b;--slate-700:#334155;
+  --slate-600:#475569;--slate-500:#64748b;--slate-400:#94a3b8;
+  --slate-300:#cbd5e1;--slate-200:#e2e8f0;--slate-100:#f1f5f9;--slate-50:#f8fafc;
+  --green:#22c55e;--red:#ef4444;--amber:#f59e0b;--blue:#3b82f6;
+  --teal:#14b8a6;--orange:#f97316;--emerald:#10b981;--rose:#f43f5e;
+  --cyan:#06b6d4;--lime:#84cc16;--purple:#a855f7;
+}
+body{font-family:'Inter',sans-serif;background:var(--slate-50);color:var(--slate-800);font-size:14px;line-height:1.5;}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:60px;
+  background:white;border-bottom:1px solid var(--slate-200);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.06);
+}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--indigo),var(--violet));display:flex;align-items:center;justify-content:center;color:white;font-weight:900;font-size:13px;}
+.logo-text{font-size:16px;font-weight:800;color:var(--slate-900);}
+.logo-text span{color:var(--indigo);}
+.topbar-search{display:flex;align-items:center;gap:8px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:10px;padding:7px 14px;width:260px;}
+.topbar-search input{border:none;background:transparent;outline:none;font-size:13px;color:var(--slate-700);width:100%;}
+.topbar-search input::placeholder{color:var(--slate-400);}
+.topbar-right{display:flex;align-items:center;gap:8px;}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--slate-100);border:1px solid var(--slate-200);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;color:var(--slate-600);font-size:15px;transition:.2s;}
+.icon-btn:hover{background:var(--slate-200);}
+.notif-badge{position:absolute;top:6px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--red);border:2px solid white;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;background:var(--slate-100);border:1px solid var(--slate-200);border-radius:999px;cursor:pointer;}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--indigo),var(--violet));display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:11px;}
+.user-name{font-size:12px;font-weight:600;color:var(--slate-700);}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  position:fixed;top:60px;left:0;bottom:0;width:220px;
+  background:var(--slate-900);overflow-y:auto;z-index:90;
+  padding:16px 0;
+}
+.sidebar::-webkit-scrollbar{width:4px;}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:4px;}
+.sidebar-section{margin-bottom:4px;}
+.sidebar-label{font-size:9px;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:1.5px;text-transform:uppercase;padding:10px 18px 4px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 18px;font-size:12px;font-weight:500;color:rgba(255,255,255,.6);cursor:pointer;transition:.15s;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,.06);color:white;}
+.nav-item.active{background:rgba(79,70,229,.2);color:white;border-left-color:var(--indigo);}
+.nav-icon{width:16px;text-align:center;font-size:13px;flex-shrink:0;}
+.nav-badge{margin-left:auto;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;}
+
+/* ── MAIN CONTENT ── */
+.main{margin-left:220px;margin-top:60px;padding:24px;min-height:calc(100vh - 60px);}
+
+/* ── NOTICE MARQUEE ── */
+.notice-bar{
+  display:flex;align-items:center;background:#fefce8;
+  border:1px solid #fef08a;border-radius:10px;
+  overflow:hidden;margin-bottom:20px;
+}
+.notice-tag{background:var(--amber);color:white;font-size:11px;font-weight:700;padding:7px 14px;white-space:nowrap;flex-shrink:0;}
+.notice-scroll{overflow:hidden;flex:1;padding:0 16px;}
+.notice-track{display:inline-block;white-space:nowrap;animation:marquee 28s linear infinite;font-size:12px;color:var(--slate-700);font-weight:500;}
+.notice-track:hover{animation-play-state:paused;}
+@keyframes marquee{0%{transform:translateX(100%)}100%{transform:translateX(-100%)}}
+
+/* ── WELCOME BANNER ── */
+.welcome-banner{
+  background:linear-gradient(135deg,var(--indigo) 0%,var(--violet) 50%,var(--pink) 100%);
+  border-radius:20px;padding:28px 32px;color:white;
+  margin-bottom:24px;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.welcome-banner::before{content:'';position:absolute;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,.06);top:-100px;right:-80px;}
+.welcome-banner::after{content:'';position:absolute;width:200px;height:200px;border-radius:50%;background:rgba(255,255,255,.04);bottom:-80px;left:200px;}
+.wb-left{}
+.wb-greeting{font-size:13px;opacity:.8;margin-bottom:4px;}
+.wb-name{font-size:26px;font-weight:800;margin-bottom:6px;}
+.wb-sub{font-size:12px;opacity:.7;}
+.wb-right{text-align:right;position:relative;z-index:1;}
+.wb-clock{font-size:32px;font-weight:800;letter-spacing:-1px;}
+.wb-date{font-size:12px;opacity:.7;margin-top:2px;}
+.wb-pills{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+.wb-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 12px;font-size:11px;font-weight:600;}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:13px;font-weight:700;color:var(--slate-500);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--slate-200);}
+
+/* ── KPI CARDS ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.kpi-card{
+  background:white;border-radius:16px;padding:20px;
+  border:1px solid var(--slate-200);
+  box-shadow:0 1px 3px rgba(0,0,0,.04);
+  position:relative;overflow:hidden;
+  transition:box-shadow .2s,transform .2s;
+}
+.kpi-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-1px);}
+.kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
+.kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.kpi-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;}
+.kpi-num{font-size:28px;font-weight:800;color:var(--slate-900);line-height:1;}
+.kpi-label{font-size:12px;color:var(--slate-500);margin-top:4px;font-weight:500;}
+.kpi-bar{height:3px;background:var(--slate-100);border-radius:3px;margin-top:12px;overflow:hidden;}
+.kpi-bar-fill{height:100%;border-radius:3px;}
+.kpi-card::before{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+
+/* ── PAYROLL / FINANCE CARDS ── */
+.finance-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+.finance-card{
+  border-radius:16px;padding:22px;color:white;
+  position:relative;overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.12);
+}
+.finance-card::before{content:'';position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.1);top:-40px;right:-30px;}
+.finance-card::after{content:'';position:absolute;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.06);bottom:-20px;left:20px;}
+.fc-icon{font-size:24px;margin-bottom:12px;position:relative;z-index:1;opacity:.8;}
+.fc-label{font-size:12px;opacity:.8;margin-bottom:4px;position:relative;z-index:1;font-weight:500;}
+.fc-amount{font-size:24px;font-weight:800;position:relative;z-index:1;}
+.fc-sub{font-size:11px;opacity:.6;margin-top:4px;position:relative;z-index:1;}
+
+/* ── CHART SECTION ── */
+.charts-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px;}
+.chart-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--slate-200);box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.chart-title{font-size:14px;font-weight:700;color:var(--slate-900);}
+.chart-subtitle{font-size:11px;color:var(--slate-400);margin-top:2px;}
+.chart-badge{font-size:11px;color:var(--slate-500);background:var(--slate-100);border:1px solid var(--slate-200);padding:4px 10px;border-radius:999px;}
+
+/* BAR CHART */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:8px;}
+.bar-group{flex:1;display:flex;gap:2px;align-items:flex-end;}
+.bar{border-radius:4px 4px 0 0;flex:1;transition:.3s;}
+.bar-labels{display:flex;gap:6px;margin-top:8px;}
+.bar-label{flex:1;text-align:center;font-size:10px;color:var(--slate-400);font-weight:500;}
+
+/* PIE CHART */
+.pie-wrap{display:flex;align-items:center;justify-content:center;padding:8px;}
+.pie{width:100px;height:100px;border-radius:50%;}
+.pie-legend{margin-top:12px;}
+.pie-leg-item{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--slate-600);margin-bottom:6px;}
+.pie-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* LINE CHART SIMPLE */
+.sparkline{display:flex;align-items:flex-end;gap:3px;height:60px;}
+.spark-bar{flex:1;border-radius:3px 3px 0 0;opacity:.85;}
+
+/* ── 3-COLUMN LOWER SECTION ── */
+.lower-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;}
+.info-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--slate-200);box-shadow:0 1px 3px rgba(0,0,0,.04);}
+
+/* ── ATTENDANCE TABLE ── */
+.att-table{width:100%;border-collapse:collapse;}
+.att-table th{font-size:11px;font-weight:600;color:var(--slate-500);text-align:left;padding:8px 12px;background:var(--slate-50);border-bottom:1px solid var(--slate-200);}
+.att-table td{font-size:12px;padding:10px 12px;border-bottom:1px solid var(--slate-100);vertical-align:middle;}
+.att-table tr:last-child td{border-bottom:none;}
+.att-avatar{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;}
+.att-name{font-weight:600;color:var(--slate-800);font-size:12px;}
+.att-role{font-size:10px;color:var(--slate-400);}
+.status-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;}
+
+/* ── ACTIVITY FEED ── */
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--slate-100);}
+.activity-item:last-child{border-bottom:none;}
+.act-dot-wrap{display:flex;flex-direction:column;align-items:center;gap:0;}
+.act-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px;}
+.act-line{width:1px;flex:1;background:var(--slate-200);margin-top:4px;}
+.act-body{flex:1;}
+.act-title{font-size:12px;font-weight:600;color:var(--slate-700);}
+.act-sub{font-size:11px;color:var(--slate-400);margin-top:1px;}
+.act-time{font-size:10px;color:var(--slate-400);margin-top:3px;}
+
+/* ── QUICK ACTIONS ── */
+.qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.qa-item{background:var(--slate-50);border:1px solid var(--slate-200);border-radius:12px;padding:14px 10px;text-align:center;cursor:pointer;transition:.2s;}
+.qa-item:hover{background:white;border-color:var(--indigo);box-shadow:0 2px 8px rgba(79,70,229,.1);}
+.qa-icon{width:36px;height:36px;border-radius:10px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.qa-label{font-size:11px;font-weight:600;color:var(--slate-700);}
+
+/* ── AIR TICKET MODULE ── */
+.ticket-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--slate-100);align-items:center;}
+.ticket-item:last-child{border-bottom:none;}
+.ticket-route{flex:1;}
+.ticket-from-to{font-size:13px;font-weight:700;color:var(--slate-800);display:flex;align-items:center;gap:6px;}
+.ticket-arrow{font-size:11px;color:var(--slate-400);}
+.ticket-meta{font-size:10px;color:var(--slate-400);margin-top:2px;}
+.ticket-amount{font-size:13px;font-weight:700;color:var(--slate-800);text-align:right;}
+.ticket-date{font-size:10px;color:var(--slate-400);text-align:right;}
+
+/* ── PAYROLL TABLE ── */
+.payroll-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-100);}
+.payroll-row:last-child{border-bottom:none;}
+.payroll-avatar{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white;flex-shrink:0;}
+.payroll-info{flex:1;}
+.payroll-name{font-size:12px;font-weight:600;color:var(--slate-800);}
+.payroll-dept{font-size:10px;color:var(--slate-400);}
+.payroll-amount{font-size:13px;font-weight:700;color:var(--slate-800);}
+.payroll-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-top:2px;display:inline-block;}
+
+/* ── ACCOUNTING SUMMARY ── */
+.acc-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--slate-100);}
+.acc-item:last-child{border-bottom:none;}
+.acc-left{display:flex;align-items:center;gap:10px;}
+.acc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.acc-account{font-size:12px;font-weight:600;color:var(--slate-700);}
+.acc-type{font-size:10px;color:var(--slate-400);}
+.acc-balance{font-size:13px;font-weight:700;}
+
+/* ── PASSPORT/VISA ── */
+.visa-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-100);}
+.visa-item:last-child{border-bottom:none;}
+.visa-flag{width:32px;height:24px;border-radius:4px;object-fit:cover;background:var(--slate-200);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.visa-info{flex:1;}
+.visa-name{font-size:12px;font-weight:600;color:var(--slate-800);}
+.visa-type{font-size:10px;color:var(--slate-400);}
+.visa-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;}
+
+/* ── CRM ── */
+.crm-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--slate-100);}
+.crm-item:last-child{border-bottom:none;}
+.crm-stage{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.crm-lead{font-size:12px;font-weight:600;color:var(--slate-800);flex:1;}
+.crm-val{font-size:12px;font-weight:700;color:var(--emerald);}
+.crm-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:999px;}
+
+/* ── MARKETING ── */
+.marketing-stat{text-align:center;padding:12px;}
+.ms-num{font-size:22px;font-weight:800;color:var(--slate-900);}
+.ms-label{font-size:11px;color:var(--slate-400);margin-top:2px;}
+.ms-bar{height:4px;border-radius:4px;margin-top:8px;background:var(--slate-100);overflow:hidden;}
+.ms-fill{height:100%;border-radius:4px;}
+
+/* ── TASK BOARD ── */
+.task-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.task-col-head{font-size:11px;font-weight:700;padding:8px 12px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.task-card{background:white;border:1px solid var(--slate-200);border-radius:10px;padding:10px 12px;margin-bottom:6px;box-shadow:0 1px 2px rgba(0,0,0,.04);}
+.task-title{font-size:12px;font-weight:600;color:var(--slate-800);margin-bottom:6px;}
+.task-meta{display:flex;align-items:center;justify-content:space-between;}
+.task-avatars{display:flex;gap:-2px;}
+.task-av{width:18px;height:18px;border-radius:50%;background:var(--indigo);border:1.5px solid white;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:white;margin-left:-4px;}
+.task-av:first-child{margin-left:0;}
+.task-prio{font-size:9px;font-weight:700;padding:2px 6px;border-radius:999px;}
+
+/* ── SUPPORT TICKETS ── */
+.ticket-support-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--slate-100);align-items:flex-start;}
+.ticket-support-item:last-child{border-bottom:none;}
+.ts-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.ts-title{font-size:12px;font-weight:600;color:var(--slate-800);}
+.ts-meta{font-size:10px;color:var(--slate-400);margin-top:2px;}
+.ts-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:auto;flex-shrink:0;}
+
+/* ── BOTTOM STATS ROW ── */
+.bottom-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
+.bs-card{background:white;border-radius:14px;padding:16px;border:1px solid var(--slate-200);text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.bs-icon{width:40px;height:40px;border-radius:11px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:17px;}
+.bs-num{font-size:20px;font-weight:800;color:var(--slate-900);}
+.bs-label{font-size:11px;color:var(--slate-400);margin-top:2px;}
+
+/* ── CHAT BUBBLE ── */
+.chat-bubble{
+  position:fixed;bottom:24px;right:24px;
+  width:48px;height:48px;border-radius:50%;
+  background:linear-gradient(135deg,var(--indigo),var(--violet));
+  color:white;font-size:20px;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(79,70,229,.4);
+  cursor:pointer;z-index:999;
+}
+.chat-badge{position:absolute;top:-2px;right:-2px;width:18px;height:18px;border-radius:50%;background:var(--red);color:white;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid white;}
+
+/* ── PRINT ── */
+@media print{
+  .topbar,.sidebar,.chat-bubble{display:none!important;}
+  .main{margin:0;padding:16px;}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .kpi-card,.finance-card,.chart-card,.info-card,.bs-card{break-inside:avoid;}
+  .welcome-banner,.notice-bar{break-inside:avoid;}
+  body{background:white;}
+}
+
+@media(max-width:1200px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr);}
+  .charts-grid{grid-template-columns:1fr;}
+  .lower-grid{grid-template-columns:1fr 1fr;}
+  .bottom-stats{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">
+      <div class="logo-icon">E</div>
+      <div class="logo-text">EPAL <span>ERP</span></div>
+    </div>
+    <div class="topbar-search">
+      <svg width="14" height="14" fill="none" stroke="#94a3b8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search modules, employees...">
+    </div>
+  </div>
+  <div class="topbar-right">
+    <div class="icon-btn" title="Notifications">
+      🔔
+      <div class="notif-badge"></div>
+    </div>
+    <div class="icon-btn" title="Messages">💬</div>
+    <div class="icon-btn" title="Settings">⚙️</div>
+    <div class="user-chip">
+      <div class="user-avatar">OH</div>
+      <div class="user-name">Omit Hasan</div>
+      <span style="font-size:10px;color:#94a3b8;margin-left:2px;">▾</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SIDEBAR ══ -->
+<div class="sidebar">
+  <div class="sidebar-section">
+    <div class="nav-item active"><span class="nav-icon">🏠</span> Dashboard</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Human Resources</div>
+    <div class="nav-item"><span class="nav-icon">👥</span> Employees</div>
+    <div class="nav-item"><span class="nav-icon">📅</span> Attendance</div>
+    <div class="nav-item"><span class="nav-icon">🏖️</span> Leaves <span class="nav-badge" style="background:#fef2f2;color:#dc2626;">5</span></div>
+    <div class="nav-item"><span class="nav-icon">🕐</span> Shifts</div>
+    <div class="nav-item"><span class="nav-icon">🎉</span> Holidays</div>
+    <div class="nav-item"><span class="nav-icon">📁</span> Departments</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Payroll</div>
+    <div class="nav-item"><span class="nav-icon">💵</span> Salaries</div>
+    <div class="nav-item"><span class="nav-icon">🧾</span> Payslips</div>
+    <div class="nav-item"><span class="nav-icon">💳</span> Advance Salary</div>
+    <div class="nav-item"><span class="nav-icon">🏦</span> Loans</div>
+    <div class="nav-item"><span class="nav-icon">📊</span> Commissions</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Accounting</div>
+    <div class="nav-item"><span class="nav-icon">📒</span> Journal Entries</div>
+    <div class="nav-item"><span class="nav-icon">🏛️</span> Chart of Accounts</div>
+    <div class="nav-item"><span class="nav-icon">🏦</span> Banks</div>
+    <div class="nav-item"><span class="nav-icon">🧾</span> Vouchers</div>
+    <div class="nav-item"><span class="nav-icon">📈</span> Reports</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Air Ticket</div>
+    <div class="nav-item"><span class="nav-icon">✈️</span> Ticket Sales</div>
+    <div class="nav-item"><span class="nav-icon">🛒</span> Ticket Purchase</div>
+    <div class="nav-item"><span class="nav-icon">🛫</span> Airports</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Passport & Visa</div>
+    <div class="nav-item"><span class="nav-icon">🛂</span> Passport Holders</div>
+    <div class="nav-item"><span class="nav-icon">📄</span> Visa Processing <span class="nav-badge" style="background:#fef3c7;color:#d97706;">3</span></div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Inventory</div>
+    <div class="nav-item"><span class="nav-icon">📦</span> Products</div>
+    <div class="nav-item"><span class="nav-icon">🛒</span> Sales</div>
+    <div class="nav-item"><span class="nav-icon">🚚</span> Purchases</div>
+    <div class="nav-item"><span class="nav-icon">📊</span> Stock</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">CRM</div>
+    <div class="nav-item"><span class="nav-icon">🎯</span> Leads <span class="nav-badge" style="background:#eff6ff;color:#2563eb;">12</span></div>
+    <div class="nav-item"><span class="nav-icon">🤝</span> Deals</div>
+    <div class="nav-item"><span class="nav-icon">📋</span> Contracts</div>
+    <div class="nav-item"><span class="nav-icon">🎫</span> Support Tickets</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Tasks & Projects</div>
+    <div class="nav-item"><span class="nav-icon">✅</span> Tasks</div>
+    <div class="nav-item"><span class="nav-icon">🗂️</span> Boards</div>
+    <div class="nav-item"><span class="nav-icon">🏗️</span> Projects</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Marketing</div>
+    <div class="nav-item"><span class="nav-icon">📱</span> SMS Campaign</div>
+    <div class="nav-item"><span class="nav-icon">📧</span> Email Campaign</div>
+    <div class="nav-item"><span class="nav-icon">💚</span> WhatsApp</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Settings</div>
+    <div class="nav-item"><span class="nav-icon">🏢</span> Company</div>
+    <div class="nav-item"><span class="nav-icon">🔐</span> Roles & Permissions</div>
+    <div class="nav-item"><span class="nav-icon">⚙️</span> Configuration</div>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Notice Bar -->
+  <div class="notice-bar">
+    <div class="notice-tag">📢 Notice</div>
+    <div class="notice-scroll">
+      <div class="notice-track">
+        &nbsp;&nbsp;&nbsp;&nbsp; 📌 Office will remain closed on April 21 for public holiday &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        📌 Salary for April will be processed by 25th April &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        📌 New attendance policy effective from May 1, 2025 &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        📌 All employees must submit Q1 performance reports by April 30
+      </div>
+    </div>
+  </div>
+
+  <!-- Welcome Banner -->
+  <div class="welcome-banner">
+    <div class="wb-left">
+      <div class="wb-greeting">Good Morning 👋</div>
+      <div class="wb-name">Omit Hasan</div>
+      <div class="wb-sub">Admin &nbsp;·&nbsp; EPAL IT Solutions &nbsp;·&nbsp; Saturday, April 19, 2025</div>
+      <div class="wb-pills">
+        <div class="wb-pill">✅ 28 Present Today</div>
+        <div class="wb-pill">⚠️ 5 Pending Leaves</div>
+        <div class="wb-pill">✈️ 3 Tickets Pending</div>
+        <div class="wb-pill">📊 Apr 2025 Period</div>
+      </div>
+    </div>
+    <div class="wb-right">
+      <div class="wb-clock" id="live-clock">09:42:15 AM</div>
+      <div class="wb-date">Live System Clock</div>
+    </div>
+  </div>
+
+  <!-- ── KPI ROW 1: HR ── -->
+  <div class="section-title">HR & Attendance Overview</div>
+  <div class="kpi-grid" style="margin-bottom:16px;">
+
+    <div class="kpi-card" style="border-top:3px solid #3b82f6;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#dbeafe;">👥</div>
+        <span class="kpi-badge" style="background:#dbeafe;color:#2563eb;">+2 New</span>
+      </div>
+      <div class="kpi-num">48</div>
+      <div class="kpi-label">Total Employees</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:80%;background:#3b82f6;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #22c55e;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#dcfce7;">✅</div>
+        <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">91.7%</span>
+      </div>
+      <div class="kpi-num">44</div>
+      <div class="kpi-label">Present Today</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:91.7%;background:#22c55e;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #ef4444;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#fef2f2;">❌</div>
+        <span class="kpi-badge" style="background:#fef2f2;color:#dc2626;">8.3%</span>
+      </div>
+      <div class="kpi-num">4</div>
+      <div class="kpi-label">Absent Today</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:8.3%;background:#ef4444;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #f59e0b;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#fef3c7;">🏖️</div>
+        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;">Active</span>
+      </div>
+      <div class="kpi-num">5</div>
+      <div class="kpi-label">On Leave</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:10%;background:#f59e0b;"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ── KPI ROW 2: FINANCE ── -->
+  <div class="section-title">Accounting & Finance</div>
+  <div class="kpi-grid" style="margin-bottom:16px;">
+
+    <div class="kpi-card" style="border-top:3px solid #10b981;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#d1fae5;">💹</div>
+        <span class="kpi-badge" style="background:#d1fae5;color:#059669;">+12%</span>
+      </div>
+      <div class="kpi-num" style="font-size:22px;">৳2,45,800</div>
+      <div class="kpi-label">Total Income (Apr)</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:72%;background:#10b981;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #ef4444;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#fef2f2;">💸</div>
+        <span class="kpi-badge" style="background:#fef2f2;color:#dc2626;">-3%</span>
+      </div>
+      <div class="kpi-num" style="font-size:22px;">৳1,12,300</div>
+      <div class="kpi-label">Total Expense (Apr)</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:46%;background:#ef4444;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #4f46e5;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#ede9fe;">📊</div>
+        <span class="kpi-badge" style="background:#ede9fe;color:#4f46e5;">Net</span>
+      </div>
+      <div class="kpi-num" style="font-size:22px;">৳1,33,500</div>
+      <div class="kpi-label">Net Profit (Apr)</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:55%;background:#4f46e5;"></div></div>
+    </div>
+
+    <div class="kpi-card" style="border-top:3px solid #14b8a6;">
+      <div class="kpi-top">
+        <div class="kpi-icon" style="background:#ccfbf1;">🏦</div>
+        <span class="kpi-badge" style="background:#ccfbf1;color:#0d9488;">Live</span>
+      </div>
+      <div class="kpi-num" style="font-size:22px;">৳8,92,000</div>
+      <div class="kpi-label">Bank Balance</div>
+      <div class="kpi-bar"><div class="kpi-bar-fill" style="width:88%;background:#14b8a6;"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ── KPI ROW 3: PAYROLL ── -->
+  <div class="section-title">Payroll Summary</div>
+  <div class="finance-grid" style="margin-bottom:24px;">
+
+    <div class="finance-card" style="background:linear-gradient(135deg,#dc2626,#be185d);">
+      <div class="fc-icon">⚖️</div>
+      <div class="fc-label">Total Liability</div>
+      <div class="fc-amount">৳3,45,200</div>
+      <div class="fc-sub">Cumulative balance</div>
+    </div>
+
+    <div class="finance-card" style="background:linear-gradient(135deg,#f97316,#eab308);">
+      <div class="fc-icon">💳</div>
+      <div class="fc-label">Total Payable (Salary)</div>
+      <div class="fc-amount">৳2,18,600</div>
+      <div class="fc-sub">April 2025 payroll</div>
+    </div>
+
+    <div class="finance-card" style="background:linear-gradient(135deg,#059669,#0d9488);">
+      <div class="fc-icon">💰</div>
+      <div class="fc-label">Total Receivable</div>
+      <div class="fc-amount">৳1,67,400</div>
+      <div class="fc-sub">Accounts receivable</div>
+    </div>
+
+  </div>
+
+  <!-- ── CHARTS ROW ── -->
+  <div class="section-title">Analytics</div>
+  <div class="charts-grid">
+
+    <!-- Attendance Chart -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Attendance Overview</div>
+          <div class="chart-subtitle">Present vs Absent — April 2025</div>
+        </div>
+        <span class="chart-badge">Apr 2025</span>
+      </div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bar" style="height:85%;background:#4f46e5;"></div><div class="bar" style="height:15%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:90%;background:#4f46e5;"></div><div class="bar" style="height:10%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:80%;background:#4f46e5;"></div><div class="bar" style="height:20%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:95%;background:#4f46e5;"></div><div class="bar" style="height:5%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:75%;background:#4f46e5;"></div><div class="bar" style="height:25%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:88%;background:#4f46e5;"></div><div class="bar" style="height:12%;background:#fca5a5;"></div></div>
+        <div class="bar-group"><div class="bar" style="height:70%;background:#7c3aed;"></div><div class="bar" style="height:30%;background:#fca5a5;"></div></div>
+      </div>
+      <div class="bar-labels">
+        <div class="bar-label">Mon</div>
+        <div class="bar-label">Tue</div>
+        <div class="bar-label">Wed</div>
+        <div class="bar-label">Thu</div>
+        <div class="bar-label">Fri</div>
+        <div class="bar-label">Sat</div>
+        <div class="bar-label">Sun</div>
+      </div>
+      <div style="display:flex;gap:16px;margin-top:12px;">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;"><div style="width:10px;height:10px;border-radius:2px;background:#4f46e5;"></div>Present</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;"><div style="width:10px;height:10px;border-radius:2px;background:#fca5a5;"></div>Absent</div>
+      </div>
+    </div>
+
+    <!-- Income vs Expense Pie -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Income vs Expense</div>
+          <div class="chart-subtitle">April 2025</div>
+        </div>
+      </div>
+      <div class="pie-wrap">
+        <div class="pie" style="background:conic-gradient(#10b981 0deg 216deg, #ef4444 216deg 330deg, #f59e0b 330deg 360deg);box-shadow:0 4px 16px rgba(0,0,0,.1);"></div>
+      </div>
+      <div class="pie-legend">
+        <div class="pie-leg-item"><div class="pie-dot" style="background:#10b981;"></div><span style="flex:1;">Income</span><strong>৳2,45,800</strong></div>
+        <div class="pie-leg-item"><div class="pie-dot" style="background:#ef4444;"></div><span style="flex:1;">Expense</span><strong>৳1,12,300</strong></div>
+        <div class="pie-leg-item"><div class="pie-dot" style="background:#f59e0b;"></div><span style="flex:1;">Payroll</span><strong>৳18,400</strong></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── AIR TICKET + PAYROLL + ACCOUNTING ── -->
+  <div class="section-title">Air Ticket · Payroll · Accounting</div>
+  <div class="lower-grid">
+
+    <!-- Air Ticket Module -->
+    <div class="info-card">
+      <div class="chart-header" style="margin-bottom:12px;">
+        <div>
+          <div class="chart-title">✈️ Air Ticket</div>
+          <div class="chart-subtitle">Recent ticket activity</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span class="kpi-badge" style="background:#eff6ff;color:#2563eb;font-size:10px;padding:3px 8px;border-radius:999px;">12 Sales</span>
+          <span class="kpi-badge" style="background:#f0fdf4;color:#16a34a;font-size:10px;padding:3px 8px;border-radius:999px;">৳98,400</span>
+        </div>
+      </div>
+      <div class="ticket-item">
+        <div style="width:36px;height:36px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✈️</div>
+        <div class="ticket-route">
+          <div class="ticket-from-to">DAC <span class="ticket-arrow">→</span> DXB</div>
+          <div class="ticket-meta">Emirates · Apr 22 · Economy</div>
+        </div>
+        <div>
+          <div class="ticket-amount">৳32,500</div>
+          <div class="ticket-date"><span class="status-badge" style="background:#dcfce7;color:#16a34a;">Sold</span></div>
+        </div>
+      </div>
+      <div class="ticket-item">
+        <div style="width:36px;height:36px;border-radius:10px;background:#fef3c7;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✈️</div>
+        <div class="ticket-route">
+          <div class="ticket-from-to">DAC <span class="ticket-arrow">→</span> KUL</div>
+          <div class="ticket-meta">MAS Air · Apr 28 · Business</div>
+        </div>
+        <div>
+          <div class="ticket-amount">৳68,000</div>
+          <div class="ticket-date"><span class="status-badge" style="background:#fef3c7;color:#d97706;">Pending</span></div>
+        </div>
+      </div>
+      <div class="ticket-item">
+        <div style="width:36px;height:36px;border-radius:10px;background:#fce7f3;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✈️</div>
+        <div class="ticket-route">
+          <div class="ticket-from-to">CGP <span class="ticket-arrow">→</span> RUH</div>
+          <div class="ticket-meta">Saudia · May 02 · Economy</div>
+        </div>
+        <div>
+          <div class="ticket-amount">৳28,900</div>
+          <div class="ticket-date"><span class="status-badge" style="background:#fef2f2;color:#dc2626;">Purchased</span></div>
+        </div>
+      </div>
+      <div class="ticket-item">
+        <div style="width:36px;height:36px;border-radius:10px;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✈️</div>
+        <div class="ticket-route">
+          <div class="ticket-from-to">DAC <span class="ticket-arrow">→</span> SIN</div>
+          <div class="ticket-meta">SQ · May 10 · Economy</div>
+        </div>
+        <div>
+          <div class="ticket-amount">৳41,200</div>
+          <div class="ticket-date"><span class="status-badge" style="background:#dcfce7;color:#16a34a;">Sold</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Payroll Module -->
+    <div class="info-card">
+      <div class="chart-header" style="margin-bottom:12px;">
+        <div>
+          <div class="chart-title">💵 Payroll — April 2025</div>
+          <div class="chart-subtitle">Employee salary status</div>
+        </div>
+        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;font-size:10px;padding:3px 8px;border-radius:999px;">6 Pending</span>
+      </div>
+      <div class="payroll-row">
+        <div class="payroll-avatar" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);">R</div>
+        <div class="payroll-info">
+          <div class="payroll-name">Rafiqul Islam</div>
+          <div class="payroll-dept">Senior Developer</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="payroll-amount">৳55,000</div>
+          <div class="payroll-status" style="background:#dcfce7;color:#16a34a;">Paid</div>
+        </div>
+      </div>
+      <div class="payroll-row">
+        <div class="payroll-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e);">S</div>
+        <div class="payroll-info">
+          <div class="payroll-name">Sultana Begum</div>
+          <div class="payroll-dept">HR Manager</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="payroll-amount">৳42,000</div>
+          <div class="payroll-status" style="background:#dcfce7;color:#16a34a;">Paid</div>
+        </div>
+      </div>
+      <div class="payroll-row">
+        <div class="payroll-avatar" style="background:linear-gradient(135deg,#f59e0b,#f97316);">K</div>
+        <div class="payroll-info">
+          <div class="payroll-name">Kamal Hossain</div>
+          <div class="payroll-dept">Accounts Officer</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="payroll-amount">৳38,500</div>
+          <div class="payroll-status" style="background:#fef3c7;color:#d97706;">Pending</div>
+        </div>
+      </div>
+      <div class="payroll-row">
+        <div class="payroll-avatar" style="background:linear-gradient(135deg,#10b981,#0d9488);">N</div>
+        <div class="payroll-info">
+          <div class="payroll-name">Nasrin Akter</div>
+          <div class="payroll-dept">Sales Executive</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="payroll-amount">৳32,000</div>
+          <div class="payroll-status" style="background:#fef3c7;color:#d97706;">Pending</div>
+        </div>
+      </div>
+      <div class="payroll-row">
+        <div class="payroll-avatar" style="background:linear-gradient(135deg,#8b5cf6,#6366f1);">T</div>
+        <div class="payroll-info">
+          <div class="payroll-name">Tanvir Ahmed</div>
+          <div class="payroll-dept">Ticket Officer</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="payroll-amount">৳28,000</div>
+          <div class="payroll-status" style="background:#dcfce7;color:#16a34a;">Paid</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Accounting Module -->
+    <div class="info-card">
+      <div class="chart-header" style="margin-bottom:12px;">
+        <div>
+          <div class="chart-title">📒 Chart of Accounts</div>
+          <div class="chart-subtitle">Account balances summary</div>
+        </div>
+        <span class="kpi-badge" style="background:#ede9fe;color:#7c3aed;font-size:10px;padding:3px 8px;border-radius:999px;">Live</span>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#3b82f6;"></div>
+          <div><div class="acc-account">Cash & Bank</div><div class="acc-type">Asset</div></div>
+        </div>
+        <div class="acc-balance" style="color:#059669;">৳8,92,000</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#10b981;"></div>
+          <div><div class="acc-account">Accounts Receivable</div><div class="acc-type">Asset</div></div>
+        </div>
+        <div class="acc-balance" style="color:#059669;">৳1,67,400</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#ef4444;"></div>
+          <div><div class="acc-account">Accounts Payable</div><div class="acc-type">Liability</div></div>
+        </div>
+        <div class="acc-balance" style="color:#dc2626;">৳2,18,600</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#f59e0b;"></div>
+          <div><div class="acc-account">Total Liability</div><div class="acc-type">Liability</div></div>
+        </div>
+        <div class="acc-balance" style="color:#dc2626;">৳3,45,200</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#4f46e5;"></div>
+          <div><div class="acc-account">Revenue (Apr)</div><div class="acc-type">Income</div></div>
+        </div>
+        <div class="acc-balance" style="color:#059669;">৳2,45,800</div>
+      </div>
+      <div class="acc-item">
+        <div class="acc-left">
+          <div class="acc-dot" style="background:#ec4899;"></div>
+          <div><div class="acc-account">Operating Expense</div><div class="acc-type">Expense</div></div>
+        </div>
+        <div class="acc-balance" style="color:#dc2626;">৳1,12,300</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── ATTENDANCE TABLE + ACTIVITY + QUICK ACTIONS ── -->
+  <div class="section-title">Today's Attendance · Activity · Quick Actions</div>
+  <div class="lower-grid">
+
+    <!-- Attendance Table -->
+    <div class="info-card">
+      <div class="chart-title" style="margin-bottom:12px;">📋 Attendance Report — Today</div>
+      <table class="att-table">
+        <thead>
+          <tr>
+            <th>Employee</th>
+            <th>Check In</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="att-avatar" style="background:linear-gradient(135deg,#4f46e5,#7c3aed);">R</div>
+                <div><div class="att-name">Rafiqul Islam</div><div class="att-role">Developer</div></div>
+              </div>
+            </td>
+            <td style="font-size:12px;font-weight:600;">09:02 AM</td>
+            <td><span class="status-badge" style="background:#dcfce7;color:#16a34a;">Present</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="att-avatar" style="background:linear-gradient(135deg,#ec4899,#f43f5e);">S</div>
+                <div><div class="att-name">Sultana Begum</div><div class="att-role">HR Manager</div></div>
+              </div>
+            </td>
+            <td style="font-size:12px;font-weight:600;">09:18 AM</td>
+            <td><span class="status-badge" style="background:#fef3c7;color:#d97706;">Late</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="att-avatar" style="background:linear-gradient(135deg,#10b981,#0d9488);">K</div>
+                <div><div class="att-name">Kamal Hossain</div><div class="att-role">Accountant</div></div>
+              </div>
+            </td>
+            <td style="font-size:12px;color:#94a3b8;">--:--</td>
+            <td><span class="status-badge" style="background:#fef2f2;color:#dc2626;">Absent</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="att-avatar" style="background:linear-gradient(135deg,#f59e0b,#f97316);">T</div>
+                <div><div class="att-name">Tanvir Ahmed</div><div class="att-role">Ticket Officer</div></div>
+              </div>
+            </td>
+            <td style="font-size:12px;font-weight:600;">08:55 AM</td>
+            <td><span class="status-badge" style="background:#dcfce7;color:#16a34a;">Present</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="att-avatar" style="background:linear-gradient(135deg,#8b5cf6,#4f46e5);">N</div>
+                <div><div class="att-name">Nasrin Akter</div><div class="att-role">Sales Exec</div></div>
+              </div>
+            </td>
+            <td style="font-size:12px;color:#94a3b8;">On Leave</td>
+            <td><span class="status-badge" style="background:#eff6ff;color:#2563eb;">Leave</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Activity Feed -->
+    <div class="info-card">
+      <div class="chart-title" style="margin-bottom:12px;">⚡ Recent Activity</div>
+      <div class="activity-item">
+        <div class="act-dot-wrap"><div class="act-dot" style="background:#22c55e;"></div><div class="act-line"></div></div>
+        <div class="act-body">
+          <div class="act-title">Rafiqul Islam checked in</div>
+          <div class="act-sub">Present · Morning Shift</div>
+          <div class="act-time">Today, 09:02 AM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot-wrap"><div class="act-dot" style="background:#4f46e5;"></div><div class="act-line"></div></div>
+        <div class="act-body">
+          <div class="act-title">New ticket sale — DAC → DXB</div>
+          <div class="act-sub">Emirates · ৳32,500</div>
+          <div class="act-time">Today, 08:45 AM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot-wrap"><div class="act-dot" style="background:#f59e0b;"></div><div class="act-line"></div></div>
+        <div class="act-body">
+          <div class="act-title">Leave approved — Nasrin Akter</div>
+          <div class="act-sub">Sick Leave · Apr 19–20</div>
+          <div class="act-time">Yesterday, 05:30 PM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot-wrap"><div class="act-dot" style="background:#ec4899;"></div><div class="act-line"></div></div>
+        <div class="act-body">
+          <div class="act-title">Visa processing — Saudi Arabia</div>
+          <div class="act-sub">3 applications submitted</div>
+          <div class="act-time">Yesterday, 02:15 PM</div>
+        </div>
+      </div>
+      <div class="activity-item">
+        <div class="act-dot-wrap"><div class="act-dot" style="background:#14b8a6;"></div></div>
+        <div class="act-body">
+          <div class="act-title">Journal entry posted — Apr payroll</div>
+          <div class="act-sub">Accounts · ৳2,18,600</div>
+          <div class="act-time">Yesterday, 01:00 PM</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="info-card">
+      <div class="chart-title" style="margin-bottom:14px;">🚀 Quick Actions</div>
+      <div class="qa-grid">
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#dbeafe;">📅</div>
+          <div class="qa-label">Apply Leave</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#dcfce7;">👆</div>
+          <div class="qa-label">Attendance</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#ede9fe;">✅</div>
+          <div class="qa-label">My Tasks</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#fef3c7;">🎫</div>
+          <div class="qa-label">Support</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#fce7f3;">✈️</div>
+          <div class="qa-label">New Ticket</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#ccfbf1;">🧾</div>
+          <div class="qa-label">Payslip</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#fef2f2;">🛂</div>
+          <div class="qa-label">Visa Apply</div>
+        </div>
+        <div class="qa-item">
+          <div class="qa-icon" style="background:#f1f5f9;">📊</div>
+          <div class="qa-label">Reports</div>
+        </div>
+      </div>
+
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9;">
+        <div class="chart-title" style="font-size:12px;margin-bottom:10px;">🎫 Support Tickets</div>
+        <div class="ticket-support-item">
+          <div class="ts-icon" style="background:#fef2f2;">🔴</div>
+          <div>
+            <div class="ts-title">Login issue — Portal users</div>
+            <div class="ts-meta">High priority · 2h ago</div>
+          </div>
+          <span class="ts-status" style="background:#fef3c7;color:#d97706;">Open</span>
+        </div>
+        <div class="ticket-support-item">
+          <div class="ts-icon" style="background:#eff6ff;">🔵</div>
+          <div>
+            <div class="ts-title">Payslip download error</div>
+            <div class="ts-meta">Medium · 5h ago</div>
+          </div>
+          <span class="ts-status" style="background:#eff6ff;color:#2563eb;">In Progress</span>
+        </div>
+        <div class="ticket-support-item">
+          <div class="ts-icon" style="background:#f0fdf4;">🟢</div>
+          <div>
+            <div class="ts-title">Attendance sync fixed</div>
+            <div class="ts-meta">Low · Yesterday</div>
+          </div>
+          <span class="ts-status" style="background:#dcfce7;color:#16a34a;">Resolved</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── PASSPORT/VISA + CRM LEADS + MARKETING ── -->
+  <div class="section-title">Passport & Visa · CRM Leads · Marketing</div>
+  <div class="lower-grid">
+
+    <!-- Passport & Visa -->
+    <div class="info-card">
+      <div class="chart-header" style="margin-bottom:12px;">
+        <div>
+          <div class="chart-title">🛂 Passport & Visa Processing</div>
+          <div class="chart-subtitle">Active applications</div>
+        </div>
+        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;font-size:10px;padding:3px 8px;border-radius:999px;">3 Active</span>
+      </div>
+      <div class="visa-item">
+        <div class="visa-flag">🇸🇦</div>
+        <div class="visa-info">
+          <div class="visa-name">Mohammad Alam</div>
+          <div class="visa-type">Saudi Arabia · Work Visa</div>
+        </div>
+        <span class="visa-status" style="background:#fef3c7;color:#d97706;">Processing</span>
+      </div>
+      <div class="visa-item">
+        <div class="visa-flag">🇦🇪</div>
+        <div class="visa-info">
+          <div class="visa-name">Fatema Khatun</div>
+          <div class="visa-type">UAE · Visit Visa</div>
+        </div>
+        <span class="visa-status" style="background:#dcfce7;color:#16a34a;">Approved</span>
+      </div>
+      <div class="visa-item">
+        <div class="visa-flag">🇲🇾</div>
+        <div class="visa-info">
+          <div class="visa-name">Jamal Uddin</div>
+          <div class="visa-type">Malaysia · Work Permit</div>
+        </div>
+        <span class="visa-status" style="background:#fef2f2;color:#dc2626;">Pending</span>
+      </div>
+      <div class="visa-item">
+        <div class="visa-flag">🇸🇬</div>
+        <div class="visa-info">
+          <div class="visa-name">Rahela Begum</div>
+          <div class="visa-type">Singapore · Student Visa</div>
+        </div>
+        <span class="visa-status" style="background:#eff6ff;color:#2563eb;">Submitted</span>
+      </div>
+    </div>
+
+    <!-- CRM Leads -->
+    <div class="info-card">
+      <div class="chart-header" style="margin-bottom:12px;">
+        <div>
+          <div class="chart-title">🎯 CRM Leads Pipeline</div>
+          <div class="chart-subtitle">Active deals & leads</div>
+        </div>
+        <span class="kpi-badge" style="background:#eff6ff;color:#2563eb;font-size:10px;padding:3px 8px;border-radius:999px;">12 Active</span>
+      </div>
+      <div class="crm-item">
+        <div class="crm-stage" style="background:#f59e0b;"></div>
+        <div class="crm-lead">TechCorp BD Ltd — ERP Package</div>
+        <div style="text-align:right;">
+          <div class="crm-val">৳1,20,000</div>
+          <span class="crm-badge" style="background:#fef3c7;color:#d97706;">Negotiation</span>
+        </div>
+      </div>
+      <div class="crm-item">
+        <div class="crm-stage" style="background:#4f46e5;"></div>
+        <div class="crm-lead">Alam Travels — Air Ticket Contract</div>
+        <div style="text-align:right;">
+          <div class="crm-val">৳85,000</div>
+          <span class="crm-badge" style="background:#ede9fe;color:#4f46e5;">Proposal</span>
+        </div>
+      </div>
+      <div class="crm-item">
+        <div class="crm-stage" style="background:#22c55e;"></div>
+        <div class="crm-lead">Dhaka Pharma — Visa Services</div>
+        <div style="text-align:right;">
+          <div class="crm-val">৳45,000</div>
+          <span class="crm-badge" style="background:#dcfce7;color:#16a34a;">Won</span>
+        </div>
+      </div>
+      <div class="crm-item">
+        <div class="crm-stage" style="background:#ec4899;"></div>
+        <div class="crm-lead">Star Group — HR Solution</div>
+        <div style="text-align:right;">
+          <div class="crm-val">৳2,50,000</div>
+          <span class="crm-badge" style="background:#fce7f3;color:#be185d;">Qualified</span>
+        </div>
+      </div>
+      <div class="crm-item">
+        <div class="crm-stage" style="background:#ef4444;"></div>
+        <div class="crm-lead">City Hospital — Payroll Setup</div>
+        <div style="text-align:right;">
+          <div class="crm-val">৳95,000</div>
+          <span class="crm-badge" style="background:#fef2f2;color:#dc2626;">Lost</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marketing -->
+    <div class="info-card">
+      <div class="chart-title" style="margin-bottom:14px;">📣 Marketing Campaigns</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border:1px solid #f1f5f9;border-radius:10px;overflow:hidden;margin-bottom:14px;">
+        <div class="marketing-stat" style="border-right:1px solid #f1f5f9;">
+          <div class="ms-num" style="color:#2563eb;">📱</div>
+          <div class="ms-num">1,240</div>
+          <div class="ms-label">SMS Sent</div>
+          <div class="ms-bar"><div class="ms-fill" style="width:62%;background:#3b82f6;"></div></div>
+        </div>
+        <div class="marketing-stat" style="border-right:1px solid #f1f5f9;">
+          <div class="ms-num" style="color:#d97706;">📧</div>
+          <div class="ms-num">856</div>
+          <div class="ms-label">Emails</div>
+          <div class="ms-bar"><div class="ms-fill" style="width:43%;background:#f59e0b;"></div></div>
+        </div>
+        <div class="marketing-stat">
+          <div class="ms-num" style="color:#16a34a;">💚</div>
+          <div class="ms-num">412</div>
+          <div class="ms-label">WhatsApp</div>
+          <div class="ms-bar"><div class="ms-fill" style="width:21%;background:#22c55e;"></div></div>
+        </div>
+      </div>
+
+      <div class="chart-title" style="font-size:12px;margin-bottom:10px;">📦 Inventory Snapshot</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#16a34a;">142</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">Products in Stock</div>
+        </div>
+        <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#2563eb;">28</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">Sales This Month</div>
+        </div>
+        <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#d97706;">৳3,82,400</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">Sales Revenue</div>
+        </div>
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#dc2626;">7</div>
+          <div style="font-size:10px;color:#64748b;margin-top:2px;">Low Stock Alert</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── TASK BOARD ── -->
+  <div class="section-title">Task Board</div>
+  <div class="info-card" style="margin-bottom:24px;">
+    <div class="chart-header" style="margin-bottom:14px;">
+      <div class="chart-title">🗂️ Active Board — April Sprint</div>
+      <span class="chart-badge">24 Tasks</span>
+    </div>
+    <div class="task-grid">
+      <div>
+        <div class="task-col-head" style="background:#f1f5f9;color:#475569;">Todo <span style="background:white;padding:1px 7px;border-radius:999px;font-size:10px;">8</span></div>
+        <div class="task-card">
+          <div class="task-title">Setup payroll module integration</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av">R</div><div class="task-av">S</div></div>
+            <span class="task-prio" style="background:#fef3c7;color:#d97706;">Medium</span>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-title">Update visa processing workflow</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av">K</div></div>
+            <span class="task-prio" style="background:#fef2f2;color:#dc2626;">High</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="task-col-head" style="background:#eff6ff;color:#2563eb;">In Progress <span style="background:white;padding:1px 7px;border-radius:999px;font-size:10px;">6</span></div>
+        <div class="task-card">
+          <div class="task-title">Air ticket module dashboard widget</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av" style="background:#ec4899;">T</div></div>
+            <span class="task-prio" style="background:#fef2f2;color:#dc2626;">High</span>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-title">Monthly report generation feature</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av" style="background:#10b981;">N</div><div class="task-av">R</div></div>
+            <span class="task-prio" style="background:#fef3c7;color:#d97706;">Medium</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="task-col-head" style="background:#fef3c7;color:#d97706;">Review <span style="background:white;padding:1px 7px;border-radius:999px;font-size:10px;">4</span></div>
+        <div class="task-card">
+          <div class="task-title">CRM lead pipeline UI redesign</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av" style="background:#f59e0b;">S</div></div>
+            <span class="task-prio" style="background:#dcfce7;color:#16a34a;">Low</span>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-title">SMS campaign template update</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av" style="background:#8b5cf6;">K</div></div>
+            <span class="task-prio" style="background:#fef3c7;color:#d97706;">Medium</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="task-col-head" style="background:#f0fdf4;color:#16a34a;">Done <span style="background:white;padding:1px 7px;border-radius:999px;font-size:10px;">6</span></div>
+        <div class="task-card">
+          <div class="task-title">Attendance report bug fix</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av" style="background:#22c55e;">R</div></div>
+            <span class="task-prio" style="background:#dcfce7;color:#16a34a;">Done</span>
+          </div>
+        </div>
+        <div class="task-card">
+          <div class="task-title">Payslip PDF generation fixed</div>
+          <div class="task-meta">
+            <div class="task-avatars"><div class="task-av">T</div></div>
+            <span class="task-prio" style="background:#dcfce7;color:#16a34a;">Done</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM ALL-MODULE STATS ── -->
+  <div class="section-title">All Module Overview</div>
+  <div class="bottom-stats">
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#dbeafe;">👥</div>
+      <div class="bs-num">48</div>
+      <div class="bs-label">Total Employees</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#fce7f3;">✈️</div>
+      <div class="bs-num">12</div>
+      <div class="bs-label">Tickets This Month</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#ccfbf1;">🛂</div>
+      <div class="bs-num">7</div>
+      <div class="bs-label">Visa Applications</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#ede9fe;">🎯</div>
+      <div class="bs-num">12</div>
+      <div class="bs-label">Active CRM Leads</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#dcfce7;">📦</div>
+      <div class="bs-num">142</div>
+      <div class="bs-label">Products in Stock</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#fef3c7;">💵</div>
+      <div class="bs-num">৳2.18L</div>
+      <div class="bs-label">Payroll Payable</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#fee2e2;">📒</div>
+      <div class="bs-num">৳8.92L</div>
+      <div class="bs-label">Bank Balance</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#f3e8ff;">✅</div>
+      <div class="bs-num">24</div>
+      <div class="bs-label">Active Tasks</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#fef2f2;">🎫</div>
+      <div class="bs-num">3</div>
+      <div class="bs-label">Open Tickets</div>
+    </div>
+    <div class="bs-card">
+      <div class="bs-icon" style="background:#eff6ff;">📣</div>
+      <div class="bs-num">2,508</div>
+      <div class="bs-label">Marketing Reach</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align:center;padding:20px 0 32px;border-top:1px solid #e2e8f0;margin-top:8px;">
+    <div style="font-size:13px;font-weight:700;color:#4f46e5;">EPAL ERP System</div>
+    <div style="font-size:11px;color:#94a3b8;margin-top:4px;">All modules in one view · Modern UI Example · April 2025</div>
+    <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">epalitsolutions.eng@gmail.com</div>
+  </div>
+
+</div>
+
+<!-- Chat Bubble -->
+<div class="chat-bubble">
+  💬
+  <div class="chat-badge">4</div>
+</div>
+
+<script>
+  function updateClock(){
+    const now = new Date();
+    const t = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    const el = document.getElementById('live-clock');
+    if(el) el.textContent = t;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+</script>
+</body>
+</html>

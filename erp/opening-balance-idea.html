@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Opening Balance Entry – Idea Mockup</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; font-size: 14px; }
+
+  /* ── Page header ── */
+  .page-header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+    color: #fff; padding: 28px 36px;
+  }
+  .page-header h1 { font-size: 22px; font-weight: 700; }
+  .page-header p  { opacity: .8; margin-top: 4px; font-size: 13px; }
+
+  .container { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+
+  /* ── Info banner ── */
+  .info-box {
+    background: #eff6ff; border: 1px solid #bfdbfe;
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 28px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .info-box i { color: #2563eb; font-size: 18px; margin-top: 2px; }
+  .info-box p { line-height: 1.6; color: #1d4ed8; font-size: 13px; }
+
+  /* ── Tabs ── */
+  .tab-nav {
+    display: flex; gap: 0; border-radius: 10px 10px 0 0;
+    overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  }
+  .tab-btn {
+    flex: 1; padding: 14px 10px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600; display: flex;
+    align-items: center; justify-content: center; gap: 7px;
+    transition: all .2s;
+  }
+  .tab-btn.receivable { background: #e0f2fe; color: #0369a1; }
+  .tab-btn.payable    { background: #fef3c7; color: #92400e; }
+  .tab-btn.asset      { background: #d1fae5; color: #065f46; }
+  .tab-btn.active.receivable { background: #0369a1; color: #fff; }
+  .tab-btn.active.payable    { background: #d97706; color: #fff; }
+  .tab-btn.active.asset      { background: #059669; color: #fff; }
+
+  /* ── Card ── */
+  .tab-card {
+    background: #fff; border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    padding: 28px; display: none;
+  }
+  .tab-card.active { display: block; }
+
+  .card-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card-desc { color: #64748b; font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 12px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: .4px; }
+  label span.req { color: #ef4444; }
+  .form-control {
+    border: 1.5px solid #e2e8f0; border-radius: 7px; padding: 9px 12px;
+    font-size: 13px; outline: none; transition: border .2s; background: #f8fafc;
+  }
+  .form-control:focus { border-color: #3b82f6; background: #fff; }
+
+  /* ── Row table for multiple entries ── */
+  .entries-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .entries-table th {
+    background: #f1f5f9; padding: 8px 10px; text-align: left;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    color: #64748b; border-bottom: 2px solid #e2e8f0;
+  }
+  .entries-table td { padding: 8px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .entries-table td input, .entries-table td select {
+    width: 100%; border: 1.5px solid #e2e8f0; border-radius: 6px;
+    padding: 6px 8px; font-size: 13px; background: #f8fafc;
+  }
+  .add-row-btn {
+    margin-top: 10px; padding: 7px 16px; background: #eff6ff;
+    border: 1.5px dashed #93c5fd; color: #2563eb; border-radius: 7px;
+    cursor: pointer; font-size: 13px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .del-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 15px; }
+
+  /* ── Journal Preview ── */
+  .preview-box {
+    border-radius: 8px; padding: 14px 16px; margin-top: 20px;
+    font-size: 13px; border: 1.5px solid;
+  }
+  .preview-box.blue   { background: #eff6ff; border-color: #93c5fd; }
+  .preview-box.yellow { background: #fffbeb; border-color: #fcd34d; }
+  .preview-box.green  { background: #ecfdf5; border-color: #6ee7b7; }
+  .preview-box h4 { font-size: 12px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: .5px; margin-bottom: 10px; }
+  .preview-table { width: 100%; border-collapse: collapse; }
+  .preview-table th { padding: 5px 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .preview-table td { padding: 6px 10px; border-top: 1px solid rgba(0,0,0,.06); }
+  .text-right { text-align: right; }
+  .text-blue  { color: #1d4ed8; font-weight: 600; }
+  .text-green { color: #15803d; font-weight: 600; }
+
+  /* ── Explanation badges ── */
+  .flow-row { display: flex; align-items: center; gap: 10px; margin: 16px 0; flex-wrap: wrap; }
+  .flow-badge {
+    padding: 7px 14px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .flow-arrow { font-size: 20px; color: #94a3b8; }
+  .badge-dr  { background: #dbeafe; color: #1d4ed8; }
+  .badge-cr  { background: #dcfce7; color: #15803d; }
+  .badge-eq  { background: #fef3c7; color: #92400e; }
+
+  /* ── Submit row ── */
+  .submit-row { margin-top: 24px; display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-cancel { padding: 10px 22px; border-radius: 7px; border: 1.5px solid #e2e8f0;
+                background: #f8fafc; color: #64748b; cursor: pointer; font-weight: 600; }
+  .btn-save { padding: 10px 26px; border-radius: 7px; border: none; cursor: pointer;
+              font-weight: 700; color: #fff; display: flex; align-items: center; gap: 7px; }
+  .btn-save.blue   { background: #2563eb; }
+  .btn-save.yellow { background: #d97706; }
+  .btn-save.green  { background: #059669; }
+
+  /* ── Summary section below ── */
+  .section-title {
+    font-size: 16px; font-weight: 700; color: #1e293b;
+    margin: 40px 0 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+  .summary-card {
+    background: #fff; border-radius: 10px; padding: 18px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07); border-left: 4px solid;
+  }
+  .summary-card.blue   { border-color: #2563eb; }
+  .summary-card.yellow { border-color: #d97706; }
+  .summary-card.green  { border-color: #059669; }
+  .summary-card h3 { font-size: 11px; font-weight: 700; text-transform: uppercase;
+                     letter-spacing: .5px; color: #64748b; margin-bottom: 6px; }
+  .summary-card .amount { font-size: 22px; font-weight: 800; }
+  .summary-card.blue   .amount { color: #1d4ed8; }
+  .summary-card.yellow .amount { color: #d97706; }
+  .summary-card.green  .amount { color: #059669; }
+  .summary-card p { font-size: 12px; color: #94a3b8; margin-top: 4px; }
+
+  /* ── Implementation note ── */
+  .impl-note {
+    background: #fff; border-radius: 10px; padding: 22px 26px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 32px;
+  }
+  .impl-note h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; color: #1e293b; }
+  .impl-step {
+    display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start;
+  }
+  .step-num {
+    width: 28px; height: 28px; border-radius: 50%; background: #2563eb;
+    color: #fff; font-weight: 800; font-size: 13px; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+  .impl-step p { line-height: 1.6; color: #475569; font-size: 13px; }
+  .impl-step strong { color: #1e293b; }
+  code {
+    background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px;
+    padding: 1px 6px; font-family: monospace; font-size: 12px; color: #be185d;
+  }
+
+  @media (max-width: 640px) {
+    .form-grid, .summary-grid { grid-template-columns: 1fr; }
+    .tab-btn span.label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1><i class="fas fa-balance-scale" style="margin-right:10px;"></i>Opening Balance Entry — Design Idea</h1>
+  <p>How to add: Customer Receivables · Supplier Payables · Existing Assets &nbsp;|&nbsp; For your ERP Journal Module</p>
+</div>
+
+<div class="container">
+
+  <!-- Info banner -->
+  <div class="info-box">
+    <i class="fas fa-lightbulb"></i>
+    <p>
+      <strong>Concept:</strong> All three flows work the same way — they create a <strong>Journal Entry</strong> using
+      an <strong>"Opening Balance Equity"</strong> account as the counter-entry. This keeps your double-entry
+      books balanced when you enter historical/existing financial data into a fresh accounting system.
+      Each type gets its own dedicated modal button (similar to your existing Credit/Debit Journal buttons).
+    </p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tab-nav">
+    <button class="tab-btn receivable active" onclick="switchTab('receivable')">
+      <i class="fas fa-file-invoice-dollar"></i>
+      <span class="label">Customer Receivables</span>
+    </button>
+    <button class="tab-btn payable" onclick="switchTab('payable')">
+      <i class="fas fa-hand-holding-usd"></i>
+      <span class="label">Supplier Payables</span>
+    </button>
+    <button class="tab-btn asset" onclick="switchTab('asset')">
+      <i class="fas fa-boxes-stacked"></i>
+      <span class="label">Existing Assets</span>
+    </button>
+  </div>
+
+  <!-- ══════════════ TAB 1: CUSTOMER RECEIVABLES ══════════════ -->
+  <div class="tab-card active" id="tab-receivable">
+    <div class="card-title" style="color:#0369a1;">
+      <i class="fas fa-file-invoice-dollar"></i> Add Customer Due Payments (Receivables)
+    </div>
+    <p class="card-desc">
+      Use this when a customer already owes you money — from a previous invoice or credit sale done outside the system.
+      The system will record it as money owed to you (<em>Accounts Receivable</em>) balanced against the
+      <em>Opening Balance Equity</em> account.
+    </p>
+
+    <!-- Accounting flow -->
+    <div class="flow-row">
+      <div class="flow-badge badge-dr"><i class="fas fa-arrow-up"></i> DR — Accounts Receivable</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-badge badge-cr"><i class="fas fa-arrow-down"></i> CR — Opening Balance Equity</div>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Company <span class="req">*</span></label>
+          <select class="form-control">
+            <option>— Select Company —</option>
+            <option>EPAL Solutions Ltd.</option>
+            <option>Visa CRM Division</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>As of Date <span class="req">*</span></label>
+          <input type="date" class="form-control" value="2026-04-26">
+        </div>
+        <div class="form-group">
+          <label>Reference</label>
+          <input type="text" class="form-control" placeholder="e.g. OB-RCV-001" value="OB-RCV-001">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-control" placeholder="Opening receivables as of [date]" value="Opening customer receivables — Apr 2026">
+        </div>
+      </div>
+
+      <!-- Multiple customers table -->
+      <div style="margin-top:20px;">
+        <label style="display:block;margin-bottom:8px;">Customer Due Amounts <span class="req">*</span></label>
+        <table class="entries-table">
+          <thead>
+            <tr>
+              <th style="width:32%">Customer</th>
+              <th style="width:26%">Invoice / Ref No.</th>
+              <th style="width:20%">Amount (৳)</th>
+              <th style="width:18%">Note</th>
+              <th style="width:4%"></th>
+            </tr>
+          </thead>
+          <tbody id="rcv-tbody">
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Customer —</option>
+                <option selected>Ahmed Corporation</option>
+                <option>Rahman & Sons</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="INV-2026-045" placeholder="INV-XXXX"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="25000" placeholder="0.00"></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Outstanding invoice" placeholder="Note"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Customer —</option>
+                <option>Ahmed Corporation</option>
+                <option selected>Rahman & Sons</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="INV-2026-038" placeholder="INV-XXXX"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="18500" placeholder="0.00"></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Partial payment pending" placeholder="Note"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="add-row-btn"><i class="fas fa-plus"></i> Add Another Customer</button>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-box blue">
+        <h4 style="color:#1d4ed8;"><i class="fas fa-eye" style="margin-right:5px;"></i>Journal Entry Preview</h4>
+        <table class="preview-table">
+          <thead>
+            <tr style="background:#dbeafe;">
+              <th style="text-align:left;">Account</th>
+              <th class="text-right">Debit (৳)</th>
+              <th class="text-right">Credit (৳)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>[1100] Accounts Receivable — Ahmed Corporation</td>
+              <td class="text-right text-blue">25,000.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[1100] Accounts Receivable — Rahman & Sons</td>
+              <td class="text-right text-blue">18,500.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[3000] Opening Balance Equity</td>
+              <td class="text-right">—</td>
+              <td class="text-right text-green">43,500.00</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#f0fdf4;font-weight:800;">
+              <td>Total</td>
+              <td class="text-right text-blue">43,500.00</td>
+              <td class="text-right text-green">43,500.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-save blue"><i class="fas fa-save"></i>Save Receivable Entry</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════════ TAB 2: SUPPLIER PAYABLES ══════════════ -->
+  <div class="tab-card" id="tab-payable">
+    <div class="card-title" style="color:#92400e;">
+      <i class="fas fa-hand-holding-usd"></i> Add Supplier Due Amounts (Payables)
+    </div>
+    <p class="card-desc">
+      Use this when you already owe money to a supplier — from a previous purchase or credit bill done outside the system.
+      The system records it as a liability (<em>Accounts Payable</em>) balanced against
+      <em>Opening Balance Equity</em>.
+    </p>
+
+    <!-- Accounting flow -->
+    <div class="flow-row">
+      <div class="flow-badge badge-eq"><i class="fas fa-arrow-up"></i> DR — Opening Balance Equity</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-badge badge-cr"><i class="fas fa-arrow-down"></i> CR — Accounts Payable</div>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Company <span class="req">*</span></label>
+          <select class="form-control">
+            <option>— Select Company —</option>
+            <option selected>EPAL Solutions Ltd.</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>As of Date <span class="req">*</span></label>
+          <input type="date" class="form-control" value="2026-04-26">
+        </div>
+        <div class="form-group">
+          <label>Reference</label>
+          <input type="text" class="form-control" value="OB-PAY-001" placeholder="e.g. OB-PAY-001">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-control" value="Opening supplier payables — Apr 2026">
+        </div>
+      </div>
+
+      <!-- Multiple suppliers table -->
+      <div style="margin-top:20px;">
+        <label style="display:block;margin-bottom:8px;">Supplier Payable Amounts <span class="req">*</span></label>
+        <table class="entries-table">
+          <thead>
+            <tr>
+              <th style="width:32%">Supplier</th>
+              <th style="width:26%">Bill / PO Ref No.</th>
+              <th style="width:20%">Amount (৳)</th>
+              <th style="width:18%">Note</th>
+              <th style="width:4%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Supplier —</option>
+                <option selected>Dhaka Printing Press</option>
+                <option>IT Hardware Ltd.</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="BILL-2026-012" placeholder="BILL-XXXX"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="35000" placeholder="0.00"></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Print materials unpaid" placeholder="Note"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Supplier —</option>
+                <option>Dhaka Printing Press</option>
+                <option selected>IT Hardware Ltd.</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="PO-2026-007" placeholder="PO-XXXX"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="12800" placeholder="0.00"></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Laptop purchase balance" placeholder="Note"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="add-row-btn"><i class="fas fa-plus"></i> Add Another Supplier</button>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-box yellow">
+        <h4 style="color:#92400e;"><i class="fas fa-eye" style="margin-right:5px;"></i>Journal Entry Preview</h4>
+        <table class="preview-table">
+          <thead>
+            <tr style="background:#fef3c7;">
+              <th style="text-align:left;">Account</th>
+              <th class="text-right">Debit (৳)</th>
+              <th class="text-right">Credit (৳)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>[3000] Opening Balance Equity</td>
+              <td class="text-right text-blue">47,800.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[2100] Accounts Payable — Dhaka Printing Press</td>
+              <td class="text-right">—</td>
+              <td class="text-right text-green">35,000.00</td>
+            </tr>
+            <tr>
+              <td>[2100] Accounts Payable — IT Hardware Ltd.</td>
+              <td class="text-right">—</td>
+              <td class="text-right text-green">12,800.00</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#fef9ee;font-weight:800;">
+              <td>Total</td>
+              <td class="text-right text-blue">47,800.00</td>
+              <td class="text-right text-green">47,800.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-save yellow"><i class="fas fa-save"></i>Save Payable Entry</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════════ TAB 3: EXISTING ASSETS ══════════════ -->
+  <div class="tab-card" id="tab-asset">
+    <div class="card-title" style="color:#065f46;">
+      <i class="fas fa-boxes-stacked"></i> Add Existing Assets (Office Materials & Equipment)
+    </div>
+    <p class="card-desc">
+      Use this to record assets you already own — office furniture, computers, vehicles, equipment, etc.
+      Each asset is debited to its <em>Asset Account</em> (e.g. Office Equipment) and balanced against
+      <em>Opening Balance Equity</em>.
+    </p>
+
+    <!-- Accounting flow -->
+    <div class="flow-row">
+      <div class="flow-badge badge-dr"><i class="fas fa-arrow-up"></i> DR — Asset Account (e.g. Office Equipment)</div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-badge badge-cr"><i class="fas fa-arrow-down"></i> CR — Opening Balance Equity</div>
+    </div>
+
+    <form onsubmit="return false;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Company <span class="req">*</span></label>
+          <select class="form-control">
+            <option>— Select Company —</option>
+            <option selected>EPAL Solutions Ltd.</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>As of Date <span class="req">*</span></label>
+          <input type="date" class="form-control" value="2026-04-26">
+        </div>
+        <div class="form-group">
+          <label>Reference</label>
+          <input type="text" class="form-control" value="OB-AST-001" placeholder="e.g. OB-AST-001">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input type="text" class="form-control" value="Opening asset balances — Apr 2026">
+        </div>
+      </div>
+
+      <!-- Multiple assets table -->
+      <div style="margin-top:20px;">
+        <label style="display:block;margin-bottom:8px;">Asset Items <span class="req">*</span></label>
+        <table class="entries-table">
+          <thead>
+            <tr>
+              <th style="width:25%">Asset Account</th>
+              <th style="width:25%">Item / Description</th>
+              <th style="width:12%">Qty</th>
+              <th style="width:18%">Value (৳)</th>
+              <th style="width:16%">Purchase Date</th>
+              <th style="width:4%"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Account —</option>
+                <option selected>[1510] Office Equipment</option>
+                <option>[1520] Furniture & Fixtures</option>
+                <option>[1530] Computer & Peripherals</option>
+                <option>[1540] Vehicles</option>
+                <option>[1550] Office Materials/Supplies</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Dell Laptop (Core i7)" placeholder="Item name"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="2" placeholder="1"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="120000" placeholder="0.00"></td>
+              <td><input type="date" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="2025-01-15"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Account —</option>
+                <option>[1510] Office Equipment</option>
+                <option selected>[1520] Furniture & Fixtures</option>
+                <option>[1530] Computer & Peripherals</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Office Desk & Chair Set" placeholder="Item name"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="5" placeholder="1"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="45000" placeholder="0.00"></td>
+              <td><input type="date" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="2024-06-20"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+            <tr>
+              <td><select style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;">
+                <option>— Select Account —</option>
+                <option>[1510] Office Equipment</option>
+                <option>[1520] Furniture & Fixtures</option>
+                <option selected>[1550] Office Materials/Supplies</option>
+              </select></td>
+              <td><input type="text" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="Stationery & Consumables" placeholder="Item name"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="1" placeholder="1"></td>
+              <td><input type="number" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="8500" placeholder="0.00"></td>
+              <td><input type="date" style="width:100%;border:1.5px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-size:13px;background:#f8fafc;" value="2026-03-01"></td>
+              <td><button class="del-btn"><i class="fas fa-trash-alt"></i></button></td>
+            </tr>
+          </tbody>
+        </table>
+        <button class="add-row-btn"><i class="fas fa-plus"></i> Add Another Asset</button>
+      </div>
+
+      <!-- Preview -->
+      <div class="preview-box green">
+        <h4 style="color:#065f46;"><i class="fas fa-eye" style="margin-right:5px;"></i>Journal Entry Preview</h4>
+        <table class="preview-table">
+          <thead>
+            <tr style="background:#d1fae5;">
+              <th style="text-align:left;">Account</th>
+              <th class="text-right">Debit (৳)</th>
+              <th class="text-right">Credit (৳)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>[1530] Computer & Peripherals — Dell Laptop ×2</td>
+              <td class="text-right text-blue">120,000.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[1520] Furniture & Fixtures — Office Desk & Chair ×5</td>
+              <td class="text-right text-blue">45,000.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[1550] Office Materials — Stationery</td>
+              <td class="text-right text-blue">8,500.00</td>
+              <td class="text-right">—</td>
+            </tr>
+            <tr>
+              <td>[3000] Opening Balance Equity</td>
+              <td class="text-right">—</td>
+              <td class="text-right text-green">173,500.00</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#ecfdf5;font-weight:800;">
+              <td>Total</td>
+              <td class="text-right text-blue">173,500.00</td>
+              <td class="text-right text-green">173,500.00</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-save green"><i class="fas fa-save"></i>Save Asset Entry</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════════ SUMMARY DASHBOARD ══════════════ -->
+  <div class="section-title">
+    <i class="fas fa-chart-pie" style="color:#2563eb;"></i> After Entry — Opening Balance Summary
+  </div>
+  <div class="summary-grid">
+    <div class="summary-card blue">
+      <h3>Total Receivables</h3>
+      <div class="amount">৳ 43,500</div>
+      <p>Money customers owe you</p>
+    </div>
+    <div class="summary-card yellow">
+      <h3>Total Payables</h3>
+      <div class="amount">৳ 47,800</div>
+      <p>Money you owe suppliers</p>
+    </div>
+    <div class="summary-card green">
+      <h3>Total Assets</h3>
+      <div class="amount">৳ 173,500</div>
+      <p>Value of existing assets</p>
+    </div>
+  </div>
+
+  <!-- ══════════════ IMPLEMENTATION PLAN ══════════════ -->
+  <div class="impl-note">
+    <h3><i class="fas fa-code" style="color:#2563eb;margin-right:8px;"></i>How to Implement in Your Laravel ERP</h3>
+
+    <div class="impl-step">
+      <div class="step-num">1</div>
+      <p>
+        <strong>Add "Opening Balance Equity" Account</strong> — Add one special chart-of-accounts entry
+        (e.g. code <code>3000</code>, type <code>equity</code>, name <em>Opening Balance Equity</em>).
+        This is the counter-account for all three journal types. All three features debit/credit against this single account.
+      </p>
+    </div>
+
+    <div class="impl-step">
+      <div class="step-num">2</div>
+      <p>
+        <strong>Add "Accounts Receivable" & "Accounts Payable" Chart of Accounts</strong> — You may need
+        sub-accounts per customer/supplier (code <code>1100</code> for AR, <code>2100</code> for AP) or
+        one shared account if you just track totals. The customer/supplier name goes in the journal item <code>note</code> field.
+      </p>
+    </div>
+
+    <div class="impl-step">
+      <div class="step-num">3</div>
+      <p>
+        <strong>Add 3 New Buttons to Journal Index Header</strong> — Just like your existing
+        <code>Add Credit Journal</code> and <code>Add Debit Journal</code> buttons, add:
+        <em>"Opening Receivable"</em>, <em>"Opening Payable"</em>, <em>"Opening Asset"</em>.
+        Each opens its own modal.
+      </p>
+    </div>
+
+    <div class="impl-step">
+      <div class="step-num">4</div>
+      <p>
+        <strong>Multi-row Modal Form</strong> — Unlike the current single-amount modals, these need a
+        dynamic row table (add/remove rows via JS). Each row collects customer/supplier/asset + amount.
+        On submit, generate journal items: one DR per row + one CR total to the Opening Balance Equity account.
+      </p>
+    </div>
+
+    <div class="impl-step">
+      <div class="step-num">5</div>
+      <p>
+        <strong>Reuse Existing <code>journals.store</code> Route</strong> — No new controller needed.
+        The payload format is the same as your current credit/debit journal. Set <code>source = 'opening_balance'</code>
+        so the journal list shows it with a distinct badge color. Add <code>'opening_balance'</code> to your sources filter list.
+      </p>
+    </div>
+
+    <div class="impl-step">
+      <div class="step-num">6</div>
+      <p>
+        <strong>Receivable Tracking (Optional Enhancement)</strong> — Store <code>customer_id</code>
+        on <code>journal_items</code> table (add a nullable <code>customer_id</code> column via migration).
+        This lets you later build an <em>Aging Report</em> — grouping overdue balances per customer. Same pattern for
+        <code>supplier_id</code> on payable items.
+      </p>
+    </div>
+  </div>
+
+  <!-- Source note -->
+  <p style="text-align:center;color:#94a3b8;font-size:12px;padding-bottom:40px;">
+    Idea mockup for <strong>EPAL ERP</strong> — 26 Apr 2026 &nbsp;·&nbsp;
+    Opening balance entries follow standard double-entry accounting rules.
+  </p>
+
+</div>
+
+<script>
+  function switchTab(name) {
+    ['receivable','payable','asset'].forEach(t => {
+      document.getElementById('tab-' + t).classList.remove('active');
+      document.querySelectorAll('.tab-btn.' + t).forEach(b => b.classList.remove('active'));
+    });
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelector('.tab-btn.' + name).classList.add('active');
+  }
+</script>
+</body>
+</html>

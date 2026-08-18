@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Company-wise Dashboard — Implementation Roadmap</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+  /* ─── Hero ─── */
+  .hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 60%);
+    padding: 60px 40px 40px;
+    border-bottom: 1px solid #1e293b;
+    text-align: center;
+  }
+  .hero h1 { font-size: 2.6rem; font-weight: 800; color: #f0f9ff; letter-spacing: -1px; }
+  .hero h1 span { color: #38bdf8; }
+  .hero p { margin-top: 12px; color: #94a3b8; font-size: 1.05rem; max-width: 600px; margin-left: auto; margin-right: auto; }
+  .badge-row { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .badge { background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 4px 14px; font-size: 0.78rem; color: #7dd3fc; }
+
+  /* ─── Layout wrapper ─── */
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: calc(100vh - 220px); }
+
+  /* ─── Sidebar preview ─── */
+  .sidebar-preview {
+    background: #111827;
+    border-right: 1px solid #1e293b;
+    padding: 24px 0;
+  }
+  .sidebar-preview .logo-area {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #1e293b;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-preview .logo-area .logo-icon {
+    width: 36px; height: 36px; background: #38bdf8;
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .sidebar-preview .logo-area span { font-weight: 700; font-size: 1rem; color: #f1f5f9; }
+
+  .section-label {
+    padding: 18px 20px 6px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #475569;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 20px;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all 0.15s;
+  }
+  .nav-item:hover, .nav-item.active {
+    background: #1e293b;
+    color: #f1f5f9;
+    border-left-color: #38bdf8;
+  }
+  .nav-item .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .company-section { margin-top: 6px; }
+  .company-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 9px 20px;
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .company-header:hover { color: #94a3b8; }
+  .company-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 20px 8px 32px;
+    font-size: 0.79rem;
+    color: #94a3b8;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+  }
+  .company-item:hover, .company-item.active {
+    background: rgba(56,189,248,0.08);
+    color: #7dd3fc;
+    border-left-color: #38bdf8;
+  }
+  .company-item .avatar {
+    width: 24px; height: 24px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .new-badge {
+    margin-left: auto; background: #38bdf8; color: #0f172a;
+    font-size: 9px; font-weight: 700; border-radius: 4px; padding: 1px 5px;
+  }
+
+  /* ─── Main content ─── */
+  .main { padding: 30px; overflow: auto; }
+
+  /* ─── Section headers ─── */
+  .section-header {
+    display: flex; align-items: center; gap: 14px; margin-bottom: 24px;
+  }
+  .section-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 800; color: #0f172a;
+    flex-shrink: 0;
+  }
+  .section-header h2 { font-size: 1.2rem; font-weight: 700; color: #f1f5f9; }
+  .section-header p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+  /* ─── Cards ─── */
+  .card-grid { display: grid; gap: 14px; margin-bottom: 36px; }
+  .card-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .card {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 18px 20px;
+    transition: border-color 0.2s;
+  }
+  .card:hover { border-color: #38bdf8; }
+  .card h3 { font-size: 0.85rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+  .card p { font-size: 0.78rem; color: #64748b; line-height: 1.5; }
+  .card .tag {
+    display: inline-block; margin-top: 10px;
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 6px; padding: 2px 8px; font-size: 0.7rem;
+    color: #7dd3fc; font-family: monospace;
+  }
+
+  /* ─── Stat cards preview ─── */
+  .stat-card {
+    background: #1e293b; border: 1px solid #334155;
+    border-radius: 12px; padding: 18px;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .stat-icon {
+    width: 42px; height: 42px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .stat-card h4 { font-size: 0.75rem; color: #64748b; font-weight: 500; }
+  .stat-card .value { font-size: 1.5rem; font-weight: 800; color: #f1f5f9; margin: 2px 0; }
+  .stat-card .sub { font-size: 0.72rem; color: #22c55e; }
+
+  /* ─── Timeline ─── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+    width: 2px; background: linear-gradient(to bottom, #38bdf8, #818cf8, #f59e0b);
+    border-radius: 2px;
+  }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid; display: flex; align-items: center; justify-content: center;
+  }
+  .tl-dot.blue { background: #0f172a; border-color: #38bdf8; }
+  .tl-dot.purple { background: #0f172a; border-color: #818cf8; }
+  .tl-dot.green { background: #0f172a; border-color: #22c55e; }
+  .tl-dot.yellow { background: #0f172a; border-color: #f59e0b; }
+  .tl-dot.red { background: #0f172a; border-color: #f87171; }
+  .tl-item h4 { font-size: 0.9rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .tl-item p { font-size: 0.78rem; color: #64748b; }
+  .tl-item code {
+    display: inline-block; background: #0f172a; border: 1px solid #334155;
+    border-radius: 4px; padding: 1px 6px; font-size: 0.72rem;
+    color: #7dd3fc; font-family: monospace; margin-top: 6px; margin-right: 4px;
+  }
+
+  /* ─── Divider ─── */
+  .divider { height: 1px; background: #1e293b; margin: 32px 0; }
+
+  /* ─── DB schema ─── */
+  .schema-box {
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 10px; padding: 20px; font-family: monospace;
+    font-size: 0.78rem; color: #94a3b8; margin-bottom: 36px;
+    line-height: 1.9;
+  }
+  .schema-box .kw { color: #818cf8; }
+  .schema-box .col { color: #38bdf8; }
+  .schema-box .type { color: #f59e0b; }
+  .schema-box .comment { color: #475569; }
+
+  /* ─── File tree ─── */
+  .tree {
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 10px; padding: 20px;
+    font-family: monospace; font-size: 0.78rem;
+    line-height: 2; margin-bottom: 36px;
+  }
+  .tree .new { color: #22c55e; }
+  .tree .exist { color: #94a3b8; }
+  .tree .folder { color: #f59e0b; }
+  .tree .mod { color: #38bdf8; }
+  .tree .arrow { color: #475569; }
+
+  /* ─── Dashboard wireframe ─── */
+  .wireframe {
+    background: #111827; border: 1px solid #334155; border-radius: 12px;
+    padding: 20px; margin-bottom: 36px;
+  }
+  .wf-topbar {
+    background: #1e293b; border-radius: 8px; padding: 10px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .wf-topbar .title { font-size: 0.9rem; font-weight: 700; color: #f1f5f9; }
+  .wf-topbar .pills { display: flex; gap: 6px; }
+  .wf-topbar .pill {
+    background: #0f172a; border: 1px solid #334155;
+    border-radius: 6px; padding: 3px 10px; font-size: 0.7rem; color: #64748b;
+  }
+  .wf-topbar .pill.active { border-color: #38bdf8; color: #38bdf8; background: rgba(56,189,248,0.08); }
+  .wf-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 14px; }
+  .wf-stat { background: #1e293b; border-radius: 8px; padding: 12px; }
+  .wf-stat .lbl { font-size: 0.67rem; color: #475569; }
+  .wf-stat .val { font-size: 1.1rem; font-weight: 800; color: #f1f5f9; margin-top: 2px; }
+  .wf-stat .chg { font-size: 0.67rem; color: #22c55e; }
+  .wf-charts { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .wf-chart {
+    background: #1e293b; border-radius: 8px; padding: 12px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .wf-chart .placeholder {
+    width: 100%; aspect-ratio: 16/7;
+    background: repeating-linear-gradient(90deg, #0f172a 0, #0f172a 2px, transparent 2px, transparent 40px),
+                repeating-linear-gradient(180deg, #0f172a 0, #0f172a 2px, transparent 2px, transparent 30px);
+    border-radius: 6px; position: relative; overflow: hidden;
+  }
+  .wf-chart .bars {
+    display: flex; align-items: flex-end; gap: 4px; padding: 0 8px;
+    height: 80px; position: absolute; bottom: 0; left: 0; right: 0;
+  }
+  .bar { border-radius: 3px 3px 0 0; flex: 1; }
+  .wf-table { background: #1e293b; border-radius: 8px; padding: 10px; }
+  .wf-table .row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0; border-bottom: 1px solid #0f172a; font-size: 0.7rem;
+  }
+  .wf-table .row:last-child { border: none; }
+  .wf-table .dot-s { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .wf-table .name { color: #94a3b8; flex: 1; }
+  .wf-table .amt { color: #f1f5f9; font-weight: 600; }
+  .wf-table .badge-s {
+    border-radius: 4px; padding: 1px 6px; font-size: 0.65rem; font-weight: 600;
+  }
+
+  /* ─── Footer ─── */
+  .footer {
+    background: #111827; border-top: 1px solid #1e293b;
+    padding: 24px 40px; text-align: center; color: #475569; font-size: 0.78rem;
+  }
+  .footer strong { color: #38bdf8; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<div class="hero">
+  <h1>Company-wise <span>Dashboard</span> Roadmap</h1>
+  <p>Sidebar-এ company list, click করলে company-specific dashboard — statistics, accounts, আর সব কিছু।</p>
+  <div class="badge-row">
+    <span class="badge">Laravel ERP</span>
+    <span class="badge">Tailwind CSS</span>
+    <span class="badge">Alpine.js</span>
+    <span class="badge">Chart.js</span>
+    <span class="badge">Company Model ✓</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════ PREVIEW LAYOUT ═══════════════════════ -->
+<div class="layout">
+
+  <!-- ── Sidebar Preview ── -->
+  <div class="sidebar-preview">
+    <div class="logo-area">
+      <div class="logo-icon">✈</div>
+      <span>EPAL ERP</span>
+    </div>
+
+    <div class="section-label">Main Menu</div>
+    <div class="nav-item active">
+      <span>🏠</span> Dashboard
+    </div>
+    <div class="nav-item">
+      <span>📊</span> Reports
+    </div>
+    <div class="nav-item">
+      <span>💰</span> Accounts
+    </div>
+
+    <!-- Company Section (NEW) -->
+    <div class="section-label" style="color:#38bdf8;">🏢 Companies</div>
+    <div class="company-section">
+      <div class="company-item active">
+        <div class="avatar" style="background:#3b82f6;">EC</div>
+        Epal Constructions & Interiors
+        <span class="new-badge">ACTIVE</span>
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#8b5cf6;">EG</div>
+        Epal Group
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#06b6d4;">EI</div>
+        Epal It Solutions
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#f59e0b;">EM</div>
+        Epal Manufacturing
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#10b981;">EO</div>
+        Epal Online Shop
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#f43f5e;">EP</div>
+        Epal Properties
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#6366f1;">ET</div>
+        Epal Travels & Consultancy
+      </div>
+      <div class="company-item">
+        <div class="avatar" style="background:#a16207;">WA</div>
+        Wood Art Interiors
+      </div>
+    </div>
+
+    <div class="section-label" style="margin-top:16px;">Settings</div>
+    <div class="nav-item">
+      <span>⚙️</span> Configuration
+    </div>
+  </div>
+
+  <!-- ── Main Area ── -->
+  <div class="main">
+
+    <!-- ─── Section 1: Feature Overview ─── -->
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div>
+        <h2>Feature Overview</h2>
+        <p>কী কী build করতে হবে একনজরে</p>
+      </div>
+    </div>
+    <div class="card-grid cols-3" style="margin-bottom:36px;">
+      <div class="card">
+        <h3>🗂️ Sidebar Company Menu</h3>
+        <p>DB থেকে সব active companies load হবে। Collapsible group হিসেবে sidebar-এ দেখাবে। Click → company dashboard।</p>
+        <span class="tag">layout/app.blade.php</span>
+      </div>
+      <div class="card">
+        <h3>📊 Company Dashboard View</h3>
+        <p>Selected company-র সব statistics। Sale, Purchase, Expense, Account Balance, Employee count, Visa, Ticket।</p>
+        <span class="tag">company/dashboard.blade.php</span>
+      </div>
+      <div class="card">
+        <h3>⚙️ CompanyDashboardController</h3>
+        <p>Company ID দিয়ে সব data aggregate করে view-এ pass করবে।</p>
+        <span class="tag">CompanyDashboardController.php</span>
+      </div>
+    </div>
+
+    <!-- ─── Section 2: Dashboard Wireframe ─── -->
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div>
+        <h2>Dashboard UI Preview</h2>
+        <p>Company dashboard-এর ভেতরে কী কী থাকবে</p>
+      </div>
+    </div>
+    <div class="wireframe" style="margin-bottom:36px;">
+      <!-- topbar -->
+      <div class="wf-topbar">
+        <div class="title">🏢 Epal Travels & Consultancy — Dashboard</div>
+        <div class="pills">
+          <div class="pill active">This Month</div>
+          <div class="pill">Last Month</div>
+          <div class="pill">This Year</div>
+          <div class="pill">Custom</div>
+        </div>
+      </div>
+
+      <!-- stat cards -->
+      <div class="wf-stats">
+        <div class="wf-stat">
+          <div class="lbl">💰 Total Revenue</div>
+          <div class="val">৳ 4,82,000</div>
+          <div class="chg">▲ 12% vs last month</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">🛒 Total Purchase</div>
+          <div class="val">৳ 2,10,500</div>
+          <div class="chg" style="color:#f87171;">▼ 3%</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">💸 Total Expense</div>
+          <div class="val">৳ 85,200</div>
+          <div class="chg">▲ 5%</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">🏦 Bank Balance</div>
+          <div class="val">৳ 1,86,300</div>
+          <div class="chg" style="color:#7dd3fc;">Across 3 banks</div>
+        </div>
+      </div>
+
+      <div class="wf-stats" style="grid-template-columns: repeat(4,1fr);">
+        <div class="wf-stat">
+          <div class="lbl">🎫 Tickets Sold</div>
+          <div class="val">148</div>
+          <div class="chg">This month</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">🛂 Visa Processed</div>
+          <div class="val">62</div>
+          <div class="chg">▲ 8%</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">👥 Employees</div>
+          <div class="val">24</div>
+          <div class="chg" style="color:#7dd3fc;">Active</div>
+        </div>
+        <div class="wf-stat">
+          <div class="lbl">📋 Passport Holders</div>
+          <div class="val">319</div>
+          <div class="chg">Total records</div>
+        </div>
+      </div>
+
+      <!-- charts row -->
+      <div class="wf-charts" style="margin-top:10px;">
+        <div class="wf-chart" style="flex-direction:column; align-items:flex-start; padding:12px 16px;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-bottom:8px;">📈 Monthly Revenue vs Expense (Bar Chart)</div>
+          <div class="placeholder" style="width:100%; height:90px;">
+            <div class="bars">
+              <div class="bar" style="height:70%; background:#38bdf8;"></div>
+              <div class="bar" style="height:40%; background:#f87171;"></div>
+              <div class="bar" style="height:80%; background:#38bdf8;"></div>
+              <div class="bar" style="height:55%; background:#f87171;"></div>
+              <div class="bar" style="height:90%; background:#38bdf8;"></div>
+              <div class="bar" style="height:45%; background:#f87171;"></div>
+              <div class="bar" style="height:75%; background:#38bdf8;"></div>
+              <div class="bar" style="height:60%; background:#f87171;"></div>
+              <div class="bar" style="height:85%; background:#38bdf8;"></div>
+              <div class="bar" style="height:50%; background:#f87171;"></div>
+              <div class="bar" style="height:95%; background:#38bdf8;"></div>
+              <div class="bar" style="height:30%; background:#f87171;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="wf-chart" style="flex-direction:column; align-items:flex-start; padding:12px 16px;">
+          <div style="font-size:0.75rem; color:#64748b; font-weight:600; margin-bottom:8px;">🥧 Expense Breakdown (Doughnut)</div>
+          <div style="display:flex; flex-direction:column; gap:6px; width:100%;">
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; color:#94a3b8;">
+              <div style="width:10px;height:10px;background:#38bdf8;border-radius:2px;flex-shrink:0;"></div> Salary — 45%
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; color:#94a3b8;">
+              <div style="width:10px;height:10px;background:#818cf8;border-radius:2px;flex-shrink:0;"></div> Office — 20%
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; color:#94a3b8;">
+              <div style="width:10px;height:10px;background:#f59e0b;border-radius:2px;flex-shrink:0;"></div> Travel — 18%
+            </div>
+            <div style="display:flex; align-items:center; gap:6px; font-size:0.68rem; color:#94a3b8;">
+              <div style="width:10px;height:10px;background:#f87171;border-radius:2px;flex-shrink:0;"></div> Others — 17%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- recent table -->
+      <div class="wf-table" style="margin-top:10px;">
+        <div style="font-size:0.72rem; color:#64748b; font-weight:600; padding-bottom:6px; border-bottom:1px solid #0f172a; margin-bottom:4px;">📋 Recent Transactions</div>
+        <div class="row">
+          <div class="dot-s" style="background:#22c55e;"></div>
+          <div class="name">Invoice #INV-2025-001 — Dhaka to Dubai Ticket</div>
+          <div class="amt">৳ 48,000</div>
+          <div class="badge-s" style="background:rgba(34,197,94,0.1);color:#22c55e;">Paid</div>
+        </div>
+        <div class="row">
+          <div class="dot-s" style="background:#f59e0b;"></div>
+          <div class="name">Visa Processing — Saudi Arabia × 3</div>
+          <div class="amt">৳ 22,500</div>
+          <div class="badge-s" style="background:rgba(245,158,11,0.1);color:#f59e0b;">Pending</div>
+        </div>
+        <div class="row">
+          <div class="dot-s" style="background:#f87171;"></div>
+          <div class="name">Office Expense — Rent May 2025</div>
+          <div class="amt">৳ 35,000</div>
+          <div class="badge-s" style="background:rgba(248,113,113,0.1);color:#f87171;">Expense</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Section 3: Implementation Steps ─── -->
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div>
+        <h2>Implementation Steps</h2>
+        <p>Step-by-step কাজের ধারা</p>
+      </div>
+    </div>
+    <div class="timeline" style="margin-bottom:36px;">
+
+      <div class="tl-item">
+        <div class="tl-dot blue"></div>
+        <h4>Step 1 — Route যোগ করো</h4>
+        <p>web.php-এ company dashboard route add করো।</p>
+        <code>GET /company/{company}/dashboard</code>
+        <code>name: company.dashboard</code>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <h4>Step 2 — CompanyDashboardController তৈরি করো</h4>
+        <p>Company ID নিয়ে সব related data (sale, purchase, expense, bank, employee, ticket, visa) query করবে।</p>
+        <code>app/Http/Controllers/CompanyDashboardController.php</code>
+        <code>public function show(Company $company)</code>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <h4>Step 3 — Sidebar update করো</h4>
+        <p>layout/app.blade.php-এ companies loop করে nav items বানাও। Alpine.js দিয়ে collapse/expand।</p>
+        <code>Company::where('status', 1)->get()</code>
+        <code>route('company.dashboard', $company->id)</code>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot yellow"></div>
+        <h4>Step 4 — Dashboard view তৈরি করো</h4>
+        <p>resources/views/company/dashboard.blade.php — stat cards, charts (Chart.js), recent transactions table।</p>
+        <code>resources/views/company/dashboard.blade.php</code>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot red"></div>
+        <h4>Step 5 — Active company highlight</h4>
+        <p>Sidebar-এ current company-র link active style করো। Session বা route parameter দিয়ে detect করো।</p>
+        <code>request()->route('company') == $c->id</code>
+      </div>
+
+    </div>
+
+    <!-- ─── Section 4: File Structure ─── -->
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div>
+        <h2>Files to Create / Modify</h2>
+        <p>কোন ফাইলগুলো নতুন, কোনগুলো edit</p>
+      </div>
+    </div>
+    <div class="tree">
+      <div><span class="folder">app/Http/Controllers/</span></div>
+      <div>&nbsp;&nbsp;<span class="arrow">├──</span> <span class="new">CompanyDashboardController.php</span> &nbsp;← <span style="color:#475569;">নতুন তৈরি</span></div>
+      <br>
+      <div><span class="folder">resources/views/</span></div>
+      <div>&nbsp;&nbsp;<span class="arrow">├──</span> <span class="folder">company/</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└──</span> <span class="new">dashboard.blade.php</span> &nbsp;← <span style="color:#475569;">নতুন তৈরি</span></div>
+      <div>&nbsp;&nbsp;<span class="arrow">└──</span> <span class="folder">layout/</span></div>
+      <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="arrow">└──</span> <span class="mod">app.blade.php</span> &nbsp;← <span style="color:#475569;">sidebar section edit</span></div>
+      <br>
+      <div><span class="folder">routes/</span></div>
+      <div>&nbsp;&nbsp;<span class="arrow">└──</span> <span class="mod">web.php</span> &nbsp;← <span style="color:#475569;">নতুন route যোগ</span></div>
+    </div>
+
+    <!-- ─── Section 5: Data Points ─── -->
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div>
+        <h2>Dashboard-এ কী কী Data থাকবে</h2>
+        <p>Company filter করে যত data দেখাবে</p>
+      </div>
+    </div>
+    <div class="card-grid cols-4" style="margin-bottom:36px;">
+      <div class="card">
+        <h3>💳 Financial</h3>
+        <p>Total Revenue<br>Total Purchase<br>Total Expense<br>Net Profit/Loss<br>Bank Balance</p>
+      </div>
+      <div class="card">
+        <h3>✈️ Travel</h3>
+        <p>Tickets Sold<br>Ticket Revenue<br>Visa Processed<br>Passport Holders<br>Routes Active</p>
+      </div>
+      <div class="card">
+        <h3>👥 HR</h3>
+        <p>Total Employees<br>Present Today<br>On Leave<br>Advance Salaries<br>Payroll Amount</p>
+      </div>
+      <div class="card">
+        <h3>📋 Misc</h3>
+        <p>Top Customers<br>Top Suppliers<br>Pending Payments<br>Recent Journals<br>Monthly Trend Chart</p>
+      </div>
+    </div>
+
+    <!-- ─── Section 6: DB Relations check ─── -->
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div>
+        <h2>Existing Model — Company.php</h2>
+        <p>যা আছে এবং যা যোগ করতে হবে</p>
+      </div>
+    </div>
+    <div class="schema-box">
+      <span class="comment">// app/Models/Company.php — বিদ্যমান relations</span><br>
+      <span class="kw">class</span> <span class="col">Company</span> <span class="kw">extends</span> Model {<br>
+      &nbsp;&nbsp;<span class="col">$fillable</span> = [<span class="type">'name', 'address', 'email', 'phone', 'logo', 'status'</span>];<br>
+      <br>
+      &nbsp;&nbsp;<span class="comment">// ✅ আছে</span><br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">users</span>() → hasMany(User)<br>
+      <br>
+      &nbsp;&nbsp;<span class="comment">// 🆕 যোগ করতে হবে (যদি company_id FK থাকে)</span><br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">sales</span>() → hasMany(Sale)<br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">purchases</span>() → hasMany(Purchase)<br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">expenses</span>() → hasMany(Expense)<br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">employees</span>() → hasMany(Employee)<br>
+      &nbsp;&nbsp;<span class="kw">public function</span> <span class="col">banks</span>() → hasMany(Bank)<br>
+      }
+    </div>
+
+    <!-- ─── Section 7: Summary ─── -->
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div>
+        <h2>Build Order (Priority)</h2>
+        <p>এই order-এ কাজ করলে সবচেয়ে দ্রুত হবে</p>
+      </div>
+    </div>
+    <div class="card-grid cols-2">
+      <div class="card" style="border-color:#22c55e;">
+        <h3 style="color:#22c55e;">🟢 Phase 1 — Core (2-3 দিন)</h3>
+        <p style="margin-top:8px;">
+          ✅ Route add করো<br>
+          ✅ CompanyDashboardController বানাও<br>
+          ✅ Sidebar-এ company list যোগ করো<br>
+          ✅ Basic dashboard view (stat cards only)
+        </p>
+      </div>
+      <div class="card" style="border-color:#38bdf8;">
+        <h3 style="color:#38bdf8;">🔵 Phase 2 — Charts & Details (2-3 দিন)</h3>
+        <p style="margin-top:8px;">
+          📊 Chart.js দিয়ে revenue/expense chart<br>
+          📋 Recent transactions table<br>
+          🎯 Date filter (this month/year/custom)<br>
+          📱 Mobile responsive sidebar
+        </p>
+      </div>
+      <div class="card" style="border-color:#818cf8;">
+        <h3 style="color:#818cf8;">🟣 Phase 3 — Polish (1-2 দিন)</h3>
+        <p style="margin-top:8px;">
+          🔗 Company logo in sidebar<br>
+          🎨 Active company highlight<br>
+          ⚡ AJAX/Livewire filter (optional)<br>
+          🖨️ Print/export company report
+        </p>
+      </div>
+      <div class="card" style="border-color:#f59e0b;">
+        <h3 style="color:#f59e0b;">🟡 Future Enhancements</h3>
+        <p style="margin-top:8px;">
+          🔒 Role-based company access<br>
+          📧 Company-wise email settings<br>
+          📊 Compare two companies side-by-side<br>
+          📅 Scheduled company report email
+        </p>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<div class="footer">
+  Roadmap for <strong>EPAL ERP</strong> — Company-wise Dashboard Feature &nbsp;|&nbsp; Laravel + Tailwind + Alpine.js + Chart.js &nbsp;|&nbsp; 2026
+</div>
+
+</body>
+</html>

@@ -31,6 +31,20 @@ deploy/deploy.log
 deploy/state.json
 deploy/.deploy.lock/
 deploy/.webhook.last
-/erp/
-!/erp/.gitkeep
 .user.ini
+
+# ---- the ERP, deployed at the front door (its own repo's source, never edited) ----
+# The source is versioned here so a push deploys it; its secrets and packages are not.
+/erp/.env
+/erp/.env.*
+!/erp/.env.example
+/erp/vendor/
+/erp/node_modules/
+/erp/storage/framework/
+/erp/storage/logs/
+/erp/storage/app/
+/erp/bootstrap/cache/*
+!/erp/bootstrap/cache/.gitignore
+/erp/public/storage
+/erp/public/build
+/erp/public/hot

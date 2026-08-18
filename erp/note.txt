@@ -1,0 +1,57 @@
+28-May-25
+---------
+**** Role and Permission never ever can add or edit from any dashboard it will maintain developer
+
+
+
+app.css default code
+-------------------
+
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+
+web route
+----------------------------
+// Route::prefix('super-admin')
+//     ->name('super-admin.')
+//     ->middleware(['auth', 'role:super admin'])
+//     ->group(function () {
+//         Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('dashboard');
+//         // Route::resource('/roles', RoleController::class);
+//         // Route::resource('/permissions', PermissionController::class);
+//     });
+
+// Admin routes
+// Route::prefix('admin')
+//     ->name('admin.')
+//     ->middleware(['auth', 'role:admin'])
+//     ->group(function () {
+//         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+//         // Route::resource('/roles', RoleController::class);
+//         // Route::resource('/permissions', PermissionController::class);
+//     });
+
+
+login method
+----------------------------------
+            // Redirect based on role
+            // if ($user->hasRole('super admin')) {
+            //     return redirect()->route('role.dashboard', ['role' => 'super-admin']);
+            //     // return redirect()->route('super-admin.dashboard');
+            // } elseif ($user->hasRole('admin')) {
+            //     return redirect()->route('role.dashboard', ['role' => 'admin']);
+            //     // return redirect()->route('admin.dashboard');
+            // } else {
+            //     Auth::logout();
+            //     return redirect()->route('login')->withErrors(['email' => 'Role not assigned']);
+            // }
