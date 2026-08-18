@@ -66,7 +66,8 @@ function eon_inject_wanted(string $html): bool
 function eon_inject_tag(): string
 {
     return "\n<!-- EON companion (appended by embed/eon-inject.php; the ERP source is untouched) -->\n"
-         . '<script src="' . htmlspecialchars(eon_inject_src(), ENT_QUOTES) . '" defer></script>' . "\n";
+         . '<script src="' . htmlspecialchars(eon_inject_src(), ENT_QUOTES) . '" defer></script>' . "\n"
+         . '<script src="' . htmlspecialchars(str_replace('eon-embed.js', 'eon-sidebar.js', eon_inject_src()), ENT_QUOTES) . '" defer></script>' . "\n";
 }
 
 /* ---------- prepend mode: buffer the whole response, append on the way out ---------- */
