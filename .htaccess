@@ -4,7 +4,7 @@ DirectoryIndex index.html
 Options -Indexes
 RedirectMatch 404 /\.git
 RedirectMatch 404 /\.github
-<FilesMatch "^(\.gitignore|CLAUDE\.md|composer\.(json|lock)|deploy\.env.*)$">
+<FilesMatch "^(\.gitignore|\.gitattributes|CLAUDE\.md|composer\.(json|lock))$">
   Require all denied
 </FilesMatch>
 

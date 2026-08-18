@@ -50,6 +50,7 @@ eon/
 │   ├── api/{health,dataset,ask,brief,memory,actions,py,file}.php
 │   ├── cron/{morning-brief,watch}.php · install/schema.sql · storage/{cache,logs,data}
 │   └── py/eon.py, requirements.txt   Python analytics service (forecast, anomalies, evaluate, report)
+├── deploy/                       push-to-deploy: deploy.sh (cron), post-deploy.php, webhook.php, notify.php
 ├── index.html + app/{eon.css,eon-app.js}   Command Center (single page, hash routing)
 └── docs/                         erp-domain-map.md, lineage-and-architecture.md, deploy.md (planned), summit script (planned)
 ```
@@ -69,12 +70,14 @@ eon/
 | Voice (`ai-companion/eon-brain/voice.js`: SpeechRecognition push-to-talk + hands-free wake word, speechSynthesis with voice pick, en-US/bn-BD) | done |
 | Command Center (`index.html` + `app/eon.css` + `app/eon-app.js`: brief, decisions, approvals, finance, people, CRM, ops, ask; server LLM answers with client fallback; headless-Chrome render verified) | done |
 | Deploy guide (`docs/deploy.md`) + summit script (`docs/summit-demo.md`) | done |
+| **Push-to-deploy** for `eon.gulfrabit.com` (`deploy/{deploy.sh,post-deploy.php,webhook.php,notify.php,.htaccess,README.md,deploy.env.example}`, `commit`/`deployed` in `health.php`, `docs/deploy.md` Option C) | done, tested end to end against a simulated origin: layout A, layout B publish (secrets/vendor/storage kept, no `.git` leak), `deploy.env`, `--force`/`--quiet`, lock, failure path, sha hand-off |
 
 ## Next steps (in order)
 
 1. Multi-agent adversarial review (22 agents) → 14 confirmed findings fixed (bdtk rounding, fail-closed auth, ERP column drift with schema-guard, payroll month parsing, sql tool hardening, prompt-injection framing, memory locking, adapter token, voice chain abort, intent order, company scope) → committed.
-2. Next: deploy to Hostinger for real (owner), live-mode test with a key; Bangla voice polish; optional server STT/TTS.
-3. Laravel module shim + deploy docs + summit script → commit.
+2. Laravel module shim + deploy docs + summit script → committed.
+3. Push-to-deploy: cron pulls `origin/main` every 5 minutes into the document root of `eon.gulfrabit.com` (`docs/deploy.md` → Option C). **Owner's part on the host:** clone into `public_html`, `config.local.php` + `composer install`, `deploy.env`, the three cron lines.
+4. Next: live-mode test on the subdomain with a real key (LLM + ERP DB paths are still untested outside offline mode); Bangla voice polish; optional server STT/TTS.
 
 ## Owner preferences learned
 

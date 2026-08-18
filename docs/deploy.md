@@ -6,16 +6,19 @@ Nothing in the ERP (Laravel 12, `erp.epal.com.bd`) is modified: EON reads the ER
 database with its own MySQL user and writes only to its own `eon_*` tables (or to
 JSON files under `server/storage/data/` when those tables are absent).
 
-Two deployment options are described, then smoke tests, troubleshooting, a
+Three deployment options are described, then smoke tests, troubleshooting, a
 security checklist and the no-server fallback.
 
-| | Option A — inside the ERP host | Option B — own subdomain |
-| --- | --- | --- |
-| URL | `https://erp.epal.com.bd/eon/` | `https://eon.epal.com.bd/` |
-| Where the files go | `public_html/eon/` of the ERP site | `public_html/` of a new site |
-| Database | same account, `localhost` | same account → `localhost`; other account → Remote MySQL |
-| Browser ↔ API | same origin, no CORS needed | same origin (B1) or cross-origin with `origins` (B2) |
-| Best for | production next to the ERP | a clean host name for the summit demo |
+| | Option A — inside the ERP host | Option B — own subdomain | **Option C — subdomain + push-to-deploy** |
+| --- | --- | --- | --- |
+| URL | `https://erp.epal.com.bd/eon/` | `https://eon.epal.com.bd/` | **`https://eon.gulfrabit.com/`** |
+| Where the files go | `public_html/eon/` of the ERP site | `public_html/` of a new site | `public_html/` of the subdomain, a git clone |
+| Updates | manual `git pull` / upload | manual `git pull` / upload | **`deploy/deploy.sh` on cron (or a webhook) — `git push` is the deploy** |
+| Database | same account, `localhost` | same account → `localhost`; other account → Remote MySQL | same as B (Remote MySQL if the ERP is on another account) |
+| Browser ↔ API | same origin, no CORS needed | same origin (B1) or cross-origin with `origins` (B2) | same origin |
+| Best for | production next to the ERP | a clean host name for the summit demo | day-to-day work: build here, push, it is live |
+
+Option C is Option B plus `deploy/` — read B1 for the site itself, then C for the automation.
 
 Host facts assumed throughout: Hostinger shared hosting (Apache/LiteSpeed,
 `.htaccess` honoured), PHP 8.2 selected in hPanel, MySQL on `localhost`, cron via
@@ -330,6 +333,204 @@ deployed) and the subdomain only serves the front end.
 
 ---
 
+## Option C — `eon.gulfrabit.com`, push to GitHub and it goes live
+
+The live site is a **git checkout**. Cron runs `deploy/deploy.sh` every few minutes:
+one `git ls-remote` asks GitHub whether the branch moved, and only when it did does
+it update the checkout, publish it (layout B), and run `deploy/post-deploy.php` —
+runtime folders, `composer install` when `vendor/` is missing, EON's schema when its
+database is reachable, cache clear, health report. When GitHub has not moved it
+prints `up to date` and stops.
+
+So the working loop becomes: **commit → `git push` → the site is on that commit.**
+
+```
+laptop ──git push──▶ github.com/imran-me/eon
+                              │ cron */5 (or the webhook, seconds)
+                              ▼
+                     deploy/deploy.sh ── git reset --hard origin/main
+                              └────────── post-deploy.php ── folders · composer · schema · cache · state.json
+                                                   └──▶ https://eon.gulfrabit.com/
+```
+
+Files (all in `deploy/`, described in `deploy/README.md`): `deploy.sh`,
+`post-deploy.php`, `webhook.php` (optional instant deploy), `notify.php` (failure
+e-mail), `deploy.env.example`. Everything the host creates — `deploy.env`,
+`deploy.log`, `state.json`, the lock — is git-ignored, and `deploy/.htaccess` denies
+the whole folder to the web except `webhook.php`.
+
+### C1. Which layout does this subdomain need?
+
+hPanel → Websites → `eon.gulfrabit.com` → its **document root** answers it:
+
+| Document root shown by hPanel | Layout |
+| --- | --- |
+| `/home/USER/domains/eon.gulfrabit.com/public_html` — its own folder | **A** — the checkout *is* the document root |
+| `/home/USER/domains/gulfrabit.com/public_html/eon` — inside the main site | **B** — keep the checkout outside and publish into that folder |
+
+Layout B exists because a folder inside another site's `public_html` can be
+overwritten by that site's own deployment; the checkout stays at `~/eon-src`, and
+each deploy copies the tree into the live folder (`rsync --delete`, or `git archive`
+when the host has no rsync — both were exercised).
+
+### C2. First deploy
+
+PHP 8.2 and SSL on for the subdomain (hPanel → PHP Configuration / SSL), then SSH:
+
+```bash
+# layout A — the checkout is the document root
+cd ~/domains/eon.gulfrabit.com
+rm -rf public_html && git clone https://github.com/imran-me/eon.git public_html
+bash public_html/deploy/deploy.sh --force
+
+# layout B — checkout outside, published into the live folder
+git clone https://github.com/imran-me/eon.git ~/eon-src
+EON_PUBLISH_DIR=~/domains/gulfrabit.com/public_html/eon bash ~/eon-src/deploy/deploy.sh --force
+```
+
+The last lines of the run are the health report — it says what is still missing
+(`token MISSING`, `ERP db off`, `offline brain`). That is expected before C3.
+
+### C3. Configure the site (A3–A4 with this host name)
+
+```bash
+cd <the live folder>/server            # layout B: the published folder, not ~/eon-src
+cp config.example.php config.local.php && chmod 600 config.local.php
+composer install --no-dev --optimize-autoloader     # post-deploy does this too when composer exists
+```
+
+In `config.local.php`: `token` (32 random bytes), `origins => ['https://eon.gulfrabit.com']`,
+the ERP `db` block (read-only user, A4) and `anthropic.api_key`. Two notes for this
+host name:
+
+- If `gulfrabit.com` is **not the same hosting account as the ERP**, `localhost` will
+  not reach the ERP database: enable hPanel → Databases → **Remote MySQL** on the ERP
+  account for this site's IP and use the host name it shows in `db.host`.
+- `server/config.local.php`, `server/storage/`, `server/vendor/` and `deploy/deploy.env`
+  are never touched by a deploy — in layout B they are on the keep-list of the
+  publish step, in layout A they are git-ignored. Secrets, memory and logs survive.
+
+In layout B, run `composer install` in the **published** `server/` (that is the one
+serving requests); `~/eon-src` needs no vendor.
+
+### C4. `deploy/deploy.env` — the host's own settings
+
+```bash
+cd <checkout>/deploy && cp deploy.env.example deploy.env && chmod 600 deploy.env
+which php composer git rsync          # fill the paths in
+```
+
+```bash
+branch = main                                            # only this branch goes live
+publish =                                                # layout B: /home/USER/domains/gulfrabit.com/public_html/eon
+src =                                                    # layout B: /home/USER/eon-src   (used by webhook.php)
+php =                                                    # empty = found automatically
+notify = 1                                               # e-mail/webhook the boss when a deploy FAILS
+secret =                                                 # only for webhook.php (C8)
+```
+
+Environment variables still win over the file (`EON_BRANCH`, `EON_PUBLISH_DIR`,
+`EON_PHP`, `EON_NOTIFY`), and `--branch=` / `--publish=` / `--force` / `--quiet` win
+over both.
+
+### C5. Cron — the deploy plus the two EON jobs
+
+hPanel → Advanced → Cron Jobs → **Custom**:
+
+```
+*/5 * * * *  /bin/bash /home/USER/domains/eon.gulfrabit.com/public_html/deploy/deploy.sh --quiet
+0 8 * * *    /usr/bin/php /home/USER/domains/eon.gulfrabit.com/public_html/server/cron/morning-brief.php >> /home/USER/domains/eon.gulfrabit.com/public_html/server/storage/logs/cron.log 2>&1
+0 * * * *    /usr/bin/php /home/USER/domains/eon.gulfrabit.com/public_html/server/cron/watch.php         >> /home/USER/domains/eon.gulfrabit.com/public_html/server/storage/logs/cron.log 2>&1
+```
+
+Layout B — the deploy line points at the checkout, the EON jobs at the live folder:
+
+```
+*/5 * * * *  /bin/bash /home/USER/eon-src/deploy/deploy.sh --quiet
+0 8 * * *    /usr/bin/php /home/USER/domains/gulfrabit.com/public_html/eon/server/cron/morning-brief.php >> /home/USER/domains/gulfrabit.com/public_html/eon/server/storage/logs/cron.log 2>&1
+0 * * * *    /usr/bin/php /home/USER/domains/gulfrabit.com/public_html/eon/server/cron/watch.php         >> /home/USER/domains/gulfrabit.com/public_html/eon/server/storage/logs/cron.log 2>&1
+```
+
+- `--quiet` keeps cron mail empty; everything is written to `deploy/deploy.log`
+  (trimmed to the last 500 lines). Anything cron still mails is a real failure.
+- Every minute (`* * * * *`) is fine — an idle check is one `git ls-remote`.
+- Concurrent runs lock each other out; a lock older than 10 minutes is cleared.
+- Cron hours are server time; the Dhaka/UTC note in A8 applies to the brief and watcher.
+
+### C6. Private repository — deploy key
+
+Public repo: nothing to do. Private repo, read-only key for the host:
+
+```bash
+ssh-keygen -t ed25519 -C "eon.gulfrabit.com deploy" -f ~/.ssh/eon_deploy -N ""
+cat ~/.ssh/eon_deploy.pub    # → GitHub → repo → Settings → Deploy keys → Add (no write access)
+printf 'Host github.com\n  IdentityFile ~/.ssh/eon_deploy\n  IdentitiesOnly yes\n' >> ~/.ssh/config
+cd <checkout> && git remote set-url origin git@github.com:imran-me/eon.git
+ssh -T git@github.com        # accept the host key once, so cron never has to
+```
+
+### C7. Verify
+
+```bash
+# laptop
+git commit -am "test: deploy marker" && git push origin main
+# host, or just wait for cron
+tail -n 20 <checkout>/deploy/deploy.log
+```
+
+```
+2026-08-18 16:46:05  deploying 550c1ab → 4075671 (main)
+2026-08-18 16:46:06  checkout 4075671 — test: deploy marker
+2026-08-18 16:46:08    EON 4075671 · php 8.2.33 · token set · ERP db ok · EON db ok · model on · data erp
+2026-08-18 16:46:08  live: 4075671
+```
+
+From anywhere:
+
+```bash
+curl -s https://eon.gulfrabit.com/server/api/health.php
+# {"ok":true,…,"model":"claude-opus-5","commit":"4075671","deployed":"2026-08-18T16:46:07+06:00"}
+```
+
+`commit` is the hash the site is actually running — compare with
+`git rev-parse --short HEAD` on the laptop. `deploy/state.json` holds the same record
+plus `token`, `erp_db`, `eon_db`, `llm`, `source`. `deploy/deploy.sh --force`
+redeploys the same commit; `deploy/deploy.sh` alone prints `up to date (sha)`.
+
+### C8. Instant deploy (optional, seconds instead of minutes)
+
+Two ways, both keeping the cron line as the fallback that heals a missed event:
+
+1. **hPanel → Advanced → GIT** — connect the repository to the site and enable
+   auto-deployment; paste the webhook URL it gives you into GitHub → Settings →
+   Webhooks. Then run `post-deploy.php` from the deploy hook (or leave cron to do it).
+2. **`deploy/webhook.php`** — for layout B, where hPanel Git cannot own the folder.
+   In `deploy.env` set `secret` (`php -r 'echo bin2hex(random_bytes(24));'`), `src`
+   and `publish`; in GitHub add the webhook with payload URL
+   `https://eon.gulfrabit.com/deploy/webhook.php`, content type `application/json`,
+   the same secret, push events only. It verifies `X-Hub-Signature-256`, ignores
+   other branches and events, rate-limits itself to one deploy per 10 s, and runs the
+   same `deploy.sh`. Without a secret it answers `503` and does nothing.
+
+### C9. What a deploy does — and does not do
+
+| Does | Does not |
+| --- | --- |
+| move the checkout to `origin/<branch>` (`git reset --hard`) | touch `config.local.php`, `server/storage/`, `server/vendor/`, `deploy/deploy.env` |
+| publish into the document root, keeping those paths (layout B) | copy `.git` into the live folder |
+| create the runtime folders and the per-directory `.htaccess` denies | change PHP versions, extensions or hPanel settings |
+| `composer install` when `server/vendor/` is missing | reinstall packages on every deploy |
+| apply `server/install/schema.sql` when the EON database is reachable and empty | migrate or drop anything in the ERP database (EON's user is SELECT-only there) |
+| clear `server/storage/cache/*.json` | restart a daemon — plain PHP has none; opcache picks new files up by timestamp |
+| log every run, notify the boss when a deploy fails | overwrite the site when GitHub is unreachable — it fails and the last good commit stays live |
+
+**Rollback** is a push: `git revert <bad-sha> && git push`. On the host in an
+emergency, `cd <checkout> && git reset --hard <good-sha>` (then `--force` a publish in
+layout B) — but the next cron run follows the branch head again, so revert-and-push
+is the real fix.
+
+---
+
 ## Smoke test
 
 Set `BASE` to the API base and `TOKEN` to your token (omit the header in open mode).
@@ -396,6 +597,9 @@ real companies in the scope selector, Ask EON's trace line reads
 | CORS error in the browser console | The page origin (scheme + host, no path) is missing from `origins`; the browser must see `Access-Control-Allow-Origin` on the preflight. Only relevant for B2, GitHub Pages and localhost. |
 | `500` on any endpoint | Read `storage/logs/eon.log` (`Http::run` logs the exception with file/line). Common: `storage/` not writable, missing `pdo_mysql`, syntax-level failure from an older PHP. |
 | `403` on `api/…` | Not from EON (only `lib/cron/install/storage/vendor/py` are blocked). Hostinger's mod_security can block a POST body it dislikes — check hPanel → Security, or rephrase the test question. |
+| Site does not update after a push | Wrong branch (`branch=` in `deploy/deploy.env` vs the branch you pushed), cron line missing/wrong path, or the host cannot reach GitHub — run `bash <checkout>/deploy/deploy.sh` by hand and read `deploy/deploy.log`. Layout B: check `publish=` points at the real document root. |
+| `health.php` shows an old `commit` | The deploy ran but `post-deploy.php` did not (no PHP binary found — set `php=` in `deploy.env`), or in layout B the publish step was skipped. `deploy/state.json` is written by post-deploy only. |
+| `webhook.php` returns 401 / 503 | 401 = the GitHub secret and `secret=` in `deploy.env` differ; 503 = no secret configured (the webhook is inert until you set one). |
 | Cron did nothing / no e-mail | Wrong absolute path or PHP binary; check `storage/logs/cron.log`. `mail()` needs a domain mailbox as `email_from`; check spam. Hour offset: server time vs Dhaka. |
 | Voice button greyed out | Not HTTPS, or the browser lacks Web Speech (use Chrome/Edge). |
 | Reports download fails | Only `report-<kind>-YYYYMMDD-HHMMSS.(xlsx|csv)` under `storage/data/` are served, through `file.php?name=…` with the token. |
@@ -422,6 +626,11 @@ real companies in the scope selector, Ask EON's trace line reads
 - [ ] Until the adapter forwards the token (A9), the `/eon/` folder is
       password-protected in hPanel if `token` is left empty.
 - [ ] `notify.email_to` is the boss's address only; the webhook URL is HTTPS.
+- [ ] `deploy/deploy.env` is `chmod 600` (it holds the webhook secret) and the deploy
+      folder answers 403 from the web except `webhook.php` (verify:
+      `curl -sI https://eon.gulfrabit.com/deploy/post-deploy.php` → 403, `/deploy/state.json` → 403).
+- [ ] The GitHub deploy key for the host is **read-only** (no write access), and the
+      branch in `deploy.env` is the one you actually review before pushing.
 - [ ] `git pull` updates never overwrite `config.local.php`, `vendor/`, `storage/`
       (all git-ignored) — but re-run `composer install` when `composer.json` changes.
 
@@ -436,7 +645,7 @@ it generates the demo dataset in the browser
 twelve companies), answers from the rule-based brain and speaks with the browser's
 voice. The pill reads **Static · demo data · offline brain**.
 
-- GitHub Pages: repository → Settings → Pages → branch `master`, folder `/ (root)`.
+- GitHub Pages: repository → Settings → Pages → branch `main`, folder `/ (root)`.
   Everything is relative, no CDN (three.js is vendored), so `https://imran-me.github.io/eon/` works as is.
 - Any web server pointed at the repo root works the same (`python3 -m http.server 8080` locally).
 - Opening `index.html` from `file://` blocks ES-module imports in most browsers — serve it over HTTP.

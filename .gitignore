@@ -24,3 +24,10 @@ server/storage/data/*.json
 !server/storage/data/demo-dataset.json
 server/storage/logs/*.log
 tools/node_modules/
+
+# deploy — created on the server, never committed
+deploy/deploy.env
+deploy/deploy.log
+deploy/state.json
+deploy/.deploy.lock/
+deploy/.webhook.last

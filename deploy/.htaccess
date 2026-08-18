@@ -1,0 +1,10 @@
+# EON deploy folder. Nothing here may be fetched from the web — post-deploy.php
+# installs packages and applies the schema, deploy.env holds the webhook secret,
+# state.json and deploy.log describe the host. The single exception is
+# webhook.php, which GitHub must be able to POST to (it verifies the signature
+# itself and refuses everything else).
+Options -Indexes
+Require all denied
+<Files "webhook.php">
+  Require all granted
+</Files>
