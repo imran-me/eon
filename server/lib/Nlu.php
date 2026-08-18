@@ -438,7 +438,7 @@ final class Nlu
                 'en' => ['where is' => 5, 'where do i find' => 6, 'where can i see' => 6, 'which menu' => 6,
                          'how do i get to' => 6, 'which page' => 5, 'where to find' => 6, 'navigate to' => 5,
                          'which screen' => 5, 'where in the erp' => 6, 'how do i open' => 5],
-                'bn' => ['কোথায় পাবো' => 6, 'কোথায় পাব' => 6, 'কোন মেনুতে' => 6, 'কিভাবে যাবো' => 6,
+                'bn' => ['কোথায় পাবো' => 6, 'কোথায় পাব' => 6, 'কোথায়+পাব' => 6, 'কোথায়+দেখ' => 6, 'কোথায়+আছে' => 5, 'কোন মেনুতে' => 6, 'কিভাবে যাবো' => 6,
                          'কোথায় দেখব' => 6, 'কোন পেজে' => 5, 'কোথায় আছে' => 5],
                 'bl' => ['kothay pabo' => 6, 'kon menu' => 6, 'kivabe jabo' => 6, 'kothay ache' => 5],
             ],
