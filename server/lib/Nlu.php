@@ -105,6 +105,16 @@ final class Nlu
         $C = [
 
             /* ============ EXECUTIVE / DECISION ============ */
+            'why' => [
+                'en' => ['why is' => 8, 'why are' => 8, 'why did' => 8, 'why has' => 8, 'why do' => 7,
+                         'what is driving' => 8, 'what caused' => 8, 'the reason for' => 7, 'reason why' => 8,
+                         'how come' => 7, 'what is behind' => 8, 'explain why' => 12, 'root cause' => 8, 'what is eating' => 9, 'eating the' => 8, 'what is killing' => 9,
+                         'what is the cause' => 8],
+                'bn' => ['কেন' => 9, 'কী কারণে' => 10, 'কি কারণে' => 10, 'কারণ কি' => 10, 'কারণটা কি' => 10,
+                         'কেন হচ্ছে' => 9, 'কেন কমছে' => 9, 'কেন বাড়ছে' => 9, 'কিসের জন্য' => 7,
+                         'পেছনে কি' => 8],
+                'bl' => ['keno' => 9, 'ki karone' => 10, 'karon ki' => 10, 'keno hocche' => 11],
+            ],
             'brief' => [
                 'en' => ['brief' => 3, 'briefing' => 3, 'morning brief' => 4, 'update me' => 3, 'catch me up' => 3,
                          'how are things' => 3, 'where do we stand' => 3, 'overall status' => 3, 'summary' => 2,
@@ -568,6 +578,14 @@ final class Nlu
         'কোথায়', 'কোন মেনু', 'কোন স্ক্রিন', 'কোন পেজ', 'kothay', 'kon menu', 'kon screen',
     ];
 
+    /** words that make a question causal, whatever it is causal about */
+    private const CAUSAL = [
+        'why', 'what is driving', 'what caused', 'what is behind', 'what is eating',
+        'root cause', 'how come', 'reason for', 'reason why',
+        'কেন', 'কি কারণে', 'কী কারণে', 'কারণ কি', 'কারণটা', 'কিসের জন্য',
+        'keno', 'ki karone', 'karon ki',
+    ];
+
     /** idioms that borrow a locative shape but ask about data, not about a screen */
     private const NOT_LOCATIVE = [
         'where is the money going', 'money going', 'where are we heading', 'where do we stand',
@@ -651,26 +669,31 @@ final class Nlu
         if (!$idiom) {
             foreach (self::LOCATIVE as $x) { if (self::hit($n, $x)) { $locative = true; break; } }
         }
+        $causal = false;
+        foreach (self::CAUSAL as $x) { if (self::hit($n, $x)) { $causal = true; break; } }
 
-        foreach (['navigation', 'howto'] as $frame) {
+        foreach (['why', 'navigation', 'howto'] as $frame) {
             $fs = $scores[$frame] ?? 0;
             // a real "where do I find it" question is about the screen no matter how
             // loudly the subject scores; otherwise the frame has to earn it on points
             $wins = ($frame === 'navigation' && $locative && $fs > 0)
+                || ($frame === 'why' && $causal && $fs > 0)
                 || ($fs >= 5.0 && $fs >= $bestScore * 0.7);
+            // a "why" question stays a why question — the how/where frames do not outrank it
+            if ($best === 'why' && $frame !== 'why') continue;
             if ($wins && $best !== $frame) {
                 foreach ($scores as $i => $sc) {
-                    if ($i !== 'navigation' && $i !== 'howto') { $topic = $i; break; }
+                    if ($i !== 'navigation' && $i !== 'howto' && $i !== 'why') { $topic = $i; break; }
                 }
                 $best = $frame;
                 $bestScore = $scores[$frame];
                 break;
             }
         }
-        if ($best === 'navigation' || $best === 'howto') {
+        if ($best === 'navigation' || $best === 'howto' || $best === 'why') {
             if ($topic === null) {
                 foreach ($scores as $i => $sc) {
-                    if ($i !== 'navigation' && $i !== 'howto') { $topic = $i; break; }
+                    if ($i !== 'navigation' && $i !== 'howto' && $i !== 'why') { $topic = $i; break; }
                 }
             }
         }

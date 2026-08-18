@@ -91,6 +91,21 @@ const BANK = {
     bl: ['forecast dao', 'agami mash e ki hobe', 'samne ki hobe'],
   },
 
+  why: {
+    section: 'Reasoning',
+    en: ['why is profit down', 'why are we making a loss', 'what is driving the loss',
+         'why is cash so tight', 'what is eating the cash', 'why is the salary bill so high',
+         'why are people late', 'why is delivery slipping', 'why has spending gone up',
+         'why is nobody paying us', 'what caused the overdue payments', 'explain why the margin fell',
+         'what is behind the cash position', 'why do we owe so much'],
+    bn: ['লাভ কেন কমছে', 'কেন লোকসান হচ্ছে', 'লোকসানের কারণ কি',
+         'কেন টাকা আটকে আছে', 'নগদ কেন কম', 'বেতনের খরচ কেন এত বেশি',
+         'কর্মীরা কেন দেরি করে', 'কাজ কেন পিছিয়ে যাচ্ছে', 'খরচ কেন বেড়েছে',
+         'কেন কেউ টাকা দিচ্ছে না', 'দেনা কেন এত', 'কী কারণে মুনাফা কমল'],
+    bl: ['lav keno komche', 'keno lokshan hocche', 'taka keno atke ache',
+         'beton keno eto beshi', 'kormira keno deri kore', 'khoroch keno bereche'],
+  },
+
   /* ---------------- cash ---------------- */
   cash: {
     section: 'Cash & Bank',

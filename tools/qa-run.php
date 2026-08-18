@@ -31,7 +31,7 @@ $show = isset($opt['show']) ? (int) $opt['show'] : 0;
 
 /* ---------- load EON ---------- */
 foreach (['Config', 'Log', 'Db', 'Dataset', 'Erp', 'Memory', 'Analytics',
-          'ErpMap', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Speech', 'Insight', 'Tools', 'Answer'] as $c) {
+          'ErpMap', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Speech', 'Insight', 'Reason', 'Tools', 'Answer'] as $c) {
     $f = EON_ROOT . '/lib/' . $c . '.php';
     if (is_file($f)) require_once $f;
 }
@@ -89,7 +89,10 @@ $ALIAS = [
     'risks'            => ['risks', 'focus', 'anomalies'],
     'howto'            => ['howto', 'navigation', 'deduction_rules'],
     // the how-frame and the specific rule intent reach the same Kb rule, so either is a correct answer
-    'deduction_rules'  => ['deduction_rules', 'howto'],
+    // a_why hands a rule question straight to the Kb rule, so the answer is the
+    // same text either way — verified, not assumed
+    'deduction_rules'  => ['deduction_rules', 'howto', 'why'],
+    'why'              => ['why', 'risks', 'deduction_rules'],
     'health'           => ['health', 'brief'],
     'customers'        => ['customers', 'pipeline'],
     'navigation'       => ['navigation', 'howto'],

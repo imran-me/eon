@@ -1,8 +1,9 @@
 {
  "generated_by": "tools/make-qa-corpus.mjs",
- "intents": 51,
+ "intents": 52,
  "sections": [
   "Executive",
+  "Reasoning",
   "Cash & Bank",
   "Receivable & Payable",
   "Accounts",
@@ -14,10 +15,10 @@
   "Meta"
  ],
  "counts": {
-  "total": 1095,
-  "en": 498,
-  "bn": 411,
-  "bl": 186
+  "total": 1127,
+  "en": 512,
+  "bn": 423,
+  "bl": 192
  },
  "person_templates": [
   {
@@ -1233,6 +1234,294 @@
   },
   {
    "id": 132,
+   "q": "why is profit down",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 133,
+   "q": "why are we making a loss",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 134,
+   "q": "what is driving the loss",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 135,
+   "q": "why is cash so tight",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 136,
+   "q": "what is eating the cash",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 137,
+   "q": "why is the salary bill so high",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 138,
+   "q": "why are people late",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 139,
+   "q": "why is delivery slipping",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 140,
+   "q": "why has spending gone up",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 141,
+   "q": "why is nobody paying us",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 142,
+   "q": "what caused the overdue payments",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 143,
+   "q": "explain why the margin fell",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 144,
+   "q": "what is behind the cash position",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 145,
+   "q": "why do we owe so much",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 146,
+   "q": "লাভ কেন কমছে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 147,
+   "q": "কেন লোকসান হচ্ছে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 148,
+   "q": "লোকসানের কারণ কি",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 149,
+   "q": "কেন টাকা আটকে আছে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 150,
+   "q": "নগদ কেন কম",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 151,
+   "q": "বেতনের খরচ কেন এত বেশি",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 152,
+   "q": "কর্মীরা কেন দেরি করে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 153,
+   "q": "কাজ কেন পিছিয়ে যাচ্ছে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 154,
+   "q": "খরচ কেন বেড়েছে",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 155,
+   "q": "কেন কেউ টাকা দিচ্ছে না",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 156,
+   "q": "দেনা কেন এত",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 157,
+   "q": "কী কারণে মুনাফা কমল",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 158,
+   "q": "lav keno komche",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 159,
+   "q": "keno lokshan hocche",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 160,
+   "q": "taka keno atke ache",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 161,
+   "q": "beton keno eto beshi",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 162,
+   "q": "kormira keno deri kore",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 163,
+   "q": "khoroch keno bereche",
+   "intent": "why",
+   "section": "Reasoning",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 164,
    "q": "cash position",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1241,7 +1530,7 @@
    "kind": "base"
   },
   {
-   "id": 133,
+   "id": 165,
    "q": "cash position for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1250,7 +1539,7 @@
    "kind": "company"
   },
   {
-   "id": 134,
+   "id": 166,
    "q": "cash position for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1259,7 +1548,7 @@
    "kind": "company"
   },
   {
-   "id": 135,
+   "id": 167,
    "q": "how much cash do we have",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1268,7 +1557,7 @@
    "kind": "base"
   },
   {
-   "id": 136,
+   "id": 168,
    "q": "how much cash do we have for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1277,7 +1566,7 @@
    "kind": "company"
   },
   {
-   "id": 137,
+   "id": 169,
    "q": "how much cash do we have for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1286,7 +1575,7 @@
    "kind": "company"
   },
   {
-   "id": 138,
+   "id": 170,
    "q": "how much money do we have",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1295,7 +1584,7 @@
    "kind": "base"
   },
   {
-   "id": 139,
+   "id": 171,
    "q": "how much money do we have for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1304,7 +1593,7 @@
    "kind": "company"
   },
   {
-   "id": 140,
+   "id": 172,
    "q": "how much money do we have for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1313,7 +1602,7 @@
    "kind": "company"
   },
   {
-   "id": 141,
+   "id": 173,
    "q": "what is our liquidity",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1322,7 +1611,7 @@
    "kind": "base"
   },
   {
-   "id": 142,
+   "id": 174,
    "q": "what is our liquidity for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1331,7 +1620,7 @@
    "kind": "company"
   },
   {
-   "id": 143,
+   "id": 175,
    "q": "what is our liquidity for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1340,7 +1629,7 @@
    "kind": "company"
   },
   {
-   "id": 144,
+   "id": 176,
    "q": "cash in hand",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1349,7 +1638,7 @@
    "kind": "base"
   },
   {
-   "id": 145,
+   "id": 177,
    "q": "cash in hand for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1358,7 +1647,7 @@
    "kind": "company"
   },
   {
-   "id": 146,
+   "id": 178,
    "q": "cash in hand for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1367,7 +1656,7 @@
    "kind": "company"
   },
   {
-   "id": 147,
+   "id": 179,
    "q": "how much is available",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1376,7 +1665,7 @@
    "kind": "base"
   },
   {
-   "id": 148,
+   "id": 180,
    "q": "how much is available for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1385,7 +1674,7 @@
    "kind": "company"
   },
   {
-   "id": 149,
+   "id": 181,
    "q": "how much is available for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1394,7 +1683,7 @@
    "kind": "company"
   },
   {
-   "id": 150,
+   "id": 182,
    "q": "what is the cash position right now",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1403,7 +1692,7 @@
    "kind": "base"
   },
   {
-   "id": 151,
+   "id": 183,
    "q": "what is the cash position right now for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1412,7 +1701,7 @@
    "kind": "company"
   },
   {
-   "id": 152,
+   "id": 184,
    "q": "what is the cash position right now for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1421,7 +1710,7 @@
    "kind": "company"
   },
   {
-   "id": 153,
+   "id": 185,
    "q": "total funds",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1430,7 +1719,7 @@
    "kind": "base"
   },
   {
-   "id": 154,
+   "id": 186,
    "q": "total funds for Epal Travels",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1439,7 +1728,7 @@
    "kind": "company"
   },
   {
-   "id": 155,
+   "id": 187,
    "q": "total funds for IT Solutions",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1448,7 +1737,7 @@
    "kind": "company"
   },
   {
-   "id": 156,
+   "id": 188,
    "q": "ক্যাশ কত আছে",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1457,7 +1746,7 @@
    "kind": "base"
   },
   {
-   "id": 157,
+   "id": 189,
    "q": "ক্যাশ কত আছে ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1466,7 +1755,7 @@
    "kind": "company"
   },
   {
-   "id": 158,
+   "id": 190,
    "q": "ক্যাশ কত আছে আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1475,7 +1764,7 @@
    "kind": "company"
   },
   {
-   "id": 159,
+   "id": 191,
    "q": "হাতে কত টাকা আছে",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1484,7 +1773,7 @@
    "kind": "base"
   },
   {
-   "id": 160,
+   "id": 192,
    "q": "হাতে কত টাকা আছে ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1493,7 +1782,7 @@
    "kind": "company"
   },
   {
-   "id": 161,
+   "id": 193,
    "q": "হাতে কত টাকা আছে আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1502,7 +1791,7 @@
    "kind": "company"
   },
   {
-   "id": 162,
+   "id": 194,
    "q": "নগদ কত",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1511,7 +1800,7 @@
    "kind": "base"
   },
   {
-   "id": 163,
+   "id": 195,
    "q": "নগদ কত ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1520,7 +1809,7 @@
    "kind": "company"
   },
   {
-   "id": 164,
+   "id": 196,
    "q": "নগদ কত আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1529,7 +1818,7 @@
    "kind": "company"
   },
   {
-   "id": 165,
+   "id": 197,
    "q": "কত টাকা আছে",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1538,7 +1827,7 @@
    "kind": "base"
   },
   {
-   "id": 166,
+   "id": 198,
    "q": "কত টাকা আছে ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1547,7 +1836,7 @@
    "kind": "company"
   },
   {
-   "id": 167,
+   "id": 199,
    "q": "কত টাকা আছে আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1556,7 +1845,7 @@
    "kind": "company"
   },
   {
-   "id": 168,
+   "id": 200,
    "q": "তহবিলে কত",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1565,7 +1854,7 @@
    "kind": "base"
   },
   {
-   "id": 169,
+   "id": 201,
    "q": "তহবিলে কত ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1574,7 +1863,7 @@
    "kind": "company"
   },
   {
-   "id": 170,
+   "id": 202,
    "q": "তহবিলে কত আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1583,7 +1872,7 @@
    "kind": "company"
   },
   {
-   "id": 171,
+   "id": 203,
    "q": "হাতে আর ব্যাংকে মোট কত",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1592,7 +1881,7 @@
    "kind": "base"
   },
   {
-   "id": 172,
+   "id": 204,
    "q": "হাতে আর ব্যাংকে মোট কত ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1601,7 +1890,7 @@
    "kind": "company"
   },
   {
-   "id": 173,
+   "id": 205,
    "q": "হাতে আর ব্যাংকে মোট কত আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1610,7 +1899,7 @@
    "kind": "company"
   },
   {
-   "id": 174,
+   "id": 206,
    "q": "নগদ অবস্থা কী",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1619,7 +1908,7 @@
    "kind": "base"
   },
   {
-   "id": 175,
+   "id": 207,
    "q": "নগদ অবস্থা কী ট্রাভেলসের জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1628,7 +1917,7 @@
    "kind": "company"
   },
   {
-   "id": 176,
+   "id": 208,
    "q": "নগদ অবস্থা কী আইটির জন্য",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1637,7 +1926,7 @@
    "kind": "company"
   },
   {
-   "id": 177,
+   "id": 209,
    "q": "cash koto ache",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1646,7 +1935,7 @@
    "kind": "base"
   },
   {
-   "id": 178,
+   "id": 210,
    "q": "cash koto ache travels er jonno",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1655,7 +1944,7 @@
    "kind": "company"
   },
   {
-   "id": 179,
+   "id": 211,
    "q": "hate koto taka",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1664,7 +1953,7 @@
    "kind": "base"
   },
   {
-   "id": 180,
+   "id": 212,
    "q": "hate koto taka travels er jonno",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1673,7 +1962,7 @@
    "kind": "company"
   },
   {
-   "id": 181,
+   "id": 213,
    "q": "taka koto ache",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1682,7 +1971,7 @@
    "kind": "base"
   },
   {
-   "id": 182,
+   "id": 214,
    "q": "taka koto ache travels er jonno",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1691,7 +1980,7 @@
    "kind": "company"
   },
   {
-   "id": 183,
+   "id": 215,
    "q": "nogod koto",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1700,7 +1989,7 @@
    "kind": "base"
   },
   {
-   "id": 184,
+   "id": 216,
    "q": "nogod koto travels er jonno",
    "intent": "cash",
    "section": "Cash & Bank",
@@ -1709,7 +1998,7 @@
    "kind": "company"
   },
   {
-   "id": 185,
+   "id": 217,
    "q": "bank balances",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1718,7 +2007,7 @@
    "kind": "base"
   },
   {
-   "id": 186,
+   "id": 218,
    "q": "which bank has the most",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1727,7 +2016,7 @@
    "kind": "base"
   },
   {
-   "id": 187,
+   "id": 219,
    "q": "show me balance by bank",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1736,7 +2025,7 @@
    "kind": "base"
   },
   {
-   "id": 188,
+   "id": 220,
    "q": "what is in our bank accounts",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1745,7 +2034,7 @@
    "kind": "base"
   },
   {
-   "id": 189,
+   "id": 221,
    "q": "bank wise balance",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1754,7 +2043,7 @@
    "kind": "base"
   },
   {
-   "id": 190,
+   "id": 222,
    "q": "list the bank accounts",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1763,7 +2052,7 @@
    "kind": "base"
   },
   {
-   "id": 191,
+   "id": 223,
    "q": "ব্যাংকে কত টাকা",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1772,7 +2061,7 @@
    "kind": "base"
   },
   {
-   "id": 192,
+   "id": 224,
    "q": "কোন ব্যাংকে কত আছে",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1781,7 +2070,7 @@
    "kind": "base"
   },
   {
-   "id": 193,
+   "id": 225,
    "q": "ব্যাংক অনুযায়ী ব্যালেন্স",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1790,7 +2079,7 @@
    "kind": "base"
   },
   {
-   "id": 194,
+   "id": 226,
    "q": "ব্যাংক অ্যাকাউন্টে কত",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1799,7 +2088,7 @@
    "kind": "base"
   },
   {
-   "id": 195,
+   "id": 227,
    "q": "কোন ব্যাংকে সবচেয়ে বেশি",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1808,7 +2097,7 @@
    "kind": "base"
   },
   {
-   "id": 196,
+   "id": 228,
    "q": "bank e koto taka",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1817,7 +2106,7 @@
    "kind": "base"
   },
   {
-   "id": 197,
+   "id": 229,
    "q": "kon bank e koto",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1826,7 +2115,7 @@
    "kind": "base"
   },
   {
-   "id": 198,
+   "id": 230,
    "q": "bank balance koto",
    "intent": "bank_accounts",
    "section": "Cash & Bank",
@@ -1835,7 +2124,7 @@
    "kind": "base"
   },
   {
-   "id": 199,
+   "id": 231,
    "q": "petty cash balance",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1844,7 +2133,7 @@
    "kind": "base"
   },
   {
-   "id": 200,
+   "id": 232,
    "q": "how much petty cash",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1853,7 +2142,7 @@
    "kind": "base"
   },
   {
-   "id": 201,
+   "id": 233,
    "q": "what is in the float",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1862,7 +2151,7 @@
    "kind": "base"
   },
   {
-   "id": 202,
+   "id": 234,
    "q": "office cash balance",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1871,7 +2160,7 @@
    "kind": "base"
   },
   {
-   "id": 203,
+   "id": 235,
    "q": "petty cash position",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1880,7 +2169,7 @@
    "kind": "base"
   },
   {
-   "id": 204,
+   "id": 236,
    "q": "পেটি ক্যাশ কত",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1889,7 +2178,7 @@
    "kind": "base"
   },
   {
-   "id": 205,
+   "id": 237,
    "q": "খুচরা নগদ কত আছে",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1898,7 +2187,7 @@
    "kind": "base"
   },
   {
-   "id": 206,
+   "id": 238,
    "q": "অফিস ক্যাশ কত",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1907,7 +2196,7 @@
    "kind": "base"
   },
   {
-   "id": 207,
+   "id": 239,
    "q": "ফ্লোটে কত আছে",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1916,7 +2205,7 @@
    "kind": "base"
   },
   {
-   "id": 208,
+   "id": 240,
    "q": "petty cash koto",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1925,7 +2214,7 @@
    "kind": "base"
   },
   {
-   "id": 209,
+   "id": 241,
    "q": "office cash koto",
    "intent": "petty_cash",
    "section": "Cash & Bank",
@@ -1934,7 +2223,7 @@
    "kind": "base"
   },
   {
-   "id": 210,
+   "id": 242,
    "q": "what is our burn rate",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1943,7 +2232,7 @@
    "kind": "base"
   },
   {
-   "id": 211,
+   "id": 243,
    "q": "how long will the cash last",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1952,7 +2241,7 @@
    "kind": "base"
   },
   {
-   "id": 212,
+   "id": 244,
    "q": "how many months of cash do we have",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1961,7 +2250,7 @@
    "kind": "base"
   },
   {
-   "id": 213,
+   "id": 245,
    "q": "what is the runway",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1970,7 +2259,7 @@
    "kind": "base"
   },
   {
-   "id": 214,
+   "id": 246,
    "q": "will we run out of money",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1979,7 +2268,7 @@
    "kind": "base"
   },
   {
-   "id": 215,
+   "id": 247,
    "q": "how much do we spend a month",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1988,7 +2277,7 @@
    "kind": "base"
   },
   {
-   "id": 216,
+   "id": 248,
    "q": "টাকা কতদিন চলবে",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -1997,7 +2286,7 @@
    "kind": "base"
   },
   {
-   "id": 217,
+   "id": 249,
    "q": "মাসে কত খরচ হয়",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2006,7 +2295,7 @@
    "kind": "base"
   },
   {
-   "id": 218,
+   "id": 250,
    "q": "হাতের টাকায় কত মাস চলবে",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2015,7 +2304,7 @@
    "kind": "base"
   },
   {
-   "id": 219,
+   "id": 251,
    "q": "ব্যয়ের হার কত",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2024,7 +2313,7 @@
    "kind": "base"
   },
   {
-   "id": 220,
+   "id": 252,
    "q": "টাকা কি শেষ হয়ে যাবে",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2033,7 +2322,7 @@
    "kind": "base"
   },
   {
-   "id": 221,
+   "id": 253,
    "q": "taka koto din cholbe",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2042,7 +2331,7 @@
    "kind": "base"
   },
   {
-   "id": 222,
+   "id": 254,
    "q": "mase koto khoroch",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2051,7 +2340,7 @@
    "kind": "base"
   },
   {
-   "id": 223,
+   "id": 255,
    "q": "koto mash cholbe",
    "intent": "burn_runway",
    "section": "Cash & Bank",
@@ -2060,7 +2349,7 @@
    "kind": "base"
   },
   {
-   "id": 224,
+   "id": 256,
    "q": "who owes us money",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2069,7 +2358,7 @@
    "kind": "base"
   },
   {
-   "id": 225,
+   "id": 257,
    "q": "what are our receivables",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2078,7 +2367,7 @@
    "kind": "base"
   },
   {
-   "id": 226,
+   "id": 258,
    "q": "how much is due to us",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2087,7 +2376,7 @@
    "kind": "base"
   },
   {
-   "id": 227,
+   "id": 259,
    "q": "show me the debtors",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2096,7 +2385,7 @@
    "kind": "base"
   },
   {
-   "id": 228,
+   "id": 260,
    "q": "how much do we have to collect",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2105,7 +2394,7 @@
    "kind": "base"
   },
   {
-   "id": 229,
+   "id": 261,
    "q": "receivables aging",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2114,7 +2403,7 @@
    "kind": "base"
   },
   {
-   "id": 230,
+   "id": 262,
    "q": "who has not paid us",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2123,7 +2412,7 @@
    "kind": "base"
   },
   {
-   "id": 231,
+   "id": 263,
    "q": "what is outstanding from customers",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2132,7 +2421,7 @@
    "kind": "base"
   },
   {
-   "id": 232,
+   "id": 264,
    "q": "কে আমাদের টাকা দেবে",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2141,7 +2430,7 @@
    "kind": "base"
   },
   {
-   "id": 233,
+   "id": 265,
    "q": "আমাদের পাওনা কত",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2150,7 +2439,7 @@
    "kind": "base"
   },
   {
-   "id": 234,
+   "id": 266,
    "q": "কার কাছে টাকা পাব",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2159,7 +2448,7 @@
    "kind": "base"
   },
   {
-   "id": 235,
+   "id": 267,
    "q": "বকেয়া আদায় কত",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2168,7 +2457,7 @@
    "kind": "base"
   },
   {
-   "id": 236,
+   "id": 268,
    "q": "গ্রাহকদের কাছে কত পাওনা",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2177,7 +2466,7 @@
    "kind": "base"
   },
   {
-   "id": 237,
+   "id": 269,
    "q": "কত টাকা পাওয়ার আছে",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2186,7 +2475,7 @@
    "kind": "base"
   },
   {
-   "id": 238,
+   "id": 270,
    "q": "ke taka debe",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2195,7 +2484,7 @@
    "kind": "base"
   },
   {
-   "id": 239,
+   "id": 271,
    "q": "amader pawna koto",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2204,7 +2493,7 @@
    "kind": "base"
   },
   {
-   "id": 240,
+   "id": 272,
    "q": "taka pabo koto",
    "intent": "receivables",
    "section": "Receivable & Payable",
@@ -2213,7 +2502,7 @@
    "kind": "base"
   },
   {
-   "id": 241,
+   "id": 273,
    "q": "what do we owe",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2222,7 +2511,7 @@
    "kind": "base"
   },
   {
-   "id": 242,
+   "id": 274,
    "q": "who do we owe money to",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2231,7 +2520,7 @@
    "kind": "base"
   },
   {
-   "id": 243,
+   "id": 275,
    "q": "show me the payables",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2240,7 +2529,7 @@
    "kind": "base"
   },
   {
-   "id": 244,
+   "id": 276,
    "q": "how much do we have to pay",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2249,7 +2538,7 @@
    "kind": "base"
   },
   {
-   "id": 245,
+   "id": 277,
    "q": "what bills are due",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2258,7 +2547,7 @@
    "kind": "base"
   },
   {
-   "id": 246,
+   "id": 278,
    "q": "payables aging",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2267,7 +2556,7 @@
    "kind": "base"
   },
   {
-   "id": 247,
+   "id": 279,
    "q": "what is outstanding to suppliers",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2276,7 +2565,7 @@
    "kind": "base"
   },
   {
-   "id": 248,
+   "id": 280,
    "q": "কাকে টাকা দিতে হবে",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2285,7 +2574,7 @@
    "kind": "base"
   },
   {
-   "id": 249,
+   "id": 281,
    "q": "আমাদের দেনা কত",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2294,7 +2583,7 @@
    "kind": "base"
   },
   {
-   "id": 250,
+   "id": 282,
    "q": "কত টাকা পরিশোধ করতে হবে",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2303,7 +2592,7 @@
    "kind": "base"
   },
   {
-   "id": 251,
+   "id": 283,
    "q": "কার কাছে দেনা আছে",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2312,7 +2601,7 @@
    "kind": "base"
   },
   {
-   "id": 252,
+   "id": 284,
    "q": "কী কী বিল বাকি",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2321,7 +2610,7 @@
    "kind": "base"
   },
   {
-   "id": 253,
+   "id": 285,
    "q": "kake taka dite hobe",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2330,7 +2619,7 @@
    "kind": "base"
   },
   {
-   "id": 254,
+   "id": 286,
    "q": "dena koto",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2339,7 +2628,7 @@
    "kind": "base"
   },
   {
-   "id": 255,
+   "id": 287,
    "q": "koto taka dite hobe",
    "intent": "payables",
    "section": "Receivable & Payable",
@@ -2348,7 +2637,7 @@
    "kind": "base"
   },
   {
-   "id": 256,
+   "id": 288,
    "q": "what payments are overdue",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2357,7 +2646,7 @@
    "kind": "base"
   },
   {
-   "id": 257,
+   "id": 289,
    "q": "anything past due",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2366,7 +2655,7 @@
    "kind": "base"
   },
   {
-   "id": 258,
+   "id": 290,
    "q": "what is due this week",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2375,7 +2664,7 @@
    "kind": "base"
   },
   {
-   "id": 259,
+   "id": 291,
    "q": "show me late payments",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2384,7 +2673,7 @@
    "kind": "base"
   },
   {
-   "id": 260,
+   "id": 292,
    "q": "what is due today",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2393,7 +2682,7 @@
    "kind": "base"
   },
   {
-   "id": 261,
+   "id": 293,
    "q": "কোন পেমেন্টের তারিখ পেরিয়েছে",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2402,7 +2691,7 @@
    "kind": "base"
   },
   {
-   "id": 262,
+   "id": 294,
    "q": "কী কী বকেয়া",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2411,7 +2700,7 @@
    "kind": "base"
   },
   {
-   "id": 263,
+   "id": 295,
    "q": "এই সপ্তাহে কী দিতে হবে",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2420,7 +2709,7 @@
    "kind": "base"
   },
   {
-   "id": 264,
+   "id": 296,
    "q": "মেয়াদোত্তীর্ণ পেমেন্ট কত",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2429,7 +2718,7 @@
    "kind": "base"
   },
   {
-   "id": 265,
+   "id": 297,
    "q": "overdue koto",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2438,7 +2727,7 @@
    "kind": "base"
   },
   {
-   "id": 266,
+   "id": 298,
    "q": "ei soptahe ki dite hobe",
    "intent": "overdue_payments",
    "section": "Receivable & Payable",
@@ -2447,7 +2736,7 @@
    "kind": "base"
   },
   {
-   "id": 267,
+   "id": 299,
    "q": "show me the trial balance",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2456,7 +2745,7 @@
    "kind": "base"
   },
   {
-   "id": 268,
+   "id": 300,
    "q": "does the trial balance tie",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2465,7 +2754,7 @@
    "kind": "base"
   },
   {
-   "id": 269,
+   "id": 301,
    "q": "is the trial balance balanced",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2474,7 +2763,7 @@
    "kind": "base"
   },
   {
-   "id": 270,
+   "id": 302,
    "q": "debits and credits total",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2483,7 +2772,7 @@
    "kind": "base"
   },
   {
-   "id": 271,
+   "id": 303,
    "q": "trial balance status",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2492,7 +2781,7 @@
    "kind": "base"
   },
   {
-   "id": 272,
+   "id": 304,
    "q": "রেওয়ামিল দেখাও",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2501,7 +2790,7 @@
    "kind": "base"
   },
   {
-   "id": 273,
+   "id": 305,
    "q": "ট্রায়াল ব্যালেন্স মিলছে কি",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2510,7 +2799,7 @@
    "kind": "base"
   },
   {
-   "id": 274,
+   "id": 306,
    "q": "ডেবিট ক্রেডিট মিলছে",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2519,7 +2808,7 @@
    "kind": "base"
   },
   {
-   "id": 275,
+   "id": 307,
    "q": "রেওয়ামিল ঠিক আছে",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2528,7 +2817,7 @@
    "kind": "base"
   },
   {
-   "id": 276,
+   "id": 308,
    "q": "trial balance mile",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2537,7 +2826,7 @@
    "kind": "base"
   },
   {
-   "id": 277,
+   "id": 309,
    "q": "rewamil dekhao",
    "intent": "trial_balance",
    "section": "Accounts",
@@ -2546,7 +2835,7 @@
    "kind": "base"
   },
   {
-   "id": 278,
+   "id": 310,
    "q": "show me the balance sheet",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2555,7 +2844,7 @@
    "kind": "base"
   },
   {
-   "id": 279,
+   "id": 311,
    "q": "what is our net worth",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2564,7 +2853,7 @@
    "kind": "base"
   },
   {
-   "id": 280,
+   "id": 312,
    "q": "total assets and liabilities",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2573,7 +2862,7 @@
    "kind": "base"
   },
   {
-   "id": 281,
+   "id": 313,
    "q": "what is the financial position",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2582,7 +2871,7 @@
    "kind": "base"
   },
   {
-   "id": 282,
+   "id": 314,
    "q": "how much equity do we have",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2591,7 +2880,7 @@
    "kind": "base"
   },
   {
-   "id": 283,
+   "id": 315,
    "q": "স্থিতিপত্র দেখাও",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2600,7 +2889,7 @@
    "kind": "base"
   },
   {
-   "id": 284,
+   "id": 316,
    "q": "নিট সম্পদ কত",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2609,7 +2898,7 @@
    "kind": "base"
   },
   {
-   "id": 285,
+   "id": 317,
    "q": "মোট সম্পদ আর দায় কত",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2618,7 +2907,7 @@
    "kind": "base"
   },
   {
-   "id": 286,
+   "id": 318,
    "q": "ব্যালেন্স শীট দাও",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2627,7 +2916,7 @@
    "kind": "base"
   },
   {
-   "id": 287,
+   "id": 319,
    "q": "আর্থিক অবস্থা কী",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2636,7 +2925,7 @@
    "kind": "base"
   },
   {
-   "id": 288,
+   "id": 320,
    "q": "balance sheet dao",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2645,7 +2934,7 @@
    "kind": "base"
   },
   {
-   "id": 289,
+   "id": 321,
    "q": "net worth koto",
    "intent": "balance_sheet",
    "section": "Accounts",
@@ -2654,7 +2943,7 @@
    "kind": "base"
   },
   {
-   "id": 290,
+   "id": 322,
    "q": "how much profit this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2663,7 +2952,7 @@
    "kind": "base"
   },
   {
-   "id": 291,
+   "id": 323,
    "q": "how much profit this month this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2672,7 +2961,7 @@
    "kind": "period"
   },
   {
-   "id": 292,
+   "id": 324,
    "q": "how much profit this month last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2681,7 +2970,7 @@
    "kind": "period"
   },
   {
-   "id": 293,
+   "id": 325,
    "q": "how much profit this month this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2690,7 +2979,7 @@
    "kind": "period"
   },
   {
-   "id": 294,
+   "id": 326,
    "q": "how much profit this month for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2699,7 +2988,7 @@
    "kind": "company"
   },
   {
-   "id": 295,
+   "id": 327,
    "q": "how much profit this month for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2708,7 +2997,7 @@
    "kind": "company"
   },
   {
-   "id": 296,
+   "id": 328,
    "q": "are we profitable",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2717,7 +3006,7 @@
    "kind": "base"
   },
   {
-   "id": 297,
+   "id": 329,
    "q": "are we profitable this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2726,7 +3015,7 @@
    "kind": "period"
   },
   {
-   "id": 298,
+   "id": 330,
    "q": "are we profitable last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2735,7 +3024,7 @@
    "kind": "period"
   },
   {
-   "id": 299,
+   "id": 331,
    "q": "are we profitable this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2744,7 +3033,7 @@
    "kind": "period"
   },
   {
-   "id": 300,
+   "id": 332,
    "q": "are we profitable for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2753,7 +3042,7 @@
    "kind": "company"
   },
   {
-   "id": 301,
+   "id": 333,
    "q": "are we profitable for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2762,7 +3051,7 @@
    "kind": "company"
   },
   {
-   "id": 302,
+   "id": 334,
    "q": "show me the P&L",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2771,7 +3060,7 @@
    "kind": "base"
   },
   {
-   "id": 303,
+   "id": 335,
    "q": "show me the P&L this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2780,7 +3069,7 @@
    "kind": "period"
   },
   {
-   "id": 304,
+   "id": 336,
    "q": "show me the P&L last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2789,7 +3078,7 @@
    "kind": "period"
   },
   {
-   "id": 305,
+   "id": 337,
    "q": "show me the P&L this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2798,7 +3087,7 @@
    "kind": "period"
   },
   {
-   "id": 306,
+   "id": 338,
    "q": "show me the P&L for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2807,7 +3096,7 @@
    "kind": "company"
   },
   {
-   "id": 307,
+   "id": 339,
    "q": "show me the P&L for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2816,7 +3105,7 @@
    "kind": "company"
   },
   {
-   "id": 308,
+   "id": 340,
    "q": "what is the net profit",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2825,7 +3114,7 @@
    "kind": "base"
   },
   {
-   "id": 309,
+   "id": 341,
    "q": "what is the net profit this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2834,7 +3123,7 @@
    "kind": "period"
   },
   {
-   "id": 310,
+   "id": 342,
    "q": "what is the net profit last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2843,7 +3132,7 @@
    "kind": "period"
   },
   {
-   "id": 311,
+   "id": 343,
    "q": "what is the net profit this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2852,7 +3141,7 @@
    "kind": "period"
   },
   {
-   "id": 312,
+   "id": 344,
    "q": "what is the net profit for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2861,7 +3150,7 @@
    "kind": "company"
   },
   {
-   "id": 313,
+   "id": 345,
    "q": "what is the net profit for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2870,7 +3159,7 @@
    "kind": "company"
   },
   {
-   "id": 314,
+   "id": 346,
    "q": "profit and loss for last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2879,7 +3168,7 @@
    "kind": "base"
   },
   {
-   "id": 315,
+   "id": 347,
    "q": "profit and loss for last month this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2888,7 +3177,7 @@
    "kind": "period"
   },
   {
-   "id": 316,
+   "id": 348,
    "q": "profit and loss for last month last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2897,7 +3186,7 @@
    "kind": "period"
   },
   {
-   "id": 317,
+   "id": 349,
    "q": "profit and loss for last month this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2906,7 +3195,7 @@
    "kind": "period"
   },
   {
-   "id": 318,
+   "id": 350,
    "q": "profit and loss for last month for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2915,7 +3204,7 @@
    "kind": "company"
   },
   {
-   "id": 319,
+   "id": 351,
    "q": "profit and loss for last month for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2924,7 +3213,7 @@
    "kind": "company"
   },
   {
-   "id": 320,
+   "id": 352,
    "q": "what is our margin",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2933,7 +3222,7 @@
    "kind": "base"
   },
   {
-   "id": 321,
+   "id": 353,
    "q": "what is our margin this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2942,7 +3231,7 @@
    "kind": "period"
   },
   {
-   "id": 322,
+   "id": 354,
    "q": "what is our margin last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2951,7 +3240,7 @@
    "kind": "period"
   },
   {
-   "id": 323,
+   "id": 355,
    "q": "what is our margin this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2960,7 +3249,7 @@
    "kind": "period"
   },
   {
-   "id": 324,
+   "id": 356,
    "q": "what is our margin for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2969,7 +3258,7 @@
    "kind": "company"
   },
   {
-   "id": 325,
+   "id": 357,
    "q": "what is our margin for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2978,7 +3267,7 @@
    "kind": "company"
   },
   {
-   "id": 326,
+   "id": 358,
    "q": "did we make money this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2987,7 +3276,7 @@
    "kind": "base"
   },
   {
-   "id": 327,
+   "id": 359,
    "q": "did we make money this month this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -2996,7 +3285,7 @@
    "kind": "period"
   },
   {
-   "id": 328,
+   "id": 360,
    "q": "did we make money this month last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3005,7 +3294,7 @@
    "kind": "period"
   },
   {
-   "id": 329,
+   "id": 361,
    "q": "did we make money this month this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3014,7 +3303,7 @@
    "kind": "period"
   },
   {
-   "id": 330,
+   "id": 362,
    "q": "did we make money this month for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3023,7 +3312,7 @@
    "kind": "company"
   },
   {
-   "id": 331,
+   "id": 363,
    "q": "did we make money this month for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3032,7 +3321,7 @@
    "kind": "company"
   },
   {
-   "id": 332,
+   "id": 364,
    "q": "income statement",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3041,7 +3330,7 @@
    "kind": "base"
   },
   {
-   "id": 333,
+   "id": 365,
    "q": "income statement this month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3050,7 +3339,7 @@
    "kind": "period"
   },
   {
-   "id": 334,
+   "id": 366,
    "q": "income statement last month",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3059,7 +3348,7 @@
    "kind": "period"
   },
   {
-   "id": 335,
+   "id": 367,
    "q": "income statement this year",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3068,7 +3357,7 @@
    "kind": "period"
   },
   {
-   "id": 336,
+   "id": 368,
    "q": "income statement for Epal Travels",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3077,7 +3366,7 @@
    "kind": "company"
   },
   {
-   "id": 337,
+   "id": 369,
    "q": "income statement for IT Solutions",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3086,7 +3375,7 @@
    "kind": "company"
   },
   {
-   "id": 338,
+   "id": 370,
    "q": "এ মাসে লাভ কত",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3095,7 +3384,7 @@
    "kind": "base"
   },
   {
-   "id": 339,
+   "id": 371,
    "q": "এ মাসে লাভ কত এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3104,7 +3393,7 @@
    "kind": "period"
   },
   {
-   "id": 340,
+   "id": 372,
    "q": "এ মাসে লাভ কত গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3113,7 +3402,7 @@
    "kind": "period"
   },
   {
-   "id": 341,
+   "id": 373,
    "q": "এ মাসে লাভ কত এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3122,7 +3411,7 @@
    "kind": "period"
   },
   {
-   "id": 342,
+   "id": 374,
    "q": "এ মাসে লাভ কত ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3131,7 +3420,7 @@
    "kind": "company"
   },
   {
-   "id": 343,
+   "id": 375,
    "q": "এ মাসে লাভ কত আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3140,7 +3429,7 @@
    "kind": "company"
   },
   {
-   "id": 344,
+   "id": 376,
    "q": "লাভ হচ্ছে কি",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3149,7 +3438,7 @@
    "kind": "base"
   },
   {
-   "id": 345,
+   "id": 377,
    "q": "লাভ হচ্ছে কি এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3158,7 +3447,7 @@
    "kind": "period"
   },
   {
-   "id": 346,
+   "id": 378,
    "q": "লাভ হচ্ছে কি গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3167,7 +3456,7 @@
    "kind": "period"
   },
   {
-   "id": 347,
+   "id": 379,
    "q": "লাভ হচ্ছে কি এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3176,7 +3465,7 @@
    "kind": "period"
   },
   {
-   "id": 348,
+   "id": 380,
    "q": "লাভ হচ্ছে কি ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3185,7 +3474,7 @@
    "kind": "company"
   },
   {
-   "id": 349,
+   "id": 381,
    "q": "লাভ হচ্ছে কি আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3194,7 +3483,7 @@
    "kind": "company"
   },
   {
-   "id": 350,
+   "id": 382,
    "q": "লাভ লোকসান দেখাও",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3203,7 +3492,7 @@
    "kind": "base"
   },
   {
-   "id": 351,
+   "id": 383,
    "q": "লাভ লোকসান দেখাও এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3212,7 +3501,7 @@
    "kind": "period"
   },
   {
-   "id": 352,
+   "id": 384,
    "q": "লাভ লোকসান দেখাও গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3221,7 +3510,7 @@
    "kind": "period"
   },
   {
-   "id": 353,
+   "id": 385,
    "q": "লাভ লোকসান দেখাও এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3230,7 +3519,7 @@
    "kind": "period"
   },
   {
-   "id": 354,
+   "id": 386,
    "q": "লাভ লোকসান দেখাও ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3239,7 +3528,7 @@
    "kind": "company"
   },
   {
-   "id": 355,
+   "id": 387,
    "q": "লাভ লোকসান দেখাও আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3248,7 +3537,7 @@
    "kind": "company"
   },
   {
-   "id": 356,
+   "id": 388,
    "q": "নিট মুনাফা কত",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3257,7 +3546,7 @@
    "kind": "base"
   },
   {
-   "id": 357,
+   "id": 389,
    "q": "নিট মুনাফা কত এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3266,7 +3555,7 @@
    "kind": "period"
   },
   {
-   "id": 358,
+   "id": 390,
    "q": "নিট মুনাফা কত গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3275,7 +3564,7 @@
    "kind": "period"
   },
   {
-   "id": 359,
+   "id": 391,
    "q": "নিট মুনাফা কত এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3284,7 +3573,7 @@
    "kind": "period"
   },
   {
-   "id": 360,
+   "id": 392,
    "q": "নিট মুনাফা কত ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3293,7 +3582,7 @@
    "kind": "company"
   },
   {
-   "id": 361,
+   "id": 393,
    "q": "নিট মুনাফা কত আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3302,7 +3591,7 @@
    "kind": "company"
   },
   {
-   "id": 362,
+   "id": 394,
    "q": "গত মাসে লাভ কত হয়েছে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3311,7 +3600,7 @@
    "kind": "base"
   },
   {
-   "id": 363,
+   "id": 395,
    "q": "গত মাসে লাভ কত হয়েছে এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3320,7 +3609,7 @@
    "kind": "period"
   },
   {
-   "id": 364,
+   "id": 396,
    "q": "গত মাসে লাভ কত হয়েছে গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3329,7 +3618,7 @@
    "kind": "period"
   },
   {
-   "id": 365,
+   "id": 397,
    "q": "গত মাসে লাভ কত হয়েছে এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3338,7 +3627,7 @@
    "kind": "period"
   },
   {
-   "id": 366,
+   "id": 398,
    "q": "গত মাসে লাভ কত হয়েছে ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3347,7 +3636,7 @@
    "kind": "company"
   },
   {
-   "id": 367,
+   "id": 399,
    "q": "গত মাসে লাভ কত হয়েছে আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3356,7 +3645,7 @@
    "kind": "company"
   },
   {
-   "id": 368,
+   "id": 400,
    "q": "মার্জিন কত",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3365,7 +3654,7 @@
    "kind": "base"
   },
   {
-   "id": 369,
+   "id": 401,
    "q": "মার্জিন কত এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3374,7 +3663,7 @@
    "kind": "period"
   },
   {
-   "id": 370,
+   "id": 402,
    "q": "মার্জিন কত গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3383,7 +3672,7 @@
    "kind": "period"
   },
   {
-   "id": 371,
+   "id": 403,
    "q": "মার্জিন কত এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3392,7 +3681,7 @@
    "kind": "period"
   },
   {
-   "id": 372,
+   "id": 404,
    "q": "মার্জিন কত ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3401,7 +3690,7 @@
    "kind": "company"
   },
   {
-   "id": 373,
+   "id": 405,
    "q": "মার্জিন কত আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3410,7 +3699,7 @@
    "kind": "company"
   },
   {
-   "id": 374,
+   "id": 406,
    "q": "লোকসান হচ্ছে কি",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3419,7 +3708,7 @@
    "kind": "base"
   },
   {
-   "id": 375,
+   "id": 407,
    "q": "লোকসান হচ্ছে কি এ মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3428,7 +3717,7 @@
    "kind": "period"
   },
   {
-   "id": 376,
+   "id": 408,
    "q": "লোকসান হচ্ছে কি গত মাসে",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3437,7 +3726,7 @@
    "kind": "period"
   },
   {
-   "id": 377,
+   "id": 409,
    "q": "লোকসান হচ্ছে কি এ বছর",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3446,7 +3735,7 @@
    "kind": "period"
   },
   {
-   "id": 378,
+   "id": 410,
    "q": "লোকসান হচ্ছে কি ট্রাভেলসের জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3455,7 +3744,7 @@
    "kind": "company"
   },
   {
-   "id": 379,
+   "id": 411,
    "q": "লোকসান হচ্ছে কি আইটির জন্য",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3464,7 +3753,7 @@
    "kind": "company"
   },
   {
-   "id": 380,
+   "id": 412,
    "q": "lav koto",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3473,7 +3762,7 @@
    "kind": "base"
   },
   {
-   "id": 381,
+   "id": 413,
    "q": "lav koto ei mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3482,7 +3771,7 @@
    "kind": "period"
   },
   {
-   "id": 382,
+   "id": 414,
    "q": "lav koto goto mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3491,7 +3780,7 @@
    "kind": "period"
   },
   {
-   "id": 383,
+   "id": 415,
    "q": "lav koto travels er jonno",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3500,7 +3789,7 @@
    "kind": "company"
   },
   {
-   "id": 384,
+   "id": 416,
    "q": "e mase lav koto",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3509,7 +3798,7 @@
    "kind": "base"
   },
   {
-   "id": 385,
+   "id": 417,
    "q": "e mase lav koto ei mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3518,7 +3807,7 @@
    "kind": "period"
   },
   {
-   "id": 386,
+   "id": 418,
    "q": "e mase lav koto goto mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3527,7 +3816,7 @@
    "kind": "period"
   },
   {
-   "id": 387,
+   "id": 419,
    "q": "e mase lav koto travels er jonno",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3536,7 +3825,7 @@
    "kind": "company"
   },
   {
-   "id": 388,
+   "id": 420,
    "q": "munafa koto",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3545,7 +3834,7 @@
    "kind": "base"
   },
   {
-   "id": 389,
+   "id": 421,
    "q": "munafa koto ei mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3554,7 +3843,7 @@
    "kind": "period"
   },
   {
-   "id": 390,
+   "id": 422,
    "q": "munafa koto goto mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3563,7 +3852,7 @@
    "kind": "period"
   },
   {
-   "id": 391,
+   "id": 423,
    "q": "munafa koto travels er jonno",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3572,7 +3861,7 @@
    "kind": "company"
   },
   {
-   "id": 392,
+   "id": 424,
    "q": "lokshan hocche ki",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3581,7 +3870,7 @@
    "kind": "base"
   },
   {
-   "id": 393,
+   "id": 425,
    "q": "lokshan hocche ki ei mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3590,7 +3879,7 @@
    "kind": "period"
   },
   {
-   "id": 394,
+   "id": 426,
    "q": "lokshan hocche ki goto mash e",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3599,7 +3888,7 @@
    "kind": "period"
   },
   {
-   "id": 395,
+   "id": 427,
    "q": "lokshan hocche ki travels er jonno",
    "intent": "profit_loss",
    "section": "Accounts",
@@ -3608,7 +3897,7 @@
    "kind": "company"
   },
   {
-   "id": 396,
+   "id": 428,
    "q": "how much revenue this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3617,7 +3906,7 @@
    "kind": "base"
   },
   {
-   "id": 397,
+   "id": 429,
    "q": "how much revenue this month this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3626,7 +3915,7 @@
    "kind": "period"
   },
   {
-   "id": 398,
+   "id": 430,
    "q": "how much revenue this month last month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3635,7 +3924,7 @@
    "kind": "period"
   },
   {
-   "id": 399,
+   "id": 431,
    "q": "how much revenue this month this year",
    "intent": "revenue",
    "section": "Accounts",
@@ -3644,7 +3933,7 @@
    "kind": "period"
   },
   {
-   "id": 400,
+   "id": 432,
    "q": "how much revenue this month for Epal Travels",
    "intent": "revenue",
    "section": "Accounts",
@@ -3653,7 +3942,7 @@
    "kind": "company"
   },
   {
-   "id": 401,
+   "id": 433,
    "q": "how much revenue this month for IT Solutions",
    "intent": "revenue",
    "section": "Accounts",
@@ -3662,7 +3951,7 @@
    "kind": "company"
   },
   {
-   "id": 402,
+   "id": 434,
    "q": "what is our turnover",
    "intent": "revenue",
    "section": "Accounts",
@@ -3671,7 +3960,7 @@
    "kind": "base"
   },
   {
-   "id": 403,
+   "id": 435,
    "q": "what is our turnover this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3680,7 +3969,7 @@
    "kind": "period"
   },
   {
-   "id": 404,
+   "id": 436,
    "q": "what is our turnover last month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3689,7 +3978,7 @@
    "kind": "period"
   },
   {
-   "id": 405,
+   "id": 437,
    "q": "what is our turnover this year",
    "intent": "revenue",
    "section": "Accounts",
@@ -3698,7 +3987,7 @@
    "kind": "period"
   },
   {
-   "id": 406,
+   "id": 438,
    "q": "what is our turnover for Epal Travels",
    "intent": "revenue",
    "section": "Accounts",
@@ -3707,7 +3996,7 @@
    "kind": "company"
   },
   {
-   "id": 407,
+   "id": 439,
    "q": "what is our turnover for IT Solutions",
    "intent": "revenue",
    "section": "Accounts",
@@ -3716,7 +4005,7 @@
    "kind": "company"
   },
   {
-   "id": 408,
+   "id": 440,
    "q": "how much did we sell",
    "intent": "revenue",
    "section": "Accounts",
@@ -3725,7 +4014,7 @@
    "kind": "base"
   },
   {
-   "id": 409,
+   "id": 441,
    "q": "how much did we sell this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3734,7 +4023,7 @@
    "kind": "period"
   },
   {
-   "id": 410,
+   "id": 442,
    "q": "how much did we sell last month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3743,7 +4032,7 @@
    "kind": "period"
   },
   {
-   "id": 411,
+   "id": 443,
    "q": "how much did we sell this year",
    "intent": "revenue",
    "section": "Accounts",
@@ -3752,7 +4041,7 @@
    "kind": "period"
   },
   {
-   "id": 412,
+   "id": 444,
    "q": "how much did we sell for Epal Travels",
    "intent": "revenue",
    "section": "Accounts",
@@ -3761,7 +4050,7 @@
    "kind": "company"
   },
   {
-   "id": 413,
+   "id": 445,
    "q": "how much did we sell for IT Solutions",
    "intent": "revenue",
    "section": "Accounts",
@@ -3770,7 +4059,7 @@
    "kind": "company"
   },
   {
-   "id": 414,
+   "id": 446,
    "q": "total income this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3779,7 +4068,7 @@
    "kind": "base"
   },
   {
-   "id": 415,
+   "id": 447,
    "q": "total income this month this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3788,7 +4077,7 @@
    "kind": "period"
   },
   {
-   "id": 416,
+   "id": 448,
    "q": "total income this month last month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3797,7 +4086,7 @@
    "kind": "period"
   },
   {
-   "id": 417,
+   "id": 449,
    "q": "total income this month this year",
    "intent": "revenue",
    "section": "Accounts",
@@ -3806,7 +4095,7 @@
    "kind": "period"
   },
   {
-   "id": 418,
+   "id": 450,
    "q": "total income this month for Epal Travels",
    "intent": "revenue",
    "section": "Accounts",
@@ -3815,7 +4104,7 @@
    "kind": "company"
   },
   {
-   "id": 419,
+   "id": 451,
    "q": "total income this month for IT Solutions",
    "intent": "revenue",
    "section": "Accounts",
@@ -3824,7 +4113,7 @@
    "kind": "company"
   },
   {
-   "id": 420,
+   "id": 452,
    "q": "what is the top line",
    "intent": "revenue",
    "section": "Accounts",
@@ -3833,7 +4122,7 @@
    "kind": "base"
   },
   {
-   "id": 421,
+   "id": 453,
    "q": "what is the top line this month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3842,7 +4131,7 @@
    "kind": "period"
   },
   {
-   "id": 422,
+   "id": 454,
    "q": "what is the top line last month",
    "intent": "revenue",
    "section": "Accounts",
@@ -3851,7 +4140,7 @@
    "kind": "period"
   },
   {
-   "id": 423,
+   "id": 455,
    "q": "what is the top line this year",
    "intent": "revenue",
    "section": "Accounts",
@@ -3860,7 +4149,7 @@
    "kind": "period"
   },
   {
-   "id": 424,
+   "id": 456,
    "q": "what is the top line for Epal Travels",
    "intent": "revenue",
    "section": "Accounts",
@@ -3869,7 +4158,7 @@
    "kind": "company"
   },
   {
-   "id": 425,
+   "id": 457,
    "q": "what is the top line for IT Solutions",
    "intent": "revenue",
    "section": "Accounts",
@@ -3878,7 +4167,7 @@
    "kind": "company"
   },
   {
-   "id": 426,
+   "id": 458,
    "q": "এ মাসে কত বিক্রি",
    "intent": "revenue",
    "section": "Accounts",
@@ -3887,7 +4176,7 @@
    "kind": "base"
   },
   {
-   "id": 427,
+   "id": 459,
    "q": "এ মাসে কত বিক্রি এ মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -3896,7 +4185,7 @@
    "kind": "period"
   },
   {
-   "id": 428,
+   "id": 460,
    "q": "এ মাসে কত বিক্রি গত মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -3905,7 +4194,7 @@
    "kind": "period"
   },
   {
-   "id": 429,
+   "id": 461,
    "q": "এ মাসে কত বিক্রি এ বছর",
    "intent": "revenue",
    "section": "Accounts",
@@ -3914,7 +4203,7 @@
    "kind": "period"
   },
   {
-   "id": 430,
+   "id": 462,
    "q": "এ মাসে কত বিক্রি ট্রাভেলসের জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -3923,7 +4212,7 @@
    "kind": "company"
   },
   {
-   "id": 431,
+   "id": 463,
    "q": "এ মাসে কত বিক্রি আইটির জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -3932,7 +4221,7 @@
    "kind": "company"
   },
   {
-   "id": 432,
+   "id": 464,
    "q": "আয় কত হয়েছে",
    "intent": "revenue",
    "section": "Accounts",
@@ -3941,7 +4230,7 @@
    "kind": "base"
   },
   {
-   "id": 433,
+   "id": 465,
    "q": "আয় কত হয়েছে এ মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -3950,7 +4239,7 @@
    "kind": "period"
   },
   {
-   "id": 434,
+   "id": 466,
    "q": "আয় কত হয়েছে গত মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -3959,7 +4248,7 @@
    "kind": "period"
   },
   {
-   "id": 435,
+   "id": 467,
    "q": "আয় কত হয়েছে এ বছর",
    "intent": "revenue",
    "section": "Accounts",
@@ -3968,7 +4257,7 @@
    "kind": "period"
   },
   {
-   "id": 436,
+   "id": 468,
    "q": "আয় কত হয়েছে ট্রাভেলসের জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -3977,7 +4266,7 @@
    "kind": "company"
   },
   {
-   "id": 437,
+   "id": 469,
    "q": "আয় কত হয়েছে আইটির জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -3986,7 +4275,7 @@
    "kind": "company"
   },
   {
-   "id": 438,
+   "id": 470,
    "q": "রাজস্ব কত",
    "intent": "revenue",
    "section": "Accounts",
@@ -3995,7 +4284,7 @@
    "kind": "base"
   },
   {
-   "id": 439,
+   "id": 471,
    "q": "রাজস্ব কত এ মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4004,7 +4293,7 @@
    "kind": "period"
   },
   {
-   "id": 440,
+   "id": 472,
    "q": "রাজস্ব কত গত মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4013,7 +4302,7 @@
    "kind": "period"
   },
   {
-   "id": 441,
+   "id": 473,
    "q": "রাজস্ব কত এ বছর",
    "intent": "revenue",
    "section": "Accounts",
@@ -4022,7 +4311,7 @@
    "kind": "period"
   },
   {
-   "id": 442,
+   "id": 474,
    "q": "রাজস্ব কত ট্রাভেলসের জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4031,7 +4320,7 @@
    "kind": "company"
   },
   {
-   "id": 443,
+   "id": 475,
    "q": "রাজস্ব কত আইটির জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4040,7 +4329,7 @@
    "kind": "company"
   },
   {
-   "id": 444,
+   "id": 476,
    "q": "টার্নওভার কত",
    "intent": "revenue",
    "section": "Accounts",
@@ -4049,7 +4338,7 @@
    "kind": "base"
   },
   {
-   "id": 445,
+   "id": 477,
    "q": "টার্নওভার কত এ মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4058,7 +4347,7 @@
    "kind": "period"
   },
   {
-   "id": 446,
+   "id": 478,
    "q": "টার্নওভার কত গত মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4067,7 +4356,7 @@
    "kind": "period"
   },
   {
-   "id": 447,
+   "id": 479,
    "q": "টার্নওভার কত এ বছর",
    "intent": "revenue",
    "section": "Accounts",
@@ -4076,7 +4365,7 @@
    "kind": "period"
   },
   {
-   "id": 448,
+   "id": 480,
    "q": "টার্নওভার কত ট্রাভেলসের জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4085,7 +4374,7 @@
    "kind": "company"
   },
   {
-   "id": 449,
+   "id": 481,
    "q": "টার্নওভার কত আইটির জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4094,7 +4383,7 @@
    "kind": "company"
   },
   {
-   "id": 450,
+   "id": 482,
    "q": "কত বিক্রি হয়েছে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4103,7 +4392,7 @@
    "kind": "base"
   },
   {
-   "id": 451,
+   "id": 483,
    "q": "কত বিক্রি হয়েছে এ মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4112,7 +4401,7 @@
    "kind": "period"
   },
   {
-   "id": 452,
+   "id": 484,
    "q": "কত বিক্রি হয়েছে গত মাসে",
    "intent": "revenue",
    "section": "Accounts",
@@ -4121,7 +4410,7 @@
    "kind": "period"
   },
   {
-   "id": 453,
+   "id": 485,
    "q": "কত বিক্রি হয়েছে এ বছর",
    "intent": "revenue",
    "section": "Accounts",
@@ -4130,7 +4419,7 @@
    "kind": "period"
   },
   {
-   "id": 454,
+   "id": 486,
    "q": "কত বিক্রি হয়েছে ট্রাভেলসের জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4139,7 +4428,7 @@
    "kind": "company"
   },
   {
-   "id": 455,
+   "id": 487,
    "q": "কত বিক্রি হয়েছে আইটির জন্য",
    "intent": "revenue",
    "section": "Accounts",
@@ -4148,7 +4437,7 @@
    "kind": "company"
   },
   {
-   "id": 456,
+   "id": 488,
    "q": "bikri koto",
    "intent": "revenue",
    "section": "Accounts",
@@ -4157,7 +4446,7 @@
    "kind": "base"
   },
   {
-   "id": 457,
+   "id": 489,
    "q": "bikri koto ei mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4166,7 +4455,7 @@
    "kind": "period"
   },
   {
-   "id": 458,
+   "id": 490,
    "q": "bikri koto goto mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4175,7 +4464,7 @@
    "kind": "period"
   },
   {
-   "id": 459,
+   "id": 491,
    "q": "bikri koto travels er jonno",
    "intent": "revenue",
    "section": "Accounts",
@@ -4184,7 +4473,7 @@
    "kind": "company"
   },
   {
-   "id": 460,
+   "id": 492,
    "q": "ay koto hoyeche",
    "intent": "revenue",
    "section": "Accounts",
@@ -4193,7 +4482,7 @@
    "kind": "base"
   },
   {
-   "id": 461,
+   "id": 493,
    "q": "ay koto hoyeche ei mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4202,7 +4491,7 @@
    "kind": "period"
   },
   {
-   "id": 462,
+   "id": 494,
    "q": "ay koto hoyeche goto mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4211,7 +4500,7 @@
    "kind": "period"
   },
   {
-   "id": 463,
+   "id": 495,
    "q": "ay koto hoyeche travels er jonno",
    "intent": "revenue",
    "section": "Accounts",
@@ -4220,7 +4509,7 @@
    "kind": "company"
   },
   {
-   "id": 464,
+   "id": 496,
    "q": "revenue koto",
    "intent": "revenue",
    "section": "Accounts",
@@ -4229,7 +4518,7 @@
    "kind": "base"
   },
   {
-   "id": 465,
+   "id": 497,
    "q": "revenue koto ei mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4238,7 +4527,7 @@
    "kind": "period"
   },
   {
-   "id": 466,
+   "id": 498,
    "q": "revenue koto goto mash e",
    "intent": "revenue",
    "section": "Accounts",
@@ -4247,7 +4536,7 @@
    "kind": "period"
   },
   {
-   "id": 467,
+   "id": 499,
    "q": "revenue koto travels er jonno",
    "intent": "revenue",
    "section": "Accounts",
@@ -4256,7 +4545,7 @@
    "kind": "company"
   },
   {
-   "id": 468,
+   "id": 500,
    "q": "how much did we spend this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4265,7 +4554,7 @@
    "kind": "base"
   },
   {
-   "id": 469,
+   "id": 501,
    "q": "how much did we spend this month this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4274,7 +4563,7 @@
    "kind": "period"
   },
   {
-   "id": 470,
+   "id": 502,
    "q": "how much did we spend this month last month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4283,7 +4572,7 @@
    "kind": "period"
   },
   {
-   "id": 471,
+   "id": 503,
    "q": "how much did we spend this month this year",
    "intent": "expenses",
    "section": "Accounts",
@@ -4292,7 +4581,7 @@
    "kind": "period"
   },
   {
-   "id": 472,
+   "id": 504,
    "q": "how much did we spend this month for Epal Travels",
    "intent": "expenses",
    "section": "Accounts",
@@ -4301,7 +4590,7 @@
    "kind": "company"
   },
   {
-   "id": 473,
+   "id": 505,
    "q": "how much did we spend this month for IT Solutions",
    "intent": "expenses",
    "section": "Accounts",
@@ -4310,7 +4599,7 @@
    "kind": "company"
   },
   {
-   "id": 474,
+   "id": 506,
    "q": "total expenses",
    "intent": "expenses",
    "section": "Accounts",
@@ -4319,7 +4608,7 @@
    "kind": "base"
   },
   {
-   "id": 475,
+   "id": 507,
    "q": "total expenses this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4328,7 +4617,7 @@
    "kind": "period"
   },
   {
-   "id": 476,
+   "id": 508,
    "q": "total expenses last month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4337,7 +4626,7 @@
    "kind": "period"
   },
   {
-   "id": 477,
+   "id": 509,
    "q": "total expenses this year",
    "intent": "expenses",
    "section": "Accounts",
@@ -4346,7 +4635,7 @@
    "kind": "period"
   },
   {
-   "id": 478,
+   "id": 510,
    "q": "total expenses for Epal Travels",
    "intent": "expenses",
    "section": "Accounts",
@@ -4355,7 +4644,7 @@
    "kind": "company"
   },
   {
-   "id": 479,
+   "id": 511,
    "q": "total expenses for IT Solutions",
    "intent": "expenses",
    "section": "Accounts",
@@ -4364,7 +4653,7 @@
    "kind": "company"
   },
   {
-   "id": 480,
+   "id": 512,
    "q": "what is our expenditure",
    "intent": "expenses",
    "section": "Accounts",
@@ -4373,7 +4662,7 @@
    "kind": "base"
   },
   {
-   "id": 481,
+   "id": 513,
    "q": "what is our expenditure this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4382,7 +4671,7 @@
    "kind": "period"
   },
   {
-   "id": 482,
+   "id": 514,
    "q": "what is our expenditure last month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4391,7 +4680,7 @@
    "kind": "period"
   },
   {
-   "id": 483,
+   "id": 515,
    "q": "what is our expenditure this year",
    "intent": "expenses",
    "section": "Accounts",
@@ -4400,7 +4689,7 @@
    "kind": "period"
   },
   {
-   "id": 484,
+   "id": 516,
    "q": "what is our expenditure for Epal Travels",
    "intent": "expenses",
    "section": "Accounts",
@@ -4409,7 +4698,7 @@
    "kind": "company"
   },
   {
-   "id": 485,
+   "id": 517,
    "q": "what is our expenditure for IT Solutions",
    "intent": "expenses",
    "section": "Accounts",
@@ -4418,7 +4707,7 @@
    "kind": "company"
   },
   {
-   "id": 486,
+   "id": 518,
    "q": "how much has gone out",
    "intent": "expenses",
    "section": "Accounts",
@@ -4427,7 +4716,7 @@
    "kind": "base"
   },
   {
-   "id": 487,
+   "id": 519,
    "q": "how much has gone out this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4436,7 +4725,7 @@
    "kind": "period"
   },
   {
-   "id": 488,
+   "id": 520,
    "q": "how much has gone out last month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4445,7 +4734,7 @@
    "kind": "period"
   },
   {
-   "id": 489,
+   "id": 521,
    "q": "how much has gone out this year",
    "intent": "expenses",
    "section": "Accounts",
@@ -4454,7 +4743,7 @@
    "kind": "period"
   },
   {
-   "id": 490,
+   "id": 522,
    "q": "how much has gone out for Epal Travels",
    "intent": "expenses",
    "section": "Accounts",
@@ -4463,7 +4752,7 @@
    "kind": "company"
   },
   {
-   "id": 491,
+   "id": 523,
    "q": "how much has gone out for IT Solutions",
    "intent": "expenses",
    "section": "Accounts",
@@ -4472,7 +4761,7 @@
    "kind": "company"
   },
   {
-   "id": 492,
+   "id": 524,
    "q": "spending this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4481,7 +4770,7 @@
    "kind": "base"
   },
   {
-   "id": 493,
+   "id": 525,
    "q": "spending this month this month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4490,7 +4779,7 @@
    "kind": "period"
   },
   {
-   "id": 494,
+   "id": 526,
    "q": "spending this month last month",
    "intent": "expenses",
    "section": "Accounts",
@@ -4499,7 +4788,7 @@
    "kind": "period"
   },
   {
-   "id": 495,
+   "id": 527,
    "q": "spending this month this year",
    "intent": "expenses",
    "section": "Accounts",
@@ -4508,7 +4797,7 @@
    "kind": "period"
   },
   {
-   "id": 496,
+   "id": 528,
    "q": "spending this month for Epal Travels",
    "intent": "expenses",
    "section": "Accounts",
@@ -4517,7 +4806,7 @@
    "kind": "company"
   },
   {
-   "id": 497,
+   "id": 529,
    "q": "spending this month for IT Solutions",
    "intent": "expenses",
    "section": "Accounts",
@@ -4526,7 +4815,7 @@
    "kind": "company"
   },
   {
-   "id": 498,
+   "id": 530,
    "q": "এ মাসে কত খরচ হয়েছে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4535,7 +4824,7 @@
    "kind": "base"
   },
   {
-   "id": 499,
+   "id": 531,
    "q": "এ মাসে কত খরচ হয়েছে এ মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4544,7 +4833,7 @@
    "kind": "period"
   },
   {
-   "id": 500,
+   "id": 532,
    "q": "এ মাসে কত খরচ হয়েছে গত মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4553,7 +4842,7 @@
    "kind": "period"
   },
   {
-   "id": 501,
+   "id": 533,
    "q": "এ মাসে কত খরচ হয়েছে এ বছর",
    "intent": "expenses",
    "section": "Accounts",
@@ -4562,7 +4851,7 @@
    "kind": "period"
   },
   {
-   "id": 502,
+   "id": 534,
    "q": "এ মাসে কত খরচ হয়েছে ট্রাভেলসের জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4571,7 +4860,7 @@
    "kind": "company"
   },
   {
-   "id": 503,
+   "id": 535,
    "q": "এ মাসে কত খরচ হয়েছে আইটির জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4580,7 +4869,7 @@
    "kind": "company"
   },
   {
-   "id": 504,
+   "id": 536,
    "q": "মোট খরচ কত",
    "intent": "expenses",
    "section": "Accounts",
@@ -4589,7 +4878,7 @@
    "kind": "base"
   },
   {
-   "id": 505,
+   "id": 537,
    "q": "মোট খরচ কত এ মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4598,7 +4887,7 @@
    "kind": "period"
   },
   {
-   "id": 506,
+   "id": 538,
    "q": "মোট খরচ কত গত মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4607,7 +4896,7 @@
    "kind": "period"
   },
   {
-   "id": 507,
+   "id": 539,
    "q": "মোট খরচ কত এ বছর",
    "intent": "expenses",
    "section": "Accounts",
@@ -4616,7 +4905,7 @@
    "kind": "period"
   },
   {
-   "id": 508,
+   "id": 540,
    "q": "মোট খরচ কত ট্রাভেলসের জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4625,7 +4914,7 @@
    "kind": "company"
   },
   {
-   "id": 509,
+   "id": 541,
    "q": "মোট খরচ কত আইটির জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4634,7 +4923,7 @@
    "kind": "company"
   },
   {
-   "id": 510,
+   "id": 542,
    "q": "ব্যয় কত",
    "intent": "expenses",
    "section": "Accounts",
@@ -4643,7 +4932,7 @@
    "kind": "base"
   },
   {
-   "id": 511,
+   "id": 543,
    "q": "ব্যয় কত এ মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4652,7 +4941,7 @@
    "kind": "period"
   },
   {
-   "id": 512,
+   "id": 544,
    "q": "ব্যয় কত গত মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4661,7 +4950,7 @@
    "kind": "period"
   },
   {
-   "id": 513,
+   "id": 545,
    "q": "ব্যয় কত এ বছর",
    "intent": "expenses",
    "section": "Accounts",
@@ -4670,7 +4959,7 @@
    "kind": "period"
   },
   {
-   "id": 514,
+   "id": 546,
    "q": "ব্যয় কত ট্রাভেলসের জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4679,7 +4968,7 @@
    "kind": "company"
   },
   {
-   "id": 515,
+   "id": 547,
    "q": "ব্যয় কত আইটির জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4688,7 +4977,7 @@
    "kind": "company"
   },
   {
-   "id": 516,
+   "id": 548,
    "q": "কত টাকা খরচ হলো",
    "intent": "expenses",
    "section": "Accounts",
@@ -4697,7 +4986,7 @@
    "kind": "base"
   },
   {
-   "id": 517,
+   "id": 549,
    "q": "কত টাকা খরচ হলো এ মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4706,7 +4995,7 @@
    "kind": "period"
   },
   {
-   "id": 518,
+   "id": 550,
    "q": "কত টাকা খরচ হলো গত মাসে",
    "intent": "expenses",
    "section": "Accounts",
@@ -4715,7 +5004,7 @@
    "kind": "period"
   },
   {
-   "id": 519,
+   "id": 551,
    "q": "কত টাকা খরচ হলো এ বছর",
    "intent": "expenses",
    "section": "Accounts",
@@ -4724,7 +5013,7 @@
    "kind": "period"
   },
   {
-   "id": 520,
+   "id": 552,
    "q": "কত টাকা খরচ হলো ট্রাভেলসের জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4733,7 +5022,7 @@
    "kind": "company"
   },
   {
-   "id": 521,
+   "id": 553,
    "q": "কত টাকা খরচ হলো আইটির জন্য",
    "intent": "expenses",
    "section": "Accounts",
@@ -4742,7 +5031,7 @@
    "kind": "company"
   },
   {
-   "id": 522,
+   "id": 554,
    "q": "khoroch koto hoyeche",
    "intent": "expenses",
    "section": "Accounts",
@@ -4751,7 +5040,7 @@
    "kind": "base"
   },
   {
-   "id": 523,
+   "id": 555,
    "q": "khoroch koto hoyeche ei mash e",
    "intent": "expenses",
    "section": "Accounts",
@@ -4760,7 +5049,7 @@
    "kind": "period"
   },
   {
-   "id": 524,
+   "id": 556,
    "q": "khoroch koto hoyeche goto mash e",
    "intent": "expenses",
    "section": "Accounts",
@@ -4769,7 +5058,7 @@
    "kind": "period"
   },
   {
-   "id": 525,
+   "id": 557,
    "q": "khoroch koto hoyeche travels er jonno",
    "intent": "expenses",
    "section": "Accounts",
@@ -4778,7 +5067,7 @@
    "kind": "company"
   },
   {
-   "id": 526,
+   "id": 558,
    "q": "mot khoroch koto",
    "intent": "expenses",
    "section": "Accounts",
@@ -4787,7 +5076,7 @@
    "kind": "base"
   },
   {
-   "id": 527,
+   "id": 559,
    "q": "mot khoroch koto ei mash e",
    "intent": "expenses",
    "section": "Accounts",
@@ -4796,7 +5085,7 @@
    "kind": "period"
   },
   {
-   "id": 528,
+   "id": 560,
    "q": "mot khoroch koto goto mash e",
    "intent": "expenses",
    "section": "Accounts",
@@ -4805,7 +5094,7 @@
    "kind": "period"
   },
   {
-   "id": 529,
+   "id": 561,
    "q": "mot khoroch koto travels er jonno",
    "intent": "expenses",
    "section": "Accounts",
@@ -4814,7 +5103,7 @@
    "kind": "company"
   },
   {
-   "id": 530,
+   "id": 562,
    "q": "what is our biggest expense",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4823,7 +5112,7 @@
    "kind": "base"
   },
   {
-   "id": 531,
+   "id": 563,
    "q": "what is our biggest expense this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4832,7 +5121,7 @@
    "kind": "period"
   },
   {
-   "id": 532,
+   "id": 564,
    "q": "what is our biggest expense last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4841,7 +5130,7 @@
    "kind": "period"
   },
   {
-   "id": 533,
+   "id": 565,
    "q": "what is our biggest expense this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4850,7 +5139,7 @@
    "kind": "period"
   },
   {
-   "id": 534,
+   "id": 566,
    "q": "expenses by category",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4859,7 +5148,7 @@
    "kind": "base"
   },
   {
-   "id": 535,
+   "id": 567,
    "q": "expenses by category this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4868,7 +5157,7 @@
    "kind": "period"
   },
   {
-   "id": 536,
+   "id": 568,
    "q": "expenses by category last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4877,7 +5166,7 @@
    "kind": "period"
   },
   {
-   "id": 537,
+   "id": 569,
    "q": "expenses by category this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4886,7 +5175,7 @@
    "kind": "period"
   },
   {
-   "id": 538,
+   "id": 570,
    "q": "where is the money going",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4895,7 +5184,7 @@
    "kind": "base"
   },
   {
-   "id": 539,
+   "id": 571,
    "q": "where is the money going this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4904,7 +5193,7 @@
    "kind": "period"
   },
   {
-   "id": 540,
+   "id": 572,
    "q": "where is the money going last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4913,7 +5202,7 @@
    "kind": "period"
   },
   {
-   "id": 541,
+   "id": 573,
    "q": "where is the money going this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4922,7 +5211,7 @@
    "kind": "period"
   },
   {
-   "id": 542,
+   "id": 574,
    "q": "show me the expense breakdown",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4931,7 +5220,7 @@
    "kind": "base"
   },
   {
-   "id": 543,
+   "id": 575,
    "q": "show me the expense breakdown this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4940,7 +5229,7 @@
    "kind": "period"
   },
   {
-   "id": 544,
+   "id": 576,
    "q": "show me the expense breakdown last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4949,7 +5238,7 @@
    "kind": "period"
   },
   {
-   "id": 545,
+   "id": 577,
    "q": "show me the expense breakdown this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4958,7 +5247,7 @@
    "kind": "period"
   },
   {
-   "id": 546,
+   "id": 578,
    "q": "which head is costing most",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4967,7 +5256,7 @@
    "kind": "base"
   },
   {
-   "id": 547,
+   "id": 579,
    "q": "which head is costing most this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4976,7 +5265,7 @@
    "kind": "period"
   },
   {
-   "id": 548,
+   "id": 580,
    "q": "which head is costing most last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4985,7 +5274,7 @@
    "kind": "period"
   },
   {
-   "id": 549,
+   "id": 581,
    "q": "which head is costing most this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -4994,7 +5283,7 @@
    "kind": "period"
   },
   {
-   "id": 550,
+   "id": 582,
    "q": "top 5 expense categories",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5003,7 +5292,7 @@
    "kind": "base"
   },
   {
-   "id": 551,
+   "id": 583,
    "q": "top 5 expense categories this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5012,7 +5301,7 @@
    "kind": "period"
   },
   {
-   "id": 552,
+   "id": 584,
    "q": "top 5 expense categories last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5021,7 +5310,7 @@
    "kind": "period"
   },
   {
-   "id": 553,
+   "id": 585,
    "q": "top 5 expense categories this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5030,7 +5319,7 @@
    "kind": "period"
   },
   {
-   "id": 554,
+   "id": 586,
    "q": "what are we spending on",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5039,7 +5328,7 @@
    "kind": "base"
   },
   {
-   "id": 555,
+   "id": 587,
    "q": "what are we spending on this month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5048,7 +5337,7 @@
    "kind": "period"
   },
   {
-   "id": 556,
+   "id": 588,
    "q": "what are we spending on last month",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5057,7 +5346,7 @@
    "kind": "period"
   },
   {
-   "id": 557,
+   "id": 589,
    "q": "what are we spending on this year",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5066,7 +5355,7 @@
    "kind": "period"
   },
   {
-   "id": 558,
+   "id": 590,
    "q": "কোন খাতে সবচেয়ে বেশি খরচ",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5075,7 +5364,7 @@
    "kind": "base"
   },
   {
-   "id": 559,
+   "id": 591,
    "q": "কোন খাতে সবচেয়ে বেশি খরচ এ মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5084,7 +5373,7 @@
    "kind": "period"
   },
   {
-   "id": 560,
+   "id": 592,
    "q": "কোন খাতে সবচেয়ে বেশি খরচ গত মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5093,7 +5382,7 @@
    "kind": "period"
   },
   {
-   "id": 561,
+   "id": 593,
    "q": "কোন খাতে সবচেয়ে বেশি খরচ এ বছর",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5102,7 +5391,7 @@
    "kind": "period"
   },
   {
-   "id": 562,
+   "id": 594,
    "q": "খরচ কোন খাতে বেশি",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5111,7 +5400,7 @@
    "kind": "base"
   },
   {
-   "id": 563,
+   "id": 595,
    "q": "খরচ কোন খাতে বেশি এ মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5120,7 +5409,7 @@
    "kind": "period"
   },
   {
-   "id": 564,
+   "id": 596,
    "q": "খরচ কোন খাতে বেশি গত মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5129,7 +5418,7 @@
    "kind": "period"
   },
   {
-   "id": 565,
+   "id": 597,
    "q": "খরচ কোন খাতে বেশি এ বছর",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5138,7 +5427,7 @@
    "kind": "period"
   },
   {
-   "id": 566,
+   "id": 598,
    "q": "খাত অনুযায়ী খরচ দেখাও",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5147,7 +5436,7 @@
    "kind": "base"
   },
   {
-   "id": 567,
+   "id": 599,
    "q": "খাত অনুযায়ী খরচ দেখাও এ মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5156,7 +5445,7 @@
    "kind": "period"
   },
   {
-   "id": 568,
+   "id": 600,
    "q": "খাত অনুযায়ী খরচ দেখাও গত মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5165,7 +5454,7 @@
    "kind": "period"
   },
   {
-   "id": 569,
+   "id": 601,
    "q": "খাত অনুযায়ী খরচ দেখাও এ বছর",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5174,7 +5463,7 @@
    "kind": "period"
   },
   {
-   "id": 570,
+   "id": 602,
    "q": "টাকা কোথায় যাচ্ছে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5183,7 +5472,7 @@
    "kind": "base"
   },
   {
-   "id": 571,
+   "id": 603,
    "q": "টাকা কোথায় যাচ্ছে এ মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5192,7 +5481,7 @@
    "kind": "period"
   },
   {
-   "id": 572,
+   "id": 604,
    "q": "টাকা কোথায় যাচ্ছে গত মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5201,7 +5490,7 @@
    "kind": "period"
   },
   {
-   "id": 573,
+   "id": 605,
    "q": "টাকা কোথায় যাচ্ছে এ বছর",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5210,7 +5499,7 @@
    "kind": "period"
   },
   {
-   "id": 574,
+   "id": 606,
    "q": "খরচের বড় খাত কোনটা",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5219,7 +5508,7 @@
    "kind": "base"
   },
   {
-   "id": 575,
+   "id": 607,
    "q": "খরচের বড় খাত কোনটা এ মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5228,7 +5517,7 @@
    "kind": "period"
   },
   {
-   "id": 576,
+   "id": 608,
    "q": "খরচের বড় খাত কোনটা গত মাসে",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5237,7 +5526,7 @@
    "kind": "period"
   },
   {
-   "id": 577,
+   "id": 609,
    "q": "খরচের বড় খাত কোনটা এ বছর",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5246,7 +5535,7 @@
    "kind": "period"
   },
   {
-   "id": 578,
+   "id": 610,
    "q": "kon khate khoroch beshi",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5255,7 +5544,7 @@
    "kind": "base"
   },
   {
-   "id": 579,
+   "id": 611,
    "q": "kon khate khoroch beshi ei mash e",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5264,7 +5553,7 @@
    "kind": "period"
   },
   {
-   "id": 580,
+   "id": 612,
    "q": "kon khate khoroch beshi goto mash e",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5273,7 +5562,7 @@
    "kind": "period"
   },
   {
-   "id": 581,
+   "id": 613,
    "q": "khoroch kothay jacche",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5282,7 +5571,7 @@
    "kind": "base"
   },
   {
-   "id": 582,
+   "id": 614,
    "q": "khoroch kothay jacche ei mash e",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5291,7 +5580,7 @@
    "kind": "period"
   },
   {
-   "id": 583,
+   "id": 615,
    "q": "khoroch kothay jacche goto mash e",
    "intent": "expense_by_category",
    "section": "Accounts",
@@ -5300,7 +5589,7 @@
    "kind": "period"
   },
   {
-   "id": 584,
+   "id": 616,
    "q": "are we over budget",
    "intent": "budget",
    "section": "Accounts",
@@ -5309,7 +5598,7 @@
    "kind": "base"
   },
   {
-   "id": 585,
+   "id": 617,
    "q": "are we over budget this month",
    "intent": "budget",
    "section": "Accounts",
@@ -5318,7 +5607,7 @@
    "kind": "period"
   },
   {
-   "id": 586,
+   "id": 618,
    "q": "are we over budget last month",
    "intent": "budget",
    "section": "Accounts",
@@ -5327,7 +5616,7 @@
    "kind": "period"
   },
   {
-   "id": 587,
+   "id": 619,
    "q": "are we over budget this year",
    "intent": "budget",
    "section": "Accounts",
@@ -5336,7 +5625,7 @@
    "kind": "period"
   },
   {
-   "id": 588,
+   "id": 620,
    "q": "budget vs actual",
    "intent": "budget",
    "section": "Accounts",
@@ -5345,7 +5634,7 @@
    "kind": "base"
   },
   {
-   "id": 589,
+   "id": 621,
    "q": "budget vs actual this month",
    "intent": "budget",
    "section": "Accounts",
@@ -5354,7 +5643,7 @@
    "kind": "period"
   },
   {
-   "id": 590,
+   "id": 622,
    "q": "budget vs actual last month",
    "intent": "budget",
    "section": "Accounts",
@@ -5363,7 +5652,7 @@
    "kind": "period"
   },
   {
-   "id": 591,
+   "id": 623,
    "q": "budget vs actual this year",
    "intent": "budget",
    "section": "Accounts",
@@ -5372,7 +5661,7 @@
    "kind": "period"
   },
   {
-   "id": 592,
+   "id": 624,
    "q": "how much of the budget is used",
    "intent": "budget",
    "section": "Accounts",
@@ -5381,7 +5670,7 @@
    "kind": "base"
   },
   {
-   "id": 593,
+   "id": 625,
    "q": "how much of the budget is used this month",
    "intent": "budget",
    "section": "Accounts",
@@ -5390,7 +5679,7 @@
    "kind": "period"
   },
   {
-   "id": 594,
+   "id": 626,
    "q": "how much of the budget is used last month",
    "intent": "budget",
    "section": "Accounts",
@@ -5399,7 +5688,7 @@
    "kind": "period"
   },
   {
-   "id": 595,
+   "id": 627,
    "q": "how much of the budget is used this year",
    "intent": "budget",
    "section": "Accounts",
@@ -5408,7 +5697,7 @@
    "kind": "period"
   },
   {
-   "id": 596,
+   "id": 628,
    "q": "which category is over budget",
    "intent": "budget",
    "section": "Accounts",
@@ -5417,7 +5706,7 @@
    "kind": "base"
   },
   {
-   "id": 597,
+   "id": 629,
    "q": "which category is over budget this month",
    "intent": "budget",
    "section": "Accounts",
@@ -5426,7 +5715,7 @@
    "kind": "period"
   },
   {
-   "id": 598,
+   "id": 630,
    "q": "which category is over budget last month",
    "intent": "budget",
    "section": "Accounts",
@@ -5435,7 +5724,7 @@
    "kind": "period"
   },
   {
-   "id": 599,
+   "id": 631,
    "q": "which category is over budget this year",
    "intent": "budget",
    "section": "Accounts",
@@ -5444,7 +5733,7 @@
    "kind": "period"
   },
   {
-   "id": 600,
+   "id": 632,
    "q": "budget variance",
    "intent": "budget",
    "section": "Accounts",
@@ -5453,7 +5742,7 @@
    "kind": "base"
   },
   {
-   "id": 601,
+   "id": 633,
    "q": "budget variance this month",
    "intent": "budget",
    "section": "Accounts",
@@ -5462,7 +5751,7 @@
    "kind": "period"
   },
   {
-   "id": 602,
+   "id": 634,
    "q": "budget variance last month",
    "intent": "budget",
    "section": "Accounts",
@@ -5471,7 +5760,7 @@
    "kind": "period"
   },
   {
-   "id": 603,
+   "id": 635,
    "q": "budget variance this year",
    "intent": "budget",
    "section": "Accounts",
@@ -5480,7 +5769,7 @@
    "kind": "period"
   },
   {
-   "id": 604,
+   "id": 636,
    "q": "বাজেট ছাড়িয়েছে কি",
    "intent": "budget",
    "section": "Accounts",
@@ -5489,7 +5778,7 @@
    "kind": "base"
   },
   {
-   "id": 605,
+   "id": 637,
    "q": "বাজেট ছাড়িয়েছে কি এ মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5498,7 +5787,7 @@
    "kind": "period"
   },
   {
-   "id": 606,
+   "id": 638,
    "q": "বাজেট ছাড়িয়েছে কি গত মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5507,7 +5796,7 @@
    "kind": "period"
   },
   {
-   "id": 607,
+   "id": 639,
    "q": "বাজেট ছাড়িয়েছে কি এ বছর",
    "intent": "budget",
    "section": "Accounts",
@@ -5516,7 +5805,7 @@
    "kind": "period"
   },
   {
-   "id": 608,
+   "id": 640,
    "q": "বাজেটের কত ব্যবহার হয়েছে",
    "intent": "budget",
    "section": "Accounts",
@@ -5525,7 +5814,7 @@
    "kind": "base"
   },
   {
-   "id": 609,
+   "id": 641,
    "q": "বাজেটের কত ব্যবহার হয়েছে এ মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5534,7 +5823,7 @@
    "kind": "period"
   },
   {
-   "id": 610,
+   "id": 642,
    "q": "বাজেটের কত ব্যবহার হয়েছে গত মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5543,7 +5832,7 @@
    "kind": "period"
   },
   {
-   "id": 611,
+   "id": 643,
    "q": "বাজেটের কত ব্যবহার হয়েছে এ বছর",
    "intent": "budget",
    "section": "Accounts",
@@ -5552,7 +5841,7 @@
    "kind": "period"
   },
   {
-   "id": 612,
+   "id": 644,
    "q": "কোন খাত বাজেটের বেশি",
    "intent": "budget",
    "section": "Accounts",
@@ -5561,7 +5850,7 @@
    "kind": "base"
   },
   {
-   "id": 613,
+   "id": 645,
    "q": "কোন খাত বাজেটের বেশি এ মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5570,7 +5859,7 @@
    "kind": "period"
   },
   {
-   "id": 614,
+   "id": 646,
    "q": "কোন খাত বাজেটের বেশি গত মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5579,7 +5868,7 @@
    "kind": "period"
   },
   {
-   "id": 615,
+   "id": 647,
    "q": "কোন খাত বাজেটের বেশি এ বছর",
    "intent": "budget",
    "section": "Accounts",
@@ -5588,7 +5877,7 @@
    "kind": "period"
   },
   {
-   "id": 616,
+   "id": 648,
    "q": "বাজেটের সাথে ফারাক কত",
    "intent": "budget",
    "section": "Accounts",
@@ -5597,7 +5886,7 @@
    "kind": "base"
   },
   {
-   "id": 617,
+   "id": 649,
    "q": "বাজেটের সাথে ফারাক কত এ মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5606,7 +5895,7 @@
    "kind": "period"
   },
   {
-   "id": 618,
+   "id": 650,
    "q": "বাজেটের সাথে ফারাক কত গত মাসে",
    "intent": "budget",
    "section": "Accounts",
@@ -5615,7 +5904,7 @@
    "kind": "period"
   },
   {
-   "id": 619,
+   "id": 651,
    "q": "বাজেটের সাথে ফারাক কত এ বছর",
    "intent": "budget",
    "section": "Accounts",
@@ -5624,7 +5913,7 @@
    "kind": "period"
   },
   {
-   "id": 620,
+   "id": 652,
    "q": "budget er beshi hoyeche ki",
    "intent": "budget",
    "section": "Accounts",
@@ -5633,7 +5922,7 @@
    "kind": "base"
   },
   {
-   "id": 621,
+   "id": 653,
    "q": "budget er beshi hoyeche ki ei mash e",
    "intent": "budget",
    "section": "Accounts",
@@ -5642,7 +5931,7 @@
    "kind": "period"
   },
   {
-   "id": 622,
+   "id": 654,
    "q": "budget er beshi hoyeche ki goto mash e",
    "intent": "budget",
    "section": "Accounts",
@@ -5651,7 +5940,7 @@
    "kind": "period"
   },
   {
-   "id": 623,
+   "id": 655,
    "q": "budget koto baki",
    "intent": "budget",
    "section": "Accounts",
@@ -5660,7 +5949,7 @@
    "kind": "base"
   },
   {
-   "id": 624,
+   "id": 656,
    "q": "budget koto baki ei mash e",
    "intent": "budget",
    "section": "Accounts",
@@ -5669,7 +5958,7 @@
    "kind": "period"
   },
   {
-   "id": 625,
+   "id": 657,
    "q": "budget koto baki goto mash e",
    "intent": "budget",
    "section": "Accounts",
@@ -5678,7 +5967,7 @@
    "kind": "period"
   },
   {
-   "id": 626,
+   "id": 658,
    "q": "show me the ledger for 1011",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5687,7 +5976,7 @@
    "kind": "base"
   },
   {
-   "id": 627,
+   "id": 659,
    "q": "what is the balance on account 2210",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5696,7 +5985,7 @@
    "kind": "base"
   },
   {
-   "id": 628,
+   "id": 660,
    "q": "account 6110 ledger",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5705,7 +5994,7 @@
    "kind": "base"
   },
   {
-   "id": 629,
+   "id": 661,
    "q": "read account 1311",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5714,7 +6003,7 @@
    "kind": "base"
   },
   {
-   "id": 630,
+   "id": 662,
    "q": "what is in account 2111",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5723,7 +6012,7 @@
    "kind": "base"
   },
   {
-   "id": 631,
+   "id": 663,
    "q": "ledger for account 1013",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5732,7 +6021,7 @@
    "kind": "base"
   },
   {
-   "id": 632,
+   "id": 664,
    "q": "১০১১ হিসাবের খতিয়ান দেখাও",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5741,7 +6030,7 @@
    "kind": "base"
   },
   {
-   "id": 633,
+   "id": 665,
    "q": "২২১০ হিসাবে কত আছে",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5750,7 +6039,7 @@
    "kind": "base"
   },
   {
-   "id": 634,
+   "id": 666,
    "q": "৬১১০ হিসাবের ব্যালেন্স",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5759,7 +6048,7 @@
    "kind": "base"
   },
   {
-   "id": 635,
+   "id": 667,
    "q": "হিসাব ১৩১১ পড়ো",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5768,7 +6057,7 @@
    "kind": "base"
   },
   {
-   "id": 636,
+   "id": 668,
    "q": "1011 er khotian dekhao",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5777,7 +6066,7 @@
    "kind": "base"
   },
   {
-   "id": 637,
+   "id": 669,
    "q": "account 2210 e koto",
    "intent": "account_ledger",
    "section": "Accounts",
@@ -5786,7 +6075,7 @@
    "kind": "base"
   },
   {
-   "id": 638,
+   "id": 670,
    "q": "how many journal entries are there",
    "intent": "journal",
    "section": "Accounts",
@@ -5795,7 +6084,7 @@
    "kind": "base"
   },
   {
-   "id": 639,
+   "id": 671,
    "q": "show me the journal entries",
    "intent": "journal",
    "section": "Accounts",
@@ -5804,7 +6093,7 @@
    "kind": "base"
   },
   {
-   "id": 640,
+   "id": 672,
    "q": "what are the recent postings",
    "intent": "journal",
    "section": "Accounts",
@@ -5813,7 +6102,7 @@
    "kind": "base"
   },
   {
-   "id": 641,
+   "id": 673,
    "q": "journal entries by source",
    "intent": "journal",
    "section": "Accounts",
@@ -5822,7 +6111,7 @@
    "kind": "base"
   },
   {
-   "id": 642,
+   "id": 674,
    "q": "কতগুলো জার্নাল এন্ট্রি আছে",
    "intent": "journal",
    "section": "Accounts",
@@ -5831,7 +6120,7 @@
    "kind": "base"
   },
   {
-   "id": 643,
+   "id": 675,
    "q": "জার্নাল এন্ট্রি দেখাও",
    "intent": "journal",
    "section": "Accounts",
@@ -5840,7 +6129,7 @@
    "kind": "base"
   },
   {
-   "id": 644,
+   "id": 676,
    "q": "সাম্প্রতিক দাখিলা দেখাও",
    "intent": "journal",
    "section": "Accounts",
@@ -5849,7 +6138,7 @@
    "kind": "base"
   },
   {
-   "id": 645,
+   "id": 677,
    "q": "journal entry koto",
    "intent": "journal",
    "section": "Accounts",
@@ -5858,7 +6147,7 @@
    "kind": "base"
   },
   {
-   "id": 646,
+   "id": 678,
    "q": "dakhila dekhao",
    "intent": "journal",
    "section": "Accounts",
@@ -5867,7 +6156,7 @@
    "kind": "base"
   },
   {
-   "id": 647,
+   "id": 679,
    "q": "what loans are outstanding",
    "intent": "loans",
    "section": "Accounts",
@@ -5876,7 +6165,7 @@
    "kind": "base"
   },
   {
-   "id": 648,
+   "id": 680,
    "q": "how much loan is left",
    "intent": "loans",
    "section": "Accounts",
@@ -5885,7 +6174,7 @@
    "kind": "base"
   },
   {
-   "id": 649,
+   "id": 681,
    "q": "show me the staff loans",
    "intent": "loans",
    "section": "Accounts",
@@ -5894,7 +6183,7 @@
    "kind": "base"
   },
   {
-   "id": 650,
+   "id": 682,
    "q": "what is the EMI",
    "intent": "loans",
    "section": "Accounts",
@@ -5903,7 +6192,7 @@
    "kind": "base"
   },
   {
-   "id": 651,
+   "id": 683,
    "q": "any loans running",
    "intent": "loans",
    "section": "Accounts",
@@ -5912,7 +6201,7 @@
    "kind": "base"
   },
   {
-   "id": 652,
+   "id": 684,
    "q": "কত ঋণ বাকি আছে",
    "intent": "loans",
    "section": "Accounts",
@@ -5921,7 +6210,7 @@
    "kind": "base"
   },
   {
-   "id": 653,
+   "id": 685,
    "q": "কর্মীদের ঋণ কত",
    "intent": "loans",
    "section": "Accounts",
@@ -5930,7 +6219,7 @@
    "kind": "base"
   },
   {
-   "id": 654,
+   "id": 686,
    "q": "কিস্তি কত",
    "intent": "loans",
    "section": "Accounts",
@@ -5939,7 +6228,7 @@
    "kind": "base"
   },
   {
-   "id": 655,
+   "id": 687,
    "q": "কোনো ঋণ চলছে কি",
    "intent": "loans",
    "section": "Accounts",
@@ -5948,7 +6237,7 @@
    "kind": "base"
   },
   {
-   "id": 656,
+   "id": 688,
    "q": "rin koto baki",
    "intent": "loans",
    "section": "Accounts",
@@ -5957,7 +6246,7 @@
    "kind": "base"
   },
   {
-   "id": 657,
+   "id": 689,
    "q": "loan koto ache",
    "intent": "loans",
    "section": "Accounts",
@@ -5966,7 +6255,7 @@
    "kind": "base"
   },
   {
-   "id": 658,
+   "id": 690,
    "q": "kisti koto",
    "intent": "loans",
    "section": "Accounts",
@@ -5975,7 +6264,7 @@
    "kind": "base"
   },
   {
-   "id": 659,
+   "id": 691,
    "q": "how much advance salary is outstanding",
    "intent": "advances",
    "section": "Accounts",
@@ -5984,7 +6273,7 @@
    "kind": "base"
   },
   {
-   "id": 660,
+   "id": 692,
    "q": "show me the advances",
    "intent": "advances",
    "section": "Accounts",
@@ -5993,7 +6282,7 @@
    "kind": "base"
   },
   {
-   "id": 661,
+   "id": 693,
    "q": "who has taken an advance",
    "intent": "advances",
    "section": "Accounts",
@@ -6002,7 +6291,7 @@
    "kind": "base"
   },
   {
-   "id": 662,
+   "id": 694,
    "q": "advance salary total",
    "intent": "advances",
    "section": "Accounts",
@@ -6011,7 +6300,7 @@
    "kind": "base"
   },
   {
-   "id": 663,
+   "id": 695,
    "q": "অগ্রিম বেতন কত বাকি",
    "intent": "advances",
    "section": "Accounts",
@@ -6020,7 +6309,7 @@
    "kind": "base"
   },
   {
-   "id": 664,
+   "id": 696,
    "q": "কে অগ্রিম নিয়েছে",
    "intent": "advances",
    "section": "Accounts",
@@ -6029,7 +6318,7 @@
    "kind": "base"
   },
   {
-   "id": 665,
+   "id": 697,
    "q": "এডভান্স কত দেওয়া হয়েছে",
    "intent": "advances",
    "section": "Accounts",
@@ -6038,7 +6327,7 @@
    "kind": "base"
   },
   {
-   "id": 666,
+   "id": 698,
    "q": "advance koto ache",
    "intent": "advances",
    "section": "Accounts",
@@ -6047,7 +6336,7 @@
    "kind": "base"
   },
   {
-   "id": 667,
+   "id": 699,
    "q": "ogrim beton koto",
    "intent": "advances",
    "section": "Accounts",
@@ -6056,7 +6345,7 @@
    "kind": "base"
   },
   {
-   "id": 668,
+   "id": 700,
    "q": "how much VAT do we owe",
    "intent": "tax",
    "section": "Accounts",
@@ -6065,7 +6354,7 @@
    "kind": "base"
   },
   {
-   "id": 669,
+   "id": 701,
    "q": "what is the TDS position",
    "intent": "tax",
    "section": "Accounts",
@@ -6074,7 +6363,7 @@
    "kind": "base"
   },
   {
-   "id": 670,
+   "id": 702,
    "q": "show me the tax payable",
    "intent": "tax",
    "section": "Accounts",
@@ -6083,7 +6372,7 @@
    "kind": "base"
   },
   {
-   "id": 671,
+   "id": 703,
    "q": "do we have a VAT return",
    "intent": "tax",
    "section": "Accounts",
@@ -6092,7 +6381,7 @@
    "kind": "base"
   },
   {
-   "id": 672,
+   "id": 704,
    "q": "income tax payable",
    "intent": "tax",
    "section": "Accounts",
@@ -6101,7 +6390,7 @@
    "kind": "base"
   },
   {
-   "id": 673,
+   "id": 705,
    "q": "ভ্যাট কত দিতে হবে",
    "intent": "tax",
    "section": "Accounts",
@@ -6110,7 +6399,7 @@
    "kind": "base"
   },
   {
-   "id": 674,
+   "id": 706,
    "q": "উৎসে কর কত",
    "intent": "tax",
    "section": "Accounts",
@@ -6119,7 +6408,7 @@
    "kind": "base"
   },
   {
-   "id": 675,
+   "id": 707,
    "q": "ট্যাক্স কত বাকি",
    "intent": "tax",
    "section": "Accounts",
@@ -6128,7 +6417,7 @@
    "kind": "base"
   },
   {
-   "id": 676,
+   "id": 708,
    "q": "আয়কর কত",
    "intent": "tax",
    "section": "Accounts",
@@ -6137,7 +6426,7 @@
    "kind": "base"
   },
   {
-   "id": 677,
+   "id": 709,
    "q": "vat koto dite hobe",
    "intent": "tax",
    "section": "Accounts",
@@ -6146,7 +6435,7 @@
    "kind": "base"
   },
   {
-   "id": 678,
+   "id": 710,
    "q": "tax koto baki",
    "intent": "tax",
    "section": "Accounts",
@@ -6155,7 +6444,7 @@
    "kind": "base"
   },
   {
-   "id": 679,
+   "id": 711,
    "q": "which company is doing best",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6164,7 +6453,7 @@
    "kind": "base"
   },
   {
-   "id": 680,
+   "id": 712,
    "q": "compare the companies",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6173,7 +6462,7 @@
    "kind": "base"
   },
   {
-   "id": 681,
+   "id": 713,
    "q": "company wise profit",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6182,7 +6471,7 @@
    "kind": "base"
   },
   {
-   "id": 682,
+   "id": 714,
    "q": "which company is losing money",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6191,7 +6480,7 @@
    "kind": "base"
   },
   {
-   "id": 683,
+   "id": 715,
    "q": "profit by company",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6200,7 +6489,7 @@
    "kind": "base"
   },
   {
-   "id": 684,
+   "id": 716,
    "q": "কোন কোম্পানি ভালো করছে",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6209,7 +6498,7 @@
    "kind": "base"
   },
   {
-   "id": 685,
+   "id": 717,
    "q": "কোম্পানি অনুযায়ী লাভ",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6218,7 +6507,7 @@
    "kind": "base"
   },
   {
-   "id": 686,
+   "id": 718,
    "q": "কোন প্রতিষ্ঠান লোকসানে",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6227,7 +6516,7 @@
    "kind": "base"
   },
   {
-   "id": 687,
+   "id": 719,
    "q": "কোম্পানিগুলোর তুলনা দাও",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6236,7 +6525,7 @@
    "kind": "base"
   },
   {
-   "id": 688,
+   "id": 720,
    "q": "kon company valo korche",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6245,7 +6534,7 @@
    "kind": "base"
   },
   {
-   "id": 689,
+   "id": 721,
    "q": "company onujayi lav",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6254,7 +6543,7 @@
    "kind": "base"
   },
   {
-   "id": 690,
+   "id": 722,
    "q": "show me the payroll",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6263,7 +6552,7 @@
    "kind": "base"
   },
   {
-   "id": 691,
+   "id": 723,
    "q": "show me the payroll this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6272,7 +6561,7 @@
    "kind": "period"
   },
   {
-   "id": 692,
+   "id": 724,
    "q": "show me the payroll last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6281,7 +6570,7 @@
    "kind": "period"
   },
   {
-   "id": 693,
+   "id": 725,
    "q": "show me the payroll this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6290,7 +6579,7 @@
    "kind": "period"
   },
   {
-   "id": 694,
+   "id": 726,
    "q": "show me the payroll for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6299,7 +6588,7 @@
    "kind": "company"
   },
   {
-   "id": 695,
+   "id": 727,
    "q": "show me the payroll for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6308,7 +6597,7 @@
    "kind": "company"
   },
   {
-   "id": 696,
+   "id": 728,
    "q": "what is the salary bill",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6317,7 +6606,7 @@
    "kind": "base"
   },
   {
-   "id": 697,
+   "id": 729,
    "q": "what is the salary bill this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6326,7 +6615,7 @@
    "kind": "period"
   },
   {
-   "id": 698,
+   "id": 730,
    "q": "what is the salary bill last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6335,7 +6624,7 @@
    "kind": "period"
   },
   {
-   "id": 699,
+   "id": 731,
    "q": "what is the salary bill this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6344,7 +6633,7 @@
    "kind": "period"
   },
   {
-   "id": 700,
+   "id": 732,
    "q": "what is the salary bill for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6353,7 +6642,7 @@
    "kind": "company"
   },
   {
-   "id": 701,
+   "id": 733,
    "q": "what is the salary bill for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6362,7 +6651,7 @@
    "kind": "company"
   },
   {
-   "id": 702,
+   "id": 734,
    "q": "payroll for last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6371,7 +6660,7 @@
    "kind": "base"
   },
   {
-   "id": 703,
+   "id": 735,
    "q": "payroll for last month this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6380,7 +6669,7 @@
    "kind": "period"
   },
   {
-   "id": 704,
+   "id": 736,
    "q": "payroll for last month last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6389,7 +6678,7 @@
    "kind": "period"
   },
   {
-   "id": 705,
+   "id": 737,
    "q": "payroll for last month this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6398,7 +6687,7 @@
    "kind": "period"
   },
   {
-   "id": 706,
+   "id": 738,
    "q": "payroll for last month for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6407,7 +6696,7 @@
    "kind": "company"
   },
   {
-   "id": 707,
+   "id": 739,
    "q": "payroll for last month for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6416,7 +6705,7 @@
    "kind": "company"
   },
   {
-   "id": 708,
+   "id": 740,
    "q": "how much is the monthly wage bill",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6425,7 +6714,7 @@
    "kind": "base"
   },
   {
-   "id": 709,
+   "id": 741,
    "q": "how much is the monthly wage bill this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6434,7 +6723,7 @@
    "kind": "period"
   },
   {
-   "id": 710,
+   "id": 742,
    "q": "how much is the monthly wage bill last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6443,7 +6732,7 @@
    "kind": "period"
   },
   {
-   "id": 711,
+   "id": 743,
    "q": "how much is the monthly wage bill this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6452,7 +6741,7 @@
    "kind": "period"
   },
   {
-   "id": 712,
+   "id": 744,
    "q": "how much is the monthly wage bill for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6461,7 +6750,7 @@
    "kind": "company"
   },
   {
-   "id": 713,
+   "id": 745,
    "q": "how much is the monthly wage bill for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6470,7 +6759,7 @@
    "kind": "company"
   },
   {
-   "id": 714,
+   "id": 746,
    "q": "payroll overview",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6479,7 +6768,7 @@
    "kind": "base"
   },
   {
-   "id": 715,
+   "id": 747,
    "q": "payroll overview this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6488,7 +6777,7 @@
    "kind": "period"
   },
   {
-   "id": 716,
+   "id": 748,
    "q": "payroll overview last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6497,7 +6786,7 @@
    "kind": "period"
   },
   {
-   "id": 717,
+   "id": 749,
    "q": "payroll overview this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6506,7 +6795,7 @@
    "kind": "period"
   },
   {
-   "id": 718,
+   "id": 750,
    "q": "payroll overview for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6515,7 +6804,7 @@
    "kind": "company"
   },
   {
-   "id": 719,
+   "id": 751,
    "q": "payroll overview for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6524,7 +6813,7 @@
    "kind": "company"
   },
   {
-   "id": 720,
+   "id": 752,
    "q": "total salary cost",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6533,7 +6822,7 @@
    "kind": "base"
   },
   {
-   "id": 721,
+   "id": 753,
    "q": "total salary cost this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6542,7 +6831,7 @@
    "kind": "period"
   },
   {
-   "id": 722,
+   "id": 754,
    "q": "total salary cost last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6551,7 +6840,7 @@
    "kind": "period"
   },
   {
-   "id": 723,
+   "id": 755,
    "q": "total salary cost this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6560,7 +6849,7 @@
    "kind": "period"
   },
   {
-   "id": 724,
+   "id": 756,
    "q": "total salary cost for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6569,7 +6858,7 @@
    "kind": "company"
   },
   {
-   "id": 725,
+   "id": 757,
    "q": "total salary cost for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6578,7 +6867,7 @@
    "kind": "company"
   },
   {
-   "id": 726,
+   "id": 758,
    "q": "পে-রোল দেখাও",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6587,7 +6876,7 @@
    "kind": "base"
   },
   {
-   "id": 727,
+   "id": 759,
    "q": "পে-রোল দেখাও এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6596,7 +6885,7 @@
    "kind": "period"
   },
   {
-   "id": 728,
+   "id": 760,
    "q": "পে-রোল দেখাও গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6605,7 +6894,7 @@
    "kind": "period"
   },
   {
-   "id": 729,
+   "id": 761,
    "q": "পে-রোল দেখাও এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6614,7 +6903,7 @@
    "kind": "period"
   },
   {
-   "id": 730,
+   "id": 762,
    "q": "পে-রোল দেখাও ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6623,7 +6912,7 @@
    "kind": "company"
   },
   {
-   "id": 731,
+   "id": 763,
    "q": "পে-রোল দেখাও আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6632,7 +6921,7 @@
    "kind": "company"
   },
   {
-   "id": 732,
+   "id": 764,
    "q": "বেতন বিল কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6641,7 +6930,7 @@
    "kind": "base"
   },
   {
-   "id": 733,
+   "id": 765,
    "q": "বেতন বিল কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6650,7 +6939,7 @@
    "kind": "period"
   },
   {
-   "id": 734,
+   "id": 766,
    "q": "বেতন বিল কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6659,7 +6948,7 @@
    "kind": "period"
   },
   {
-   "id": 735,
+   "id": 767,
    "q": "বেতন বিল কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6668,7 +6957,7 @@
    "kind": "period"
   },
   {
-   "id": 736,
+   "id": 768,
    "q": "বেতন বিল কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6677,7 +6966,7 @@
    "kind": "company"
   },
   {
-   "id": 737,
+   "id": 769,
    "q": "বেতন বিল কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6686,7 +6975,7 @@
    "kind": "company"
   },
   {
-   "id": 738,
+   "id": 770,
    "q": "গত মাসের বেতন কত হয়েছে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6695,7 +6984,7 @@
    "kind": "base"
   },
   {
-   "id": 739,
+   "id": 771,
    "q": "গত মাসের বেতন কত হয়েছে এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6704,7 +6993,7 @@
    "kind": "period"
   },
   {
-   "id": 740,
+   "id": 772,
    "q": "গত মাসের বেতন কত হয়েছে গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6713,7 +7002,7 @@
    "kind": "period"
   },
   {
-   "id": 741,
+   "id": 773,
    "q": "গত মাসের বেতন কত হয়েছে এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6722,7 +7011,7 @@
    "kind": "period"
   },
   {
-   "id": 742,
+   "id": 774,
    "q": "গত মাসের বেতন কত হয়েছে ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6731,7 +7020,7 @@
    "kind": "company"
   },
   {
-   "id": 743,
+   "id": 775,
    "q": "গত মাসের বেতন কত হয়েছে আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6740,7 +7029,7 @@
    "kind": "company"
   },
   {
-   "id": 744,
+   "id": 776,
    "q": "মাসিক বেতন খরচ কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6749,7 +7038,7 @@
    "kind": "base"
   },
   {
-   "id": 745,
+   "id": 777,
    "q": "মাসিক বেতন খরচ কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6758,7 +7047,7 @@
    "kind": "period"
   },
   {
-   "id": 746,
+   "id": 778,
    "q": "মাসিক বেতন খরচ কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6767,7 +7056,7 @@
    "kind": "period"
   },
   {
-   "id": 747,
+   "id": 779,
    "q": "মাসিক বেতন খরচ কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6776,7 +7065,7 @@
    "kind": "period"
   },
   {
-   "id": 748,
+   "id": 780,
    "q": "মাসিক বেতন খরচ কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6785,7 +7074,7 @@
    "kind": "company"
   },
   {
-   "id": 749,
+   "id": 781,
    "q": "মাসিক বেতন খরচ কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6794,7 +7083,7 @@
    "kind": "company"
   },
   {
-   "id": 750,
+   "id": 782,
    "q": "মোট বেতন কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6803,7 +7092,7 @@
    "kind": "base"
   },
   {
-   "id": 751,
+   "id": 783,
    "q": "মোট বেতন কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6812,7 +7101,7 @@
    "kind": "period"
   },
   {
-   "id": 752,
+   "id": 784,
    "q": "মোট বেতন কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6821,7 +7110,7 @@
    "kind": "period"
   },
   {
-   "id": 753,
+   "id": 785,
    "q": "মোট বেতন কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6830,7 +7119,7 @@
    "kind": "period"
   },
   {
-   "id": 754,
+   "id": 786,
    "q": "মোট বেতন কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6839,7 +7128,7 @@
    "kind": "company"
   },
   {
-   "id": 755,
+   "id": 787,
    "q": "মোট বেতন কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6848,7 +7137,7 @@
    "kind": "company"
   },
   {
-   "id": 756,
+   "id": 788,
    "q": "payroll dekhao",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6857,7 +7146,7 @@
    "kind": "base"
   },
   {
-   "id": 757,
+   "id": 789,
    "q": "payroll dekhao ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6866,7 +7155,7 @@
    "kind": "period"
   },
   {
-   "id": 758,
+   "id": 790,
    "q": "payroll dekhao goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6875,7 +7164,7 @@
    "kind": "period"
   },
   {
-   "id": 759,
+   "id": 791,
    "q": "payroll dekhao travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6884,7 +7173,7 @@
    "kind": "company"
   },
   {
-   "id": 760,
+   "id": 792,
    "q": "beton bill koto",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6893,7 +7182,7 @@
    "kind": "base"
   },
   {
-   "id": 761,
+   "id": 793,
    "q": "beton bill koto ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6902,7 +7191,7 @@
    "kind": "period"
   },
   {
-   "id": 762,
+   "id": 794,
    "q": "beton bill koto goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6911,7 +7200,7 @@
    "kind": "period"
   },
   {
-   "id": 763,
+   "id": 795,
    "q": "beton bill koto travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6920,7 +7209,7 @@
    "kind": "company"
   },
   {
-   "id": 764,
+   "id": 796,
    "q": "beton koto",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6929,7 +7218,7 @@
    "kind": "base"
   },
   {
-   "id": 765,
+   "id": 797,
    "q": "beton koto ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6938,7 +7227,7 @@
    "kind": "period"
   },
   {
-   "id": 766,
+   "id": 798,
    "q": "beton koto goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6947,7 +7236,7 @@
    "kind": "period"
   },
   {
-   "id": 767,
+   "id": 799,
    "q": "beton koto travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6956,7 +7245,7 @@
    "kind": "company"
   },
   {
-   "id": 768,
+   "id": 800,
    "q": "has salary been paid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -6965,7 +7254,7 @@
    "kind": "base"
   },
   {
-   "id": 769,
+   "id": 801,
    "q": "has salary been paid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -6974,7 +7263,7 @@
    "kind": "period"
   },
   {
-   "id": 770,
+   "id": 802,
    "q": "has salary been paid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -6983,7 +7272,7 @@
    "kind": "period"
   },
   {
-   "id": 771,
+   "id": 803,
    "q": "has salary been paid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -6992,7 +7281,7 @@
    "kind": "period"
   },
   {
-   "id": 772,
+   "id": 804,
    "q": "whose salary is pending",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7001,7 +7290,7 @@
    "kind": "base"
   },
   {
-   "id": 773,
+   "id": 805,
    "q": "whose salary is pending this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7010,7 +7299,7 @@
    "kind": "period"
   },
   {
-   "id": 774,
+   "id": 806,
    "q": "whose salary is pending last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7019,7 +7308,7 @@
    "kind": "period"
   },
   {
-   "id": 775,
+   "id": 807,
    "q": "whose salary is pending this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7028,7 +7317,7 @@
    "kind": "period"
   },
   {
-   "id": 776,
+   "id": 808,
    "q": "how much salary is unpaid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7037,7 +7326,7 @@
    "kind": "base"
   },
   {
-   "id": 777,
+   "id": 809,
    "q": "how much salary is unpaid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7046,7 +7335,7 @@
    "kind": "period"
   },
   {
-   "id": 778,
+   "id": 810,
    "q": "how much salary is unpaid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7055,7 +7344,7 @@
    "kind": "period"
   },
   {
-   "id": 779,
+   "id": 811,
    "q": "how much salary is unpaid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7064,7 +7353,7 @@
    "kind": "period"
   },
   {
-   "id": 780,
+   "id": 812,
    "q": "is payroll settled",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7073,7 +7362,7 @@
    "kind": "base"
   },
   {
-   "id": 781,
+   "id": 813,
    "q": "is payroll settled this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7082,7 +7371,7 @@
    "kind": "period"
   },
   {
-   "id": 782,
+   "id": 814,
    "q": "is payroll settled last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7091,7 +7380,7 @@
    "kind": "period"
   },
   {
-   "id": 783,
+   "id": 815,
    "q": "is payroll settled this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7100,7 +7389,7 @@
    "kind": "period"
   },
   {
-   "id": 784,
+   "id": 816,
    "q": "who has not been paid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7109,7 +7398,7 @@
    "kind": "base"
   },
   {
-   "id": 785,
+   "id": 817,
    "q": "who has not been paid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7118,7 +7407,7 @@
    "kind": "period"
   },
   {
-   "id": 786,
+   "id": 818,
    "q": "who has not been paid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7127,7 +7416,7 @@
    "kind": "period"
   },
   {
-   "id": 787,
+   "id": 819,
    "q": "who has not been paid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7136,7 +7425,7 @@
    "kind": "period"
   },
   {
-   "id": 788,
+   "id": 820,
    "q": "বেতন পরিশোধ হয়েছে কি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7145,7 +7434,7 @@
    "kind": "base"
   },
   {
-   "id": 789,
+   "id": 821,
    "q": "বেতন পরিশোধ হয়েছে কি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7154,7 +7443,7 @@
    "kind": "period"
   },
   {
-   "id": 790,
+   "id": 822,
    "q": "বেতন পরিশোধ হয়েছে কি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7163,7 +7452,7 @@
    "kind": "period"
   },
   {
-   "id": 791,
+   "id": 823,
    "q": "বেতন পরিশোধ হয়েছে কি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7172,7 +7461,7 @@
    "kind": "period"
   },
   {
-   "id": 792,
+   "id": 824,
    "q": "কার বেতন বাকি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7181,7 +7470,7 @@
    "kind": "base"
   },
   {
-   "id": 793,
+   "id": 825,
    "q": "কার বেতন বাকি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7190,7 +7479,7 @@
    "kind": "period"
   },
   {
-   "id": 794,
+   "id": 826,
    "q": "কার বেতন বাকি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7199,7 +7488,7 @@
    "kind": "period"
   },
   {
-   "id": 795,
+   "id": 827,
    "q": "কার বেতন বাকি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7208,7 +7497,7 @@
    "kind": "period"
   },
   {
-   "id": 796,
+   "id": 828,
    "q": "কত বেতন এখনো দেওয়া হয়নি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7217,7 +7506,7 @@
    "kind": "base"
   },
   {
-   "id": 797,
+   "id": 829,
    "q": "কত বেতন এখনো দেওয়া হয়নি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7226,7 +7515,7 @@
    "kind": "period"
   },
   {
-   "id": 798,
+   "id": 830,
    "q": "কত বেতন এখনো দেওয়া হয়নি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7235,7 +7524,7 @@
    "kind": "period"
   },
   {
-   "id": 799,
+   "id": 831,
    "q": "কত বেতন এখনো দেওয়া হয়নি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7244,7 +7533,7 @@
    "kind": "period"
   },
   {
-   "id": 800,
+   "id": 832,
    "q": "বেতন কি দেওয়া হয়েছে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7253,7 +7542,7 @@
    "kind": "base"
   },
   {
-   "id": 801,
+   "id": 833,
    "q": "বেতন কি দেওয়া হয়েছে এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7262,7 +7551,7 @@
    "kind": "period"
   },
   {
-   "id": 802,
+   "id": 834,
    "q": "বেতন কি দেওয়া হয়েছে গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7271,7 +7560,7 @@
    "kind": "period"
   },
   {
-   "id": 803,
+   "id": 835,
    "q": "বেতন কি দেওয়া হয়েছে এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7280,7 +7569,7 @@
    "kind": "period"
   },
   {
-   "id": 804,
+   "id": 836,
    "q": "beton porishodh hoyeche ki",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7289,7 +7578,7 @@
    "kind": "base"
   },
   {
-   "id": 805,
+   "id": 837,
    "q": "beton porishodh hoyeche ki ei mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7298,7 +7587,7 @@
    "kind": "period"
   },
   {
-   "id": 806,
+   "id": 838,
    "q": "beton porishodh hoyeche ki goto mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7307,7 +7596,7 @@
    "kind": "period"
   },
   {
-   "id": 807,
+   "id": 839,
    "q": "kar beton baki",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7316,7 +7605,7 @@
    "kind": "base"
   },
   {
-   "id": 808,
+   "id": 840,
    "q": "kar beton baki ei mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7325,7 +7614,7 @@
    "kind": "period"
   },
   {
-   "id": 809,
+   "id": 841,
    "q": "kar beton baki goto mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7334,7 +7623,7 @@
    "kind": "period"
   },
   {
-   "id": 810,
+   "id": 842,
    "q": "how is late deduction calculated",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7343,7 +7632,7 @@
    "kind": "base"
   },
   {
-   "id": 811,
+   "id": 843,
    "q": "explain the deduction rule",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7352,7 +7641,7 @@
    "kind": "base"
   },
   {
-   "id": 812,
+   "id": 844,
    "q": "why was money deducted",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7361,7 +7650,7 @@
    "kind": "base"
   },
   {
-   "id": 813,
+   "id": 845,
    "q": "how is salary calculated",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7370,7 +7659,7 @@
    "kind": "base"
   },
   {
-   "id": 814,
+   "id": 846,
    "q": "what is the grace period",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7379,7 +7668,7 @@
    "kind": "base"
   },
   {
-   "id": 815,
+   "id": 847,
    "q": "how does absent deduction work",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7388,7 +7677,7 @@
    "kind": "base"
   },
   {
-   "id": 816,
+   "id": 848,
    "q": "বিলম্ব কর্তন কিভাবে হয়",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7397,7 +7686,7 @@
    "kind": "base"
   },
   {
-   "id": 817,
+   "id": 849,
    "q": "কর্তনের নিয়ম কী",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7406,7 +7695,7 @@
    "kind": "base"
   },
   {
-   "id": 818,
+   "id": 850,
    "q": "বেতন কিভাবে হিসাব হয়",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7415,7 +7704,7 @@
    "kind": "base"
   },
   {
-   "id": 819,
+   "id": 851,
    "q": "কেন টাকা কাটা হলো",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7424,7 +7713,7 @@
    "kind": "base"
   },
   {
-   "id": 820,
+   "id": 852,
    "q": "অনুপস্থিতির কর্তন কিভাবে",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7433,7 +7722,7 @@
    "kind": "base"
   },
   {
-   "id": 821,
+   "id": 853,
    "q": "deduction kivabe hoy",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7442,7 +7731,7 @@
    "kind": "base"
   },
   {
-   "id": 822,
+   "id": 854,
    "q": "beton kivabe hisab hoy",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7451,7 +7740,7 @@
    "kind": "base"
   },
   {
-   "id": 823,
+   "id": 855,
    "q": "how much overtime this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7460,7 +7749,7 @@
    "kind": "base"
   },
   {
-   "id": 824,
+   "id": 856,
    "q": "how much overtime this month this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7469,7 +7758,7 @@
    "kind": "period"
   },
   {
-   "id": 825,
+   "id": 857,
    "q": "how much overtime this month last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7478,7 +7767,7 @@
    "kind": "period"
   },
   {
-   "id": 826,
+   "id": 858,
    "q": "how much overtime this month this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7487,7 +7776,7 @@
    "kind": "period"
   },
   {
-   "id": 827,
+   "id": 859,
    "q": "who worked the most overtime",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7496,7 +7785,7 @@
    "kind": "base"
   },
   {
-   "id": 828,
+   "id": 860,
    "q": "who worked the most overtime this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7505,7 +7794,7 @@
    "kind": "period"
   },
   {
-   "id": 829,
+   "id": 861,
    "q": "who worked the most overtime last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7514,7 +7803,7 @@
    "kind": "period"
   },
   {
-   "id": 830,
+   "id": 862,
    "q": "who worked the most overtime this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7523,7 +7812,7 @@
    "kind": "period"
   },
   {
-   "id": 831,
+   "id": 863,
    "q": "overtime hours",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7532,7 +7821,7 @@
    "kind": "base"
   },
   {
-   "id": 832,
+   "id": 864,
    "q": "overtime hours this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7541,7 +7830,7 @@
    "kind": "period"
   },
   {
-   "id": 833,
+   "id": 865,
    "q": "overtime hours last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7550,7 +7839,7 @@
    "kind": "period"
   },
   {
-   "id": 834,
+   "id": 866,
    "q": "overtime hours this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7559,7 +7848,7 @@
    "kind": "period"
   },
   {
-   "id": 835,
+   "id": 867,
    "q": "is overtime being paid",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7568,7 +7857,7 @@
    "kind": "base"
   },
   {
-   "id": 836,
+   "id": 868,
    "q": "is overtime being paid this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7577,7 +7866,7 @@
    "kind": "period"
   },
   {
-   "id": 837,
+   "id": 869,
    "q": "is overtime being paid last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7586,7 +7875,7 @@
    "kind": "period"
   },
   {
-   "id": 838,
+   "id": 870,
    "q": "is overtime being paid this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7595,7 +7884,7 @@
    "kind": "period"
   },
   {
-   "id": 839,
+   "id": 871,
    "q": "এ মাসে ওভারটাইম কত",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7604,7 +7893,7 @@
    "kind": "base"
   },
   {
-   "id": 840,
+   "id": 872,
    "q": "এ মাসে ওভারটাইম কত এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7613,7 +7902,7 @@
    "kind": "period"
   },
   {
-   "id": 841,
+   "id": 873,
    "q": "এ মাসে ওভারটাইম কত গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7622,7 +7911,7 @@
    "kind": "period"
   },
   {
-   "id": 842,
+   "id": 874,
    "q": "এ মাসে ওভারটাইম কত এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7631,7 +7920,7 @@
    "kind": "period"
   },
   {
-   "id": 843,
+   "id": 875,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7640,7 +7929,7 @@
    "kind": "base"
   },
   {
-   "id": 844,
+   "id": 876,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7649,7 +7938,7 @@
    "kind": "period"
   },
   {
-   "id": 845,
+   "id": 877,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7658,7 +7947,7 @@
    "kind": "period"
   },
   {
-   "id": 846,
+   "id": 878,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7667,7 +7956,7 @@
    "kind": "period"
   },
   {
-   "id": 847,
+   "id": 879,
    "q": "অতিরিক্ত সময় কত",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7676,7 +7965,7 @@
    "kind": "base"
   },
   {
-   "id": 848,
+   "id": 880,
    "q": "অতিরিক্ত সময় কত এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7685,7 +7974,7 @@
    "kind": "period"
   },
   {
-   "id": 849,
+   "id": 881,
    "q": "অতিরিক্ত সময় কত গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7694,7 +7983,7 @@
    "kind": "period"
   },
   {
-   "id": 850,
+   "id": 882,
    "q": "অতিরিক্ত সময় কত এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7703,7 +7992,7 @@
    "kind": "period"
   },
   {
-   "id": 851,
+   "id": 883,
    "q": "overtime koto",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7712,7 +8001,7 @@
    "kind": "base"
   },
   {
-   "id": 852,
+   "id": 884,
    "q": "overtime koto ei mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7721,7 +8010,7 @@
    "kind": "period"
   },
   {
-   "id": 853,
+   "id": 885,
    "q": "overtime koto goto mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7730,7 +8019,7 @@
    "kind": "period"
   },
   {
-   "id": 854,
+   "id": 886,
    "q": "ke beshi overtime korlo",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7739,7 +8028,7 @@
    "kind": "base"
   },
   {
-   "id": 855,
+   "id": 887,
    "q": "ke beshi overtime korlo ei mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7748,7 +8037,7 @@
    "kind": "period"
   },
   {
-   "id": 856,
+   "id": 888,
    "q": "ke beshi overtime korlo goto mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7757,7 +8046,7 @@
    "kind": "period"
   },
   {
-   "id": 857,
+   "id": 889,
    "q": "how many employees do we have",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7766,7 +8055,7 @@
    "kind": "base"
   },
   {
-   "id": 858,
+   "id": 890,
    "q": "how many employees do we have for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7775,7 +8064,7 @@
    "kind": "company"
   },
   {
-   "id": 859,
+   "id": 891,
    "q": "how many employees do we have for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7784,7 +8073,7 @@
    "kind": "company"
   },
   {
-   "id": 860,
+   "id": 892,
    "q": "what is the headcount",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7793,7 +8082,7 @@
    "kind": "base"
   },
   {
-   "id": 861,
+   "id": 893,
    "q": "what is the headcount for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7802,7 +8091,7 @@
    "kind": "company"
   },
   {
-   "id": 862,
+   "id": 894,
    "q": "what is the headcount for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7811,7 +8100,7 @@
    "kind": "company"
   },
   {
-   "id": 863,
+   "id": 895,
    "q": "total staff strength",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7820,7 +8109,7 @@
    "kind": "base"
   },
   {
-   "id": 864,
+   "id": 896,
    "q": "total staff strength for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7829,7 +8118,7 @@
    "kind": "company"
   },
   {
-   "id": 865,
+   "id": 897,
    "q": "total staff strength for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7838,7 +8127,7 @@
    "kind": "company"
   },
   {
-   "id": 866,
+   "id": 898,
    "q": "how many people work here",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7847,7 +8136,7 @@
    "kind": "base"
   },
   {
-   "id": 867,
+   "id": 899,
    "q": "how many people work here for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7856,7 +8145,7 @@
    "kind": "company"
   },
   {
-   "id": 868,
+   "id": 900,
    "q": "how many people work here for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7865,7 +8154,7 @@
    "kind": "company"
   },
   {
-   "id": 869,
+   "id": 901,
    "q": "how many staff are active",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7874,7 +8163,7 @@
    "kind": "base"
   },
   {
-   "id": 870,
+   "id": 902,
    "q": "how many staff are active for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7883,7 +8172,7 @@
    "kind": "company"
   },
   {
-   "id": 871,
+   "id": 903,
    "q": "how many staff are active for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7892,7 +8181,7 @@
    "kind": "company"
   },
   {
-   "id": 872,
+   "id": 904,
    "q": "কতজন কর্মী আছে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7901,7 +8190,7 @@
    "kind": "base"
   },
   {
-   "id": 873,
+   "id": 905,
    "q": "কতজন কর্মী আছে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7910,7 +8199,7 @@
    "kind": "company"
   },
   {
-   "id": 874,
+   "id": 906,
    "q": "কতজন কর্মী আছে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7919,7 +8208,7 @@
    "kind": "company"
   },
   {
-   "id": 875,
+   "id": 907,
    "q": "মোট জনবল কত",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7928,7 +8217,7 @@
    "kind": "base"
   },
   {
-   "id": 876,
+   "id": 908,
    "q": "মোট জনবল কত ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7937,7 +8226,7 @@
    "kind": "company"
   },
   {
-   "id": 877,
+   "id": 909,
    "q": "মোট জনবল কত আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7946,7 +8235,7 @@
    "kind": "company"
   },
   {
-   "id": 878,
+   "id": 910,
    "q": "কত কর্মচারী আছে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7955,7 +8244,7 @@
    "kind": "base"
   },
   {
-   "id": 879,
+   "id": 911,
    "q": "কত কর্মচারী আছে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7964,7 +8253,7 @@
    "kind": "company"
   },
   {
-   "id": 880,
+   "id": 912,
    "q": "কত কর্মচারী আছে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7973,7 +8262,7 @@
    "kind": "company"
   },
   {
-   "id": 881,
+   "id": 913,
    "q": "কতজন কাজ করে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7982,7 +8271,7 @@
    "kind": "base"
   },
   {
-   "id": 882,
+   "id": 914,
    "q": "কতজন কাজ করে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -7991,7 +8280,7 @@
    "kind": "company"
   },
   {
-   "id": 883,
+   "id": 915,
    "q": "কতজন কাজ করে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8000,7 +8289,7 @@
    "kind": "company"
   },
   {
-   "id": 884,
+   "id": 916,
    "q": "kotojon kormi ache",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8009,7 +8298,7 @@
    "kind": "base"
   },
   {
-   "id": 885,
+   "id": 917,
    "q": "kotojon kormi ache travels er jonno",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8018,7 +8307,7 @@
    "kind": "company"
   },
   {
-   "id": 886,
+   "id": 918,
    "q": "koto employee ache",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8027,7 +8316,7 @@
    "kind": "base"
   },
   {
-   "id": 887,
+   "id": 919,
    "q": "koto employee ache travels er jonno",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8036,7 +8325,7 @@
    "kind": "company"
   },
   {
-   "id": 888,
+   "id": 920,
    "q": "how many departments",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8045,7 +8334,7 @@
    "kind": "base"
   },
   {
-   "id": 889,
+   "id": 921,
    "q": "headcount by department",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8054,7 +8343,7 @@
    "kind": "base"
   },
   {
-   "id": 890,
+   "id": 922,
    "q": "which department is biggest",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8063,7 +8352,7 @@
    "kind": "base"
   },
   {
-   "id": 891,
+   "id": 923,
    "q": "show me the departments",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8072,7 +8361,7 @@
    "kind": "base"
   },
   {
-   "id": 892,
+   "id": 924,
    "q": "কতগুলো বিভাগ আছে",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8081,7 +8370,7 @@
    "kind": "base"
   },
   {
-   "id": 893,
+   "id": 925,
    "q": "বিভাগ অনুযায়ী কতজন",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8090,7 +8379,7 @@
    "kind": "base"
   },
   {
-   "id": 894,
+   "id": 926,
    "q": "সবচেয়ে বড় বিভাগ কোনটা",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8099,7 +8388,7 @@
    "kind": "base"
   },
   {
-   "id": 895,
+   "id": 927,
    "q": "koto bibhag ache",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8108,7 +8397,7 @@
    "kind": "base"
   },
   {
-   "id": 896,
+   "id": 928,
    "q": "bibhag onujayi kotojon",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8117,7 +8406,7 @@
    "kind": "base"
   },
   {
-   "id": 897,
+   "id": 929,
    "q": "who is absent today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8126,7 +8415,7 @@
    "kind": "base"
   },
   {
-   "id": 898,
+   "id": 930,
    "q": "attendance today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8135,7 +8424,7 @@
    "kind": "base"
   },
   {
-   "id": 899,
+   "id": 931,
    "q": "who is present",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8144,7 +8433,7 @@
    "kind": "base"
   },
   {
-   "id": 900,
+   "id": 932,
    "q": "how many came today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8153,7 +8442,7 @@
    "kind": "base"
   },
   {
-   "id": 901,
+   "id": 933,
    "q": "who is in the office",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8162,7 +8451,7 @@
    "kind": "base"
   },
   {
-   "id": 902,
+   "id": 934,
    "q": "today attendance summary",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8171,7 +8460,7 @@
    "kind": "base"
   },
   {
-   "id": 903,
+   "id": 935,
    "q": "আজ কে অনুপস্থিত",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8180,7 +8469,7 @@
    "kind": "base"
   },
   {
-   "id": 904,
+   "id": 936,
    "q": "আজকের হাজিরা",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8189,7 +8478,7 @@
    "kind": "base"
   },
   {
-   "id": 905,
+   "id": 937,
    "q": "কে কে এসেছে",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8198,7 +8487,7 @@
    "kind": "base"
   },
   {
-   "id": 906,
+   "id": 938,
    "q": "আজ কতজন এসেছে",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8207,7 +8496,7 @@
    "kind": "base"
   },
   {
-   "id": 907,
+   "id": 939,
    "q": "আজ কে আসেনি",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8216,7 +8505,7 @@
    "kind": "base"
   },
   {
-   "id": 908,
+   "id": 940,
    "q": "উপস্থিতি কেমন",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8225,7 +8514,7 @@
    "kind": "base"
   },
   {
-   "id": 909,
+   "id": 941,
    "q": "aj ke onupostit",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8234,7 +8523,7 @@
    "kind": "base"
   },
   {
-   "id": 910,
+   "id": 942,
    "q": "ajker hajira",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8243,7 +8532,7 @@
    "kind": "base"
   },
   {
-   "id": 911,
+   "id": 943,
    "q": "ke eseche aj",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8252,7 +8541,7 @@
    "kind": "base"
   },
   {
-   "id": 912,
+   "id": 944,
    "q": "who came late today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8261,7 +8550,7 @@
    "kind": "base"
   },
   {
-   "id": 913,
+   "id": 945,
    "q": "who was late",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8270,7 +8559,7 @@
    "kind": "base"
   },
   {
-   "id": 914,
+   "id": 946,
    "q": "any latecomers today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8279,7 +8568,7 @@
    "kind": "base"
   },
   {
-   "id": 915,
+   "id": 947,
    "q": "late arrivals today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8288,7 +8577,7 @@
    "kind": "base"
   },
   {
-   "id": 916,
+   "id": 948,
    "q": "আজ কে দেরি করে এসেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8297,7 +8586,7 @@
    "kind": "base"
   },
   {
-   "id": 917,
+   "id": 949,
    "q": "কে লেট করেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8306,7 +8595,7 @@
    "kind": "base"
   },
   {
-   "id": 918,
+   "id": 950,
    "q": "আজ কে বিলম্বে এসেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8315,7 +8604,7 @@
    "kind": "base"
   },
   {
-   "id": 919,
+   "id": 951,
    "q": "ke deri kore eseche",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8324,7 +8613,7 @@
    "kind": "base"
   },
   {
-   "id": 920,
+   "id": 952,
    "q": "aj ke late",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8333,7 +8622,7 @@
    "kind": "base"
   },
   {
-   "id": 921,
+   "id": 953,
    "q": "who is always late",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8342,7 +8631,7 @@
    "kind": "base"
   },
   {
-   "id": 922,
+   "id": 954,
    "q": "who is chronically late",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8351,7 +8640,7 @@
    "kind": "base"
   },
   {
-   "id": 923,
+   "id": 955,
    "q": "show me the punctuality problems",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8360,7 +8649,7 @@
    "kind": "base"
   },
   {
-   "id": 924,
+   "id": 956,
    "q": "late patterns this month",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8369,7 +8658,7 @@
    "kind": "base"
   },
   {
-   "id": 925,
+   "id": 957,
    "q": "who has the worst attendance",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8378,7 +8667,7 @@
    "kind": "base"
   },
   {
-   "id": 926,
+   "id": 958,
    "q": "কে প্রায়ই দেরি করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8387,7 +8676,7 @@
    "kind": "base"
   },
   {
-   "id": 927,
+   "id": 959,
    "q": "নিয়মিত কে দেরি করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8396,7 +8685,7 @@
    "kind": "base"
   },
   {
-   "id": 928,
+   "id": 960,
    "q": "সময়ানুবর্তিতার সমস্যা কার",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8405,7 +8694,7 @@
    "kind": "base"
   },
   {
-   "id": 929,
+   "id": 961,
    "q": "কে বারবার লেট করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8414,7 +8703,7 @@
    "kind": "base"
   },
   {
-   "id": 930,
+   "id": 962,
    "q": "ke baar baar late kore",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8423,7 +8712,7 @@
    "kind": "base"
   },
   {
-   "id": 931,
+   "id": 963,
    "q": "niyomito ke deri kore",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8432,7 +8721,7 @@
    "kind": "base"
   },
   {
-   "id": 932,
+   "id": 964,
    "q": "who is on leave",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8441,7 +8730,7 @@
    "kind": "base"
   },
   {
-   "id": 933,
+   "id": 965,
    "q": "any pending leave applications",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8450,7 +8739,7 @@
    "kind": "base"
   },
   {
-   "id": 934,
+   "id": 966,
    "q": "how many leave requests",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8459,7 +8748,7 @@
    "kind": "base"
   },
   {
-   "id": 935,
+   "id": 967,
    "q": "show me the leave balance",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8468,7 +8757,7 @@
    "kind": "base"
   },
   {
-   "id": 936,
+   "id": 968,
    "q": "is anyone on leave today",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8477,7 +8766,7 @@
    "kind": "base"
   },
   {
-   "id": 937,
+   "id": 969,
    "q": "কে ছুটিতে আছে",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8486,7 +8775,7 @@
    "kind": "base"
   },
   {
-   "id": 938,
+   "id": 970,
    "q": "ছুটির আবেদন কতগুলো",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8495,7 +8784,7 @@
    "kind": "base"
   },
   {
-   "id": 939,
+   "id": 971,
    "q": "ছুটি বাকি কত",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8504,7 +8793,7 @@
    "kind": "base"
   },
   {
-   "id": 940,
+   "id": 972,
    "q": "আজ কে ছুটিতে",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8513,7 +8802,7 @@
    "kind": "base"
   },
   {
-   "id": 941,
+   "id": 973,
    "q": "ke chutite ache",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8522,7 +8811,7 @@
    "kind": "base"
   },
   {
-   "id": 942,
+   "id": 974,
    "q": "chutir abedon koto",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8531,7 +8820,7 @@
    "kind": "base"
   },
   {
-   "id": 943,
+   "id": 975,
    "q": "when is the next holiday",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8540,7 +8829,7 @@
    "kind": "base"
   },
   {
-   "id": 944,
+   "id": 976,
    "q": "what holidays are coming",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8549,7 +8838,7 @@
    "kind": "base"
   },
   {
-   "id": 945,
+   "id": 977,
    "q": "show me the holiday calendar",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8558,7 +8847,7 @@
    "kind": "base"
   },
   {
-   "id": 946,
+   "id": 978,
    "q": "is the office closed soon",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8567,7 +8856,7 @@
    "kind": "base"
   },
   {
-   "id": 947,
+   "id": 979,
    "q": "পরের ছুটি কবে",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8576,7 +8865,7 @@
    "kind": "base"
   },
   {
-   "id": 948,
+   "id": 980,
    "q": "সামনে কী কী ছুটি",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8585,7 +8874,7 @@
    "kind": "base"
   },
   {
-   "id": 949,
+   "id": 981,
    "q": "ছুটির ক্যালেন্ডার দেখাও",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8594,7 +8883,7 @@
    "kind": "base"
   },
   {
-   "id": 950,
+   "id": 982,
    "q": "সরকারি ছুটি কবে",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8603,7 +8892,7 @@
    "kind": "base"
   },
   {
-   "id": 951,
+   "id": 983,
    "q": "porer chuti kobe",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8612,7 +8901,7 @@
    "kind": "base"
   },
   {
-   "id": 952,
+   "id": 984,
    "q": "samne ki chuti ache",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8621,7 +8910,7 @@
    "kind": "base"
   },
   {
-   "id": 953,
+   "id": 985,
    "q": "any employee requests pending",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8630,7 +8919,7 @@
    "kind": "base"
   },
   {
-   "id": 954,
+   "id": 986,
    "q": "show me the staff requests",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8639,7 +8928,7 @@
    "kind": "base"
   },
   {
-   "id": 955,
+   "id": 987,
    "q": "who has applied for something",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8648,7 +8937,7 @@
    "kind": "base"
   },
   {
-   "id": 956,
+   "id": 988,
    "q": "pending employee applications",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8657,7 +8946,7 @@
    "kind": "base"
   },
   {
-   "id": 957,
+   "id": 989,
    "q": "কর্মীদের কোনো আবেদন আছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8666,7 +8955,7 @@
    "kind": "base"
   },
   {
-   "id": 958,
+   "id": 990,
    "q": "কে কী আবেদন করেছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8675,7 +8964,7 @@
    "kind": "base"
   },
   {
-   "id": 959,
+   "id": 991,
    "q": "আবেদন কতগুলো ঝুলে আছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8684,7 +8973,7 @@
    "kind": "base"
   },
   {
-   "id": 960,
+   "id": 992,
    "q": "kormider abedon ache ki",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8693,7 +8982,7 @@
    "kind": "base"
   },
   {
-   "id": 961,
+   "id": 993,
    "q": "ke ki abedon korche",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8702,7 +8991,7 @@
    "kind": "base"
   },
   {
-   "id": 962,
+   "id": 994,
    "q": "who is online now",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8711,7 +9000,7 @@
    "kind": "base"
   },
   {
-   "id": 963,
+   "id": 995,
    "q": "who is working right now",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8720,7 +9009,7 @@
    "kind": "base"
   },
   {
-   "id": 964,
+   "id": 996,
    "q": "who is currently active",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8729,7 +9018,7 @@
    "kind": "base"
   },
   {
-   "id": 965,
+   "id": 997,
    "q": "anyone online",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8738,7 +9027,7 @@
    "kind": "base"
   },
   {
-   "id": 966,
+   "id": 998,
    "q": "এখন কে অনলাইনে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8747,7 +9036,7 @@
    "kind": "base"
   },
   {
-   "id": 967,
+   "id": 999,
    "q": "এখন কে কাজ করছে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8756,7 +9045,7 @@
    "kind": "base"
   },
   {
-   "id": 968,
+   "id": 1000,
    "q": "কে সক্রিয় আছে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8765,7 +9054,7 @@
    "kind": "base"
   },
   {
-   "id": 969,
+   "id": 1001,
    "q": "ekhon ke online",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8774,7 +9063,7 @@
    "kind": "base"
   },
   {
-   "id": 970,
+   "id": 1002,
    "q": "ke kaj korche ekhon",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -8783,7 +9072,7 @@
    "kind": "base"
   },
   {
-   "id": 971,
+   "id": 1003,
    "q": "how many tasks are overdue",
    "intent": "tasks",
    "section": "Operations",
@@ -8792,7 +9081,7 @@
    "kind": "base"
   },
   {
-   "id": 972,
+   "id": 1004,
    "q": "show me the tasks",
    "intent": "tasks",
    "section": "Operations",
@@ -8801,7 +9090,7 @@
    "kind": "base"
   },
   {
-   "id": 973,
+   "id": 1005,
    "q": "who is overloaded",
    "intent": "tasks",
    "section": "Operations",
@@ -8810,7 +9099,7 @@
    "kind": "base"
   },
   {
-   "id": 974,
+   "id": 1006,
    "q": "what work is pending",
    "intent": "tasks",
    "section": "Operations",
@@ -8819,7 +9108,7 @@
    "kind": "base"
   },
   {
-   "id": 975,
+   "id": 1007,
    "q": "task status",
    "intent": "tasks",
    "section": "Operations",
@@ -8828,7 +9117,7 @@
    "kind": "base"
   },
   {
-   "id": 976,
+   "id": 1008,
    "q": "কতগুলো কাজ বকেয়া",
    "intent": "tasks",
    "section": "Operations",
@@ -8837,7 +9126,7 @@
    "kind": "base"
   },
   {
-   "id": 977,
+   "id": 1009,
    "q": "টাস্কের অবস্থা কী",
    "intent": "tasks",
    "section": "Operations",
@@ -8846,7 +9135,7 @@
    "kind": "base"
   },
   {
-   "id": 978,
+   "id": 1010,
    "q": "কার উপর কাজের চাপ বেশি",
    "intent": "tasks",
    "section": "Operations",
@@ -8855,7 +9144,7 @@
    "kind": "base"
   },
   {
-   "id": 979,
+   "id": 1011,
    "q": "কী কী কাজ বাকি",
    "intent": "tasks",
    "section": "Operations",
@@ -8864,7 +9153,7 @@
    "kind": "base"
   },
   {
-   "id": 980,
+   "id": 1012,
    "q": "koto kaj baki",
    "intent": "tasks",
    "section": "Operations",
@@ -8873,7 +9162,7 @@
    "kind": "base"
   },
   {
-   "id": 981,
+   "id": 1013,
    "q": "task er obostha ki",
    "intent": "tasks",
    "section": "Operations",
@@ -8882,7 +9171,7 @@
    "kind": "base"
   },
   {
-   "id": 982,
+   "id": 1014,
    "q": "how many projects are running",
    "intent": "projects",
    "section": "Operations",
@@ -8891,7 +9180,7 @@
    "kind": "base"
   },
   {
-   "id": 983,
+   "id": 1015,
    "q": "which projects are at risk",
    "intent": "projects",
    "section": "Operations",
@@ -8900,7 +9189,7 @@
    "kind": "base"
   },
   {
-   "id": 984,
+   "id": 1016,
    "q": "project status",
    "intent": "projects",
    "section": "Operations",
@@ -8909,7 +9198,7 @@
    "kind": "base"
   },
   {
-   "id": 985,
+   "id": 1017,
    "q": "is any project behind schedule",
    "intent": "projects",
    "section": "Operations",
@@ -8918,7 +9207,7 @@
    "kind": "base"
   },
   {
-   "id": 986,
+   "id": 1018,
    "q": "show me the projects",
    "intent": "projects",
    "section": "Operations",
@@ -8927,7 +9216,7 @@
    "kind": "base"
   },
   {
-   "id": 987,
+   "id": 1019,
    "q": "কতগুলো প্রকল্প চলছে",
    "intent": "projects",
    "section": "Operations",
@@ -8936,7 +9225,7 @@
    "kind": "base"
   },
   {
-   "id": 988,
+   "id": 1020,
    "q": "কোন প্রকল্প ঝুঁকিতে",
    "intent": "projects",
    "section": "Operations",
@@ -8945,7 +9234,7 @@
    "kind": "base"
   },
   {
-   "id": 989,
+   "id": 1021,
    "q": "প্রকল্পের অগ্রগতি কেমন",
    "intent": "projects",
    "section": "Operations",
@@ -8954,7 +9243,7 @@
    "kind": "base"
   },
   {
-   "id": 990,
+   "id": 1022,
    "q": "কোন প্রজেক্ট পিছিয়ে আছে",
    "intent": "projects",
    "section": "Operations",
@@ -8963,7 +9252,7 @@
    "kind": "base"
   },
   {
-   "id": 991,
+   "id": 1023,
    "q": "koto project cholche",
    "intent": "projects",
    "section": "Operations",
@@ -8972,7 +9261,7 @@
    "kind": "base"
   },
   {
-   "id": 992,
+   "id": 1024,
    "q": "kon project jhukite",
    "intent": "projects",
    "section": "Operations",
@@ -8981,7 +9270,7 @@
    "kind": "base"
   },
   {
-   "id": 993,
+   "id": 1025,
    "q": "show me the office to-dos",
    "intent": "todos",
    "section": "Operations",
@@ -8990,7 +9279,7 @@
    "kind": "base"
   },
   {
-   "id": 994,
+   "id": 1026,
    "q": "what is on the checklist",
    "intent": "todos",
    "section": "Operations",
@@ -8999,7 +9288,7 @@
    "kind": "base"
   },
   {
-   "id": 995,
+   "id": 1027,
    "q": "office todo list",
    "intent": "todos",
    "section": "Operations",
@@ -9008,7 +9297,7 @@
    "kind": "base"
   },
   {
-   "id": 996,
+   "id": 1028,
    "q": "অফিসের কাজের তালিকা দেখাও",
    "intent": "todos",
    "section": "Operations",
@@ -9017,7 +9306,7 @@
    "kind": "base"
   },
   {
-   "id": 997,
+   "id": 1029,
    "q": "চেকলিস্টে কী আছে",
    "intent": "todos",
    "section": "Operations",
@@ -9026,7 +9315,7 @@
    "kind": "base"
   },
   {
-   "id": 998,
+   "id": 1030,
    "q": "করণীয় তালিকা",
    "intent": "todos",
    "section": "Operations",
@@ -9035,7 +9324,7 @@
    "kind": "base"
   },
   {
-   "id": 999,
+   "id": 1031,
    "q": "office todo dekhao",
    "intent": "todos",
    "section": "Operations",
@@ -9044,7 +9333,7 @@
    "kind": "base"
   },
   {
-   "id": 1000,
+   "id": 1032,
    "q": "checklist e ki ache",
    "intent": "todos",
    "section": "Operations",
@@ -9053,7 +9342,7 @@
    "kind": "base"
   },
   {
-   "id": 1001,
+   "id": 1033,
    "q": "what is in the pipeline",
    "intent": "pipeline",
    "section": "CRM",
@@ -9062,7 +9351,7 @@
    "kind": "base"
   },
   {
-   "id": 1002,
+   "id": 1034,
    "q": "how many open leads",
    "intent": "pipeline",
    "section": "CRM",
@@ -9071,7 +9360,7 @@
    "kind": "base"
   },
   {
-   "id": 1003,
+   "id": 1035,
    "q": "what is our conversion rate",
    "intent": "pipeline",
    "section": "CRM",
@@ -9080,7 +9369,7 @@
    "kind": "base"
   },
   {
-   "id": 1004,
+   "id": 1036,
    "q": "show me the CRM status",
    "intent": "pipeline",
    "section": "CRM",
@@ -9089,7 +9378,7 @@
    "kind": "base"
   },
   {
-   "id": 1005,
+   "id": 1037,
    "q": "any follow ups due",
    "intent": "pipeline",
    "section": "CRM",
@@ -9098,7 +9387,7 @@
    "kind": "base"
   },
   {
-   "id": 1006,
+   "id": 1038,
    "q": "how many leads have gone cold",
    "intent": "pipeline",
    "section": "CRM",
@@ -9107,7 +9396,7 @@
    "kind": "base"
   },
   {
-   "id": 1007,
+   "id": 1039,
    "q": "পাইপলাইনে কী আছে",
    "intent": "pipeline",
    "section": "CRM",
@@ -9116,7 +9405,7 @@
    "kind": "base"
   },
   {
-   "id": 1008,
+   "id": 1040,
    "q": "কতগুলো লিড খোলা",
    "intent": "pipeline",
    "section": "CRM",
@@ -9125,7 +9414,7 @@
    "kind": "base"
   },
   {
-   "id": 1009,
+   "id": 1041,
    "q": "কনভার্শন রেট কত",
    "intent": "pipeline",
    "section": "CRM",
@@ -9134,7 +9423,7 @@
    "kind": "base"
   },
   {
-   "id": 1010,
+   "id": 1042,
    "q": "সিআরএম-এর অবস্থা কী",
    "intent": "pipeline",
    "section": "CRM",
@@ -9143,7 +9432,7 @@
    "kind": "base"
   },
   {
-   "id": 1011,
+   "id": 1043,
    "q": "কোনো ফলোআপ বাকি আছে",
    "intent": "pipeline",
    "section": "CRM",
@@ -9152,7 +9441,7 @@
    "kind": "base"
   },
   {
-   "id": 1012,
+   "id": 1044,
    "q": "pipeline e ki ache",
    "intent": "pipeline",
    "section": "CRM",
@@ -9161,7 +9450,7 @@
    "kind": "base"
   },
   {
-   "id": 1013,
+   "id": 1045,
    "q": "koto lead ache",
    "intent": "pipeline",
    "section": "CRM",
@@ -9170,7 +9459,7 @@
    "kind": "base"
   },
   {
-   "id": 1014,
+   "id": 1046,
    "q": "conversion rate koto",
    "intent": "pipeline",
    "section": "CRM",
@@ -9179,7 +9468,7 @@
    "kind": "base"
   },
   {
-   "id": 1015,
+   "id": 1047,
    "q": "how many customers do we have",
    "intent": "customers",
    "section": "CRM",
@@ -9188,7 +9477,7 @@
    "kind": "base"
   },
   {
-   "id": 1016,
+   "id": 1048,
    "q": "who is our biggest customer",
    "intent": "customers",
    "section": "CRM",
@@ -9197,7 +9486,7 @@
    "kind": "base"
   },
   {
-   "id": 1017,
+   "id": 1049,
    "q": "show me the customer list",
    "intent": "customers",
    "section": "CRM",
@@ -9206,7 +9495,7 @@
    "kind": "base"
   },
   {
-   "id": 1018,
+   "id": 1050,
    "q": "top customers",
    "intent": "customers",
    "section": "CRM",
@@ -9215,7 +9504,7 @@
    "kind": "base"
   },
   {
-   "id": 1019,
+   "id": 1051,
    "q": "কতজন গ্রাহক আছে",
    "intent": "customers",
    "section": "CRM",
@@ -9224,7 +9513,7 @@
    "kind": "base"
   },
   {
-   "id": 1020,
+   "id": 1052,
    "q": "সবচেয়ে বড় গ্রাহক কে",
    "intent": "customers",
    "section": "CRM",
@@ -9233,7 +9522,7 @@
    "kind": "base"
   },
   {
-   "id": 1021,
+   "id": 1053,
    "q": "গ্রাহকের তালিকা দেখাও",
    "intent": "customers",
    "section": "CRM",
@@ -9242,7 +9531,7 @@
    "kind": "base"
   },
   {
-   "id": 1022,
+   "id": 1054,
    "q": "koto customer ache",
    "intent": "customers",
    "section": "CRM",
@@ -9251,7 +9540,7 @@
    "kind": "base"
   },
   {
-   "id": 1023,
+   "id": 1055,
    "q": "boro customer ke",
    "intent": "customers",
    "section": "CRM",
@@ -9260,7 +9549,7 @@
    "kind": "base"
   },
   {
-   "id": 1024,
+   "id": 1056,
    "q": "how many suppliers",
    "intent": "suppliers",
    "section": "CRM",
@@ -9269,7 +9558,7 @@
    "kind": "base"
   },
   {
-   "id": 1025,
+   "id": 1057,
    "q": "show me the vendor list",
    "intent": "suppliers",
    "section": "CRM",
@@ -9278,7 +9567,7 @@
    "kind": "base"
   },
   {
-   "id": 1026,
+   "id": 1058,
    "q": "who are our suppliers",
    "intent": "suppliers",
    "section": "CRM",
@@ -9287,7 +9576,7 @@
    "kind": "base"
   },
   {
-   "id": 1027,
+   "id": 1059,
    "q": "কতজন সরবরাহকারী আছে",
    "intent": "suppliers",
    "section": "CRM",
@@ -9296,7 +9585,7 @@
    "kind": "base"
   },
   {
-   "id": 1028,
+   "id": 1060,
    "q": "ভেন্ডরের তালিকা দেখাও",
    "intent": "suppliers",
    "section": "CRM",
@@ -9305,7 +9594,7 @@
    "kind": "base"
   },
   {
-   "id": 1029,
+   "id": 1061,
    "q": "সাপ্লায়ার কারা",
    "intent": "suppliers",
    "section": "CRM",
@@ -9314,7 +9603,7 @@
    "kind": "base"
   },
   {
-   "id": 1030,
+   "id": 1062,
    "q": "koto supplier ache",
    "intent": "suppliers",
    "section": "CRM",
@@ -9323,7 +9612,7 @@
    "kind": "base"
   },
   {
-   "id": 1031,
+   "id": 1063,
    "q": "vendor list dekhao",
    "intent": "suppliers",
    "section": "CRM",
@@ -9332,7 +9621,7 @@
    "kind": "base"
   },
   {
-   "id": 1032,
+   "id": 1064,
    "q": "where do I find the payslips",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9341,7 +9630,7 @@
    "kind": "base"
   },
   {
-   "id": 1033,
+   "id": 1065,
    "q": "where is the trial balance",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9350,7 +9639,7 @@
    "kind": "base"
   },
   {
-   "id": 1034,
+   "id": 1066,
    "q": "which menu has attendance",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9359,7 +9648,7 @@
    "kind": "base"
   },
   {
-   "id": 1035,
+   "id": 1067,
    "q": "where do I set the budget",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9368,7 +9657,7 @@
    "kind": "base"
   },
   {
-   "id": 1036,
+   "id": 1068,
    "q": "how do I get to the general ledger",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9377,7 +9666,7 @@
    "kind": "base"
   },
   {
-   "id": 1037,
+   "id": 1069,
    "q": "where are the payment schedules",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9386,7 +9675,7 @@
    "kind": "base"
   },
   {
-   "id": 1038,
+   "id": 1070,
    "q": "where do I see the leads",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9395,7 +9684,7 @@
    "kind": "base"
   },
   {
-   "id": 1039,
+   "id": 1071,
    "q": "which screen shows the projects",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9404,7 +9693,7 @@
    "kind": "base"
   },
   {
-   "id": 1040,
+   "id": 1072,
    "q": "where is petty cash",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9413,7 +9702,7 @@
    "kind": "base"
   },
   {
-   "id": 1041,
+   "id": 1073,
    "q": "where do I find expenses",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9422,7 +9711,7 @@
    "kind": "base"
   },
   {
-   "id": 1042,
+   "id": 1074,
    "q": "where are the bank accounts",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9431,7 +9720,7 @@
    "kind": "base"
   },
   {
-   "id": 1043,
+   "id": 1075,
    "q": "where do I see holidays",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9440,7 +9729,7 @@
    "kind": "base"
   },
   {
-   "id": 1044,
+   "id": 1076,
    "q": "কোথায় পাবো পে-স্লিপ",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9449,7 +9738,7 @@
    "kind": "base"
   },
   {
-   "id": 1045,
+   "id": 1077,
    "q": "রেওয়ামিল কোথায় দেখব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9458,7 +9747,7 @@
    "kind": "base"
   },
   {
-   "id": 1046,
+   "id": 1078,
    "q": "হাজিরা কোন মেনুতে",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9467,7 +9756,7 @@
    "kind": "base"
   },
   {
-   "id": 1047,
+   "id": 1079,
    "q": "বাজেট কোথায় বসাবো",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9476,7 +9765,7 @@
    "kind": "base"
   },
   {
-   "id": 1048,
+   "id": 1080,
    "q": "খতিয়ান কোথায় পাব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9485,7 +9774,7 @@
    "kind": "base"
   },
   {
-   "id": 1049,
+   "id": 1081,
    "q": "পেমেন্ট সূচি কোথায়",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9494,7 +9783,7 @@
    "kind": "base"
   },
   {
-   "id": 1050,
+   "id": 1082,
    "q": "লিড কোথায় দেখব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9503,7 +9792,7 @@
    "kind": "base"
   },
   {
-   "id": 1051,
+   "id": 1083,
    "q": "প্রকল্প কোন স্ক্রিনে",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9512,7 +9801,7 @@
    "kind": "base"
   },
   {
-   "id": 1052,
+   "id": 1084,
    "q": "খরচ কোথায় পাবো",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9521,7 +9810,7 @@
    "kind": "base"
   },
   {
-   "id": 1053,
+   "id": 1085,
    "q": "payslip kothay pabo",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9530,7 +9819,7 @@
    "kind": "base"
   },
   {
-   "id": 1054,
+   "id": 1086,
    "q": "trial balance kothay",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9539,7 +9828,7 @@
    "kind": "base"
   },
   {
-   "id": 1055,
+   "id": 1087,
    "q": "hajira kon menu te",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9548,7 +9837,7 @@
    "kind": "base"
   },
   {
-   "id": 1056,
+   "id": 1088,
    "q": "how does an expense get posted",
    "intent": "howto",
    "section": "ERP rules",
@@ -9557,7 +9846,7 @@
    "kind": "base"
   },
   {
-   "id": 1057,
+   "id": 1089,
    "q": "what happens when a payment schedule is approved",
    "intent": "howto",
    "section": "ERP rules",
@@ -9566,7 +9855,7 @@
    "kind": "base"
   },
   {
-   "id": 1058,
+   "id": 1090,
    "q": "how does the lead workflow work",
    "intent": "howto",
    "section": "ERP rules",
@@ -9575,7 +9864,7 @@
    "kind": "base"
   },
   {
-   "id": 1059,
+   "id": 1091,
    "q": "explain the employee request process",
    "intent": "howto",
    "section": "ERP rules",
@@ -9584,7 +9873,7 @@
    "kind": "base"
   },
   {
-   "id": 1060,
+   "id": 1092,
    "q": "how is a correction handled",
    "intent": "howto",
    "section": "ERP rules",
@@ -9593,7 +9882,7 @@
    "kind": "base"
   },
   {
-   "id": 1061,
+   "id": 1093,
    "q": "why must a shared account have no company",
    "intent": "howto",
    "section": "ERP rules",
@@ -9602,7 +9891,7 @@
    "kind": "base"
   },
   {
-   "id": 1062,
+   "id": 1094,
    "q": "what reports is the ERP missing",
    "intent": "howto",
    "section": "ERP rules",
@@ -9611,7 +9900,7 @@
    "kind": "base"
   },
   {
-   "id": 1063,
+   "id": 1095,
    "q": "how does overtime work",
    "intent": "howto",
    "section": "ERP rules",
@@ -9620,7 +9909,7 @@
    "kind": "base"
   },
   {
-   "id": 1064,
+   "id": 1096,
    "q": "how is the leave balance worked out",
    "intent": "howto",
    "section": "ERP rules",
@@ -9629,7 +9918,7 @@
    "kind": "base"
   },
   {
-   "id": 1065,
+   "id": 1097,
    "q": "খরচের এন্ট্রি কিভাবে বসে",
    "intent": "howto",
    "section": "ERP rules",
@@ -9638,7 +9927,7 @@
    "kind": "base"
   },
   {
-   "id": 1066,
+   "id": 1098,
    "q": "পেমেন্ট সূচি অনুমোদন হলে কী হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9647,7 +9936,7 @@
    "kind": "base"
   },
   {
-   "id": 1067,
+   "id": 1099,
    "q": "লিডের ধাপগুলো কী",
    "intent": "howto",
    "section": "ERP rules",
@@ -9656,7 +9945,7 @@
    "kind": "base"
   },
   {
-   "id": 1068,
+   "id": 1100,
    "q": "কর্মীর আবেদনের প্রক্রিয়া বুঝিয়ে বলো",
    "intent": "howto",
    "section": "ERP rules",
@@ -9665,7 +9954,7 @@
    "kind": "base"
   },
   {
-   "id": 1069,
+   "id": 1101,
    "q": "ভুল এন্ট্রি কিভাবে সংশোধন হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9674,7 +9963,7 @@
    "kind": "base"
   },
   {
-   "id": 1070,
+   "id": 1102,
    "q": "ছুটির হিসাব কিভাবে হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9683,7 +9972,7 @@
    "kind": "base"
   },
   {
-   "id": 1071,
+   "id": 1103,
    "q": "ওভারটাইম কিভাবে কাজ করে",
    "intent": "howto",
    "section": "ERP rules",
@@ -9692,7 +9981,7 @@
    "kind": "base"
   },
   {
-   "id": 1072,
+   "id": 1104,
    "q": "khoroch er entry kivabe bose",
    "intent": "howto",
    "section": "ERP rules",
@@ -9701,7 +9990,7 @@
    "kind": "base"
   },
   {
-   "id": 1073,
+   "id": 1105,
    "q": "lead er dhap ki",
    "intent": "howto",
    "section": "ERP rules",
@@ -9710,7 +9999,7 @@
    "kind": "base"
   },
   {
-   "id": 1074,
+   "id": 1106,
    "q": "chutir hisab kivabe hoy",
    "intent": "howto",
    "section": "ERP rules",
@@ -9719,7 +10008,7 @@
    "kind": "base"
   },
   {
-   "id": 1075,
+   "id": 1107,
    "q": "what can you do",
    "intent": "capabilities",
    "section": "Meta",
@@ -9728,7 +10017,7 @@
    "kind": "base"
   },
   {
-   "id": 1076,
+   "id": 1108,
    "q": "what can I ask you",
    "intent": "capabilities",
    "section": "Meta",
@@ -9737,7 +10026,7 @@
    "kind": "base"
   },
   {
-   "id": 1077,
+   "id": 1109,
    "q": "what do you know",
    "intent": "capabilities",
    "section": "Meta",
@@ -9746,7 +10035,7 @@
    "kind": "base"
   },
   {
-   "id": 1078,
+   "id": 1110,
    "q": "help me",
    "intent": "capabilities",
    "section": "Meta",
@@ -9755,7 +10044,7 @@
    "kind": "base"
   },
   {
-   "id": 1079,
+   "id": 1111,
    "q": "তুমি কী কী পারো",
    "intent": "capabilities",
    "section": "Meta",
@@ -9764,7 +10053,7 @@
    "kind": "base"
   },
   {
-   "id": 1080,
+   "id": 1112,
    "q": "কী জিজ্ঞেস করতে পারি",
    "intent": "capabilities",
    "section": "Meta",
@@ -9773,7 +10062,7 @@
    "kind": "base"
   },
   {
-   "id": 1081,
+   "id": 1113,
    "q": "তুমি কী জানো",
    "intent": "capabilities",
    "section": "Meta",
@@ -9782,7 +10071,7 @@
    "kind": "base"
   },
   {
-   "id": 1082,
+   "id": 1114,
    "q": "tumi ki paro",
    "intent": "capabilities",
    "section": "Meta",
@@ -9791,7 +10080,7 @@
    "kind": "base"
   },
   {
-   "id": 1083,
+   "id": 1115,
    "q": "ki jiggesh korte pari",
    "intent": "capabilities",
    "section": "Meta",
@@ -9800,7 +10089,7 @@
    "kind": "base"
   },
   {
-   "id": 1084,
+   "id": 1116,
    "q": "hello",
    "intent": "greeting",
    "section": "Meta",
@@ -9809,7 +10098,7 @@
    "kind": "base"
   },
   {
-   "id": 1085,
+   "id": 1117,
    "q": "good morning",
    "intent": "greeting",
    "section": "Meta",
@@ -9818,7 +10107,7 @@
    "kind": "base"
   },
   {
-   "id": 1086,
+   "id": 1118,
    "q": "hi EON",
    "intent": "greeting",
    "section": "Meta",
@@ -9827,7 +10116,7 @@
    "kind": "base"
   },
   {
-   "id": 1087,
+   "id": 1119,
    "q": "thank you",
    "intent": "greeting",
    "section": "Meta",
@@ -9836,7 +10125,7 @@
    "kind": "base"
   },
   {
-   "id": 1088,
+   "id": 1120,
    "q": "thanks EON",
    "intent": "greeting",
    "section": "Meta",
@@ -9845,7 +10134,7 @@
    "kind": "base"
   },
   {
-   "id": 1089,
+   "id": 1121,
    "q": "হ্যালো",
    "intent": "greeting",
    "section": "Meta",
@@ -9854,7 +10143,7 @@
    "kind": "base"
   },
   {
-   "id": 1090,
+   "id": 1122,
    "q": "শুভ সকাল",
    "intent": "greeting",
    "section": "Meta",
@@ -9863,7 +10152,7 @@
    "kind": "base"
   },
   {
-   "id": 1091,
+   "id": 1123,
    "q": "আসসালামু আলাইকুম",
    "intent": "greeting",
    "section": "Meta",
@@ -9872,7 +10161,7 @@
    "kind": "base"
   },
   {
-   "id": 1092,
+   "id": 1124,
    "q": "ধন্যবাদ",
    "intent": "greeting",
    "section": "Meta",
@@ -9881,7 +10170,7 @@
    "kind": "base"
   },
   {
-   "id": 1093,
+   "id": 1125,
    "q": "salam",
    "intent": "greeting",
    "section": "Meta",
@@ -9890,7 +10179,7 @@
    "kind": "base"
   },
   {
-   "id": 1094,
+   "id": 1126,
    "q": "dhonnobad",
    "intent": "greeting",
    "section": "Meta",
@@ -9899,7 +10188,7 @@
    "kind": "base"
   },
   {
-   "id": 1095,
+   "id": 1127,
    "q": "kemon acho",
    "intent": "greeting",
    "section": "Meta",

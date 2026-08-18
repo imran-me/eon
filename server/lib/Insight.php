@@ -145,10 +145,16 @@ final class Insight
     public function forecast(int $monthsAhead = 3): array
     {
         $trend = $this->A->revenueTrend(6);
+        // Analytics returns ['series' => [...]] now and a flat list before that —
+        // accept either, so a change on that side cannot blind the forecast again
+        $rows = isset($trend['series']) && is_array($trend['series']) ? $trend['series'] : $trend;
         $series = [];
-        foreach ($trend as $t) {
-            $series[] = ['month' => (string) ($t['month'] ?? ''), 'income' => $this->f($t['income'] ?? 0),
-                         'expense' => $this->f($t['expense'] ?? ($t['cost'] ?? 0)), 'profit' => $this->f($t['profit'] ?? 0)];
+        foreach ((array) $rows as $t) {
+            if (!is_array($t) || !isset($t['month'])) continue;
+            $income = $this->f($t['income'] ?? 0);
+            $expense = $this->f($t['expense'] ?? 0) ?: ($this->f($t['direct'] ?? 0) + $this->f($t['opex'] ?? 0));
+            $profit = array_key_exists('net', $t) ? $this->f($t['net']) : $this->f($t['profit'] ?? ($income - $expense));
+            $series[] = ['month' => (string) $t['month'], 'income' => $income, 'expense' => $expense, 'profit' => $profit];
         }
         $n = count($series);
         if ($n < 2) return ['ok' => false, 'reason' => 'not enough months', 'months' => $n, 'series' => $series];

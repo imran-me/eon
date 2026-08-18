@@ -453,6 +453,248 @@ final class Answer
         ]);
     }
 
+    /* ================= WHY ================= */
+
+    private function a_why(): string
+    {
+        if (!class_exists('Reason')) return $this->a_risks();
+
+        // "why was this deducted" is asking for the rule, not for a trend —
+        // the rule is the honest answer, so hand it over.
+        $ruleWords = ['deduction', 'deducted', 'late rule', 'grace', 'overtime',
+                      'কর্তন', 'কাটা', 'কেটে', 'নিয়ম', 'ওভারটাইম'];
+        foreach ($ruleWords as $w) {
+            if (mb_strpos($this->c['norm'], $w) !== false) {
+                $r = Kb::findRule($this->c['norm'], $this->c['slots']['topic'] ?? null);
+                if ($r) {
+                    return $this->say([$this->open('ok'), (string) $r[$this->L()],
+                        $this->act('give me the name and the month if a figure still looks wrong, and I will read the actual slip.',
+                                   'কোনো অঙ্ক এখনো ভুল লাগলে নাম আর মাসটা বলুন, আমি আসল স্লিপটা পড়ে দেব।')]);
+                }
+            }
+        }
+
+        $this->used('explain_why');
+        $R = new Reason($this->A());
+        $topic = $R->topicOf($this->c['norm'], $this->c['slots']['topic'] ?? null);
+        $x = $R->explain($topic);
+        $ev = [];
+        foreach (($x['evidence'] ?? []) as $e) {
+            $line = $this->evidenceLine($e, $topic);
+            if ($line !== '') $ev[] = $line;
+        }
+        if (!$ev) return $this->a_risks();
+
+        $mood = in_array($x['claim'] ?? '', ['loss', 'tight'], true) ? 'bad' : 'ok';
+        $head = $this->whyHead($topic, $x);
+        $act = $this->whyAction($topic, (string) ($x['cause'] ?? ''));
+        $caveat = ($x['confidence'] ?? '') === 'thin'
+            ? $this->t('That is on a short history, so read it as a direction rather than a measurement.',
+                       'হিসাবটা অল্প সময়ের ওপর, তাই একে মাপ না ধরে দিক ধরুন।')
+            : '';
+
+        return $this->say(array_merge([$this->open($mood), $head], $ev, [$caveat, $act]));
+    }
+
+    private function whyHead(string $topic, array $x): string
+    {
+        $net = $this->f($x['net'] ?? 0);
+        switch ($topic) {
+            case 'profit':
+                return ($x['claim'] ?? '') === 'loss'
+                    ? $this->t(sprintf('%s closed at a loss of %s. Here is where it went.', Phrase::monthName((string) ($x['month'] ?? ''), 'en'), $this->m(abs($net))),
+                               sprintf('%s মাসে লোকসান %s। কোথায় গেল, দেখুন।', Phrase::monthName((string) ($x['month'] ?? ''), 'bn'), $this->m(abs($net))))
+                    : $this->t(sprintf('%s closed in profit at %s. What carried it:', Phrase::monthName((string) ($x['month'] ?? ''), 'en'), $this->m($net)),
+                               sprintf('%s মাসে মুনাফা %s। কীসে হলো:', Phrase::monthName((string) ($x['month'] ?? ''), 'bn'), $this->m($net)));
+            case 'cash':
+                return $this->t('The cash position, and what is pulling on it:', 'হাতের টাকার অবস্থা, আর কীসে টান পড়ছে:');
+            case 'spend':
+                return $this->t('Where the spending actually sits:', 'খরচটা আসলে কোথায় বসে আছে:');
+            case 'receivable':
+                return $this->t('What is owed to you, and why it is not in:', 'আপনার পাওনা কত, আর কেন আসছে না:');
+            case 'payable':
+                return $this->t('What you owe, and what is behind it:', 'আপনার দেনা কত, আর তার পেছনে কী:');
+            case 'attendance':
+                return $this->t('The attendance picture, and what drives it:', 'হাজিরার ছবি, আর তার পেছনের কারণ:');
+            case 'payroll':
+                return $this->t('The salary bill, and what makes it that size:', 'বেতনের অঙ্ক, আর সেটা এত কেন:');
+            case 'delivery':
+                return $this->t('Where delivery stands, and what is slipping:', 'কাজের অবস্থা, আর কোথায় পিছিয়ে যাচ্ছে:');
+        }
+        return '';
+    }
+
+    /** one line of the argument */
+    private function evidenceLine(array $e, string $topic): string
+    {
+        $f = (string) ($e['fact'] ?? '');
+        $parts = [
+            'net' => fn() => $this->t(
+                sprintf('Income %s, direct cost %s, overheads %s.', $this->m($this->f($e['detail']['income'] ?? 0)), $this->m($this->f($e['detail']['direct'] ?? 0)), $this->m($this->f($e['detail']['opex'] ?? 0))),
+                sprintf('আয় %s, সরাসরি খরচ %s, সাধারণ খরচ %s।', $this->m($this->f($e['detail']['income'] ?? 0)), $this->m($this->f($e['detail']['direct'] ?? 0)), $this->m($this->f($e['detail']['opex'] ?? 0)))),
+
+            'mover' => function () use ($e) {
+                $names = ['income' => ['income', 'আয়'], 'direct' => ['direct cost', 'সরাসরি খরচ'], 'opex' => ['overheads', 'সাধারণ খরচ']];
+                $n = $names[(string) $e['part']] ?? ['it', 'এটা'];
+                $ch = $this->f($e['change']);
+                $dir = $ch >= 0 ? ['rose', 'বেড়েছে'] : ['fell', 'কমেছে'];
+                return $this->t(sprintf('The part that moved is %s: it %s by %s against %s.', $n[0], $dir[0], $this->m(abs($ch)), Phrase::monthName((string) $e['from'], 'en')),
+                                sprintf('যেটা নড়েছে সেটা %s: %s মাসের তুলনায় %s %s।', $n[1], Phrase::monthName((string) $e['from'], 'bn'), $this->m(abs($ch)), $dir[1]));
+            },
+
+            'opex_exceeds_income' => fn() => $this->t(
+                sprintf('Overheads alone are %s times the income for the month — the loss is structural, not a pricing problem.', $this->num($e['ratio'])),
+                sprintf('একা সাধারণ খরচই মাসের আয়ের %s গুণ — লোকসানটা কাঠামোগত, দামের সমস্যা না।', $this->num($e['ratio']))),
+
+            'top_category' => fn() => $this->t(
+                sprintf('Of the expenses actually booked (%s), %s is the largest at %s.', $this->m($this->f($e['booked_total'])), $e['category'], $this->m($this->f($e['amount']))),
+                sprintf('যেসব খরচ আসলে বসেছে (%s), তার মধ্যে সবচেয়ে বড় %s — %s।', $this->m($this->f($e['booked_total'])), $e['category'], $this->m($this->f($e['amount'])))),
+
+            'payroll_share' => fn() => $this->t(
+                sprintf('Payroll is the real overhead: %s gross, about %s%% of it.', $this->m($this->f($e['gross'])), $this->num($e['share'])),
+                sprintf('আসল সাধারণ খরচ হলো বেতন: গ্রস %s, যা এর প্রায় %s%%।', $this->m($this->f($e['gross'])), $this->num($e['share']))),
+
+            'unapproved' => fn() => $this->t(
+                sprintf('And %s items worth %s have not been approved yet, so they are not in these numbers at all.', $this->num($e['count']), $this->m($this->f($e['amount']))),
+                sprintf('আর %s টা বিষয়, মোট %s, এখনো অনুমোদন হয়নি — মানে এই হিসাবে ওগুলো নেইই।', $this->num($e['count']), $this->m($this->f($e['amount'])))),
+
+            'position' => function () use ($e, $topic) {
+                if ($topic === 'cash') {
+                    return $this->t(sprintf('Cash %s against a burn of %s a month — about %s months, and %s%% of that burn is payroll.',
+                            $this->m($this->f($e['cash'])), $this->m($this->f($e['burn'])), $this->num($e['months']), $this->num($e['payroll_share'])),
+                        sprintf('হাতে %s, মাসে খরচ %s — প্রায় %s মাস চলবে, আর ওই খরচের %s%% ই বেতন।',
+                            $this->m($this->f($e['cash'])), $this->m($this->f($e['burn'])), $this->num($e['months']), $this->num($e['payroll_share'])));
+                }
+                return $this->t(sprintf('%s open, %s of it overdue across %s items.', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue'])), $this->num($e['count'])),
+                                sprintf('খোলা আছে %s, তার %s বকেয়া, %s টা বিষয়ে।', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue'])), $this->num($e['count'])));
+            },
+
+            'money_owed_in' => fn() => $this->t(
+                sprintf('%s is owed to you and all of %s is past due — %s alone owes %s.', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue'])), (string) $e['top'], $this->m($this->f($e['top_amount']))),
+                sprintf('আপনার পাওনা %s, তার %s তারিখ পেরিয়েছে — একা %s এর কাছেই %s।', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue'])), (string) $e['top'], $this->m($this->f($e['top_amount'])))),
+
+            'money_owed_out' => fn() => $this->t(
+                sprintf('Against that you owe %s, with %s already overdue.', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue']))),
+                sprintf('তার বিপরীতে আপনার দেনা %s, যার %s ইতিমধ্যে বকেয়া।', $this->m($this->f($e['total'])), $this->m($this->f($e['overdue'])))),
+
+            'shortfall' => fn() => ($e['covered_by_receivables'] ?? false)
+                ? $this->t(sprintf('So the gap is %s, and collecting everything overdue would close it.', $this->m($this->f($e['gap']))),
+                           sprintf('ফলে ঘাটতি %s, আর সব বকেয়া আদায় করতে পারলে সেটা মিটে যাবে।', $this->m($this->f($e['gap']))))
+                : $this->t(sprintf('So the gap is %s, and collecting every overdue taka would still not close it.', $this->m($this->f($e['gap']))),
+                           sprintf('ফলে ঘাটতি %s, আর সব বকেয়া আদায় করলেও সেটা মিটবে না।', $this->m($this->f($e['gap'])))),
+
+            'category' => fn() => $this->t(
+                sprintf('%s %s (%s).', $e['category'], $this->m($this->f($e['amount'])), $this->pc($this->f($e['pct']))),
+                sprintf('%s %s (%s)।', $e['category'], $this->m($this->f($e['amount'])), $this->pc($this->f($e['pct'])))),
+
+            'spike' => fn() => $this->t(
+                sprintf('%s is running %s times its own average this month.', $e['category'], $this->num($e['times'])),
+                sprintf('%s খাত এ মাসে নিজের গড়ের %s গুণ চলছে।', $e['category'], $this->num($e['times']))),
+
+            'payroll_dominates' => fn() => $this->t(
+                sprintf('Booked expenses are only %s — the money really goes out as salary, %s of it.', $this->m($this->f($e['expenses'])), $this->m($this->f($e['gross']))),
+                sprintf('খাতায় বসা খরচ মাত্র %s — টাকা আসলে বেরোয় বেতন হয়ে, %s।', $this->m($this->f($e['expenses'])), $this->m($this->f($e['gross'])))),
+
+            'party' => fn() => $this->t(
+                sprintf('%s owes %s, oldest %s days.', (string) $e['name'], $this->m($this->f($e['due'])), $this->num($e['oldest'])),
+                sprintf('%s এর কাছে %s, সবচেয়ে পুরনোটা %s দিনের।', (string) $e['name'], $this->m($this->f($e['due'])), $this->num($e['oldest']))),
+
+            'no_schedules' => fn() => $this->t(
+                'Nothing shows as receivable because sales are booked without a payment schedule — the money may well be owed, the ERP simply cannot see it.',
+                'পাওনা কিছু দেখাচ্ছে না কারণ বিক্রি বসছে পেমেন্ট সূচি ছাড়াই — টাকা পাওনা থাকতেই পারে, ERP শুধু সেটা দেখতে পাচ্ছে না।'),
+
+            'oldest' => fn() => $this->t(
+                sprintf('The oldest is %s at %s days (%s).', (string) $e['party'], $this->num($e['days']), (string) $e['ref']),
+                sprintf('সবচেয়ে পুরনোটা %s — %s দিন (%s)।', (string) $e['party'], $this->num($e['days']), (string) $e['ref'])),
+
+            'salary_inside' => fn() => $this->t(
+                sprintf('%s of that is staff salary, which is the part that costs you people rather than goodwill.', $this->m($this->f($e['amount']))),
+                sprintf('তার %s হলো কর্মীদের বেতন — এই অংশটা সুনাম না, লোক হারায়।', $this->m($this->f($e['amount'])))),
+
+            'today' => function () use ($e) {
+                if ($e['weekend'] ?? false) return $this->t('It is the weekend.', 'আজ সাপ্তাহিক ছুটি।');
+                if ((int) $e['present'] === 0 && (int) $e['absent'] === 0) return $this->t('Today has not been punched yet.', 'আজকের হাজিরা এখনো ওঠেনি।');
+                return $this->t(sprintf('Today %s of %s are in.', $this->num($e['present']), $this->num($e['total'])),
+                                sprintf('আজ %s জনের মধ্যে %s জন এসেছে।', $this->num($e['total']), $this->num($e['present'])));
+            },
+
+            'chronic' => fn() => $this->t(
+                sprintf('%s people are late on most days; the worst is %s at %s days and %s minutes.', $this->num($e['count']), (string) $e['worst'], $this->num($e['days']), $this->num($e['minutes'])),
+                sprintf('%s জন প্রায় প্রতিদিনই দেরি করে; সবচেয়ে খারাপ %s — %s দিন, %s মিনিট।', $this->num($e['count']), (string) $e['worst'], $this->num($e['days']), $this->num($e['minutes']))),
+
+            'rule' => fn() => $this->t(
+                'None of it costs anyone money until they pass two hours of lateness in the month, which is why a warning works better than the deduction.',
+                'মাসে দুই ঘণ্টা দেরি না পেরোলে কারও টাকা কাটে না — এজন্যই কর্তনের চেয়ে সতর্কীকরণ ভালো কাজ করে।'),
+
+            'coverage' => function () use ($e, $topic) {
+                if ($topic === 'payroll') {
+                    return $this->t(sprintf('Note the gap: %s payslips were generated against %s active staff.', $this->num($e['slips']), $this->num($e['active'])),
+                                    sprintf('একটা ফাঁক খেয়াল করুন: %s জন সক্রিয় কর্মীর বিপরীতে স্লিপ হয়েছে %s টা।', $this->num($e['active']), $this->num($e['slips'])));
+                }
+                return $this->t(sprintf('And only %s of %s staff are on the attendance device, so this is a partial picture.', $this->num($e['tracked']), $this->num($e['active'])),
+                                sprintf('আর %s জনের মধ্যে মাত্র %s জন হাজিরা ডিভাইসে আছে, তাই ছবিটা আংশিক।', $this->num($e['active']), $this->num($e['tracked'])));
+            },
+
+            'run' => fn() => $this->t(
+                sprintf('%s: %s payslips, %s gross, %s net, %s unpaid.', Phrase::monthName((string) $e['month'], 'en'), $this->num($e['heads']), $this->m($this->f($e['gross'])), $this->m($this->f($e['net'])), $this->num($e['pending'])),
+                sprintf('%s: %s টা স্লিপ, গ্রস %s, নিট %s, %s জনের বাকি।', Phrase::monthName((string) $e['month'], 'bn'), $this->num($e['heads']), $this->m($this->f($e['gross'])), $this->m($this->f($e['net'])), $this->num($e['pending']))),
+
+            'headcount' => fn() => $this->t(
+                sprintf('%s people are active, carrying %s of salary a month.', $this->num($e['active']), $this->m($this->f($e['monthly_salary']))),
+                sprintf('সক্রিয় কর্মী %s জন, মাসে বেতন %s।', $this->num($e['active']), $this->m($this->f($e['monthly_salary'])))),
+
+            'biggest_department' => fn() => strtolower((string) $e['department']) === 'unassigned'
+                ? $this->t(sprintf('%s of them have no department recorded, which is a gap in the records.', $this->num($e['headcount'])),
+                           sprintf('তাদের %s জনের কোনো বিভাগ বসানো নেই — এটা রেকর্ডের ফাঁক।', $this->num($e['headcount'])))
+                : $this->t(sprintf('The heaviest department is %s with %s people.', (string) $e['department'], $this->num($e['headcount'])),
+                           sprintf('সবচেয়ে ভারী বিভাগ %s — %s জন।', (string) $e['department'], $this->num($e['headcount']))),
+
+            'tasks' => fn() => $this->t(
+                sprintf('%s tasks open, %s overdue, %s closed this week.', $this->num($e['open']), $this->num($e['overdue']), $this->num($e['closed_week'])),
+                sprintf('খোলা কাজ %s টা, সময় পেরিয়েছে %s টার, এই সপ্তাহে শেষ হয়েছে %s টা।', $this->num($e['open']), $this->num($e['overdue']), $this->num($e['closed_week']))),
+
+            'projects' => fn() => $this->t(
+                sprintf('%s projects active, %s at risk.', $this->num($e['active']), $this->num($e['at_risk'])),
+                sprintf('চালু প্রকল্প %s টা, ঝুঁকিতে %s টা।', $this->num($e['active']), $this->num($e['at_risk']))),
+
+            'worst' => fn() => $this->t(
+                sprintf('The worst is %s — %s done with %s of its time spent.', (string) $e['name'], $this->pc($this->f($e['progress'])), $this->pc($this->f($e['elapsed']))),
+                sprintf('সবচেয়ে খারাপ %s — কাজ %s, অথচ সময় গেছে %s।', (string) $e['name'], $this->pc($this->f($e['progress'])), $this->pc($this->f($e['elapsed'])))),
+
+            'overloaded' => fn() => $this->t(
+                sprintf('%s is carrying %s open items on their own.', (string) $e['name'], $this->num($e['open'])),
+                sprintf('একা %s এর ঘাড়ে %s টা খোলা কাজ।', (string) $e['name'], $this->num($e['open']))),
+        ];
+
+        return isset($parts[$f]) ? ($parts[$f])() : '';
+    }
+
+    private function whyAction(string $topic, string $cause): string
+    {
+        $map = [
+            'profit:opex'    => ['the overhead line is the lever, not price — start with payroll cover and the unapproved queue.', 'হাতিয়ার সাধারণ খরচ, দাম না — বেতনের ভার আর অনুমোদনের সারি দিয়ে শুরু করুন।'],
+            'profit:income'  => ['income is what moved — look at what did not close rather than at cost.', 'নড়েছে আয় — খরচ না দেখে দেখুন কোনটা বন্ধ হয়নি।'],
+            'profit:direct'  => ['direct cost moved — check purchase and vendor pricing on the recent files.', 'সরাসরি খরচ নড়েছে — সাম্প্রতিক ফাইলগুলোর ক্রয় আর ভেন্ডরের দাম দেখুন।'],
+            'cash:payables'  => ['you cannot pay your way out of this one — collections first, then reschedule the rest.', 'এটা টাকা দিয়ে সমাধান হবে না — আগে আদায়, তারপর বাকিগুলোর তারিখ পেছান।'],
+            'cash:collection'=> ['chase the largest overdue party this week; that single call is worth the rest together.', 'এই সপ্তাহে সবচেয়ে বড় বকেয়া পার্টিকে ধরুন; ওই একটা ফোনই বাকি সব মিলিয়ে সমান।'],
+            'cash:burn'      => ['nothing is bleeding — keep an eye on the next seven days of dues.', 'কোথাও রক্তক্ষরণ নেই — সামনের সাত দিনের দেনায় চোখ রাখুন।'],
+            'spend:category' => ['cap the biggest head in Expenses → Budget Setup; without a budget nothing can be called overspending.', 'খরচ → বাজেট সেটআপে সবচেয়ে বড় খাতে সীমা বসান; বাজেট না থাকলে কোনটা বেশি সেটাই বলা যায় না।'],
+            'receivable:not_recorded' => ['raise a payment schedule at the point of sale, or no report will ever show what you are owed.', 'বিক্রির সময়েই পেমেন্ট সূচি খুলুন, নইলে আপনার পাওনা কোনো রিপোর্টেই উঠবে না।'],
+            'receivable:collection'   => ['send the reminder to the top two names today.', 'উপরের দুইজনকে আজই তাগাদা পাঠান।'],
+            'payable:salary' => ['release the salaries before the suppliers — late pay costs people, late suppliers cost patience.', 'সরবরাহকারীদের আগে বেতন ছাড়ুন — দেরিতে বেতন দিলে লোক যায়, সরবরাহকারী শুধু ধৈর্য হারায়।'],
+            'payable:supplier' => ['clear the oldest first; age is what turns a payable into a phone call.', 'সবচেয়ে পুরনোটা আগে মেটান; দেনা পুরনো হলেই ফোন আসে।'],
+            'attendance:habit' => ['a written warning to the worst two, and fix the device coverage — you cannot manage what only a fifth of the staff is on.', 'সবচেয়ে খারাপ দুজনকে লিখিত সতর্কতা, আর ডিভাইসের কভারেজ ঠিক করুন — এক-পঞ্চমাংশ কর্মীর হাজিরা দিয়ে ব্যবস্থাপনা হয় না।'],
+            'attendance:none'  => ['nothing to act on here today.', 'আজ এখানে করার কিছু নেই।'],
+            'payroll:headcount' => ['the gap between active staff and generated payslips is the thing to fix first.', 'সক্রিয় কর্মী আর তৈরি হওয়া স্লিপের ফারাকটাই আগে ঠিক করার জিনিস।'],
+            'delivery:schedule' => ['re-baseline the worst project or add a person; it will not recover on its own.', 'সবচেয়ে খারাপ প্রকল্পের সময় নতুন করে ঠিক করুন বা লোক দিন; নিজে থেকে ঠিক হবে না।'],
+            'delivery:none'  => ['delivery is holding.', 'কাজের দিকটা ধরে আছে।'],
+        ];
+        $k = $topic . ':' . $cause;
+        if (isset($map[$k])) return $this->act($map[$k][0], $map[$k][1]);
+        return $this->act('ask me for the piece you want to go deeper on.',
+                          'কোন অংশে আরও গভীরে যেতে চান, বলুন।');
+    }
+
     /* ================= CASH ================= */
 
     private function a_cash(): string

@@ -31,7 +31,8 @@ if (is_file(EON_ROOT . '/lib/Grammar.php')) require_once EON_ROOT . '/lib/Gramma
 if (is_file(EON_ROOT . '/lib/Phrase.php')) require_once EON_ROOT . '/lib/Phrase.php';    // how EON sounds in each language
 if (is_file(EON_ROOT . '/lib/Loc.php')) require_once EON_ROOT . '/lib/Loc.php';      // Bangla for the templates EON did not write
 if (is_file(EON_ROOT . '/lib/Kb.php')) require_once EON_ROOT . '/lib/Kb.php';       // the ERP's screens and rules, in both languages
-if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insight.php';  // aging, runway, forecast, anomalies, comparisons
+if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insight.php';
+if (is_file(EON_ROOT . '/lib/Reason.php')) require_once EON_ROOT . '/lib/Reason.php';    // why, as opposed to what  // aging, runway, forecast, anomalies, comparisons
 if (is_file(EON_ROOT . '/lib/Speech.php')) require_once EON_ROOT . '/lib/Speech.php';   // written answers turned into spoken words
 if (is_file(EON_ROOT . '/lib/Tts.php')) require_once EON_ROOT . '/lib/Tts.php';      // and rendered to audio when the machine has no voice
 if (is_file(EON_ROOT . '/lib/Answer.php')) require_once EON_ROOT . '/lib/Answer.php';   // the offline voice, in the boss's language
