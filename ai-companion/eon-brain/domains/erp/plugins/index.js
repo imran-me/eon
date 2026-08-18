@@ -3,3 +3,4 @@
    • decisions              EonErpDecisions.addProvider((D, {company}) => [...])
    • a screen panel         window.EonApp?.registerPanel(section, { id, title, render })
    Add a line here for every plug-in. */
+import './bangla.js';        // বাংলা — Bangla brief and Bangla answers
