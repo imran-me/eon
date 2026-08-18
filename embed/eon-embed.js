@@ -68,7 +68,7 @@
       #eon-panel-btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(31,109,255,.45)}
       #eon-panel-btn .eon-dot{width:8px;height:8px;border-radius:50%;background:#7ed957;box-shadow:0 0 8px #7ed957}
       #eon-panel-btn .eon-arrow{opacity:.85;font-weight:400}
-      #eon-panel-alt{position:fixed;${pos};transform:translateX(calc(100% + 6px));z-index:2147483000;
+      #eon-panel-alt{position:fixed;${pos};margin-left:96px;z-index:2147483000;
         display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;text-decoration:none;
         background:#fff;color:#4f46e5;border:1px solid #e2e7f0;box-shadow:0 4px 14px rgba(19,26,46,.12);
         font:600 13px "Inter","Segoe UI",system-ui,sans-serif}
@@ -112,6 +112,8 @@
     adapter.onload = () => {
       head.appendChild(el('script', { type: 'module', src: `${BASE}/ai-companion/js/boot.js` }));
       head.appendChild(el('script', { type: 'module', src: `${BASE}/ai-companion/eon-brain/voice.js` }));
+      // the conversation in place: same brain, same actions, on the ERP page itself
+      head.appendChild(el('script', { src: `${BASE}/embed/eon-ask.js`, defer: true }));
     };
     adapter.onerror = () => console.warn('[EON embed] adapter did not load from ' + BASE);
     head.appendChild(adapter);
