@@ -9,3 +9,5 @@ import './since.js';         // since yesterday — what moved since the last sn
 import './compliance.js';    // Bangladesh statutory calendar — VAT, TDS, licences, RJSC
 import './prefs.js';         // what EON remembers about the boss
 import './boardpack.js';     // printable board pack
+import './delegate.js';      // delegation & follow-through — EON chases what the boss handed out
+import './whatif.js';        // what-if simulator — levers over the real ledger
