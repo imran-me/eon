@@ -188,6 +188,24 @@ final class Phrase
         return $lang === 'bn' ? 'স্যার' : '';
     }
 
+    /**
+     * The decision layer speaks English. When the boss asked in Bangla we cannot
+     * retranslate its sentences honestly, but we can at least make the money and
+     * the digits read as Bangla so the line does not look pasted in.
+     */
+    public static function localise(string $text, string $lang): string
+    {
+        if ($lang !== 'bn' || $text === '') return $text;
+        // ৳2.5 L → ৳২.৫ লাখ  ·  ৳3.4 Cr → ৳৩.৪ কোটি  ·  ৳28k → ৳২৮ হাজার
+        $text = preg_replace_callback('/৳\s?([\d.,]+)\s?(Cr|L|k)\b/u', function ($m) {
+            $unit = ['Cr' => ' কোটি', 'L' => ' লাখ', 'k' => ' হাজার'][$m[2]];
+            return '৳' . self::bnDigits($m[1]) . $unit;
+        }, $text);
+        // any remaining bare digits
+        $text = preg_replace_callback('/\d+/u', fn($m) => self::bnDigits($m[0]), $text);
+        return $text;
+    }
+
     /** stitch sentences without double spaces or stray punctuation */
     public static function sentence(array $parts): string
     {
@@ -195,7 +213,7 @@ final class Phrase
         foreach ($parts as $p) {
             $p = trim((string) $p);
             if ($p === '') continue;
-            if ($out !== '' && !preg_match('/[—:\-]\s*$/u', $out)) $out .= ' ';
+            if ($out !== '') $out .= ' ';
             $out .= $p;
         }
         $out = preg_replace('/\s+/u', ' ', $out);
