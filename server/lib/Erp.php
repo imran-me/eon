@@ -117,6 +117,20 @@ final class Erp
             (SELECT MAX(followup_date) FROM lead_followups f WHERE f.lead_id = l.id) AS last_followup_at,
             (SELECT MIN(due_date) FROM lead_reminders r WHERE r.lead_id = l.id AND r.status = 'pending') AS next_followup_at
             FROM leads l LEFT JOIN lead_sources s ON s.id = l.lead_source_id LEFT JOIN users u ON u.id = l.assigned_to WHERE 1=1 {$sd('leads', 'l')} " . ($company ? " AND {$leadCo} = " . (int) $company : ''));
+        // a lead carries no value column: the money lives in the type-specific detail table
+        // (interior budget, the air ticket quoted price, the visa job). Without this the
+        // pipeline reports every lead as worth zero.
+        try {
+            $val = [];
+            foreach (Db::rows(self::$pdo, "SELECT lead_id, COALESCE(budget_max, budget_min) AS v, 'interior' AS k FROM lead_interiors
+                UNION ALL SELECT lead_id, quoted_price, 'air_ticket' FROM lead_air_tickets
+                UNION ALL SELECT lead_id, NULL, 'visa' FROM lead_visas") as $r) {
+                $id = (int) $r['lead_id'];
+                if (!isset($val[$id])) $val[$id] = ['value' => 0.0, 'kind' => $r['k']];
+                $val[$id]['value'] += (float) ($r['v'] ?? 0);
+            }
+            foreach ($D['leads'] as &$l) { $k = $val[(int) $l['id']] ?? null; if ($k) { $l['value'] = $k['value']; $l['detail'] = $k['kind']; } } unset($l);
+        } catch (Throwable $e) { self::$warnings[] = 'lead values: ' . $e->getMessage(); }
         $dealTitle = $has('deals', 'deal_name') ? "COALESCE(d.deal_name, l.name, 'Deal')" : "CONCAT(COALESCE(l.name,'Deal'), ' — ', COALESCE(d.pipeline,''))";
         self::section($D, 'deals', "SELECT d.id, {$leadCo} AS company_id, d.lead_id, {$dealTitle} AS title, d.stage, d.amount, d.closing_date, d.status, d.deal_agent AS agent_id FROM deals d LEFT JOIN leads l ON l.id = d.lead_id LEFT JOIN users u ON u.id = l.assigned_to WHERE 1=1 {$sd('deals', 'd')} " . ($company ? " AND {$leadCo} = " . (int) $company : ''));
         self::section($D, 'projects', "SELECT p.id, p.company_id, p.project_name, p.customer_id, c.name AS customer, p.status, p.start_date, p.end_date, p.budget, NULL AS spent, NULL AS progress, NULL AS manager_id, p.team_members AS team FROM projects p LEFT JOIN customers c ON c.id = p.customer_id WHERE 1=1 {$sd('projects', 'p')} {$cwp}");
@@ -182,6 +196,27 @@ final class Erp
         self::section($D, 'resignations', "SELECT r.id, r.employee_id AS user_id, u.name AS person, r.resign_date, r.last_working_day, r.resign_type, r.notice_period_days, r.status, r.reason FROM employee_resignations r LEFT JOIN users u ON u.id = r.employee_id WHERE 1=1 {$sd('employee_resignations', 'r')} ORDER BY r.resign_date DESC");
         self::section($D, 'shifts', "SELECT id, name, start_time, end_time FROM shifts WHERE 1=1 {$sd('shifts')}");
 
+        // --- the party ledger: every customer's and vendor's running balance ---
+        // transactions carries the movement the invoice tables do not: sales, payments
+        // received, purchases and bank transfers, each with the party's balance after it.
+        self::section($D, 'party_transactions', "SELECT t.id, t.user_id, u.name AS party_name, t.user_type AS party_type, t.type, t.invoice_id, t.payment_date AS date, t.reference_no, t.payment_method, t.debit, t.credit, t.balance, t.remarks
+            FROM transactions t LEFT JOIN users u ON u.id = t.user_id WHERE t.payment_date >= ? ORDER BY t.payment_date, t.id", [$from]);
+
+        // --- what is actually on each invoice ---
+        self::section($D, 'ticket_sale_items', "SELECT i.id, i.ticket_sale_id, i.price, p.ticket_no, p.airline_or_operator AS airline, p.trip_type, p.ticket_type FROM ticket_sale_items i LEFT JOIN ticket_purchases p ON p.id = i.ticket_purchase_id");
+        self::section($D, 'visa_sale_items', "SELECT i.id, i.visa_sale_id, i.sale_price, v.application_id, c.name AS country, t.name AS visa_category FROM visa_sale_items i LEFT JOIN visa_processes v ON v.id = i.visa_process_id LEFT JOIN countries c ON c.id = v.country_id LEFT JOIN visa_categories t ON t.id = v.visa_category_id");
+
+        // --- the audit trail behind an approval: who rescheduled what, and why ---
+        self::section($D, 'payment_schedule_logs', "SELECT l.id, l.payment_schedule_id, l.action, l.old_date, l.new_date, l.reason, l.done_by, u.name AS done_by_name, DATE(l.created_at) AS created_at FROM payment_schedule_logs l LEFT JOIN users u ON u.id = l.done_by ORDER BY l.created_at DESC");
+        self::section($D, 'expense_items', "SELECT id, expense_id, description, amount FROM expense_items");
+        self::section($D, 'salary_templates', "SELECT id, name, company_id, basic_salary, house_rent, medical_allowance, conveyance_allowance, other_allowance, bonus, total_salary, status FROM salary_templates");
+
+        // --- who is really on the attendance system (device enrolment is the ground truth) ---
+        self::section($D, 'device_users', "SELECT id, user_id, device_id FROM device_users");
+
+        // --- Wood Art Interiors: an isolated module with its own tables ---
+        self::section($D, 'wa_projects', "SELECT id, company_id, name, client, type, area, value, cost, stage, phase, progress, designer, start, deadline, billed FROM wa_projects WHERE 1=1 {$sd('wa_projects')}");
+
         // --- service desk ---
         self::section($D, 'support_tickets', "SELECT t.id, t.company_id, t.title, d.name AS department, t.priority, t.status, t.assigned_to, u.name AS assignee, t.customer_id, DATE(t.created_at) AS created_at FROM support_tickets t LEFT JOIN ticket_departments d ON d.id = t.ticket_department_id LEFT JOIN users u ON u.id = t.assigned_to WHERE 1=1 {$co('support_tickets', 't')}{$sd('support_tickets', 't')} ORDER BY t.created_at DESC");
 
@@ -189,7 +224,7 @@ final class Erp
         foreach (['payment_schedules' => ['amount', 'paid_amount'], 'expenses' => ['amount'], 'expense_budgets' => ['amount'], 'payroll' => ['gross_salary', 'absent_deduction', 'leave_deduction', 'late_deduction', 'early_leave_deduction', 'loan_deduction', 'advance_salary_deduction', 'overtime_salary', 'total_deductions', 'net_salary'], 'loans' => ['amount', 'remaining_amount', 'monthly_deduction'], 'advance_salaries' => ['amount'], 'employee_requests' => ['amount'], 'deals' => ['amount'], 'sales' => ['total', 'paid_amount', 'due_amount'], 'purchases' => ['total', 'paid_amount', 'due_amount'], 'accounts' => ['opening_balance'],
             'ticket_sales' => ['total', 'paid_amount', 'due_amount'], 'visa_sales' => ['total', 'paid_amount', 'due_amount'], 'contract_file_sales' => ['total', 'paid_amount', 'due_amount', 'vendor_cost'], 'contract_flight_bookings' => ['total', 'paid_amount', 'due_amount', 'unit_price'],
             'ticket_purchases' => ['total', 'paid_amount', 'due_amount'], 'visa_processes' => ['embassy_fee', 'vfs_fee', 'our_service_fee', 'costing_price', 'cost_paid_amount', 'due_amount', 'sale_price', 'advance_received'], 'other_visa_services' => ['cost_price', 'sale_price'],
-            'payments' => ['amount'], 'bank_transfers' => ['amount'], 'petty_cash_floats' => ['float_limit'], 'petty_cash_transactions' => ['amount'], 'employee_ledger' => ['debit', 'credit', 'balance']] as $t => $cols) {
+            'payments' => ['amount'], 'bank_transfers' => ['amount'], 'petty_cash_floats' => ['float_limit'], 'petty_cash_transactions' => ['amount'], 'employee_ledger' => ['debit', 'credit', 'balance'], 'party_transactions' => ['debit', 'credit', 'balance'], 'ticket_sale_items' => ['price'], 'visa_sale_items' => ['sale_price'], 'expense_items' => ['amount'], 'salary_templates' => ['basic_salary', 'total_salary'], 'wa_projects' => ['value', 'cost']] as $t => $cols) {
             foreach ($D[$t] as &$r) foreach ($cols as $c) $r[$c] = (float) ($r[$c] ?? 0); unset($r);
         }
         foreach (Dataset::TABLES as $t) foreach ($D[$t] as &$r) { foreach (['id', 'company_id', 'user_id', 'customer_id', 'supplier_id', 'lead_id', 'project_id', 'assigned_to', 'agent_id', 'account_id', 'bank_id', 'party_id', 'category_id', 'department_id'] as $k) if (array_key_exists($k, $r) && $r[$k] !== null && !is_array($r[$k])) $r[$k] = (int) $r[$k]; } unset($r);

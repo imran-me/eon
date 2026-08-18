@@ -163,6 +163,64 @@ final class Analytics
         return $out;
     }
 
+    /* Every party's running account, from the ERP's own transactions table: what they
+       were invoiced, what they paid, and the balance the ERP itself carries after each
+       movement. This is the ERP's view of a customer or vendor — worth quoting beside
+       the invoice dues, and worth flagging when the two disagree. */
+    /** Net position per party from the transactions ledger, keyed by lower-cased name.
+        Bank-transfer legs are excluded: they are bank-to-bank movements booked against
+        whoever keyed them, not money that party owes. Positive = they owe us. */
+    public function partyBalances(string $partyType = 'customer'): array
+    {
+        $out = [];
+        foreach ($this->rows('party_transactions') as $r) {
+            if ((string) ($r['party_type'] ?? '') !== $partyType) continue;
+            if ((string) ($r['type'] ?? '') === 'bank_transfer') continue;
+            $n = mb_strtolower(trim((string) ($r['party_name'] ?? '')));
+            if ($n === '') continue;
+            if (!isset($out[$n])) $out[$n] = ['party_name' => $r['party_name'], 'balance' => 0.0, 'movements' => 0];
+            $out[$n]['balance'] += (float) $r['debit'] - (float) $r['credit'];
+            $out[$n]['movements']++;
+        }
+        return $out;
+    }
+
+    public function partyLedger(?string $name = null, int $limit = 40): array
+    {
+        $rows = $this->rows('party_transactions');
+        if ($name !== null && trim($name) !== '') {
+            $q = mb_strtolower(trim($name));
+            $rows = array_values(array_filter($rows, fn($r) => str_contains(mb_strtolower((string) ($r['party_name'] ?? '')), $q)));
+        }
+        usort($rows, fn($a, $b) => strcmp((string) $a['date'], (string) $b['date']) ?: (int) $a['id'] <=> (int) $b['id']);
+        $parties = [];
+        foreach ($rows as $r) {
+            $k = (int) ($r['user_id'] ?? 0) . ':' . (string) ($r['party_type'] ?? '');
+            if (!isset($parties[$k])) $parties[$k] = ['party_name' => $r['party_name'] ?? '—', 'party_type' => $r['party_type'] ?? null, 'party_id' => $r['user_id'] ?? null, 'debit' => 0.0, 'credit' => 0.0, 'balance' => 0.0, 'erp_balance' => 0.0, 'movements' => 0, 'last_date' => null];
+            $p = &$parties[$k];
+            $p['debit'] += (float) $r['debit']; $p['credit'] += (float) $r['credit'];
+            // The stored running balance is written in insert order, not date order, so a
+            // back-dated row leaves it wrong (a customer whose advances were keyed after
+            // the invoice reads as owing the full invoice). Compute it; keep theirs to compare.
+            $p['erp_balance'] = (float) $r['balance'];
+            $p['movements']++; $p['last_date'] = $r['date'];
+            unset($p);
+        }
+        $list = array_values($parties);
+        foreach ($list as &$p) {
+            $p['balance'] = $p['debit'] - $p['credit'];
+            $p['in_credit'] = $p['balance'] < -1;                          // holds an advance we have not applied
+            $p['erp_balance_disagrees'] = abs($p['balance'] - $p['erp_balance']) > 1;
+            $p['debit'] = round($p['debit']); $p['credit'] = round($p['credit']); $p['balance'] = round($p['balance']); $p['erp_balance'] = round($p['erp_balance']);
+        } unset($p);
+        usort($list, fn($a, $b) => abs($b['balance']) <=> abs($a['balance']));
+        $recent = array_map(fn($r) => ['date' => $r['date'], 'party' => $r['party_name'], 'party_type' => $r['party_type'], 'type' => $r['type'], 'ref' => $r['reference_no'], 'debit' => round((float) $r['debit']), 'credit' => round((float) $r['credit']), 'balance' => round((float) $r['balance'])], array_slice(array_reverse($rows), 0, $limit));
+        $byType = [];
+        foreach ($rows as $r) { $t = (string) $r['type']; $byType[$t] = ($byType[$t] ?? 0) + 1; }
+        arsort($byType);
+        return ['matched' => $name, 'parties' => array_slice($list, 0, 25), 'movements' => count($rows), 'by_type' => array_map(fn($k, $v) => ['type' => $k, 'count' => $v], array_keys($byType), array_values($byType)), 'recent' => $recent];
+    }
+
     public function schedules(string $type): array
     {
         $rows = array_merge($this->rows('payment_schedules'), $this->invoiceDues($type));
@@ -172,7 +230,30 @@ final class Analytics
         $byParty = []; foreach ($open as $p) { $k = $p['party_type'] . ':' . $p['party_id']; if (!isset($byParty[$k])) $byParty[$k] = ['party_type' => $p['party_type'], 'party_id' => $p['party_id'], 'party_name' => $p['party_name'], 'due' => 0, 'overdue' => 0, 'count' => 0, 'oldest' => 0]; $byParty[$k]['due'] += $p['due']; if ($p['overdue']) $byParty[$k]['overdue'] += $p['due']; $byParty[$k]['count']++; $byParty[$k]['oldest'] = max($byParty[$k]['oldest'], $p['days_overdue']); }
         $byParty = array_values($byParty); usort($byParty, fn($a, $b) => $b['overdue'] <=> $a['overdue'] ?: $b['due'] <=> $a['due']);
         $soon = array_values(array_filter($open, fn($p) => !$p['overdue'] && $this->days($this->today, (string) $p['scheduled_date']) <= 7));
-        return ['type' => $type, 'total' => round(self::sum($open, 'due')), 'count' => count($open), 'overdue_total' => round(self::sum($overdue, 'due')), 'overdue_count' => count($overdue), 'buckets' => $buckets, 'by_party' => array_slice($byParty, 0, 15), 'overdue' => array_slice(array_map(fn($p) => ['party' => $p['party_name'], 'ref' => $p['source_label'], 'due' => $p['due'], 'days_overdue' => $p['days_overdue'], 'company' => $this->coName($p['company_id']), 'party_type' => $p['party_type']], $overdue), 0, 25), 'due_in_7_days' => round(self::sum($soon, 'due')), 'due_in_7_days_count' => count($soon)];
+        // Two sources disagree and the boss needs both. An invoice reads "due" until it is
+        // marked paid, but a party may have settled it by advance in the transactions
+        // ledger — ECN RABBI shows ৳8.5 L due on INV000021 while his ledger is ৳1.4 L in
+        // CREDIT. So: report the gross invoiced, the ledger position, and every party where
+        // the two differ. Never quote the gross alone as "what we are owed".
+        $recon = []; $ledgerOwed = 0.0; $advanceHeld = 0.0;
+        if ($type === 'receive') {
+            $openByName = [];
+            foreach ($open as $p) { $n = mb_strtolower(trim((string) $p['party_name'])); if ($n !== '') $openByName[$n] = ($openByName[$n] ?? 0) + $p['due']; }
+            $bal = $this->partyBalances('customer');
+            foreach ($bal as $n => $b) {
+                $ledgerOwed += max(0.0, $b['balance']);
+                $advanceHeld += max(0.0, -$b['balance']);
+            }
+            foreach ($openByName as $n => $due) {
+                $b = $bal[$n]['balance'] ?? null;
+                if ($b === null || abs($b - $due) <= 1) continue;
+                $recon[] = ['party' => $bal[$n]['party_name'] ?? $n, 'invoiced_open' => round($due), 'ledger_balance' => round($b),
+                    'difference' => round($due - $b), 'reason' => $b < 0 ? 'paid by advance, invoice never marked paid' : 'invoice and ledger disagree'];
+            }
+            usort($recon, fn($a, $b) => abs($b['difference']) <=> abs($a['difference']));
+        }
+        return ['type' => $type, 'total' => round(self::sum($open, 'due')), 'count' => count($open),
+            'ledger_receivable' => round($ledgerOwed), 'advances_held' => round($advanceHeld), 'reconciliation' => $recon, 'overdue_total' => round(self::sum($overdue, 'due')), 'overdue_count' => count($overdue), 'buckets' => $buckets, 'by_party' => array_slice($byParty, 0, 15), 'overdue' => array_slice(array_map(fn($p) => ['party' => $p['party_name'], 'ref' => $p['source_label'], 'due' => $p['due'], 'days_overdue' => $p['days_overdue'], 'company' => $this->coName($p['company_id']), 'party_type' => $p['party_type']], $overdue), 0, 25), 'due_in_7_days' => round(self::sum($soon, 'due')), 'due_in_7_days_count' => count($soon)];
     }
     public function expensesVsBudget(?string $month = null): array
     {
@@ -205,9 +286,12 @@ final class Analytics
             $seen[(int) $a['user_id']] = true;                                  // who is on the attendance system at all
             if ((string) $a['date'] > $lastDate) $lastDate = (string) $a['date'];
         }
-        // Only part of the payroll punches in (device users / selfie check-in). Measuring
-        // presence against every active employee reads "0 of 87 in" on a normal morning,
-        // which is false: the honest denominator is the people the system actually tracks.
+        // Only part of the payroll punches in. Measuring presence against every active
+        // employee reads "0 of 87 in" on a normal morning, which is false: the honest
+        // denominator is the people the system actually tracks — enrolled on a device,
+        // or seen punching at all in the window (selfie check-in leaves no device row).
+        foreach ($this->rows('device_users') as $d) $seen[(int) $d['user_id']] = true;
+        $enrolled = count($this->D['device_users'] ?? []);
         $tracked = count(array_filter($emps, fn($e) => isset($seen[(int) $e['id']])));
         $present = []; $absent = []; $late = []; $leave = []; $notYet = [];
         foreach ($emps as $e) { $a = $A[(int) $e['id']] ?? null; $item = ['id' => $e['id'], 'name' => $e['name'], 'department' => $e['department'], 'company' => $this->coName($e['company_id']), 'check_in' => $a['check_in'] ?? null, 'late_minutes' => (int) ($a['late_minutes'] ?? 0)]; if (!$a) { $notYet[] = $item; continue; } if ($a['status'] === 'present') { $present[] = $item; if ($item['late_minutes'] > 0) $late[] = $item; } elseif ($a['status'] === 'absent') $absent[] = $item; elseif ($a['status'] === 'leave') $leave[] = $item; }
@@ -215,7 +299,7 @@ final class Analytics
         $online = array_values(array_map(fn($e) => $e['name'], array_filter($emps, fn($e) => !empty($e['last_seen_at']) && time() - strtotime((string) $e['last_seen_at']) < 300)));
         $w = (int) date('w', strtotime($this->today));
         $den = $tracked ?: count($emps);
-        return ['date' => $this->today, 'weekend' => in_array($w, [5, 6], true), 'total' => count($emps), 'tracked' => $tracked, 'recorded_today' => count($A), 'no_data_yet' => count($A) === 0, 'last_recorded_date' => $lastDate,
+        return ['date' => $this->today, 'weekend' => in_array($w, [5, 6], true), 'total' => count($emps), 'tracked' => $tracked, 'enrolled_on_device' => $enrolled, 'recorded_today' => count($A), 'no_data_yet' => count($A) === 0, 'last_recorded_date' => $lastDate,
             'present' => count($present), 'present_pct' => $den ? (int) round(count($present) / $den * 100) : 0, 'absent' => count($absent), 'late' => count($late), 'on_leave' => count($leave), 'not_punched' => count($notYet),
             'absent_list' => array_slice($absent, 0, 20), 'late_list' => array_slice($late, 0, 15), 'on_leave_list' => array_slice($leave, 0, 15), 'online' => array_slice($online, 0, 20), 'online_count' => count($online)];
     }
@@ -320,6 +404,13 @@ final class Analytics
     {
         $out = []; $ar = $this->schedules('receive'); $ap = $this->schedules('pay'); $cash = $this->cash(); $bud = $this->expensesVsBudget(); $pe = $this->pendingExpenses(); $tr = $this->revenueTrend(); $td = $this->attendanceToday(); $pt = $this->latePatterns(); $lv = $this->pendingLeaves(); $pr = $this->payroll(); $pipe = $this->pipeline(); $tk = $this->tasks(); $pj = $this->projects();
         $push = function (string $layer, int $sev, string $title, array $why, string $rec, float $amount = 0) use (&$out) { $out[] = ['layer' => $layer, 'severity' => $sev, 'severity_label' => [5 => 'critical', 4 => 'high', 3 => 'medium', 2 => 'low', 1 => 'info'][$sev], 'title' => $title, 'why' => $why, 'recommend' => $rec, 'amount' => round($amount)]; };
+        // money already banked but still showing as owed — chasing it would embarrass us
+        if (!empty($ar['reconciliation'])) {
+            $worst = $ar['reconciliation'][0];
+            $push('finance', 4, 'Invoices worth ' . self::bdtk((float) $ar['total'] - (float) $ar['ledger_receivable']) . ' are settled in the ledger but still marked unpaid',
+                array_map(fn($x) => "{$x['party']} — invoice " . self::bdt((float) $x['invoiced_open']) . ' vs ledger ' . self::bdt((float) $x['ledger_balance']) . " ({$x['reason']})", array_slice($ar['reconciliation'], 0, 3)),
+                'Accounts to apply the advances against the invoices, starting with ' . $worst['party'] . ', before any collection call goes out.', (float) $ar['total'] - (float) $ar['ledger_receivable']);
+        }
         if ($ar['overdue_total'] > 0) { $top = array_slice(array_filter($ar['by_party'], fn($p) => $p['overdue'] > 0), 0, 3); $push('finance', $ar['overdue_total'] > $cash['total'] * 0.25 ? 5 : 4, self::bdtk($ar['overdue_total']) . " receivable is overdue across {$ar['overdue_count']} dues", array_map(fn($p) => "{$p['party_name']} — " . self::bdtk($p['overdue']) . " overdue, oldest {$p['oldest']}d", $top), 'Call ' . ($top[0]['party_name'] ?? 'the top debtor') . ' today; written reminders to the next two; the 30+ day buckets alone recover ' . self::bdtk($ar['buckets'][2]['amount'] + $ar['buckets'][3]['amount'] + $ar['buckets'][4]['amount']) . '.', $ar['overdue_total']); }
         if ($ap['overdue_total'] > 0) { $emp = array_filter($ap['overdue'], fn($p) => $p['party_type'] === 'employee'); $push('finance', $emp ? 5 : 4, self::bdtk($ap['overdue_total']) . " payable is past due ({$ap['overdue_count']} items)", [$emp ? count($emp) . ' salary payments are late' : 'no salary is late', 'cash available ' . self::bdtk($cash['total'])], $emp ? 'Release the late salaries first, then suppliers older than 30 days.' : 'Settle suppliers older than 30 days this week to protect credit terms.', $ap['overdue_total']); }
         if ($ap['due_in_7_days'] > $cash['total'] * 0.6 && $ap['due_in_7_days'] > 0) $push('finance', 4, 'Payables due in 7 days (' . self::bdtk($ap['due_in_7_days']) . ') take most of the cash', ['cash ' . self::bdtk($cash['total'])], 'Sequence payments: salaries and high-priority suppliers first; chase receivables due now.', $ap['due_in_7_days']);
@@ -364,7 +455,11 @@ final class Analytics
         $lines[] = sprintf('%s, %s. %s. Cash stands at %s; revenue this month %s, tracking %s %d%% on last month, which closed at a net %s of %s.', $greet, $who, date('l j F', strtotime($this->today)), self::bdtk($k['cash']), self::bdtk($k['revenue_mtd']), $k['revenue_vs_prev_pct'] >= 0 ? 'up' : 'down', abs($k['revenue_vs_prev_pct']), $k['net_profit_last_month'] >= 0 ? 'profit' : 'loss', self::bdtk(abs($k['net_profit_last_month'])));
         // the desks invoice ahead of the ledger — lead with the business, then the books
         if ($sb['invoiced'] > 0 && $sb['invoiced'] - $k['revenue_mtd'] > 1000) $lines[] = sprintf('The desks invoiced %s this month across %d invoices — %s of that is not journalised yet, so the books show only %s.', self::bdtk((float) $sb['invoiced']), (int) $sb['invoices'], self::bdtk((float) $sb['invoiced'] - (float) $k['revenue_mtd']), self::bdtk((float) $k['revenue_mtd']));
-        if ($k['receivables_overdue'] || $k['payables_overdue']) $lines[] = sprintf('Overdue: %s to collect, %s to pay.', self::bdtk($k['receivables_overdue']), self::bdtk($k['payables_overdue']));
+        if ($k['receivables_overdue'] || $k['payables_overdue']) {
+            $arx = $this->schedules('receive');
+            $note = !empty($arx['reconciliation']) ? sprintf(' — though the party ledger only supports %s of that, the rest is already banked against invoices nobody has marked paid', self::bdtk((float) $arx['ledger_receivable'])) : '';
+            $lines[] = sprintf('Overdue: %s to collect%s, %s to pay.', self::bdtk($k['receivables_overdue']), $note, self::bdtk($k['payables_overdue']));
+        }
         if (!$td['weekend']) {
             $lines[] = !empty($td['no_data_yet'])
                 ? sprintf('No attendance is in yet today (last recorded %s).', $td['last_recorded_date'])

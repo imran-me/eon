@@ -11,7 +11,9 @@ final class Dataset
         // money that moves outside the journal
         'payments', 'bank_transfers', 'petty_cash_floats', 'petty_cash_transactions', 'employee_ledger',
         // the rest of the people lifecycle, and the service desk
-        'payslips', 'resignations', 'shifts', 'support_tickets', 'portals'];
+        'payslips', 'resignations', 'shifts', 'support_tickets', 'portals',
+        // the party ledger, what is on each invoice, the audit trail, and Wood Art
+        'party_transactions', 'ticket_sale_items', 'visa_sale_items', 'payment_schedule_logs', 'expense_items', 'salary_templates', 'device_users', 'wa_projects'];
 
     /** every section that carries an invoice-style due: [table, date column, label] — the real AR/AP */
     public const SALES_TABLES = [

@@ -182,6 +182,14 @@ final class Answers
             $o = $r['by_party'][0];
             $t .= $this->t(' Chase ' . $o['party_name'] . ' first — ' . $this->n((int) $o['oldest']) . ' days old.', ' আগে ' . $o['party_name'] . '-কে তাগাদা দিন — ' . $this->n((int) $o['oldest']) . ' দিন হয়ে গেছে।');
         }
+        // the invoices and the party ledger disagree — say which number to trust and why
+        if (!empty($r['reconciliation'])) {
+            $x = $r['reconciliation'][0];
+            $t .= $this->t(
+                ' But the party ledger only supports ' . $this->m((float) $r['ledger_receivable']) . ': ' . $x['party'] . ' shows ' . $this->m((float) $x['invoiced_open']) . ' on the invoice while the ledger has them ' . ((float) $x['ledger_balance'] < 0 ? 'in credit ' . $this->m(abs((float) $x['ledger_balance'])) : 'at ' . $this->m((float) $x['ledger_balance'])) . ' — ' . $x['reason'] . '. Get the invoice marked paid before anyone chases it.',
+                ' তবে পার্টি খাতা বলছে আসলে পাওনা ' . $this->m((float) $r['ledger_receivable']) . ': ' . $x['party'] . '-এর বিলে ' . $this->m((float) $x['invoiced_open']) . ' দেখালেও খাতায় তিনি ' . ((float) $x['ledger_balance'] < 0 ? $this->m(abs((float) $x['ledger_balance'])) . ' জমা আছেন' : $this->m((float) $x['ledger_balance']) . ' বাকি') . ' — অগ্রিম নেওয়া হয়েছে কিন্তু বিলে বসানো হয়নি। তাগাদা দেওয়ার আগে বিলটি পরিশোধ দেখান।'
+            );
+        }
         return $t;
     }
 
