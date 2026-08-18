@@ -178,6 +178,12 @@ EON therefore stops depending on the machine: `server/lib/Tts.php` renders the s
 
 The words EON says are now authentic Bangla, but a browser still needs a **Bangla speech voice installed on the machine** to read them. Windows rarely ships one: Settings → Time & language → Language → add বাংলা and its speech pack. Chrome on Android has `bn-BD` out of the box. Without it `voice.js` now says so plainly instead of reading Bengali with an English voice and producing nonsense — check `EonVoice.voiceReport()` on the demo machine before the day.
 
+## Testing the deployed EON
+
+`python tools/live-check.py --token …` goes the whole way a browser goes: posts real questions to `ask.php`, takes the `speak` field back, fetches it from `tts.php`, and checks real MP3 audio comes out. Ten questions across বাংলা, English and Banglish; currently 10/10.
+
+**A trap that will cost you an hour:** on Windows, never pass Bengali to `curl --data-urlencode`. curl transcodes the argument to the ANSI codepage first, so বাংলা arrives as `???` and an em dash as a stray `0x97`, and the server rightly rejects it as malformed UTF-8 — which looks exactly like a bug in EON and is not. Percent-encode first (`urllib.parse.quote`) and pass the encoded string, as `live-check.py` does.
+
 ## Host facts (Hostinger, eon.gulfrabit.com) — learned the hard way
 
 - **Signing in: EON trusts the ERP's session, not a token.** `server/lib/ErpSession.php` decrypts `laravel_session` with the ERP's `APP_KEY` (AES-256-CBC, `config/app.php` pins it; GCM handled too), verifies the HMAC and Laravel's cookie-value prefix, reads the session from `erp/storage/framework/sessions/` (or the `sessions` table) and requires the `login_web_<sha1>` guard key. `Http::auth()` accepts it before the token. So: logged into the ERP ⇒ logged into EON, same origin, nothing to paste. The token still works for cron and for devices not signed into the ERP. `health.php` reports `auth` (`erp-session`/`token`/`token-required`), `erp_login` and `user`.
