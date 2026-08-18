@@ -44,9 +44,30 @@ $line('folders ok');
 // deploys it, but its packages, key and .env belong to the host. Everything here is
 // idempotent: after the first deploy it all short-circuits.
 $erp = $root . '/erp';
+// shared hosts (this one included) disable exec/shell_exec for the web user — never call
+// them directly; everything that can be done in-process is, and the rest is reported.
+$sh = function (string $cmd): ?string {
+    if (function_exists('shell_exec')) { try { return (string) @shell_exec($cmd); } catch (Throwable $e) { return null; } }
+    if (function_exists('exec')) { $o = []; @exec($cmd, $o); return implode("\n", $o); }
+    if (function_exists('proc_open')) {
+        $p = @proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (is_resource($p)) { $out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]); fclose($pipes[1]); fclose($pipes[2]); proc_close($p); return $out; }
+    }
+    return null;
+};
+$canShell = function_exists('shell_exec') || function_exists('exec') || function_exists('proc_open');
 if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
     require_once $server . '/bootstrap.php';   // Config, for the database EON already reads
     $bin = PHP_BINARY ?: 'php';
+
+    // (0) the folders Laravel insists on — FIRST, and in-process, so nothing else can prevent them
+    foreach (['storage/framework/cache/data', 'storage/framework/sessions', 'storage/framework/views', 'storage/framework/testing', 'storage/logs', 'storage/app/public', 'storage/app/private', 'bootstrap/cache'] as $d) {
+        $dir = $erp . '/' . $d;
+        if (!is_dir($dir)) @mkdir($dir, 0775, true);
+        @chmod($dir, 0775);
+    }
+    // the public/storage link, without artisan (it needs exec on some builds)
+    if (!file_exists($erp . '/public/storage') && function_exists('symlink')) @symlink($erp . '/storage/app/public', $erp . '/public/storage');
 
     // (a) .env — built from EON's own configuration, so the ERP and EON read one database
     if (!is_file($erp . '/.env')) {
@@ -91,8 +112,8 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
     // (b) packages — Laravel cannot run without vendor/
     if (!is_file($erp . '/vendor/autoload.php')) {
         $composer = null;
-        foreach (['composer', '/usr/local/bin/composer', '/usr/bin/composer', '/opt/cpanel/composer/bin/composer'] as $c) {
-            $probe = @shell_exec(escapeshellcmd($c) . ' --version 2>/dev/null');
+        foreach ($canShell ? ['composer', '/usr/local/bin/composer', '/usr/bin/composer', '/opt/cpanel/composer/bin/composer'] : [] as $c) {
+            $probe = $sh(escapeshellcmd($c) . ' --version 2>/dev/null');
             if ($probe && stripos($probe, 'composer') !== false) { $composer = $c; break; }
         }
         if ($composer === null && is_file($erp . '/composer.phar')) $composer = escapeshellarg($bin) . ' ' . escapeshellarg($erp . '/composer.phar');
@@ -103,13 +124,13 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
             }
         }
         // last resort: fetch composer itself (official installer, verified by its own checksum) into erp/
-        if ($composer === null && function_exists('shell_exec') && ini_get('allow_url_fopen')) {
+        if ($composer === null && $canShell && ini_get('allow_url_fopen')) {
             $line('composer not on this host — downloading composer.phar into erp/ (once)…');
             $setup = @file_get_contents('https://getcomposer.org/installer');
             $sig = trim((string) @file_get_contents('https://composer.github.io/installer.sig'));
             if ($setup !== false && $sig !== '' && hash('sha384', $setup) === $sig) {
                 @file_put_contents($erp . '/composer-setup.php', $setup);
-                @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' composer-setup.php --quiet 2>&1');
+                $sh('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' composer-setup.php --quiet 2>&1');
                 @unlink($erp . '/composer-setup.php');
                 if (is_file($erp . '/composer.phar')) $composer = escapeshellarg($bin) . ' ' . escapeshellarg($erp . '/composer.phar');
                 else $line('! composer download did not produce composer.phar');
@@ -117,35 +138,32 @@ if (is_file($erp . '/artisan') && is_file($erp . '/composer.json')) {
                 $line('! composer installer could not be fetched or failed its checksum');
             }
         }
-        if ($composer !== null && function_exists('shell_exec')) {
+        if ($composer !== null && $canShell) {
             $line('installing the ERP packages (first deploy only, this takes a few minutes)…');
-            $cout = (string) @shell_exec('cd ' . escapeshellarg($erp) . ' && COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_MEMORY_LIMIT=-1 ' . $composer . ' install --no-dev --optimize-autoloader --no-interaction --no-progress 2>&1');
+            $cout = (string) $sh('cd ' . escapeshellarg($erp) . ' && COMPOSER_ALLOW_SUPERUSER=1 COMPOSER_MEMORY_LIMIT=-1 ' . $composer . ' install --no-dev --optimize-autoloader --no-interaction --no-progress 2>&1');
             if (is_file($erp . '/vendor/autoload.php')) $line('ERP packages ok');
             else { $line('! composer install did not finish — run it over SSH in erp/'); foreach (array_slice(array_filter(explode(PHP_EOL, $cout)), -6) as $cl) $line('    ' . $cl); }
         } else {
-            $line('! composer not found on this host — run "composer install --no-dev -o" in erp/ over SSH');
+            $line($canShell ? '! composer not found on this host — run "composer install --no-dev -o" in erp/ over SSH'
+                            : '- exec is disabled for the web user: install the ERP packages once over SSH → bash deploy/erp-install.sh');
         }
     }
 
-    // (c) the writable folders Laravel insists on
-    foreach (['storage/framework/cache/data', 'storage/framework/sessions', 'storage/framework/views', 'storage/logs', 'storage/app/public', 'bootstrap/cache'] as $d) {
-        $dir = $erp . '/' . $d;
-        if (!is_dir($dir)) @mkdir($dir, 0775, true);
-        @chmod($dir, 0775);
+    // (c) the application key — written in-process (artisan key:generate needs nothing we lack, but exec may be off)
+    $envTxt = is_file($erp . '/.env') ? (string) @file_get_contents($erp . '/.env') : '';
+    if ($envTxt !== '' && !preg_match('/^APP_KEY=base64:.+$/m', $envTxt)) {
+        $key = 'base64:' . base64_encode(random_bytes(32));
+        $envTxt = preg_match('/^APP_KEY=.*$/m', $envTxt) ? preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $envTxt, 1) : rtrim($envTxt) . "\nAPP_KEY=" . $key . "\n";
+        @file_put_contents($erp . '/.env', $envTxt);
+        $line('ERP app key generated');
     }
 
-    // (d) the application key, once
-    if (is_file($erp . '/vendor/autoload.php') && function_exists('shell_exec')) {
-        $envTxt = (string) @file_get_contents($erp . '/.env');
-        if (!preg_match('/^APP_KEY=base64:.+$/m', $envTxt)) {
-            @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' artisan key:generate --force 2>&1');
-            $line(preg_match('/^APP_KEY=base64:.+$/m', (string) @file_get_contents($erp . '/.env')) ? 'ERP app key generated' : '! ERP app key not generated — run "php artisan key:generate" in erp/');
-        }
-        if (!file_exists($erp . '/public/storage')) @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' artisan storage:link 2>&1');
-        // a new checkout must not serve the previous deploy's compiled config/routes/views
-        @shell_exec('cd ' . escapeshellarg($erp) . ' && ' . escapeshellarg($bin) . ' artisan optimize:clear 2>&1');
-        $line('ERP caches cleared');
+    // (d) a new checkout must not serve the previous deploy's compiled config/routes/views — delete them in-process
+    foreach (['bootstrap/cache/config.php', 'bootstrap/cache/routes-v7.php', 'bootstrap/cache/services.php', 'bootstrap/cache/packages.php', 'bootstrap/cache/events.php'] as $f) {
+        if (is_file($erp . '/' . $f) && !in_array(basename($f), ['services.php', 'packages.php'], true)) @unlink($erp . '/' . $f);
     }
+    foreach (glob($erp . '/storage/framework/views/*.php') ?: [] as $f) @unlink($f);
+    $line(is_file($erp . '/vendor/autoload.php') ? 'ERP ready (packages present, caches cleared)' : 'ERP source present, packages missing');
 }
 
 // ---- 1b. the ERP is the front door: make sure the companion is appended to its pages ----
@@ -171,12 +189,12 @@ if (is_file($root . '/erp/public/index.php')) {
 if (!is_file($server . '/vendor/autoload.php')) {
     $composer = null;
     foreach (['composer', '/usr/local/bin/composer', '/usr/bin/composer', 'composer.phar'] as $c) {
-        $probe = @shell_exec(escapeshellcmd($c) . ' --version 2>/dev/null');
+        $probe = $canShell ? $sh(escapeshellcmd($c) . ' --version 2>/dev/null') : null;
         if ($probe && stripos($probe, 'composer') !== false) { $composer = $c; break; }
     }
-    if ($composer && function_exists('shell_exec')) {
+    if ($composer && $canShell) {
         $line('installing composer packages…');
-        @shell_exec('cd ' . escapeshellarg($server) . ' && ' . escapeshellcmd($composer) . ' install --no-dev --no-interaction --optimize-autoloader 2>&1');
+        $sh('cd ' . escapeshellarg($server) . ' && ' . escapeshellcmd($composer) . ' install --no-dev --no-interaction --optimize-autoloader 2>&1');
         $line(is_file($server . '/vendor/autoload.php') ? 'composer ok' : '! composer install did not produce vendor/ — run it over SSH');
     } else {
         $line('- no composer on this host: EON will answer with the offline brain until vendor/ is uploaded');
@@ -225,7 +243,8 @@ try { Dataset::cacheClear(); $line('cache cleared'); } catch (Throwable $e) { $l
 // the commit: from deploy.sh, else from the checkout (git, then .git/HEAD), else unknown
 $sha = (string) (getenv('EON_DEPLOY_SHA') ?: '');
 if ($sha === '' && function_exists('shell_exec')) {
-    $sha = @trim((string) @shell_exec('cd ' . escapeshellarg($root) . ' && git rev-parse --short HEAD 2>/dev/null'));
+    $sha = $canShell ? trim((string) $sh('cd ' . escapeshellarg($root) . ' && git rev-parse --short HEAD 2>/dev/null')) : '';
+    if ($sha === '') { $head = trim((string) @file_get_contents($root . '/.git/HEAD')); if (str_starts_with($head, 'ref:')) $sha = substr(trim((string) @file_get_contents($root . '/.git/' . trim(substr($head, 4)))), 0, 7); elseif ($head !== '') $sha = substr($head, 0, 7); }
 }
 if ($sha === '' && is_file($root . '/.git/HEAD')) {
     $head = trim((string) @file_get_contents($root . '/.git/HEAD'));

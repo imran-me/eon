@@ -37,10 +37,12 @@ else
   echo "   vendor/ present — skipping"
 fi
 
-echo "== 3. key, storage link, caches =="
+echo "== 3. key, storage link, caches (post-deploy already did these in-process; this is belt and braces) =="
+mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/framework/testing storage/logs storage/app/public bootstrap/cache
 grep -q '^APP_KEY=base64:' .env || "$PHP_BIN" artisan key:generate --force
-[ -e public/storage ] || "$PHP_BIN" artisan storage:link
-"$PHP_BIN" artisan optimize:clear
+[ -e public/storage ] || ln -s "$ERP/storage/app/public" public/storage 2>/dev/null || true
+rm -f bootstrap/cache/config.php bootstrap/cache/routes-v7.php storage/framework/views/*.php 2>/dev/null
+"$PHP_BIN" artisan config:clear 2>/dev/null; "$PHP_BIN" artisan route:clear 2>/dev/null; "$PHP_BIN" artisan view:clear 2>/dev/null || true
 chmod -R 775 storage bootstrap/cache 2>/dev/null
 
 echo "== 4. does it boot? =="
