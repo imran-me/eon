@@ -27,6 +27,23 @@ Http::run(function () {
     // Whatever reaches here may be screen text — "৳1.9 L", an account code, a URL.
     // Put it through the spoken-form builder unless the caller says it is ready,
     // so anything that asks EON to speak is spoken properly, not read out.
+    // ?debug=1 — report what happens to the text instead of returning audio
+    if (isset($_GET['debug'])) {
+        $steps = ['in_len' => mb_strlen($text), 'in_utf8' => mb_check_encoding($text, 'UTF-8')];
+        $sp = class_exists('Speech') ? Speech::spoken($text, $lang === 'bn' ? 'bn' : 'en') : $text;
+        $steps['spoken'] = $sp;
+        $steps['spoken_utf8'] = mb_check_encoding($sp, 'UTF-8');
+        $sh = class_exists('Speech') ? Speech::shorten($sp) : $sp;
+        $steps['short'] = $sh;
+        $steps['short_utf8'] = mb_check_encoding($sh, 'UTF-8');
+        $collapse = preg_replace('/\s+/u', ' ', $sh);
+        $steps['collapse_null'] = ($collapse === null);
+        $steps['preg_error'] = preg_last_error_msg();
+        $steps['pcre'] = defined('PCRE_VERSION') ? PCRE_VERSION : (function_exists('preg_last_error') ? 'n/a' : '');
+        Http::json(['ok' => true, 'debug' => $steps]);
+        return;
+    }
+
     $prepared = false;
     if (empty($b['raw']) && !isset($_GET['raw']) && class_exists('Speech')) {
         $before = $text;
