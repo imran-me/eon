@@ -196,7 +196,7 @@ const UI = { revenue_change_pct: 0, opex_change_pct: 0, collect_overdue_pct: 0, 
 function panel() {
   const A = typeof window !== 'undefined' && window.EonApp;
   if (!A || !A.registerPanel) return;
-  if (!wired) {
+  if (!wired && typeof document !== 'undefined') {
     wired = true;
     document.addEventListener('input', (e) => {
       const el = e.target && e.target.closest && e.target.closest('[data-whatif]');

@@ -168,7 +168,7 @@ let wired = false;
 function panel() {
   const A = typeof window !== 'undefined' && window.EonApp;
   if (!A || !A.registerPanel) return;
-  if (!wired) {
+  if (!wired && typeof document !== 'undefined') {
     wired = true;
     document.addEventListener('click', (e) => {
       const b = e.target && e.target.closest && e.target.closest('[data-delegate-done]');

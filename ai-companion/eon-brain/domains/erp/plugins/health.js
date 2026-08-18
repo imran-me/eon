@@ -134,10 +134,15 @@ export function scoreCompany(D, company = null) {
   const drivers = Object.keys(parts).map((k) => ({ part: k, layer: LAYER_OF[k], score: Math.round(parts[k]), lost: r1((100 - parts[k]) * W[k]), text: facts[k] }))
     .filter((d) => d.lost > 0).sort((a, b) => b.lost - a.lost).slice(0, 3);
   const co = company == null ? null : (D.companies || []).find((c) => c.id === company);
+  // nothing to judge is not the same as healthy: a company with no people, no money owed
+  // either way, no leads and no work must not score 90/A
+  const signal = hc.total + ar.total + ap.total + pipe.open.length + tk.open.length + pj.active.length + Math.abs(pl.totalIncome);
+  const insufficient = signal <= 0;
   return {
+    insufficient_data: insufficient,
     company_id: company, company: co ? co.name : 'Epal Group (all companies)', short_name: co ? co.short_name : 'GROUP',
     score, grade: grade(score), sub, parts: Object.fromEntries(Object.keys(parts).map((k) => [k, Math.round(parts[k])])), facts, drivers,
-    top_driver: drivers[0] ? drivers[0].text : 'Nothing is pulling the score down', trend: null,
+    top_driver: insufficient ? 'No data for this company yet' : (drivers[0] ? drivers[0].text : 'Nothing is pulling the score down'), trend: null,
     formula: 'finance×0.40 + people×0.25 + sales×0.20 + ops×0.15',
   };
 }
@@ -206,7 +211,7 @@ if (typeof window !== 'undefined') {
 /* ---------- decisions: any company below 55 ---------- */
 addProvider((D, { company } = {}) => {
   const rows = company == null ? (D.companies || []).filter((c) => !c.status || c.status === 'active').map((c) => scoreCompany(D, c.id)) : [scoreCompany(D, company)];
-  return rows.filter((r) => r.score < 55).map((r) => ({
+  return rows.filter((r) => !r.insufficient_data && r.score < 55).map((r) => ({
     id: `health-${r.company_id}`, layer: 'finance', severity: r.score < 40 ? 4 : 3, company_id: r.company_id,
     title: `${r.company} health score ${r.score} (${r.grade}) — ${r.top_driver}`,
     why: [`Sub-scores: ${subsLine(r)}`].concat(r.drivers.map((d) => `${d.text} (−${d.lost} pts)`)),
