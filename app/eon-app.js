@@ -33,7 +33,9 @@ function paintEnv() {
   const mode = e.serverOk ? (e.llm ? 'live' : 'server') : 'demo';
   pill.className = 'pill ' + mode;
   $('#envText').textContent = mode === 'live' ? 'Live · ERP + language model' : mode === 'server' ? (e.db ? 'Server · ERP data · offline brain' : 'Server · demo data') : (src === 'demo' ? 'Static · demo data · offline brain' : 'Static');
-  $('#footEnv').textContent = `${src || '—'} · ${e.serverOk ? 'server ok' : 'no server'}${e.authError ? ' · ⚠ token needed (localStorage eon_token)' : ''} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'on' : 'off'}`;
+  const build = e.commit ? ` · build ${e.commit}` : '';
+  $('#footEnv').textContent = `${src || '—'} · ${e.serverOk ? 'server ok' : 'no server'}${build}${e.authError ? ' · ⚠ token needed (localStorage eon_token)' : ''} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'on' : 'off'}`;
+  if (e.deployed) $('#footEnv').title = `deployed ${new Date(e.deployed).toLocaleString()}${e.php ? ' · php ' + e.php : ''}`;
 }
 function paintCompanies() {
   const sel = $('#companySel'); const cur = sel.value;

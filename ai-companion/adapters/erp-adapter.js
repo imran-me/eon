@@ -45,7 +45,7 @@
   const writeLS = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch { /* quota — keep in memory */ } };
   const mem = {};
   const deepMerge = (dst, src) => { Object.keys(src || {}).forEach((k) => { if (src[k] && typeof src[k] === 'object' && !Array.isArray(src[k]) && dst[k] && typeof dst[k] === 'object' && !Array.isArray(dst[k])) deepMerge(dst[k], src[k]); else dst[k] = src[k]; }); return dst; };
-  const ENV = window.EON_ENV = { mode: 'static', server: SERVER, serverOk: false, llm: false, db: false, company: CFG.company, source: null, adapter: 'erp', checkedAt: null, authError: null };
+  const ENV = window.EON_ENV = { mode: 'static', server: SERVER, serverOk: false, llm: false, db: false, company: CFG.company, source: null, adapter: 'erp', checkedAt: null, authError: null, commit: null, deployed: null, php: null };
   const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
   // token: ?token=… once (remembered), then localStorage 'eon_token' — sent as Authorization: Bearer
   try { const qt = new URLSearchParams(location.search).get('token'); if (qt) { localStorage.setItem('eon_token', qt); history.replaceState(null, '', location.pathname + location.hash); } } catch {}
@@ -123,6 +123,7 @@
       try {
         const h = await api('health.php', { timeout: 3500 });
         ENV.serverOk = true; ENV.db = !!h.db; ENV.llm = !!h.llm; ENV.mode = h.db ? (h.llm ? 'live' : 'server') : 'static';
+        ENV.commit = h.commit || null; ENV.deployed = h.deployed || null; ENV.php = h.php || null;
         if (h.db) {
           const cacheKey = 'dataset:' + (CFG.company || 'all'); const cached = readLS(cacheKey);
           if (cached && cached.at && Date.now() - cached.at < CFG.cacheMinutes * 60000 && cached.D) { await publish(cached.D); }

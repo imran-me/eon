@@ -16,7 +16,15 @@ $root = dirname(__DIR__);
 $server = $root . '/server';
 $ok = true;
 $out = [];
-$line = function (string $s) use (&$out) { $out[] = $s; };
+$line = function (string $s) use (&$out) { $out[] = $s; echo $s, "\n"; };   // print as we go — a fatal further down must not swallow the earlier lines
+
+// without this a fatal error ended the deploy silently: "post-deploy reported problems" and nothing else
+register_shutdown_function(function () {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        echo "! post-deploy stopped: {$e['message']} ({$e['file']}:{$e['line']})\n";
+    }
+});
 
 // ---- 1. runtime folders (git keeps them empty; the app needs them writable) ----
 foreach (['storage/cache', 'storage/logs', 'storage/data'] as $d) {
@@ -50,8 +58,9 @@ if (!is_file($server . '/vendor/autoload.php')) {
 }
 
 // ---- 3. load EON itself ----
-if (!is_file($server . '/bootstrap.php')) { $line('! server/bootstrap.php missing'); echo implode("\n", $out) . "\n"; exit(1); }
+if (!is_file($server . '/bootstrap.php')) { $line('! server/bootstrap.php missing'); exit(1); }
 require_once $server . '/bootstrap.php';
+ini_set('display_errors', '1');   // CLI: the deploy log should carry the reason, not hide it
 
 if (!is_file($server . '/config.local.php')) {
     $line('- config.local.php missing → demo mode. Copy config.example.php and set the token, database and boss.');
@@ -126,5 +135,4 @@ if (!$state['token'] && ($state['erp_db'] || Config::llmKeyPresent())) {
     $ok = false;
 }
 
-echo implode("\n", $out) . "\n";
 exit($ok ? 0 : 1);
