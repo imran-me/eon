@@ -134,14 +134,25 @@ final class ErpSession
         if (!is_array($p) || !isset($p['iv'], $p['value'], $p['mac'])) return null;
         if (!is_string($p['iv']) || !is_string($p['value']) || !is_string($p['mac'])) return null;
 
-        // the MAC covers iv+value exactly as they travel, so check it before touching the cipher
-        $mac = hash_hmac('sha256', $p['iv'] . $p['value'], $key);
-        if (!hash_equals($mac, $p['mac'])) return null;
+        // AEAD ciphers (GCM) authenticate through their tag; CBC carries a separate HMAC.
+        // The ERP pins AES-256-CBC today; honour APP_CIPHER so a future change still works.
+        $cipher = strtoupper((string) self::env('APP_CIPHER', 'AES-256-CBC'));
+        $tag = isset($p['tag']) && is_string($p['tag']) && $p['tag'] !== '' ? base64_decode($p['tag'], true) : null;
+        $gcm = str_contains($cipher, 'GCM') || $tag !== null;
+
+        if (!$gcm) {
+            // the MAC covers iv+value exactly as they travel, so check it before touching the cipher
+            $mac = hash_hmac('sha256', $p['iv'] . $p['value'], $key);
+            if (!hash_equals($mac, $p['mac'])) return null;
+        }
 
         $iv = base64_decode($p['iv'], true);
-        if ($iv === false || strlen($iv) !== 16) return null;
-        $plain = openssl_decrypt($p['value'], 'AES-256-CBC', $key, 0, $iv);
-        if (!is_string($plain) || $plain === '') return null;
+        if ($iv === false) return null;
+        if (!$gcm && strlen($iv) !== 16) return null;
+        $plain = $gcm
+            ? openssl_decrypt($p['value'], 'aes-256-gcm', $key, 0, $iv, (string) $tag)
+            : openssl_decrypt($p['value'], 'AES-256-CBC', $key, 0, $iv);
+        if (!is_string($plain) || $plain === '') return null;             // GCM: a bad tag lands here
 
         // Laravel 9+ prefixes the value with hash_hmac('sha1', name.'v2', key).'|'
         $prefix = hash_hmac('sha1', $name . 'v2', $key) . '|';

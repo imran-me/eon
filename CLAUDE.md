@@ -91,6 +91,10 @@ eon/
 
 ## Host facts (Hostinger, eon.gulfrabit.com) — learned the hard way
 
+- **Signing in: EON trusts the ERP's session, not a token.** `server/lib/ErpSession.php` decrypts `laravel_session` with the ERP's `APP_KEY` (AES-256-CBC, `config/app.php` pins it; GCM handled too), verifies the HMAC and Laravel's cookie-value prefix, reads the session from `erp/storage/framework/sessions/` (or the `sessions` table) and requires the `login_web_<sha1>` guard key. `Http::auth()` accepts it before the token. So: logged into the ERP ⇒ logged into EON, same origin, nothing to paste. The token still works for cron and for devices not signed into the ERP. `health.php` reports `auth` (`erp-session`/`token`/`token-required`), `erp_login` and `user`.
+- **The ERP's frontend must be built and committed**: `erp/public/build/` is git-ignored upstream, but the host has no Node — without it `@vite` is skipped and the dashboard loads NO stylesheet (the layout's `@else` branch is a commented-out CDN line). Rebuild with `npm ci && npm run build` in `erp/`, then `git add -f erp/public/build`.
+- Node 24 is installed on the workstation (winget `OpenJS.NodeJS.LTS`); the portable PHP in the scratchpad needed `php_openssl.dll` added to test the session crypto.
+
 - **`exec`/`shell_exec`/`proc_open` are disabled** for the web user. post-deploy does everything in-process; composer for the ERP was run once over SSH (`deploy/erp-install.sh`).
 - **`.user.ini` is ignored** in our folder (PHP reads it only from the website's own root, which is gulfrabit.com's). PHP directives go in the site `.htaccess` as `php_value` (LiteSpeed honours them). `embed/check.php` shows what PHP accepted.
 - **`auto_append_file` never reaches the client** behind Laravel (it terminates the request itself). The injector runs as **`auto_prepend_file`** and adds the tag from an output-buffer callback (`embed/eon-inject.php`).
