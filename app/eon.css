@@ -103,3 +103,74 @@ tr:hover td { background: #f6f8fc; }
 .trace-live { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .trace-live div { padding: 3px 0; border-bottom: 1px dashed var(--line); }
 .trace-live b { color: var(--primary); }
+
+/* ============================================================
+   DOCKED — EON beside the ERP in the split workspace.
+   A 380–520px column: no sidebar, no page chrome, the conversation
+   first and everything else reachable from one row of chips.
+   ============================================================ */
+.dock body, html.dock body { background: #fff; font-size: 14px; }
+.dock .shell { grid-template-columns: 1fr; min-height: 100dvh; }
+.dock .side { display: none; }
+.dock .main { padding: 0; max-width: none; height: 100dvh; display: flex; flex-direction: column; }
+
+/* one compact header: scope + the section chips, horizontally scrollable */
+.dock .top { position: sticky; top: 0; z-index: 20; margin: 0; padding: 8px 10px; gap: 8px;
+             background: rgba(255,255,255,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+.dock .top h1 { font-size: 15px; }
+.dock .top .pill { font-size: 11px; padding: 3px 8px; }
+.dock select.company { max-width: 140px; font-size: 12.5px; padding: 5px 8px; }
+.dock .top .btn { height: 30px; padding: 0 10px; font-size: 12.5px; }
+.dock .btn.mic { width: 34px; height: 34px; font-size: 15px; }
+
+/* the sections become a chip row under the header */
+.dock #dockNav { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; border-bottom: 1px solid var(--line);
+                 scrollbar-width: none; background: #fff; position: sticky; top: 46px; z-index: 19; }
+.dock #dockNav::-webkit-scrollbar { display: none; }
+.dock #dockNav a { flex: 0 0 auto; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line);
+                   color: var(--muted); font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+.dock #dockNav a.active { background: rgba(79,70,229,.1); border-color: rgba(79,70,229,.3); color: var(--primary); font-weight: 600; }
+
+.dock #content { flex: 1; overflow: auto; padding: 10px; }
+.dock .grid { gap: 10px; }
+.dock .g2, .dock .g3, .dock .g4 { grid-template-columns: 1fr; }
+.dock .card { padding: 12px 13px; border-radius: 12px; box-shadow: none; }
+.dock .card h3 { font-size: 12px; }
+.dock .tile .val { font-size: 21px; }
+.dock .hero p { font-size: 14.5px; }
+.dock .hero .greet { font-size: 17px; }
+.dock table { font-size: 12.5px; }
+.dock th, .dock td { padding: 6px 6px; }
+.dock .item { grid-template-columns: auto 1fr; }
+.dock .item .meta { grid-column: 2; text-align: left; padding-top: 4px; }
+
+/* the conversation fills the panel: the composer is always in reach */
+.dock #content .card:has(#chat) { display: flex; flex-direction: column; height: calc(100dvh - 150px); }
+.dock .chat { flex: 1; max-height: none; min-height: 0; }
+.dock .msg { max-width: 94%; }
+.dock .askbar { position: sticky; bottom: 0; background: #fff; padding-top: 8px; }
+.dock .chips { gap: 5px; }
+.dock .chip { font-size: 11.5px; padding: 4px 9px; }
+
+/* the avatar never renders here — it walks on the ERP side */
+.dock #eon-home, .dock .eon-companion, .dock .eon-stage, .dock canvas.eon { display: none !important; }
+
+@media (max-width: 420px) { .dock .top h1 { display: none; } }
+
+/* nothing may push the panel wider than the column it lives in */
+.dock body { overflow-x: hidden; }
+.dock .shell, .dock .main, .dock #content, .dock .card, .dock .grid, .dock .item, .dock .chat, .dock .askbar { min-width: 0; max-width: 100%; }
+.dock #content { overflow-x: hidden; }
+.dock .top { flex-wrap: wrap; row-gap: 6px; }
+.dock .top .spacer { display: none; }
+.dock select.company { flex: 1 1 130px; min-width: 0; }
+.dock .askbar { flex-wrap: nowrap; }
+.dock .askbar input { min-width: 0; flex: 1 1 auto; }
+.dock table { table-layout: fixed; width: 100%; }
+.dock th, .dock td { overflow: hidden; text-overflow: ellipsis; }
+.dock .msg { overflow-wrap: anywhere; }
+.dock .card { overflow: hidden; }
+.dock pre, .dock .draft, .dock .trace { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* the tiles read as a two-up strip rather than a wide row */
+.dock .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dock .tile .val { font-size: 19px; }

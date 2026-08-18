@@ -51,6 +51,8 @@
   /* ---------- 1. the button: EON's own panel, in a new tab ---------- */
   function button() {
     if (!O.button || document.getElementById('eon-panel-btn')) return;
+    // already docked beside EON in the workspace? then the button would be noise
+    try { if (window.parent !== window && window.parent.EonWorkspace) return; } catch {}
     const pos = {
       'bottom-left': 'left:18px;bottom:18px',
       'bottom-right': 'right:18px;bottom:78px',
@@ -66,11 +68,27 @@
       #eon-panel-btn:hover{transform:translateY(-1px);box-shadow:0 12px 30px rgba(31,109,255,.45)}
       #eon-panel-btn .eon-dot{width:8px;height:8px;border-radius:50%;background:#7ed957;box-shadow:0 0 8px #7ed957}
       #eon-panel-btn .eon-arrow{opacity:.85;font-weight:400}
+      #eon-panel-alt{position:fixed;${pos};transform:translateX(calc(100% + 6px));z-index:2147483000;
+        display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;text-decoration:none;
+        background:#fff;color:#4f46e5;border:1px solid #e2e7f0;box-shadow:0 4px 14px rgba(19,26,46,.12);
+        font:600 13px "Inter","Segoe UI",system-ui,sans-serif}
+      #eon-panel-alt:hover{background:#f5f7fc}
+      @media print{#eon-panel-alt{display:none}}
       @media print{#eon-panel-btn{display:none}}`;
     head.appendChild(style);
-    const a = el('a', { id: 'eon-panel-btn', href: O.panel, target: '_blank', rel: 'noopener', title: 'Open EON — brief, decisions, approvals, Ask EON' });
-    a.innerHTML = '<span class="eon-dot"></span>EON panel <span class="eon-arrow">↗</span>';
+    const workspace = O.panel.replace(/\/?$/, '/') + 'workspace.html?to=' + encodeURIComponent(location.pathname + location.search);
+    const a = el('a', { id: 'eon-panel-btn', href: workspace, title: 'Work with EON beside the ERP (right-click for a separate tab)' });
+    a.innerHTML = '<span class="eon-dot"></span>EON <span class="eon-arrow">⇥</span>';
+    // left click docks EON beside the ERP; middle/ctrl click opens the panel on its own
+    a.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;   // let the browser do its thing
+      e.preventDefault();
+      location.href = workspace;
+    });
+    const alt = el('a', { id: 'eon-panel-alt', href: O.panel, target: '_blank', rel: 'noopener', title: 'Open EON in a separate tab' });
+    alt.textContent = '↗';
     (document.body || document.documentElement).appendChild(a);
+    (document.body || document.documentElement).appendChild(alt);
   }
 
   /* ---------- 2. the companion ---------- */

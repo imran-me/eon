@@ -12,6 +12,17 @@
   <link href="../ai-companion/css/home.css" rel="stylesheet">
   <link href="../ai-companion/css/animations.css" rel="stylesheet">
   <link href="../app/eon.css" rel="stylesheet">
+  <script>
+    /* Docked beside the ERP (?dock=1, or framed by the workspace shell): render the
+       compact chat-first panel and leave the avatar to the ERP side, where it walks.
+       Set before first paint so nothing flashes at full width. */
+    (function () {
+      var docked = /(\?|&)dock=1\b/.test(location.search);
+      try { if (!docked && window.parent !== window && window.parent.EonWorkspace) docked = true; } catch (e) {}
+      window.EON_DOCK = docked;
+      if (docked) document.documentElement.classList.add('dock');
+    })();
+  </script>
 </head>
 <body>
   <div class="shell">
@@ -38,6 +49,16 @@
         <button class="btn" id="btnSpeakBrief" title="Read the brief aloud">🔊 Read brief</button>
         <button class="btn mic" id="btnMic" title="Talk to EON (hold or click)">🎙</button>
       </div>
+      <nav id="dockNav" hidden>
+        <a href="#ask" data-sec="ask">Ask</a>
+        <a href="#brief" data-sec="brief">Brief</a>
+        <a href="#decisions" data-sec="decisions">Decisions</a>
+        <a href="#approvals" data-sec="approvals">Approvals</a>
+        <a href="#finance" data-sec="finance">Finance</a>
+        <a href="#people" data-sec="people">People</a>
+        <a href="#crm" data-sec="crm">Sales</a>
+        <a href="#ops" data-sec="ops">Operations</a>
+      </nav>
       <div id="heard" class="heard"></div>
       <section id="content"><div class="empty">EON is waking up — reading the company…</div></section>
     </main>

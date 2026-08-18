@@ -59,7 +59,7 @@ function pluginPanels(section) {
 /* ---------------- renderers ---------------- */
 const TITLES = { brief: 'Brief', decisions: 'Decisions', approvals: 'Approvals', finance: 'Finance', people: 'People', crm: 'Sales & CRM', ops: 'Operations', ask: 'Ask EON' };
 function render() {
-  document.querySelectorAll('#nav a').forEach((a) => a.classList.toggle('active', a.dataset.sec === state.section));
+  document.querySelectorAll('#nav a, #dockNav a').forEach((a) => a.classList.toggle('active', a.dataset.sec === state.section));
   $('#pageTitle').textContent = TITLES[state.section] || 'EON';
   if (!D()) { $('#content').innerHTML = '<div class="empty">EON is reading the company…</div>'; return; }
   const fn = { brief: rBrief, decisions: rDecisions, approvals: rApprovals, finance: rFinance, people: rPeople, crm: rCrm, ops: rOps, ask: rAsk }[state.section] || rBrief;
@@ -235,7 +235,13 @@ function boot() {
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
-  window.EonApp = { ask, act, render, state, api, toast, esc, k, money, registerPanel, panels: PANELS, env, server, prefs: () => window.EON_PREFS || {} };
+  // docked beside the ERP: chips instead of the sidebar, conversation first
+  if (window.EON_DOCK) {
+    const dn = document.getElementById('dockNav');
+    if (dn) dn.hidden = false;
+    if (!location.hash) location.hash = '#ask';
+  }
+  window.EonApp = { ask, act, render, state, api, toast, esc, k, money, registerPanel, panels: PANELS, env, server, prefs: () => window.EON_PREFS || {}, docked: () => !!window.EON_DOCK };
   try { window.dispatchEvent(new CustomEvent('eon:app-ready')); } catch {}
   render();
 }

@@ -8,7 +8,10 @@
 let started = false;
 function start() {
   if (started) return; started = true;
-  import('./main.js').catch((e) => console.warn('[EON] companion failed to load:', e));
+  // docked beside the ERP: the companion walks on the ERP side, not in the panel
+  if (!(typeof window !== 'undefined' && window.EON_DOCK)) {
+    import('./main.js').catch((e) => console.warn('[EON] companion failed to load:', e));
+  }
   import('../eon-brain/eon-brain.js').catch((e) => console.warn('[EON] brain failed to load:', e));
   // the ERP domain (knowledge + decision layers + answerer) — the space this EON lives in
   const space = (window.EON_BRAIN_CONFIG && window.EON_BRAIN_CONFIG.space) || 'erp';

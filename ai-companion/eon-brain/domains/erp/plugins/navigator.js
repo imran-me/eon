@@ -444,10 +444,38 @@ function answer(q, ctx) {
 /* ---------- acting on it ---------- */
 function go(href) {
   if (typeof window === 'undefined' || !href) return;
-  const onErp = typeof location !== 'undefined' && !/\/eon\/?$|\/eon\//.test(location.pathname);
-  if (onErp) location.href = href;                      // riding on the ERP: just go
-  else window.open(href, '_blank', 'noopener');         // from EON's panel: a new tab
+
+  // 1. inside the split workspace, EON must move the ERP frame and stay put itself.
+  //    (Its own frame is never navigated — that is what keeps the thread alive.)
+  try {
+    if (window.parent && window.parent !== window) {
+      if (window.parent.EonWorkspace && window.parent.EonWorkspace.isWorkspace) {
+        window.parent.EonWorkspace.navigate(href);
+        return;
+      }
+      // cross-document fallback: ask the shell over postMessage
+      window.parent.postMessage({ type: 'eon:navigate', url: href }, location.origin);
+      return;
+    }
+  } catch { /* not framed, or a foreign parent — fall through */ }
+
+  // 2. riding on an ERP page (companion): just go
+  const onPanel = typeof location !== 'undefined' && /\/eon(\/|$)/.test(location.pathname);
+  if (!onPanel) { location.href = href; return; }
+
+  // 3. from EON's own page, opened on its own: a new tab
+  window.open(href, '_blank', 'noopener');
 }
+
+/* the ERP page the boss is looking at, when EON is docked beside it */
+let erpContext = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (e) => {
+    if (e.origin !== location.origin || !e.data || e.data.type !== 'eon:erp-context') return;
+    erpContext = { path: e.data.path || null, title: e.data.title || '', at: e.data.at || Date.now() };
+  });
+}
+export function context() { return erpContext; }
 
 let wired = false;
 function wire() {
@@ -464,7 +492,7 @@ function wire() {
 /* ---------- registration ---------- */
 if (typeof window !== 'undefined') {
   wire();
-  window.EonNavigator = { find, findRecord, abilities, tableFor, url, currentRole, go, map: () => MAP, ready: () => load() };
+  window.EonNavigator = { find, findRecord, abilities, tableFor, url, currentRole, go, context, map: () => MAP, ready: () => load() };
   (window.__eonDomainQueue = window.__eonDomainQueue || []).push({
     id: 'navigator',
     priority: 97,
