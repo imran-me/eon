@@ -251,17 +251,12 @@ final class Grammar
         // Staff and clients are keyed in Latin, but the boss types বাংলা. Fold the
         // sentence to a rough Latin skeleton as well, so "রাশেদুল ইসলামের বেতন"
         // reaches the same record as "Rashedul Islam payroll".
-        $nSkel = self::skeleton($n);
+        $nWords = self::skeletonWords($n);
         $best = null;
-        $consider = function (string $kind, $id, ?string $label) use (&$best, $n, $nSkel) {
+        $consider = function (string $kind, $id, ?string $label) use (&$best, $n, $nWords) {
             $label = trim((string) $label);
             if ($label === '' || mb_strlen($label) < 3) return;
-            $hit = mb_stripos($n, mb_strtolower($label)) !== false;
-            if (!$hit) {
-                // both sides reduced the same way, or the comparison is meaningless
-                $sk = self::skeleton($label);
-                $hit = strlen($sk) >= 5 && str_contains($nSkel, $sk);
-            }
+            $hit = mb_stripos($n, mb_strtolower($label)) !== false || self::nameInSentence($label, $nWords);
             if (!$hit) return;
             if ($best === null || mb_strlen($label) > mb_strlen($best['label'])) $best = ['kind' => $kind, 'id' => $id, 'label' => $label];
         };
@@ -324,6 +319,46 @@ final class Grammar
     {
         $s = self::romanise($s);
         return preg_replace('/[aeiouhwy\s]+/', '', $s) ?? $s;
+    }
+
+    /** the same reduction, but kept word by word */
+    public static function skeletonWords(string $s): array
+    {
+        $out = [];
+        foreach (preg_split('/\s+/', trim(self::romanise($s))) ?: [] as $w) {
+            $k = preg_replace('/[aeiouhwy]+/', '', $w) ?? $w;
+            // a one-letter token is never part of a name; the possessive 's left behind
+            // by "MD SHAFIQUL ISLAM's" was satisfying the "Sohel" of a different person
+            if (strlen($k) >= 2) $out[] = $k;
+        }
+        return $out;
+    }
+
+    /**
+     * Does a record's name appear in the sentence, allowing for script and spelling drift?
+     * Word by word, as a contiguous run — a flat skeleton match runs across word
+     * boundaries and borrows letters from the next word, which married the passenger
+     * "MD SHAFIQUL ISLAM" to the employee "Shafiqul Islam Sohel" by eating "ledger".
+     */
+    public static function nameInSentence(string $label, array $sentenceWords): bool
+    {
+        $want = self::skeletonWords($label);
+        $want = array_values(array_filter($want, fn($w) => strlen($w) >= 2));
+        if (count($want) < 2) return false;                       // one short word is not a name
+        $strong = false;
+        foreach ($want as $w) if (strlen($w) >= 3) { $strong = true; break; }
+        if (!$strong) return false;
+        $n = count($sentenceWords); $m = count($want);
+        for ($i = 0; $i + $m <= $n; $i++) {
+            $ok = true;
+            for ($j = 0; $j < $m; $j++) {
+                $a = $want[$j]; $b = $sentenceWords[$i + $j];
+                // one a prefix of the other absorbs Bangla case endings (islam → islamer)
+                if (!str_starts_with($a, $b) && !str_starts_with($b, $a)) { $ok = false; break; }
+            }
+            if ($ok) return true;
+        }
+        return false;
     }
 
     /** (kind, aspect) → the handler that answers it */

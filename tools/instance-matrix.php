@@ -41,13 +41,20 @@ $PHRASINGS = [
     'en' => [
         '{a} of {n}', "{n}'s {a}", 'what is {n} {a}', 'give me {n} {a}', 'show me {n} {a}',
         'take me to {n} {a}', 'i want {n} {a}', 'tell me about {n} {a}',
+        'open {n} {a}', 'check {n} {a}', 'pull up {n} {a}', 'how is {n} {a}',
+        'what about {n} {a}', 'i need {n} {a}', 'get me {n} {a}', 'display {n} {a}',
+        'bring {n} {a}', 'let me see {n} {a}', 'can you show {n} {a}', '{n} {a} please',
     ],
     'bn' => [
         '{n}-এর {a}', '{n} এর {a} কত', '{n} এর {a} দেখাও', '{n} এর {a} দাও',
-        '{n} এর {a} বলো', '{n} এর {a} নিয়ে চলো',
+        '{n} এর {a} বলো', '{n} এর {a} নিয়ে চলো', '{n} এর {a} কী', '{n} এর {a} জানাও',
+        '{n} এর {a} চাই', '{n} এর {a} বের করো', '{n} এর {a} খুলে দাও', '{n} এর {a} কেমন',
+        '{n} এর {a} দেখতে চাই', '{n} এর {a} একটু দেখাও',
     ],
     'bl' => [
         '{n} er {a}', '{n} er {a} koto', '{n} er {a} dekhao', '{n} er {a} dao', '{n} er {a} bolo',
+        '{n} er {a} ki', '{n} er {a} janao', '{n} er {a} chai', '{n} er {a} ber koro',
+        '{n} er {a} kemon', '{n} er {a} dekhte chai',
     ],
 ];
 
@@ -104,10 +111,24 @@ echo str_repeat('=', 74) . "\n";
 /* ---------- sample it ---------- */
 
 if ($sample < $size) {
-    // deterministic spread: walk with a stride so every kind and aspect is hit
-    $stride = max(1, (int) floor($size / $sample));
+    /* Stratify by (kind, aspect, script) and take round-robin. A plain stride aliases:
+       the phrasings sit in per-language blocks, so a stride sharing a factor with the
+       block size lands on the same offsets forever — 500 points and Banglish was never
+       sampled once. Round-robin over the buckets cannot do that. */
+    $buckets = [];
+    foreach ($points as $pt) $buckets[$pt['inst']['kind'] . '|' . $pt['aspect'] . '|' . $pt['lang']][] = $pt;
+    ksort($buckets);
     $picked = [];
-    for ($i = 0; $i < $size && count($picked) < $sample; $i += $stride) $picked[] = $points[$i];
+    for ($round = 0; count($picked) < $sample; $round++) {
+        $addedThisRound = false;
+        foreach ($buckets as $b) {
+            if (!isset($b[$round])) continue;
+            $picked[] = $b[$round];
+            $addedThisRound = true;
+            if (count($picked) >= $sample) break;
+        }
+        if (!$addedThisRound) break;
+    }
     $points = $picked;
 }
 printf("\nprobing %d of %d instance-level sentences…\n\n", count($points), $size);
