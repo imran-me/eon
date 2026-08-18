@@ -199,13 +199,25 @@ final class Analytics
     // ---------- people ----------
     public function attendanceToday(): array
     {
-        $emps = array_filter($this->rows('employees'), fn($e) => ($e['status'] ?? 'active') === 'active'); $A = []; foreach ($this->rows('attendances') as $a) if ($a['date'] === $this->today) $A[(int) $a['user_id']] = $a;
+        $emps = array_filter($this->rows('employees'), fn($e) => ($e['status'] ?? 'active') === 'active'); $A = []; $seen = []; $lastDate = '';
+        foreach ($this->rows('attendances') as $a) {
+            if ($a['date'] === $this->today) $A[(int) $a['user_id']] = $a;
+            $seen[(int) $a['user_id']] = true;                                  // who is on the attendance system at all
+            if ((string) $a['date'] > $lastDate) $lastDate = (string) $a['date'];
+        }
+        // Only part of the payroll punches in (device users / selfie check-in). Measuring
+        // presence against every active employee reads "0 of 87 in" on a normal morning,
+        // which is false: the honest denominator is the people the system actually tracks.
+        $tracked = count(array_filter($emps, fn($e) => isset($seen[(int) $e['id']])));
         $present = []; $absent = []; $late = []; $leave = []; $notYet = [];
         foreach ($emps as $e) { $a = $A[(int) $e['id']] ?? null; $item = ['id' => $e['id'], 'name' => $e['name'], 'department' => $e['department'], 'company' => $this->coName($e['company_id']), 'check_in' => $a['check_in'] ?? null, 'late_minutes' => (int) ($a['late_minutes'] ?? 0)]; if (!$a) { $notYet[] = $item; continue; } if ($a['status'] === 'present') { $present[] = $item; if ($item['late_minutes'] > 0) $late[] = $item; } elseif ($a['status'] === 'absent') $absent[] = $item; elseif ($a['status'] === 'leave') $leave[] = $item; }
         usort($late, fn($a, $b) => $b['late_minutes'] <=> $a['late_minutes']);
         $online = array_values(array_map(fn($e) => $e['name'], array_filter($emps, fn($e) => !empty($e['last_seen_at']) && time() - strtotime((string) $e['last_seen_at']) < 300)));
         $w = (int) date('w', strtotime($this->today));
-        return ['date' => $this->today, 'weekend' => in_array($w, [5, 6], true), 'total' => count($emps), 'present' => count($present), 'present_pct' => count($emps) ? (int) round(count($present) / count($emps) * 100) : 0, 'absent' => count($absent), 'late' => count($late), 'on_leave' => count($leave), 'not_punched' => count($notYet), 'absent_list' => array_slice($absent, 0, 20), 'late_list' => array_slice($late, 0, 15), 'on_leave_list' => array_slice($leave, 0, 15), 'online' => array_slice($online, 0, 20), 'online_count' => count($online)];
+        $den = $tracked ?: count($emps);
+        return ['date' => $this->today, 'weekend' => in_array($w, [5, 6], true), 'total' => count($emps), 'tracked' => $tracked, 'recorded_today' => count($A), 'no_data_yet' => count($A) === 0, 'last_recorded_date' => $lastDate,
+            'present' => count($present), 'present_pct' => $den ? (int) round(count($present) / $den * 100) : 0, 'absent' => count($absent), 'late' => count($late), 'on_leave' => count($leave), 'not_punched' => count($notYet),
+            'absent_list' => array_slice($absent, 0, 20), 'late_list' => array_slice($late, 0, 15), 'on_leave_list' => array_slice($leave, 0, 15), 'online' => array_slice($online, 0, 20), 'online_count' => count($online)];
     }
     public function latePatterns(int $days = 30): array
     {
@@ -348,9 +360,16 @@ final class Analytics
         $who = 'Boss'; foreach (preg_split('/\s+/', trim((string) Config::get('boss.name', 'Boss'))) as $part) { if ($part !== '' && !preg_match('/^(md\.?|mohammad|muhammad|mohammed|mst\.?|mrs?\.?|ms\.?|dr\.?)$/i', $part)) { $who = $part; break; } }
         $h = (int) date('G'); $greet = $h < 12 ? 'Good morning' : ($h < 17 ? 'Good afternoon' : 'Good evening');
         $lines = [];
+        $sb = $this->salesBooked(substr($this->today, 0, 7) . '-01', $this->today);
         $lines[] = sprintf('%s, %s. %s. Cash stands at %s; revenue this month %s, tracking %s %d%% on last month, which closed at a net %s of %s.', $greet, $who, date('l j F', strtotime($this->today)), self::bdtk($k['cash']), self::bdtk($k['revenue_mtd']), $k['revenue_vs_prev_pct'] >= 0 ? 'up' : 'down', abs($k['revenue_vs_prev_pct']), $k['net_profit_last_month'] >= 0 ? 'profit' : 'loss', self::bdtk(abs($k['net_profit_last_month'])));
+        // the desks invoice ahead of the ledger — lead with the business, then the books
+        if ($sb['invoiced'] > 0 && $sb['invoiced'] - $k['revenue_mtd'] > 1000) $lines[] = sprintf('The desks invoiced %s this month across %d invoices — %s of that is not journalised yet, so the books show only %s.', self::bdtk((float) $sb['invoiced']), (int) $sb['invoices'], self::bdtk((float) $sb['invoiced'] - (float) $k['revenue_mtd']), self::bdtk((float) $k['revenue_mtd']));
         if ($k['receivables_overdue'] || $k['payables_overdue']) $lines[] = sprintf('Overdue: %s to collect, %s to pay.', self::bdtk($k['receivables_overdue']), self::bdtk($k['payables_overdue']));
-        if (!$td['weekend']) $lines[] = sprintf('%d of %d are in today, %d absent, %d late.', $td['present'], $td['total'], $td['absent'], $td['late']);
+        if (!$td['weekend']) {
+            $lines[] = !empty($td['no_data_yet'])
+                ? sprintf('No attendance is in yet today (last recorded %s).', $td['last_recorded_date'])
+                : sprintf('%d of %d tracked staff are in today, %d absent, %d late.', $td['present'], $td['tracked'] ?: $td['total'], $td['absent'], $td['late']);
+        }
         $crit = array_values(array_filter($dec, fn($d) => $d['severity'] >= 4));
         if ($crit) $lines[] = count($crit) . ' thing' . (count($crit) > 1 ? 's' : '') . ' need' . (count($crit) > 1 ? '' : 's') . ' you today: ' . implode('; ', array_map(fn($d) => $d['title'], array_slice($crit, 0, 3))) . '.';
         else $lines[] = 'Nothing critical this morning.';
