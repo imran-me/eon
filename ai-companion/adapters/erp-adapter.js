@@ -123,7 +123,7 @@
       try {
         const h = await api('health.php', { timeout: 3500 });
         ENV.serverOk = true; ENV.db = !!h.db; ENV.llm = !!h.llm; ENV.mode = h.db ? (h.llm ? 'live' : 'server') : 'static';
-        ENV.commit = h.commit || null; ENV.deployed = h.deployed || null; ENV.php = h.php || null;
+        ENV.commit = h.commit || null; ENV.deployed = h.deployed || null; ENV.php = h.php || null; ENV.user = h.user || null; ENV.erpLogin = !!h.erp_login;
         if (h.db) {
           const cacheKey = 'dataset:' + (CFG.company || 'all'); const cached = readLS(cacheKey);
           if (cached && cached.at && Date.now() - cached.at < CFG.cacheMinutes * 60000 && cached.D) { await publish(cached.D); }

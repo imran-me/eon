@@ -19,6 +19,7 @@ if (is_file(EON_ROOT . '/vendor/autoload.php')) require_once EON_ROOT . '/vendor
 require_once EON_ROOT . '/lib/Config.php';
 require_once EON_ROOT . '/lib/Log.php';
 require_once EON_ROOT . '/lib/Http.php';
+require_once EON_ROOT . '/lib/ErpSession.php';   // trust the ERP's own login
 require_once EON_ROOT . '/lib/Db.php';
 require_once EON_ROOT . '/lib/Dataset.php';
 require_once EON_ROOT . '/lib/Erp.php';

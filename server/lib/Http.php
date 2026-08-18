@@ -20,6 +20,10 @@ final class Http
     /** Bearer / header / query token. Returns true when no token is configured (open mode). */
     public static function auth(bool $required = true): bool
     {
+        // Signed into the ERP? Then you are already authenticated: same host, same origin,
+        // the ERP's own session, verified against its APP_KEY. No second credential to hand over.
+        if (class_exists('ErpSession') && ErpSession::user() !== null) return true;
+
         $token = (string) Config::get('token', '');
         if ($token === '') {
             // open mode is only safe for a pure demo (no ERP database, no model key) or loopback

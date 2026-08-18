@@ -30,7 +30,12 @@ Http::run(function () {
     Http::json([
         'ok' => true, 'name' => 'EON server', 'version' => EON_VERSION, 'time' => date('c'), 'php' => PHP_VERSION,
         'db' => $db, 'source' => Dataset::source(), 'llm' => Config::llmEnabled(), 'llm_key' => Config::llmKeyPresent(), 'sdk' => class_exists('Anthropic\Client'),
-        'memory' => Memory::backend(), 'auth' => (string) Config::get('token', '') !== '' ? 'token' : (Http::auth(false) ? 'open-demo' : 'token-required'), 'python' => Py::available(), 'model' => Config::get('anthropic.model'),
+        'memory' => Memory::backend(),
+        // how this very request is authenticated, and whether signing into the ERP is wired up at all
+        'auth' => ErpSession::user() !== null ? 'erp-session' : ((string) Config::get('token', '') !== '' ? (Http::auth(false) ? 'token' : 'token-required') : (Http::auth(false) ? 'open-demo' : 'token-required')),
+        'erp_login' => ErpSession::available(),
+        'user' => ErpSession::user()['id'] ?? null,
+        'python' => Py::available(), 'model' => Config::get('anthropic.model'),
         'commit' => $dep['commit'] ?? null, 'deployed' => $dep['deployed_at'] ?? null,
     ]);
 });
