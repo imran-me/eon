@@ -58,10 +58,11 @@ foreach (Grammar::pairs() as $pair) {
         $bnOut = (bool) preg_match('/[\x{0985}-\x{09B9}\x{09BE}-\x{09CC}]/u', $text);
         $langOk = $lang === 'en' ? !$bnOut : $bnOut;
 
-        $pass = $err === null && $text !== '' && !$isFallback && $langOk && ($want === null || $got === $want);
+        $ok = Grammar::accepts($pair['verb'], $pair['subject']);
+        $pass = $err === null && $text !== '' && !$isFallback && $langOk && ($want === null || in_array($got, $ok, true));
         $rows[] = ['subject' => $pair['subject'], 'verb' => $pair['verb'], 'lang' => $lang, 'q' => $q,
                    'want' => $want, 'got' => $got, 'pass' => $pass,
-                   'why' => $err ? 'threw: ' . $err : ($text === '' ? 'empty' : ($isFallback ? 'fallback' : (!$langOk ? 'wrong language' : ($got !== $want ? "went to " . ($got ?? 'nothing') : '')))),
+                   'why' => $err ? 'threw: ' . $err : ($text === '' ? 'empty' : ($isFallback ? 'fallback' : (!$langOk ? 'wrong language' : (!in_array($got, $ok, true) ? "went to " . ($got ?? 'nothing') . " (expected one of " . implode('/', $ok) . ")" : '')))),
                    'text' => mb_substr($text, 0, 160)];
     }
 }

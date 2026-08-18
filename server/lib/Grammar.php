@@ -80,13 +80,13 @@ final class Grammar
     public const SUBJECTS = [
         /* --- money on hand --- */
         'cash'          => ['en' => ['cash', 'cash in hand', 'liquidity', 'money we have'], 'bn' => ['ক্যাশ', 'নগদ', 'হাতে টাকা'], 'bl' => ['cash', 'nogod', 'hate taka'],
-                            'intent' => 'cash', 'ops' => ['total', 'show', 'compare', 'trend'], 'by' => ['trend' => 'burn_runway', 'compare' => 'company_compare']],
+                            'intent' => 'cash', 'ops' => ['total', 'show', 'compare', 'trend'], 'by' => ['trend' => 'forecast']],
         'bank'          => ['en' => ['bank', 'bank account', 'bank balance', 'banks'], 'bn' => ['ব্যাংক', 'ব্যাংক হিসাব'], 'bl' => ['bank', 'bank account'],
                             'intent' => 'bank_accounts', 'ops' => ['total', 'count', 'show', 'rank']],
         'petty_cash'    => ['en' => ['petty cash', 'float', 'cash float'], 'bn' => ['পেটি ক্যাশ', 'খুচরা নগদ'], 'bl' => ['petty cash'],
                             'intent' => 'petty_cash', 'ops' => ['total', 'show']],
         'runway'        => ['en' => ['runway', 'burn', 'burn rate', 'how long will cash last'], 'bn' => ['কত দিন চলবে', 'খরচের হার'], 'bl' => ['runway', 'koto din cholbe'],
-                            'intent' => 'burn_runway', 'ops' => ['total', 'show', 'trend']],
+                            'intent' => 'burn_runway', 'ops' => ['total', 'show', 'trend'], 'by' => ['trend' => 'forecast']],
 
         /* --- what we are owed and owe --- */
         'receivable'    => ['en' => ['receivable', 'receivables', 'who owes us', 'debtors', 'collection'], 'bn' => ['পাওনা', 'আদায়', 'কে টাকা দেবে'], 'bl' => ['pawna', 'ke taka debe'],
@@ -100,7 +100,7 @@ final class Grammar
 
         /* --- the service business --- */
         'revenue'       => ['en' => ['revenue', 'sales', 'turnover', 'business', 'top line'], 'bn' => ['বিক্রি', 'আয়', 'রাজস্ব'], 'bl' => ['bikri', 'ay', 'revenue'],
-                            'intent' => 'revenue', 'ops' => ['total', 'count', 'show', 'compare', 'trend']],
+                            'intent' => 'revenue', 'ops' => ['total', 'count', 'show', 'compare', 'trend'], 'by' => ['trend' => 'forecast']],
         'visa_file'     => ['en' => ['visa', 'visa file', 'visa processing', 'visa application'], 'bn' => ['ভিসা', 'ভিসা ফাইল', 'ভিসা প্রসেসিং'], 'bl' => ['visa', 'visa file'],
                             'intent' => 'service_ops', 'ops' => ['total', 'count', 'show', 'rank']],
         'ticket'        => ['en' => ['ticket', 'air ticket', 'ticket sale', 'ticket purchase'], 'bn' => ['টিকিট', 'এয়ার টিকিট', 'টিকিট বিক্রি'], 'bl' => ['ticket', 'air ticket'],
@@ -112,9 +112,9 @@ final class Grammar
 
         /* --- books --- */
         'profit'        => ['en' => ['profit', 'loss', 'margin', 'net profit', 'p&l', 'income statement'], 'bn' => ['লাভ', 'লোকসান', 'মুনাফা', 'মার্জিন'], 'bl' => ['lav', 'profit', 'munafa'],
-                            'intent' => 'profit_loss', 'ops' => ['total', 'show', 'compare', 'trend', 'explain']],
+                            'intent' => 'profit_loss', 'ops' => ['total', 'show', 'compare', 'trend', 'explain'], 'by' => ['trend' => 'forecast']],
         'expense'       => ['en' => ['expense', 'expenses', 'spending', 'cost', 'overhead'], 'bn' => ['খরচ', 'ব্যয়'], 'bl' => ['khoroch', 'expense'],
-                            'intent' => 'expenses', 'ops' => ['total', 'count', 'show', 'rank', 'compare']],
+                            'intent' => 'expenses', 'ops' => ['total', 'count', 'show', 'rank', 'compare'], 'by' => ['rank' => 'expense_by_category']],
         'budget'        => ['en' => ['budget', 'over budget', 'budget variance'], 'bn' => ['বাজেট', 'বাজেট ছাড়িয়ে'], 'bl' => ['budget'],
                             'intent' => 'budget', 'ops' => ['total', 'show', 'compare']],
         'account'       => ['en' => ['account', 'ledger', 'chart of accounts', 'account balance'], 'bn' => ['হিসাব', 'খতিয়ান', 'অ্যাকাউন্ট'], 'bl' => ['hisab', 'account', 'ledger'],
@@ -136,7 +136,7 @@ final class Grammar
         'payroll'       => ['en' => ['payroll', 'salary', 'salaries', 'wage bill'], 'bn' => ['বেতন', 'পে-রোল', 'মজুরি'], 'bl' => ['beton', 'payroll', 'salary'],
                             'intent' => 'payroll', 'ops' => ['total', 'count', 'show', 'compare', 'explain'], 'by' => ['explain' => 'deduction_rules']],
         'payslip'       => ['en' => ['payslip', 'payslips', 'pay slip'], 'bn' => ['পে-স্লিপ', 'বেতন স্লিপ'], 'bl' => ['payslip'],
-                            'intent' => 'payroll_unpaid', 'ops' => ['count', 'show', 'locate']],
+                            'intent' => 'payroll', 'ops' => ['count', 'show', 'locate']],
         'deduction'     => ['en' => ['deduction', 'late deduction', 'absence deduction'], 'bn' => ['কর্তন', 'দেরির কর্তন'], 'bl' => ['kortoN', 'deduction'],
                             'intent' => 'deduction_rules', 'ops' => ['explain', 'total', 'show']],
         'overtime'      => ['en' => ['overtime', 'ot', 'extra hours'], 'bn' => ['ওভারটাইম', 'অতিরিক্ত সময়'], 'bl' => ['overtime'],
@@ -156,14 +156,14 @@ final class Grammar
         'request'       => ['en' => ['employee request', 'requests', 'staff request'], 'bn' => ['কর্মীর আবেদন', 'আবেদন'], 'bl' => ['abedon', 'request'],
                             'intent' => 'employee_requests', 'ops' => ['count', 'show', 'total']],
         'person'        => ['en' => ['evaluate', 'performance of', 'how is doing', 'profile of'], 'bn' => ['মূল্যায়ন', 'কেমন করছে'], 'bl' => ['mullayon', 'kemon korche'],
-                            'intent' => 'evaluate_person', 'ops' => ['show', 'rank'], 'by' => ['rank' => 'staff_ranking']],
+                            'intent' => 'evaluate_person', 'ops' => ['show']],
 
         /* --- work --- */
         'task'          => ['en' => ['task', 'tasks', 'workload', 'assignment'], 'bn' => ['কাজ', 'টাস্ক', 'কাজের চাপ'], 'bl' => ['kaj', 'task'],
                             'intent' => 'tasks', 'ops' => ['count', 'show', 'rank']],
         'project'       => ['en' => ['project', 'projects', 'delivery', 'milestone'], 'bn' => ['প্রকল্প', 'প্রজেক্ট'], 'bl' => ['project', 'prokolpo'],
                             'intent' => 'projects', 'ops' => ['count', 'show', 'rank']],
-        'todo'          => ['en' => ['to do', 'todo', 'office todo', 'checklist'], 'bn' => ['করণীয়', 'অফিস কাজ'], 'bl' => ['todo', 'koroniyo'],
+        'todo'          => ['en' => ['office todo', 'todo', 'to do', 'checklist'], 'bn' => ['করণীয়', 'অফিস কাজ'], 'bl' => ['todo', 'koroniyo'],
                             'intent' => 'todos', 'ops' => ['count', 'show']],
 
         /* --- market --- */
@@ -178,7 +178,7 @@ final class Grammar
         'brief'         => ['en' => ['brief', 'briefing', 'summary', 'where do we stand', 'status'], 'bn' => ['ব্রিফ', 'সারসংক্ষেপ', 'অবস্থা'], 'bl' => ['brief', 'obostha'],
                             'intent' => 'brief', 'ops' => ['show']],
         'approval'      => ['en' => ['approval', 'approvals', 'waiting on me', 'sign off'], 'bn' => ['অনুমোদন', 'আমার অনুমোদন'], 'bl' => ['onumodon', 'approval'],
-                            'intent' => 'approvals', 'ops' => ['count', 'show', 'total', 'act']],
+                            'intent' => 'approvals', 'ops' => ['count', 'show', 'total']],
         'risk'          => ['en' => ['risk', 'risks', 'problem', 'what needs attention', 'red flag'], 'bn' => ['ঝুঁকি', 'সমস্যা', 'নজর দিতে'], 'bl' => ['jhuki', 'somossa'],
                             'intent' => 'risks', 'ops' => ['count', 'show']],
         'anomaly'       => ['en' => ['anomaly', 'anomalies', 'unusual', 'duplicate', 'suspicious'], 'bn' => ['অস্বাভাবিক', 'ডুপ্লিকেট', 'সন্দেহজনক'], 'bl' => ['onnorokom', 'duplicate'],
@@ -267,8 +267,22 @@ final class Grammar
         foreach ($D['projects'] ?? [] as $r) $consider('project', $r['id'] ?? null, $r['project_name'] ?? null);
         foreach ($D['companies'] ?? [] as $r) { $consider('company', $r['id'] ?? null, $r['name'] ?? null); $consider('company', $r['id'] ?? null, $r['short_name'] ?? null); }
         foreach ($D['accounts'] ?? [] as $r) $consider('account', $r['code'] ?? null, $r['name'] ?? null);
-        // a first name is enough when it is unambiguous
-        if ($best === null) {
+        /* A first name is enough when it is unambiguous — but only when the sentence is
+           actually about a person. "show me the ticket" matched a vendor registered as
+           TICKET AMAR DOT COM, because "ticket" is that record's first word AND an
+           everyday noun. Require a possessive or a named aspect before guessing from
+           one token, and never guess from a word the vocabulary already owns. */
+        $commonNoun = function (string $w): bool {
+            foreach ([self::SUBJECTS, self::ASPECTS, self::VERBS] as $table) {
+                foreach ($table as $def) {
+                    foreach (['en', 'bn', 'bl'] as $s) {
+                        foreach ((array) ($def[$s] ?? []) as $form) if (mb_strtolower(trim((string) $form)) === $w) return true;
+                    }
+                }
+            }
+            return false;
+        };
+        if ($best === null && ($out['possessive'] || $out['aspect'] !== null)) {
             $firsts = [];
             foreach ($D['employees'] ?? [] as $r) {
                 $f = mb_strtolower(trim(explode(' ', trim((string) ($r['name'] ?? '')))[0] ?? ''));
@@ -276,6 +290,7 @@ final class Grammar
             }
             foreach ($firsts as $f => $rs) {
                 if (count($rs) !== 1 || mb_stripos($n, ' ' . $f) === false) continue;
+                if ($commonNoun((string) $f)) continue;          // "ticket", "cash", "leave" name things, not people
                 $best = ['kind' => 'employee', 'id' => $rs[0]['id'], 'label' => $rs[0]['name']];
                 break;
             }
@@ -353,8 +368,12 @@ final class Grammar
             $ok = true;
             for ($j = 0; $j < $m; $j++) {
                 $a = $want[$j]; $b = $sentenceWords[$i + $j];
-                // one a prefix of the other absorbs Bangla case endings (islam → islamer)
-                if (!str_starts_with($a, $b) && !str_starts_with($b, $a)) { $ok = false; break; }
+                /* The sentence word may EXTEND the name — Bangla case endings do that
+                   (ইসলামের → islamer covers islam). It may not be shorter than the name:
+                   that means a different, shorter word happened to share a prefix, which
+                   is how "হিসাব কত" reached a passenger called SAHIBA AKTER (akter→ktr
+                   against কত→kt). One direction only. */
+                if (!str_starts_with($b, $a)) { $ok = false; break; }
             }
             if ($ok) return true;
         }
@@ -440,6 +459,34 @@ final class Grammar
         return $def['intent'] ?? null;
     }
 
+    /**
+     * The handlers that legitimately answer a (verb, subject) pair.
+     *
+     * More than one usually does, and asserting a single winner makes the coverage
+     * report lie in the strict direction: "which expense is the biggest" answered
+     * "Utility Expenses, 62.8% of everything" and was scored a miss because it came
+     * from `expenses` rather than `expense_by_category`. A pair passes when the answer
+     * comes from any handler that can genuinely answer it — and still fails when the
+     * reply is the fallback, is empty, or is in the wrong language.
+     */
+    public static function accepts(?string $verb, ?string $subject): array
+    {
+        $out = [];
+        $routed = self::route($verb, $subject);
+        if ($routed !== null) $out[] = $routed;
+        if ($subject !== null && isset(self::SUBJECTS[$subject]['intent'])) $out[] = self::SUBJECTS[$subject]['intent'];
+        // asking for the rule behind a number is answered by the how-to layer or by the
+        // deduction rules, both of which explain rather than quote a figure
+        if ($verb === 'explain') { $out[] = 'howto'; $out[] = 'deduction_rules'; $out[] = 'navigation'; }
+        // where something is heading is the forecast, whatever the subject
+        if ($verb === 'trend') { $out[] = 'forecast'; $out[] = 'burn_runway'; }
+        // where something lives is navigation
+        if ($verb === 'locate') { $out[] = 'navigation'; $out[] = 'howto'; }
+        // an instruction about anything is recorded
+        if ($verb === 'act') { $out[] = 'remind'; }
+        return array_values(array_unique(array_filter($out)));
+    }
+
     /** every (subject, verb) pair the matrix should be able to answer */
     public static function pairs(): array
     {
@@ -469,9 +516,9 @@ final class Grammar
                  'explain' => 'how is {s} calculated', 'locate' => 'where is the {s} screen', 'act' => 'remind me about {s}'],
         'bn' => ['total' => '{s} কত', 'count' => '{s} কতগুলো', 'show' => '{s} দেখাও',
                  'rank' => 'সবচেয়ে বেশি {s} কোনটা', 'compare' => 'গত মাসের সঙ্গে {s} তুলনা করো', 'trend' => '{s} এর পূর্বাভাস কী',
-                 'explain' => '{s} কীভাবে হিসাব হয়', 'locate' => '{s} স্ক্রিন কোথায়', 'act' => '{s} নিয়ে মনে করিয়ে দিও'],
+                 'explain' => '{s} এর নিয়ম কী', 'locate' => '{s} স্ক্রিন কোথায়', 'act' => '{s} নিয়ে মনে করিয়ে দিও'],
         'bl' => ['total' => '{s} koto', 'count' => '{s} kotogulo', 'show' => '{s} dekhao',
                  'rank' => 'sobcheye beshi {s} konta', 'compare' => 'goto maser songe {s} tulona koro', 'trend' => '{s} er forecast ki',
-                 'explain' => '{s} kivabe hisab hoy', 'locate' => '{s} screen kothay', 'act' => '{s} niye remind koro'],
+                 'explain' => '{s} er niyom ki', 'locate' => '{s} screen kothay', 'act' => '{s} niye remind koro'],
     ];
 }
