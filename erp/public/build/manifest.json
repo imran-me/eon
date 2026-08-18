@@ -1,0 +1,25 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-DstQf9Xr.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-Dgo7WxmH.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/notifications.js": {
+    "file": "assets/notifications-Bqu_i5XH.js",
+    "name": "notifications",
+    "src": "resources/js/notifications.js",
+    "isEntry": true
+  },
+  "resources/js/pages/board-show.js": {
+    "file": "assets/board-show-C1gzfdDj.js",
+    "name": "board-show",
+    "src": "resources/js/pages/board-show.js",
+    "isEntry": true
+  }
+}

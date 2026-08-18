@@ -46,5 +46,5 @@ deploy/.webhook.last
 /erp/bootstrap/cache/*
 !/erp/bootstrap/cache/.gitignore
 /erp/public/storage
-/erp/public/build
 /erp/public/hot
+# erp/public/build IS versioned: the host has no Node, so the compiled Tailwind/JS bundle ships with the source
