@@ -183,6 +183,10 @@ function createPage(what) {
 
 /* ---------- the actions EON can carry out ---------- */
 export async function planTask(person, title, opts = {}) {
+  // the sentence's question mark is not part of the task's name — "can you assign
+  // Imran a task: check the ledger?" must not put "check the ledger?" on the board.
+  // Here rather than at the parse, because the understander plans tasks too.
+  title = cleanTitle(title);
   const N = nav(); if (!N) throw new Error('the ERP map is not loaded');
   const page = createPage('task');
   if (!page) throw new Error('this ERP has no task screen');
@@ -627,8 +631,24 @@ function signInSpeak(bn) {
    domain to no answer while a plan sat waiting for it. Bangla words carry a
    not-another-Bangla-letter guard instead, so "না" cancels but "নামগুলো
    দেখাও" does not. */
-const YES = /^\s*(?:(?:yes|yeah|yep|do it|go ahead|confirm|proceed|ok|okay|please do)\b|(?:হ্যাঁ|হ্যা|জি|আচ্ছা|ঠিক আছে|করে দাও|করো|কর|দাও)(?![ঀ-৿]))/i;
-const NO = /^\s*(?:(?:no|cancel|stop|don'?t|never mind)\b|(?:নাহ|না|বাদ দাও|বাদ|থাক|বাতিল)(?![ঀ-৿]))/i;
+/* And a yes has to be the whole answer, not the first word of one. Matching a
+   prefix meant "ok so how much cash do we have?" — a follow-up question —
+   opened the gate and posted the plan waiting behind it; with a payment in the
+   queue that is the gate failing at precisely the job it exists for. So the
+   affirmation must be the sentence: the word, an optional polite tail, and
+   nothing after it. "no idea, what does the ledger say?" likewise stops
+   throwing the plan away behind the boss's back. */
+const YES_WORD = String.raw`yes|yeah|yep|yup|ok|okay|sure|confirm|proceed|do it|go ahead|please do`;
+const YES_TAIL = String.raw`(?:\s*,?\s*(?:please|do it|go ahead|post it|send it|create it|pay it|confirm|now|then))*`;
+const NO_WORD = String.raw`no|nope|cancel|stop|don'?t|do not|never mind|nevermind|not now|leave it`;
+const NO_TAIL = String.raw`(?:\s*,?\s*(?:thanks|thank you|please|for now|now))*`;
+const BN_YES_WORD = String.raw`হ্যাঁ|হ্যা|জ্বি|জি|আচ্ছা|ঠিক আছে|করে দাও|করো|কর|দাও|ওকে`;
+const BN_YES_TAIL = String.raw`(?:\s*,?\s*(?:করে দাও|করে দিন|করো|দাও|দিন|প্লিজ|এখনই))*`;
+const BN_NO_WORD = String.raw`নাহ|না|বাদ দাও|বাদ|থাক|বাতিল|লাগবে না`;
+const BN_NO_TAIL = String.raw`(?:\s*,?\s*(?:ধন্যবাদ|প্লিজ|এখন))*`;
+const WHOLE = String.raw`\s*[।.!…]*\s*$`;
+const YES = new RegExp(String.raw`^\s*(?:(?:${YES_WORD})(?![A-Za-z])${YES_TAIL}|(?:${BN_YES_WORD})(?![ঀ-৿])${BN_YES_TAIL})${WHOLE}`, 'i');
+const NO = new RegExp(String.raw`^\s*(?:(?:${NO_WORD})(?![A-Za-z])${NO_TAIL}|(?:${BN_NO_WORD})(?![ঀ-৿])${BN_NO_TAIL})${WHOLE}`, 'i');
 const ASSIGN = /^\s*(?:eon[,\s]+)?(?:assign|give)\s+(.+?)\s+(?:a\s+)?(?:task|job|work)\b\s*(?:[,:—-]\s*)?(?:the task is\s*)?(.*)$/i;
 const MESSAGE = /^\s*(?:eon[,\s]+)?(?:message|msg|write to|tell|send)\s+([A-Za-z][A-Za-z. ]{2,40}?)\s*[,:—-]\s*(.+)$/i;
 const NOTICE = /^\s*(?:eon[,\s]+)?(?:write|publish|post|draft)\s+a?\s*notice\b[\s:,-]*(.*)$/i;
@@ -636,7 +656,19 @@ const BN = /[ঀ-৿]/;
 /* "ইমরানকে টাস্ক দাও: লেজার চেক করো" — an order, not a question about tasks.
    দাও/দিন/দে must not be allowed to match inside দেখাও ("show me the tasks"),
    which is why the verb is followed by a not-a-Bangla-letter guard. */
-const BN_ASSIGN = /^\s*(?:eon[,\s]*)?(\S[^]{0,40}?)\s*(?:একটা|একটি)?\s*(?:টাস্ক|কাজ)\s*(?:দাও|দিন|দে)(?![ঀ-৿])\s*[:—–\-,]?\s*([^]*)$/;
+const BN_ASSIGN = /^\s*(?:eon[,\s]*)?(\S[^]{0,40}?)\s*(?:একটা|একটি)?\s*(?:টাস্ক|কাজ|task)\s*(?:দাও|দিন|দে)(?![ঀ-৿])\s*[:—–\-,]?\s*([^]*)$/i;
+
+/* "give me a task list" and "tell me the cash position, please" are questions,
+   and both fit the order shapes above: "give <who> a task" and "tell <who>:
+   <what>". Answering them with "I could not find 'me the cash position' among
+   the employees" is worse than not answering — act sits at priority 99, so its
+   mistake is the one the boss sees. A recipient that is a pronoun or the team
+   itself is nobody's name, so act stands down and the question falls through
+   to the domains that can actually answer it. */
+const NOT_A_PERSON = /^\s*(?:me|us|him|her|them|it|myself|everyone|everybody|anyone|all|somebody|someone)(?:\s|$)/i;
+
+/** trailing question marks and full stops are the sentence's, not the title's */
+const cleanTitle = (t) => String(t || '').trim().replace(/[?!.।\s]+$/u, '').trim();
 
 /* ---------- a Bangla name reaching a record spelled in Latin ----------
    বাংলা writes no vowels the passport agrees with, so both sides are reduced
@@ -660,11 +692,18 @@ const banglaSkeleton = (w) => dedupe(String(w || '')
   .replace(/য়|য়/g, 'y').replace(/ড়|ড়/g, 'r').replace(/ঢ়|ঢ়/g, 'r')
   .split('').map((ch) => BN_CONS[ch] || '').join(''));
 
-/** the employee a Bangla sentence names — or an honest "which of them?" */
+/** the employee a Bangla sentence names — or an honest "which of them?"
+    The boss mixes scripts inside one sentence — "Imran কে টাস্ক দাও: check the
+    ledger" — so a Latin word in a Bangla order is reduced by the Latin rule and
+    a Bangla word by the Bangla one; otherwise the name he actually typed in
+    English is the one word this never sees. */
 function findEmployeeBn(D, text) {
   const wanted = [];
   String(text || '').split(/\s+/).filter(Boolean).forEach((w) => {
-    [banglaSkeleton(w), banglaSkeleton(w.replace(CASE_ENDING, ''))].forEach((sk) => {
+    const skeletons = /[ঀ-৿]/.test(w)
+      ? [banglaSkeleton(w), banglaSkeleton(w.replace(CASE_ENDING, ''))]
+      : [latinSkeleton(w)];
+    skeletons.forEach((sk) => {
       if (sk.length >= 3 && !wanted.includes(sk)) wanted.push(sk);
     });
   });
@@ -691,7 +730,7 @@ async function answer(q, ctx) {
   let m;
   try {
     if (bn && (m = s.match(BN_ASSIGN))) {
-      const title = (m[2] || '').trim();
+      const title = cleanTitle(m[2]);
       const found = findEmployeeBn(D, m[1]);
       if (found && found.ambiguous) {
         return { speak: `“${m[1].trim()}” নামে ${found.ambiguous.length} জন আছেন — ${found.ambiguous.map((e) => e.name).join(', ')}। কাকে দেবো?`, detail: [] };
@@ -703,20 +742,20 @@ async function answer(q, ctx) {
       plan.summary_bn = `${found.name}-কে একটা কাজ দেবো: “${title}”`;
       return await propose(plan);
     }
-    if ((m = s.match(ASSIGN))) {
+    if ((m = s.match(ASSIGN)) && !NOT_A_PERSON.test(m[1])) {
       const person = P.findEmployee(D, m[1]);
-      const title = (m[2] || '').trim();
+      const title = cleanTitle(m[2]);
       if (!title) return { speak: `What should the task say? Try “assign ${person ? person.name : m[1]} a task: check the ledger entries”.`, detail: [] };
       if (!person) return { speak: `I could not find “${m[1].trim()}” among the employees, so I have not created anything.`, detail: [] };
       return await propose(await planTask(person, title, { due: (window.EonDelegate ? (window.EonDelegate.parseDue(s) || null) : null) }));
     }
-    if ((m = s.match(MESSAGE))) {
+    if ((m = s.match(MESSAGE)) && !NOT_A_PERSON.test(m[1])) {
       const person = P.findEmployee(D, m[1]);
       if (!person) return { speak: `I could not find “${m[1].trim()}” among the employees.`, detail: [] };
       return await propose(await planMessage(person, m[2].trim()));
     }
     if ((m = s.match(NOTICE))) {
-      const subject = (m[1] || '').replace(/^about\s+/i, '').trim();
+      const subject = cleanTitle((m[1] || '').replace(/^about\s+/i, ''));
       if (!subject) return { speak: 'What should the notice be about?', detail: [] };
       const body = `This is to inform all concerned: ${subject}.\n\nBy order of the Management.`;
       return await propose(await planNotice(subject.replace(/^./, (c) => c.toUpperCase()), body));
@@ -729,7 +768,8 @@ async function answer(q, ctx) {
   return null;
 }
 
-const CLAIM = (q) => ASSIGN.test(q) || MESSAGE.test(q) || NOTICE.test(q) || (BN.test(q) && BN_ASSIGN.test(q))
+const named = (re, q) => { const m = String(q || '').match(re); return !!m && !NOT_A_PERSON.test(m[1]); };
+const CLAIM = (q) => named(ASSIGN, q) || named(MESSAGE, q) || NOTICE.test(q) || (BN.test(q) && BN_ASSIGN.test(q))
   || (pending && (YES.test(q) || NO.test(q)));
 
 if (typeof window !== 'undefined') {
