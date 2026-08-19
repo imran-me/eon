@@ -87,6 +87,11 @@ $ALIAS = [
     'brief'            => ['brief', 'focus'],
     'focus'            => ['focus', 'brief', 'risks'],
     'risks'            => ['risks', 'focus', 'anomalies'],
+    // "গরমিল" is a discrepancy in the books, so the ledger check is the better
+    // answer than the generic anomaly sweep — verified, not assumed
+    'anomalies'        => ['anomalies', 'accounts_error', 'risks'],
+    'accounts_error'   => ['accounts_error', 'anomalies'],
+    'fix'              => ['fix', 'accounts_error', 'howto'],
     'howto'            => ['howto', 'navigation', 'deduction_rules'],
     // the how-frame and the specific rule intent reach the same Kb rule, so either is a correct answer
     // a_why hands a rule question straight to the Kb rule, so the answer is the

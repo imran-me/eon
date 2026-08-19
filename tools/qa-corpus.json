@@ -1,12 +1,13 @@
 {
  "generated_by": "tools/make-qa-corpus.mjs",
- "intents": 52,
+ "intents": 54,
  "sections": [
   "Executive",
   "Reasoning",
   "Cash & Bank",
   "Receivable & Payable",
   "Accounts",
+  "Bookkeeping",
   "Payroll & People",
   "Operations",
   "CRM",
@@ -15,10 +16,10 @@
   "Meta"
  ],
  "counts": {
-  "total": 1127,
-  "en": 512,
-  "bn": 423,
-  "bl": 192
+  "total": 1155,
+  "en": 527,
+  "bn": 431,
+  "bl": 197
  },
  "person_templates": [
   {
@@ -6490,6 +6491,51 @@
   },
   {
    "id": 716,
+   "q": "which business is doing well",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 717,
+   "q": "which company is burning money",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 718,
+   "q": "which company has the most revenue",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 719,
+   "q": "which company has the highest revenue",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 720,
+   "q": "which business is doing best",
+   "intent": "company_compare",
+   "section": "Accounts",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 721,
    "q": "কোন কোম্পানি ভালো করছে",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6498,7 +6544,7 @@
    "kind": "base"
   },
   {
-   "id": 717,
+   "id": 722,
    "q": "কোম্পানি অনুযায়ী লাভ",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6507,7 +6553,7 @@
    "kind": "base"
   },
   {
-   "id": 718,
+   "id": 723,
    "q": "কোন প্রতিষ্ঠান লোকসানে",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6516,7 +6562,7 @@
    "kind": "base"
   },
   {
-   "id": 719,
+   "id": 724,
    "q": "কোম্পানিগুলোর তুলনা দাও",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6525,7 +6571,7 @@
    "kind": "base"
   },
   {
-   "id": 720,
+   "id": 725,
    "q": "kon company valo korche",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6534,7 +6580,7 @@
    "kind": "base"
   },
   {
-   "id": 721,
+   "id": 726,
    "q": "company onujayi lav",
    "intent": "company_compare",
    "section": "Accounts",
@@ -6543,7 +6589,214 @@
    "kind": "base"
   },
   {
-   "id": 722,
+   "id": 727,
+   "q": "any accounts error",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 728,
+   "q": "is anything wrong with the accounts",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 729,
+   "q": "does anything not add up",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 730,
+   "q": "any discrepancy in the books",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 731,
+   "q": "are there accounting mistakes",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 732,
+   "q": "anything broken in the accounts",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 733,
+   "q": "হিসাবে কোনো ভুল আছে",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 734,
+   "q": "হিসাবের ভুল আছে কি",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 735,
+   "q": "কোথাও গরমিল আছে",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 736,
+   "q": "একাউন্টে ভুল আছে",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 737,
+   "q": "হিসাব মিলছে না",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 738,
+   "q": "hisabe bhul ache ki",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 739,
+   "q": "gormil ache ki",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 740,
+   "q": "accounts error ache",
+   "intent": "accounts_error",
+   "section": "Bookkeeping",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 741,
+   "q": "how to solve that error",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 742,
+   "q": "how do I fix that",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 743,
+   "q": "how to correct it",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 744,
+   "q": "what is the remedy",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "en",
+   "expect": "en",
+   "kind": "base"
+  },
+  {
+   "id": 745,
+   "q": "কিভাবে ঠিক করব",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 746,
+   "q": "কিভাবে সমাধান করব",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 747,
+   "q": "এটা ঠিক করার উপায় কি",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "bn",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 748,
+   "q": "kivabe thik korbo",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 749,
+   "q": "somadhan ki",
+   "intent": "fix",
+   "section": "Bookkeeping",
+   "lang": "bl",
+   "expect": "bn",
+   "kind": "base"
+  },
+  {
+   "id": 750,
    "q": "show me the payroll",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6552,7 +6805,7 @@
    "kind": "base"
   },
   {
-   "id": 723,
+   "id": 751,
    "q": "show me the payroll this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6561,7 +6814,7 @@
    "kind": "period"
   },
   {
-   "id": 724,
+   "id": 752,
    "q": "show me the payroll last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6570,7 +6823,7 @@
    "kind": "period"
   },
   {
-   "id": 725,
+   "id": 753,
    "q": "show me the payroll this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6579,7 +6832,7 @@
    "kind": "period"
   },
   {
-   "id": 726,
+   "id": 754,
    "q": "show me the payroll for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6588,7 +6841,7 @@
    "kind": "company"
   },
   {
-   "id": 727,
+   "id": 755,
    "q": "show me the payroll for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6597,7 +6850,7 @@
    "kind": "company"
   },
   {
-   "id": 728,
+   "id": 756,
    "q": "what is the salary bill",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6606,7 +6859,7 @@
    "kind": "base"
   },
   {
-   "id": 729,
+   "id": 757,
    "q": "what is the salary bill this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6615,7 +6868,7 @@
    "kind": "period"
   },
   {
-   "id": 730,
+   "id": 758,
    "q": "what is the salary bill last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6624,7 +6877,7 @@
    "kind": "period"
   },
   {
-   "id": 731,
+   "id": 759,
    "q": "what is the salary bill this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6633,7 +6886,7 @@
    "kind": "period"
   },
   {
-   "id": 732,
+   "id": 760,
    "q": "what is the salary bill for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6642,7 +6895,7 @@
    "kind": "company"
   },
   {
-   "id": 733,
+   "id": 761,
    "q": "what is the salary bill for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6651,7 +6904,7 @@
    "kind": "company"
   },
   {
-   "id": 734,
+   "id": 762,
    "q": "payroll for last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6660,7 +6913,7 @@
    "kind": "base"
   },
   {
-   "id": 735,
+   "id": 763,
    "q": "payroll for last month this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6669,7 +6922,7 @@
    "kind": "period"
   },
   {
-   "id": 736,
+   "id": 764,
    "q": "payroll for last month last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6678,7 +6931,7 @@
    "kind": "period"
   },
   {
-   "id": 737,
+   "id": 765,
    "q": "payroll for last month this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6687,7 +6940,7 @@
    "kind": "period"
   },
   {
-   "id": 738,
+   "id": 766,
    "q": "payroll for last month for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6696,7 +6949,7 @@
    "kind": "company"
   },
   {
-   "id": 739,
+   "id": 767,
    "q": "payroll for last month for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6705,7 +6958,7 @@
    "kind": "company"
   },
   {
-   "id": 740,
+   "id": 768,
    "q": "how much is the monthly wage bill",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6714,7 +6967,7 @@
    "kind": "base"
   },
   {
-   "id": 741,
+   "id": 769,
    "q": "how much is the monthly wage bill this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6723,7 +6976,7 @@
    "kind": "period"
   },
   {
-   "id": 742,
+   "id": 770,
    "q": "how much is the monthly wage bill last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6732,7 +6985,7 @@
    "kind": "period"
   },
   {
-   "id": 743,
+   "id": 771,
    "q": "how much is the monthly wage bill this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6741,7 +6994,7 @@
    "kind": "period"
   },
   {
-   "id": 744,
+   "id": 772,
    "q": "how much is the monthly wage bill for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6750,7 +7003,7 @@
    "kind": "company"
   },
   {
-   "id": 745,
+   "id": 773,
    "q": "how much is the monthly wage bill for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6759,7 +7012,7 @@
    "kind": "company"
   },
   {
-   "id": 746,
+   "id": 774,
    "q": "payroll overview",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6768,7 +7021,7 @@
    "kind": "base"
   },
   {
-   "id": 747,
+   "id": 775,
    "q": "payroll overview this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6777,7 +7030,7 @@
    "kind": "period"
   },
   {
-   "id": 748,
+   "id": 776,
    "q": "payroll overview last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6786,7 +7039,7 @@
    "kind": "period"
   },
   {
-   "id": 749,
+   "id": 777,
    "q": "payroll overview this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6795,7 +7048,7 @@
    "kind": "period"
   },
   {
-   "id": 750,
+   "id": 778,
    "q": "payroll overview for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6804,7 +7057,7 @@
    "kind": "company"
   },
   {
-   "id": 751,
+   "id": 779,
    "q": "payroll overview for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6813,7 +7066,7 @@
    "kind": "company"
   },
   {
-   "id": 752,
+   "id": 780,
    "q": "total salary cost",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6822,7 +7075,7 @@
    "kind": "base"
   },
   {
-   "id": 753,
+   "id": 781,
    "q": "total salary cost this month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6831,7 +7084,7 @@
    "kind": "period"
   },
   {
-   "id": 754,
+   "id": 782,
    "q": "total salary cost last month",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6840,7 +7093,7 @@
    "kind": "period"
   },
   {
-   "id": 755,
+   "id": 783,
    "q": "total salary cost this year",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6849,7 +7102,7 @@
    "kind": "period"
   },
   {
-   "id": 756,
+   "id": 784,
    "q": "total salary cost for Epal Travels",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6858,7 +7111,7 @@
    "kind": "company"
   },
   {
-   "id": 757,
+   "id": 785,
    "q": "total salary cost for IT Solutions",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6867,7 +7120,7 @@
    "kind": "company"
   },
   {
-   "id": 758,
+   "id": 786,
    "q": "পে-রোল দেখাও",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6876,7 +7129,7 @@
    "kind": "base"
   },
   {
-   "id": 759,
+   "id": 787,
    "q": "পে-রোল দেখাও এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6885,7 +7138,7 @@
    "kind": "period"
   },
   {
-   "id": 760,
+   "id": 788,
    "q": "পে-রোল দেখাও গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6894,7 +7147,7 @@
    "kind": "period"
   },
   {
-   "id": 761,
+   "id": 789,
    "q": "পে-রোল দেখাও এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6903,7 +7156,7 @@
    "kind": "period"
   },
   {
-   "id": 762,
+   "id": 790,
    "q": "পে-রোল দেখাও ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6912,7 +7165,7 @@
    "kind": "company"
   },
   {
-   "id": 763,
+   "id": 791,
    "q": "পে-রোল দেখাও আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6921,7 +7174,7 @@
    "kind": "company"
   },
   {
-   "id": 764,
+   "id": 792,
    "q": "বেতন বিল কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6930,7 +7183,7 @@
    "kind": "base"
   },
   {
-   "id": 765,
+   "id": 793,
    "q": "বেতন বিল কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6939,7 +7192,7 @@
    "kind": "period"
   },
   {
-   "id": 766,
+   "id": 794,
    "q": "বেতন বিল কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6948,7 +7201,7 @@
    "kind": "period"
   },
   {
-   "id": 767,
+   "id": 795,
    "q": "বেতন বিল কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6957,7 +7210,7 @@
    "kind": "period"
   },
   {
-   "id": 768,
+   "id": 796,
    "q": "বেতন বিল কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6966,7 +7219,7 @@
    "kind": "company"
   },
   {
-   "id": 769,
+   "id": 797,
    "q": "বেতন বিল কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6975,7 +7228,7 @@
    "kind": "company"
   },
   {
-   "id": 770,
+   "id": 798,
    "q": "গত মাসের বেতন কত হয়েছে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6984,7 +7237,7 @@
    "kind": "base"
   },
   {
-   "id": 771,
+   "id": 799,
    "q": "গত মাসের বেতন কত হয়েছে এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -6993,7 +7246,7 @@
    "kind": "period"
   },
   {
-   "id": 772,
+   "id": 800,
    "q": "গত মাসের বেতন কত হয়েছে গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7002,7 +7255,7 @@
    "kind": "period"
   },
   {
-   "id": 773,
+   "id": 801,
    "q": "গত মাসের বেতন কত হয়েছে এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7011,7 +7264,7 @@
    "kind": "period"
   },
   {
-   "id": 774,
+   "id": 802,
    "q": "গত মাসের বেতন কত হয়েছে ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7020,7 +7273,7 @@
    "kind": "company"
   },
   {
-   "id": 775,
+   "id": 803,
    "q": "গত মাসের বেতন কত হয়েছে আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7029,7 +7282,7 @@
    "kind": "company"
   },
   {
-   "id": 776,
+   "id": 804,
    "q": "মাসিক বেতন খরচ কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7038,7 +7291,7 @@
    "kind": "base"
   },
   {
-   "id": 777,
+   "id": 805,
    "q": "মাসিক বেতন খরচ কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7047,7 +7300,7 @@
    "kind": "period"
   },
   {
-   "id": 778,
+   "id": 806,
    "q": "মাসিক বেতন খরচ কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7056,7 +7309,7 @@
    "kind": "period"
   },
   {
-   "id": 779,
+   "id": 807,
    "q": "মাসিক বেতন খরচ কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7065,7 +7318,7 @@
    "kind": "period"
   },
   {
-   "id": 780,
+   "id": 808,
    "q": "মাসিক বেতন খরচ কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7074,7 +7327,7 @@
    "kind": "company"
   },
   {
-   "id": 781,
+   "id": 809,
    "q": "মাসিক বেতন খরচ কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7083,7 +7336,7 @@
    "kind": "company"
   },
   {
-   "id": 782,
+   "id": 810,
    "q": "মোট বেতন কত",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7092,7 +7345,7 @@
    "kind": "base"
   },
   {
-   "id": 783,
+   "id": 811,
    "q": "মোট বেতন কত এ মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7101,7 +7354,7 @@
    "kind": "period"
   },
   {
-   "id": 784,
+   "id": 812,
    "q": "মোট বেতন কত গত মাসে",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7110,7 +7363,7 @@
    "kind": "period"
   },
   {
-   "id": 785,
+   "id": 813,
    "q": "মোট বেতন কত এ বছর",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7119,7 +7372,7 @@
    "kind": "period"
   },
   {
-   "id": 786,
+   "id": 814,
    "q": "মোট বেতন কত ট্রাভেলসের জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7128,7 +7381,7 @@
    "kind": "company"
   },
   {
-   "id": 787,
+   "id": 815,
    "q": "মোট বেতন কত আইটির জন্য",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7137,7 +7390,7 @@
    "kind": "company"
   },
   {
-   "id": 788,
+   "id": 816,
    "q": "payroll dekhao",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7146,7 +7399,7 @@
    "kind": "base"
   },
   {
-   "id": 789,
+   "id": 817,
    "q": "payroll dekhao ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7155,7 +7408,7 @@
    "kind": "period"
   },
   {
-   "id": 790,
+   "id": 818,
    "q": "payroll dekhao goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7164,7 +7417,7 @@
    "kind": "period"
   },
   {
-   "id": 791,
+   "id": 819,
    "q": "payroll dekhao travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7173,7 +7426,7 @@
    "kind": "company"
   },
   {
-   "id": 792,
+   "id": 820,
    "q": "beton bill koto",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7182,7 +7435,7 @@
    "kind": "base"
   },
   {
-   "id": 793,
+   "id": 821,
    "q": "beton bill koto ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7191,7 +7444,7 @@
    "kind": "period"
   },
   {
-   "id": 794,
+   "id": 822,
    "q": "beton bill koto goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7200,7 +7453,7 @@
    "kind": "period"
   },
   {
-   "id": 795,
+   "id": 823,
    "q": "beton bill koto travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7209,7 +7462,7 @@
    "kind": "company"
   },
   {
-   "id": 796,
+   "id": 824,
    "q": "beton koto",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7218,7 +7471,7 @@
    "kind": "base"
   },
   {
-   "id": 797,
+   "id": 825,
    "q": "beton koto ei mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7227,7 +7480,7 @@
    "kind": "period"
   },
   {
-   "id": 798,
+   "id": 826,
    "q": "beton koto goto mash e",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7236,7 +7489,7 @@
    "kind": "period"
   },
   {
-   "id": 799,
+   "id": 827,
    "q": "beton koto travels er jonno",
    "intent": "payroll",
    "section": "Payroll & People",
@@ -7245,7 +7498,7 @@
    "kind": "company"
   },
   {
-   "id": 800,
+   "id": 828,
    "q": "has salary been paid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7254,7 +7507,7 @@
    "kind": "base"
   },
   {
-   "id": 801,
+   "id": 829,
    "q": "has salary been paid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7263,7 +7516,7 @@
    "kind": "period"
   },
   {
-   "id": 802,
+   "id": 830,
    "q": "has salary been paid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7272,7 +7525,7 @@
    "kind": "period"
   },
   {
-   "id": 803,
+   "id": 831,
    "q": "has salary been paid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7281,7 +7534,7 @@
    "kind": "period"
   },
   {
-   "id": 804,
+   "id": 832,
    "q": "whose salary is pending",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7290,7 +7543,7 @@
    "kind": "base"
   },
   {
-   "id": 805,
+   "id": 833,
    "q": "whose salary is pending this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7299,7 +7552,7 @@
    "kind": "period"
   },
   {
-   "id": 806,
+   "id": 834,
    "q": "whose salary is pending last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7308,7 +7561,7 @@
    "kind": "period"
   },
   {
-   "id": 807,
+   "id": 835,
    "q": "whose salary is pending this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7317,7 +7570,7 @@
    "kind": "period"
   },
   {
-   "id": 808,
+   "id": 836,
    "q": "how much salary is unpaid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7326,7 +7579,7 @@
    "kind": "base"
   },
   {
-   "id": 809,
+   "id": 837,
    "q": "how much salary is unpaid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7335,7 +7588,7 @@
    "kind": "period"
   },
   {
-   "id": 810,
+   "id": 838,
    "q": "how much salary is unpaid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7344,7 +7597,7 @@
    "kind": "period"
   },
   {
-   "id": 811,
+   "id": 839,
    "q": "how much salary is unpaid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7353,7 +7606,7 @@
    "kind": "period"
   },
   {
-   "id": 812,
+   "id": 840,
    "q": "is payroll settled",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7362,7 +7615,7 @@
    "kind": "base"
   },
   {
-   "id": 813,
+   "id": 841,
    "q": "is payroll settled this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7371,7 +7624,7 @@
    "kind": "period"
   },
   {
-   "id": 814,
+   "id": 842,
    "q": "is payroll settled last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7380,7 +7633,7 @@
    "kind": "period"
   },
   {
-   "id": 815,
+   "id": 843,
    "q": "is payroll settled this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7389,7 +7642,7 @@
    "kind": "period"
   },
   {
-   "id": 816,
+   "id": 844,
    "q": "who has not been paid",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7398,7 +7651,7 @@
    "kind": "base"
   },
   {
-   "id": 817,
+   "id": 845,
    "q": "who has not been paid this month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7407,7 +7660,7 @@
    "kind": "period"
   },
   {
-   "id": 818,
+   "id": 846,
    "q": "who has not been paid last month",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7416,7 +7669,7 @@
    "kind": "period"
   },
   {
-   "id": 819,
+   "id": 847,
    "q": "who has not been paid this year",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7425,7 +7678,7 @@
    "kind": "period"
   },
   {
-   "id": 820,
+   "id": 848,
    "q": "বেতন পরিশোধ হয়েছে কি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7434,7 +7687,7 @@
    "kind": "base"
   },
   {
-   "id": 821,
+   "id": 849,
    "q": "বেতন পরিশোধ হয়েছে কি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7443,7 +7696,7 @@
    "kind": "period"
   },
   {
-   "id": 822,
+   "id": 850,
    "q": "বেতন পরিশোধ হয়েছে কি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7452,7 +7705,7 @@
    "kind": "period"
   },
   {
-   "id": 823,
+   "id": 851,
    "q": "বেতন পরিশোধ হয়েছে কি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7461,7 +7714,7 @@
    "kind": "period"
   },
   {
-   "id": 824,
+   "id": 852,
    "q": "কার বেতন বাকি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7470,7 +7723,7 @@
    "kind": "base"
   },
   {
-   "id": 825,
+   "id": 853,
    "q": "কার বেতন বাকি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7479,7 +7732,7 @@
    "kind": "period"
   },
   {
-   "id": 826,
+   "id": 854,
    "q": "কার বেতন বাকি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7488,7 +7741,7 @@
    "kind": "period"
   },
   {
-   "id": 827,
+   "id": 855,
    "q": "কার বেতন বাকি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7497,7 +7750,7 @@
    "kind": "period"
   },
   {
-   "id": 828,
+   "id": 856,
    "q": "কত বেতন এখনো দেওয়া হয়নি",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7506,7 +7759,7 @@
    "kind": "base"
   },
   {
-   "id": 829,
+   "id": 857,
    "q": "কত বেতন এখনো দেওয়া হয়নি এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7515,7 +7768,7 @@
    "kind": "period"
   },
   {
-   "id": 830,
+   "id": 858,
    "q": "কত বেতন এখনো দেওয়া হয়নি গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7524,7 +7777,7 @@
    "kind": "period"
   },
   {
-   "id": 831,
+   "id": 859,
    "q": "কত বেতন এখনো দেওয়া হয়নি এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7533,7 +7786,7 @@
    "kind": "period"
   },
   {
-   "id": 832,
+   "id": 860,
    "q": "বেতন কি দেওয়া হয়েছে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7542,7 +7795,7 @@
    "kind": "base"
   },
   {
-   "id": 833,
+   "id": 861,
    "q": "বেতন কি দেওয়া হয়েছে এ মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7551,7 +7804,7 @@
    "kind": "period"
   },
   {
-   "id": 834,
+   "id": 862,
    "q": "বেতন কি দেওয়া হয়েছে গত মাসে",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7560,7 +7813,7 @@
    "kind": "period"
   },
   {
-   "id": 835,
+   "id": 863,
    "q": "বেতন কি দেওয়া হয়েছে এ বছর",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7569,7 +7822,7 @@
    "kind": "period"
   },
   {
-   "id": 836,
+   "id": 864,
    "q": "beton porishodh hoyeche ki",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7578,7 +7831,7 @@
    "kind": "base"
   },
   {
-   "id": 837,
+   "id": 865,
    "q": "beton porishodh hoyeche ki ei mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7587,7 +7840,7 @@
    "kind": "period"
   },
   {
-   "id": 838,
+   "id": 866,
    "q": "beton porishodh hoyeche ki goto mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7596,7 +7849,7 @@
    "kind": "period"
   },
   {
-   "id": 839,
+   "id": 867,
    "q": "kar beton baki",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7605,7 +7858,7 @@
    "kind": "base"
   },
   {
-   "id": 840,
+   "id": 868,
    "q": "kar beton baki ei mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7614,7 +7867,7 @@
    "kind": "period"
   },
   {
-   "id": 841,
+   "id": 869,
    "q": "kar beton baki goto mash e",
    "intent": "payroll_unpaid",
    "section": "Payroll & People",
@@ -7623,7 +7876,7 @@
    "kind": "period"
   },
   {
-   "id": 842,
+   "id": 870,
    "q": "how is late deduction calculated",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7632,7 +7885,7 @@
    "kind": "base"
   },
   {
-   "id": 843,
+   "id": 871,
    "q": "explain the deduction rule",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7641,7 +7894,7 @@
    "kind": "base"
   },
   {
-   "id": 844,
+   "id": 872,
    "q": "why was money deducted",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7650,7 +7903,7 @@
    "kind": "base"
   },
   {
-   "id": 845,
+   "id": 873,
    "q": "how is salary calculated",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7659,7 +7912,7 @@
    "kind": "base"
   },
   {
-   "id": 846,
+   "id": 874,
    "q": "what is the grace period",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7668,7 +7921,7 @@
    "kind": "base"
   },
   {
-   "id": 847,
+   "id": 875,
    "q": "how does absent deduction work",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7677,7 +7930,7 @@
    "kind": "base"
   },
   {
-   "id": 848,
+   "id": 876,
    "q": "বিলম্ব কর্তন কিভাবে হয়",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7686,7 +7939,7 @@
    "kind": "base"
   },
   {
-   "id": 849,
+   "id": 877,
    "q": "কর্তনের নিয়ম কী",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7695,7 +7948,7 @@
    "kind": "base"
   },
   {
-   "id": 850,
+   "id": 878,
    "q": "বেতন কিভাবে হিসাব হয়",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7704,7 +7957,7 @@
    "kind": "base"
   },
   {
-   "id": 851,
+   "id": 879,
    "q": "কেন টাকা কাটা হলো",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7713,7 +7966,7 @@
    "kind": "base"
   },
   {
-   "id": 852,
+   "id": 880,
    "q": "অনুপস্থিতির কর্তন কিভাবে",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7722,7 +7975,7 @@
    "kind": "base"
   },
   {
-   "id": 853,
+   "id": 881,
    "q": "deduction kivabe hoy",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7731,7 +7984,7 @@
    "kind": "base"
   },
   {
-   "id": 854,
+   "id": 882,
    "q": "beton kivabe hisab hoy",
    "intent": "deduction_rules",
    "section": "Payroll & People",
@@ -7740,7 +7993,7 @@
    "kind": "base"
   },
   {
-   "id": 855,
+   "id": 883,
    "q": "how much overtime this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7749,7 +8002,7 @@
    "kind": "base"
   },
   {
-   "id": 856,
+   "id": 884,
    "q": "how much overtime this month this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7758,7 +8011,7 @@
    "kind": "period"
   },
   {
-   "id": 857,
+   "id": 885,
    "q": "how much overtime this month last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7767,7 +8020,7 @@
    "kind": "period"
   },
   {
-   "id": 858,
+   "id": 886,
    "q": "how much overtime this month this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7776,7 +8029,7 @@
    "kind": "period"
   },
   {
-   "id": 859,
+   "id": 887,
    "q": "who worked the most overtime",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7785,7 +8038,7 @@
    "kind": "base"
   },
   {
-   "id": 860,
+   "id": 888,
    "q": "who worked the most overtime this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7794,7 +8047,7 @@
    "kind": "period"
   },
   {
-   "id": 861,
+   "id": 889,
    "q": "who worked the most overtime last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7803,7 +8056,7 @@
    "kind": "period"
   },
   {
-   "id": 862,
+   "id": 890,
    "q": "who worked the most overtime this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7812,7 +8065,7 @@
    "kind": "period"
   },
   {
-   "id": 863,
+   "id": 891,
    "q": "overtime hours",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7821,7 +8074,7 @@
    "kind": "base"
   },
   {
-   "id": 864,
+   "id": 892,
    "q": "overtime hours this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7830,7 +8083,7 @@
    "kind": "period"
   },
   {
-   "id": 865,
+   "id": 893,
    "q": "overtime hours last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7839,7 +8092,7 @@
    "kind": "period"
   },
   {
-   "id": 866,
+   "id": 894,
    "q": "overtime hours this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7848,7 +8101,7 @@
    "kind": "period"
   },
   {
-   "id": 867,
+   "id": 895,
    "q": "is overtime being paid",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7857,7 +8110,7 @@
    "kind": "base"
   },
   {
-   "id": 868,
+   "id": 896,
    "q": "is overtime being paid this month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7866,7 +8119,7 @@
    "kind": "period"
   },
   {
-   "id": 869,
+   "id": 897,
    "q": "is overtime being paid last month",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7875,7 +8128,7 @@
    "kind": "period"
   },
   {
-   "id": 870,
+   "id": 898,
    "q": "is overtime being paid this year",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7884,7 +8137,7 @@
    "kind": "period"
   },
   {
-   "id": 871,
+   "id": 899,
    "q": "এ মাসে ওভারটাইম কত",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7893,7 +8146,7 @@
    "kind": "base"
   },
   {
-   "id": 872,
+   "id": 900,
    "q": "এ মাসে ওভারটাইম কত এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7902,7 +8155,7 @@
    "kind": "period"
   },
   {
-   "id": 873,
+   "id": 901,
    "q": "এ মাসে ওভারটাইম কত গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7911,7 +8164,7 @@
    "kind": "period"
   },
   {
-   "id": 874,
+   "id": 902,
    "q": "এ মাসে ওভারটাইম কত এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7920,7 +8173,7 @@
    "kind": "period"
   },
   {
-   "id": 875,
+   "id": 903,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7929,7 +8182,7 @@
    "kind": "base"
   },
   {
-   "id": 876,
+   "id": 904,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7938,7 +8191,7 @@
    "kind": "period"
   },
   {
-   "id": 877,
+   "id": 905,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7947,7 +8200,7 @@
    "kind": "period"
   },
   {
-   "id": 878,
+   "id": 906,
    "q": "কে সবচেয়ে বেশি ওভারটাইম করেছে এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7956,7 +8209,7 @@
    "kind": "period"
   },
   {
-   "id": 879,
+   "id": 907,
    "q": "অতিরিক্ত সময় কত",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7965,7 +8218,7 @@
    "kind": "base"
   },
   {
-   "id": 880,
+   "id": 908,
    "q": "অতিরিক্ত সময় কত এ মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7974,7 +8227,7 @@
    "kind": "period"
   },
   {
-   "id": 881,
+   "id": 909,
    "q": "অতিরিক্ত সময় কত গত মাসে",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7983,7 +8236,7 @@
    "kind": "period"
   },
   {
-   "id": 882,
+   "id": 910,
    "q": "অতিরিক্ত সময় কত এ বছর",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -7992,7 +8245,7 @@
    "kind": "period"
   },
   {
-   "id": 883,
+   "id": 911,
    "q": "overtime koto",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8001,7 +8254,7 @@
    "kind": "base"
   },
   {
-   "id": 884,
+   "id": 912,
    "q": "overtime koto ei mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8010,7 +8263,7 @@
    "kind": "period"
   },
   {
-   "id": 885,
+   "id": 913,
    "q": "overtime koto goto mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8019,7 +8272,7 @@
    "kind": "period"
   },
   {
-   "id": 886,
+   "id": 914,
    "q": "ke beshi overtime korlo",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8028,7 +8281,7 @@
    "kind": "base"
   },
   {
-   "id": 887,
+   "id": 915,
    "q": "ke beshi overtime korlo ei mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8037,7 +8290,7 @@
    "kind": "period"
   },
   {
-   "id": 888,
+   "id": 916,
    "q": "ke beshi overtime korlo goto mash e",
    "intent": "overtime",
    "section": "Payroll & People",
@@ -8046,7 +8299,7 @@
    "kind": "period"
   },
   {
-   "id": 889,
+   "id": 917,
    "q": "how many employees do we have",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8055,7 +8308,7 @@
    "kind": "base"
   },
   {
-   "id": 890,
+   "id": 918,
    "q": "how many employees do we have for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8064,7 +8317,7 @@
    "kind": "company"
   },
   {
-   "id": 891,
+   "id": 919,
    "q": "how many employees do we have for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8073,7 +8326,7 @@
    "kind": "company"
   },
   {
-   "id": 892,
+   "id": 920,
    "q": "what is the headcount",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8082,7 +8335,7 @@
    "kind": "base"
   },
   {
-   "id": 893,
+   "id": 921,
    "q": "what is the headcount for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8091,7 +8344,7 @@
    "kind": "company"
   },
   {
-   "id": 894,
+   "id": 922,
    "q": "what is the headcount for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8100,7 +8353,7 @@
    "kind": "company"
   },
   {
-   "id": 895,
+   "id": 923,
    "q": "total staff strength",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8109,7 +8362,7 @@
    "kind": "base"
   },
   {
-   "id": 896,
+   "id": 924,
    "q": "total staff strength for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8118,7 +8371,7 @@
    "kind": "company"
   },
   {
-   "id": 897,
+   "id": 925,
    "q": "total staff strength for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8127,7 +8380,7 @@
    "kind": "company"
   },
   {
-   "id": 898,
+   "id": 926,
    "q": "how many people work here",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8136,7 +8389,7 @@
    "kind": "base"
   },
   {
-   "id": 899,
+   "id": 927,
    "q": "how many people work here for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8145,7 +8398,7 @@
    "kind": "company"
   },
   {
-   "id": 900,
+   "id": 928,
    "q": "how many people work here for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8154,7 +8407,7 @@
    "kind": "company"
   },
   {
-   "id": 901,
+   "id": 929,
    "q": "how many staff are active",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8163,7 +8416,7 @@
    "kind": "base"
   },
   {
-   "id": 902,
+   "id": 930,
    "q": "how many staff are active for Epal Travels",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8172,7 +8425,7 @@
    "kind": "company"
   },
   {
-   "id": 903,
+   "id": 931,
    "q": "how many staff are active for IT Solutions",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8181,7 +8434,7 @@
    "kind": "company"
   },
   {
-   "id": 904,
+   "id": 932,
    "q": "কতজন কর্মী আছে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8190,7 +8443,7 @@
    "kind": "base"
   },
   {
-   "id": 905,
+   "id": 933,
    "q": "কতজন কর্মী আছে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8199,7 +8452,7 @@
    "kind": "company"
   },
   {
-   "id": 906,
+   "id": 934,
    "q": "কতজন কর্মী আছে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8208,7 +8461,7 @@
    "kind": "company"
   },
   {
-   "id": 907,
+   "id": 935,
    "q": "মোট জনবল কত",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8217,7 +8470,7 @@
    "kind": "base"
   },
   {
-   "id": 908,
+   "id": 936,
    "q": "মোট জনবল কত ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8226,7 +8479,7 @@
    "kind": "company"
   },
   {
-   "id": 909,
+   "id": 937,
    "q": "মোট জনবল কত আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8235,7 +8488,7 @@
    "kind": "company"
   },
   {
-   "id": 910,
+   "id": 938,
    "q": "কত কর্মচারী আছে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8244,7 +8497,7 @@
    "kind": "base"
   },
   {
-   "id": 911,
+   "id": 939,
    "q": "কত কর্মচারী আছে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8253,7 +8506,7 @@
    "kind": "company"
   },
   {
-   "id": 912,
+   "id": 940,
    "q": "কত কর্মচারী আছে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8262,7 +8515,7 @@
    "kind": "company"
   },
   {
-   "id": 913,
+   "id": 941,
    "q": "কতজন কাজ করে",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8271,7 +8524,7 @@
    "kind": "base"
   },
   {
-   "id": 914,
+   "id": 942,
    "q": "কতজন কাজ করে ট্রাভেলসের জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8280,7 +8533,7 @@
    "kind": "company"
   },
   {
-   "id": 915,
+   "id": 943,
    "q": "কতজন কাজ করে আইটির জন্য",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8289,7 +8542,7 @@
    "kind": "company"
   },
   {
-   "id": 916,
+   "id": 944,
    "q": "kotojon kormi ache",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8298,7 +8551,7 @@
    "kind": "base"
   },
   {
-   "id": 917,
+   "id": 945,
    "q": "kotojon kormi ache travels er jonno",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8307,7 +8560,7 @@
    "kind": "company"
   },
   {
-   "id": 918,
+   "id": 946,
    "q": "koto employee ache",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8316,7 +8569,7 @@
    "kind": "base"
   },
   {
-   "id": 919,
+   "id": 947,
    "q": "koto employee ache travels er jonno",
    "intent": "headcount",
    "section": "Payroll & People",
@@ -8325,7 +8578,7 @@
    "kind": "company"
   },
   {
-   "id": 920,
+   "id": 948,
    "q": "how many departments",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8334,7 +8587,7 @@
    "kind": "base"
   },
   {
-   "id": 921,
+   "id": 949,
    "q": "headcount by department",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8343,7 +8596,7 @@
    "kind": "base"
   },
   {
-   "id": 922,
+   "id": 950,
    "q": "which department is biggest",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8352,7 +8605,7 @@
    "kind": "base"
   },
   {
-   "id": 923,
+   "id": 951,
    "q": "show me the departments",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8361,7 +8614,7 @@
    "kind": "base"
   },
   {
-   "id": 924,
+   "id": 952,
    "q": "কতগুলো বিভাগ আছে",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8370,7 +8623,7 @@
    "kind": "base"
   },
   {
-   "id": 925,
+   "id": 953,
    "q": "বিভাগ অনুযায়ী কতজন",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8379,7 +8632,7 @@
    "kind": "base"
   },
   {
-   "id": 926,
+   "id": 954,
    "q": "সবচেয়ে বড় বিভাগ কোনটা",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8388,7 +8641,7 @@
    "kind": "base"
   },
   {
-   "id": 927,
+   "id": 955,
    "q": "koto bibhag ache",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8397,7 +8650,7 @@
    "kind": "base"
   },
   {
-   "id": 928,
+   "id": 956,
    "q": "bibhag onujayi kotojon",
    "intent": "departments",
    "section": "Payroll & People",
@@ -8406,7 +8659,7 @@
    "kind": "base"
   },
   {
-   "id": 929,
+   "id": 957,
    "q": "who is absent today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8415,7 +8668,7 @@
    "kind": "base"
   },
   {
-   "id": 930,
+   "id": 958,
    "q": "attendance today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8424,7 +8677,7 @@
    "kind": "base"
   },
   {
-   "id": 931,
+   "id": 959,
    "q": "who is present",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8433,7 +8686,7 @@
    "kind": "base"
   },
   {
-   "id": 932,
+   "id": 960,
    "q": "how many came today",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8442,7 +8695,7 @@
    "kind": "base"
   },
   {
-   "id": 933,
+   "id": 961,
    "q": "who is in the office",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8451,7 +8704,7 @@
    "kind": "base"
   },
   {
-   "id": 934,
+   "id": 962,
    "q": "today attendance summary",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8460,7 +8713,7 @@
    "kind": "base"
   },
   {
-   "id": 935,
+   "id": 963,
    "q": "আজ কে অনুপস্থিত",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8469,7 +8722,7 @@
    "kind": "base"
   },
   {
-   "id": 936,
+   "id": 964,
    "q": "আজকের হাজিরা",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8478,7 +8731,7 @@
    "kind": "base"
   },
   {
-   "id": 937,
+   "id": 965,
    "q": "কে কে এসেছে",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8487,7 +8740,7 @@
    "kind": "base"
   },
   {
-   "id": 938,
+   "id": 966,
    "q": "আজ কতজন এসেছে",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8496,7 +8749,7 @@
    "kind": "base"
   },
   {
-   "id": 939,
+   "id": 967,
    "q": "আজ কে আসেনি",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8505,7 +8758,7 @@
    "kind": "base"
   },
   {
-   "id": 940,
+   "id": 968,
    "q": "উপস্থিতি কেমন",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8514,7 +8767,7 @@
    "kind": "base"
   },
   {
-   "id": 941,
+   "id": 969,
    "q": "aj ke onupostit",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8523,7 +8776,7 @@
    "kind": "base"
   },
   {
-   "id": 942,
+   "id": 970,
    "q": "ajker hajira",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8532,7 +8785,7 @@
    "kind": "base"
   },
   {
-   "id": 943,
+   "id": 971,
    "q": "ke eseche aj",
    "intent": "attendance_today",
    "section": "Payroll & People",
@@ -8541,7 +8794,7 @@
    "kind": "base"
   },
   {
-   "id": 944,
+   "id": 972,
    "q": "who came late today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8550,7 +8803,7 @@
    "kind": "base"
   },
   {
-   "id": 945,
+   "id": 973,
    "q": "who was late",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8559,7 +8812,7 @@
    "kind": "base"
   },
   {
-   "id": 946,
+   "id": 974,
    "q": "any latecomers today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8568,7 +8821,7 @@
    "kind": "base"
   },
   {
-   "id": 947,
+   "id": 975,
    "q": "late arrivals today",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8577,7 +8830,7 @@
    "kind": "base"
   },
   {
-   "id": 948,
+   "id": 976,
    "q": "আজ কে দেরি করে এসেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8586,7 +8839,7 @@
    "kind": "base"
   },
   {
-   "id": 949,
+   "id": 977,
    "q": "কে লেট করেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8595,7 +8848,7 @@
    "kind": "base"
   },
   {
-   "id": 950,
+   "id": 978,
    "q": "আজ কে বিলম্বে এসেছে",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8604,7 +8857,7 @@
    "kind": "base"
   },
   {
-   "id": 951,
+   "id": 979,
    "q": "ke deri kore eseche",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8613,7 +8866,7 @@
    "kind": "base"
   },
   {
-   "id": 952,
+   "id": 980,
    "q": "aj ke late",
    "intent": "late_today",
    "section": "Payroll & People",
@@ -8622,7 +8875,7 @@
    "kind": "base"
   },
   {
-   "id": 953,
+   "id": 981,
    "q": "who is always late",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8631,7 +8884,7 @@
    "kind": "base"
   },
   {
-   "id": 954,
+   "id": 982,
    "q": "who is chronically late",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8640,7 +8893,7 @@
    "kind": "base"
   },
   {
-   "id": 955,
+   "id": 983,
    "q": "show me the punctuality problems",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8649,7 +8902,7 @@
    "kind": "base"
   },
   {
-   "id": 956,
+   "id": 984,
    "q": "late patterns this month",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8658,7 +8911,7 @@
    "kind": "base"
   },
   {
-   "id": 957,
+   "id": 985,
    "q": "who has the worst attendance",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8667,7 +8920,7 @@
    "kind": "base"
   },
   {
-   "id": 958,
+   "id": 986,
    "q": "কে প্রায়ই দেরি করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8676,7 +8929,7 @@
    "kind": "base"
   },
   {
-   "id": 959,
+   "id": 987,
    "q": "নিয়মিত কে দেরি করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8685,7 +8938,7 @@
    "kind": "base"
   },
   {
-   "id": 960,
+   "id": 988,
    "q": "সময়ানুবর্তিতার সমস্যা কার",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8694,7 +8947,7 @@
    "kind": "base"
   },
   {
-   "id": 961,
+   "id": 989,
    "q": "কে বারবার লেট করে",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8703,7 +8956,7 @@
    "kind": "base"
   },
   {
-   "id": 962,
+   "id": 990,
    "q": "ke baar baar late kore",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8712,7 +8965,7 @@
    "kind": "base"
   },
   {
-   "id": 963,
+   "id": 991,
    "q": "niyomito ke deri kore",
    "intent": "chronic_late",
    "section": "Payroll & People",
@@ -8721,7 +8974,7 @@
    "kind": "base"
   },
   {
-   "id": 964,
+   "id": 992,
    "q": "who is on leave",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8730,7 +8983,7 @@
    "kind": "base"
   },
   {
-   "id": 965,
+   "id": 993,
    "q": "any pending leave applications",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8739,7 +8992,7 @@
    "kind": "base"
   },
   {
-   "id": 966,
+   "id": 994,
    "q": "how many leave requests",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8748,7 +9001,7 @@
    "kind": "base"
   },
   {
-   "id": 967,
+   "id": 995,
    "q": "show me the leave balance",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8757,7 +9010,7 @@
    "kind": "base"
   },
   {
-   "id": 968,
+   "id": 996,
    "q": "is anyone on leave today",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8766,7 +9019,7 @@
    "kind": "base"
   },
   {
-   "id": 969,
+   "id": 997,
    "q": "কে ছুটিতে আছে",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8775,7 +9028,7 @@
    "kind": "base"
   },
   {
-   "id": 970,
+   "id": 998,
    "q": "ছুটির আবেদন কতগুলো",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8784,7 +9037,7 @@
    "kind": "base"
   },
   {
-   "id": 971,
+   "id": 999,
    "q": "ছুটি বাকি কত",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8793,7 +9046,7 @@
    "kind": "base"
   },
   {
-   "id": 972,
+   "id": 1000,
    "q": "আজ কে ছুটিতে",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8802,7 +9055,7 @@
    "kind": "base"
   },
   {
-   "id": 973,
+   "id": 1001,
    "q": "ke chutite ache",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8811,7 +9064,7 @@
    "kind": "base"
   },
   {
-   "id": 974,
+   "id": 1002,
    "q": "chutir abedon koto",
    "intent": "leaves",
    "section": "Payroll & People",
@@ -8820,7 +9073,7 @@
    "kind": "base"
   },
   {
-   "id": 975,
+   "id": 1003,
    "q": "when is the next holiday",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8829,7 +9082,7 @@
    "kind": "base"
   },
   {
-   "id": 976,
+   "id": 1004,
    "q": "what holidays are coming",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8838,7 +9091,7 @@
    "kind": "base"
   },
   {
-   "id": 977,
+   "id": 1005,
    "q": "show me the holiday calendar",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8847,7 +9100,7 @@
    "kind": "base"
   },
   {
-   "id": 978,
+   "id": 1006,
    "q": "is the office closed soon",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8856,7 +9109,7 @@
    "kind": "base"
   },
   {
-   "id": 979,
+   "id": 1007,
    "q": "পরের ছুটি কবে",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8865,7 +9118,7 @@
    "kind": "base"
   },
   {
-   "id": 980,
+   "id": 1008,
    "q": "সামনে কী কী ছুটি",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8874,7 +9127,7 @@
    "kind": "base"
   },
   {
-   "id": 981,
+   "id": 1009,
    "q": "ছুটির ক্যালেন্ডার দেখাও",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8883,7 +9136,7 @@
    "kind": "base"
   },
   {
-   "id": 982,
+   "id": 1010,
    "q": "সরকারি ছুটি কবে",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8892,7 +9145,7 @@
    "kind": "base"
   },
   {
-   "id": 983,
+   "id": 1011,
    "q": "porer chuti kobe",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8901,7 +9154,7 @@
    "kind": "base"
   },
   {
-   "id": 984,
+   "id": 1012,
    "q": "samne ki chuti ache",
    "intent": "holidays",
    "section": "Payroll & People",
@@ -8910,7 +9163,7 @@
    "kind": "base"
   },
   {
-   "id": 985,
+   "id": 1013,
    "q": "any employee requests pending",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8919,7 +9172,7 @@
    "kind": "base"
   },
   {
-   "id": 986,
+   "id": 1014,
    "q": "show me the staff requests",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8928,7 +9181,7 @@
    "kind": "base"
   },
   {
-   "id": 987,
+   "id": 1015,
    "q": "who has applied for something",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8937,7 +9190,7 @@
    "kind": "base"
   },
   {
-   "id": 988,
+   "id": 1016,
    "q": "pending employee applications",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8946,7 +9199,7 @@
    "kind": "base"
   },
   {
-   "id": 989,
+   "id": 1017,
    "q": "কর্মীদের কোনো আবেদন আছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8955,7 +9208,7 @@
    "kind": "base"
   },
   {
-   "id": 990,
+   "id": 1018,
    "q": "কে কী আবেদন করেছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8964,7 +9217,7 @@
    "kind": "base"
   },
   {
-   "id": 991,
+   "id": 1019,
    "q": "আবেদন কতগুলো ঝুলে আছে",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8973,7 +9226,7 @@
    "kind": "base"
   },
   {
-   "id": 992,
+   "id": 1020,
    "q": "kormider abedon ache ki",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8982,7 +9235,7 @@
    "kind": "base"
   },
   {
-   "id": 993,
+   "id": 1021,
    "q": "ke ki abedon korche",
    "intent": "employee_requests",
    "section": "Payroll & People",
@@ -8991,7 +9244,7 @@
    "kind": "base"
   },
   {
-   "id": 994,
+   "id": 1022,
    "q": "who is online now",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9000,7 +9253,7 @@
    "kind": "base"
   },
   {
-   "id": 995,
+   "id": 1023,
    "q": "who is working right now",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9009,7 +9262,7 @@
    "kind": "base"
   },
   {
-   "id": 996,
+   "id": 1024,
    "q": "who is currently active",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9018,7 +9271,7 @@
    "kind": "base"
   },
   {
-   "id": 997,
+   "id": 1025,
    "q": "anyone online",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9027,7 +9280,7 @@
    "kind": "base"
   },
   {
-   "id": 998,
+   "id": 1026,
    "q": "এখন কে অনলাইনে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9036,7 +9289,7 @@
    "kind": "base"
   },
   {
-   "id": 999,
+   "id": 1027,
    "q": "এখন কে কাজ করছে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9045,7 +9298,7 @@
    "kind": "base"
   },
   {
-   "id": 1000,
+   "id": 1028,
    "q": "কে সক্রিয় আছে",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9054,7 +9307,7 @@
    "kind": "base"
   },
   {
-   "id": 1001,
+   "id": 1029,
    "q": "ekhon ke online",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9063,7 +9316,7 @@
    "kind": "base"
   },
   {
-   "id": 1002,
+   "id": 1030,
    "q": "ke kaj korche ekhon",
    "intent": "online_now",
    "section": "Payroll & People",
@@ -9072,7 +9325,7 @@
    "kind": "base"
   },
   {
-   "id": 1003,
+   "id": 1031,
    "q": "how many tasks are overdue",
    "intent": "tasks",
    "section": "Operations",
@@ -9081,7 +9334,7 @@
    "kind": "base"
   },
   {
-   "id": 1004,
+   "id": 1032,
    "q": "show me the tasks",
    "intent": "tasks",
    "section": "Operations",
@@ -9090,7 +9343,7 @@
    "kind": "base"
   },
   {
-   "id": 1005,
+   "id": 1033,
    "q": "who is overloaded",
    "intent": "tasks",
    "section": "Operations",
@@ -9099,7 +9352,7 @@
    "kind": "base"
   },
   {
-   "id": 1006,
+   "id": 1034,
    "q": "what work is pending",
    "intent": "tasks",
    "section": "Operations",
@@ -9108,7 +9361,7 @@
    "kind": "base"
   },
   {
-   "id": 1007,
+   "id": 1035,
    "q": "task status",
    "intent": "tasks",
    "section": "Operations",
@@ -9117,7 +9370,7 @@
    "kind": "base"
   },
   {
-   "id": 1008,
+   "id": 1036,
    "q": "কতগুলো কাজ বকেয়া",
    "intent": "tasks",
    "section": "Operations",
@@ -9126,7 +9379,7 @@
    "kind": "base"
   },
   {
-   "id": 1009,
+   "id": 1037,
    "q": "টাস্কের অবস্থা কী",
    "intent": "tasks",
    "section": "Operations",
@@ -9135,7 +9388,7 @@
    "kind": "base"
   },
   {
-   "id": 1010,
+   "id": 1038,
    "q": "কার উপর কাজের চাপ বেশি",
    "intent": "tasks",
    "section": "Operations",
@@ -9144,7 +9397,7 @@
    "kind": "base"
   },
   {
-   "id": 1011,
+   "id": 1039,
    "q": "কী কী কাজ বাকি",
    "intent": "tasks",
    "section": "Operations",
@@ -9153,7 +9406,7 @@
    "kind": "base"
   },
   {
-   "id": 1012,
+   "id": 1040,
    "q": "koto kaj baki",
    "intent": "tasks",
    "section": "Operations",
@@ -9162,7 +9415,7 @@
    "kind": "base"
   },
   {
-   "id": 1013,
+   "id": 1041,
    "q": "task er obostha ki",
    "intent": "tasks",
    "section": "Operations",
@@ -9171,7 +9424,7 @@
    "kind": "base"
   },
   {
-   "id": 1014,
+   "id": 1042,
    "q": "how many projects are running",
    "intent": "projects",
    "section": "Operations",
@@ -9180,7 +9433,7 @@
    "kind": "base"
   },
   {
-   "id": 1015,
+   "id": 1043,
    "q": "which projects are at risk",
    "intent": "projects",
    "section": "Operations",
@@ -9189,7 +9442,7 @@
    "kind": "base"
   },
   {
-   "id": 1016,
+   "id": 1044,
    "q": "project status",
    "intent": "projects",
    "section": "Operations",
@@ -9198,7 +9451,7 @@
    "kind": "base"
   },
   {
-   "id": 1017,
+   "id": 1045,
    "q": "is any project behind schedule",
    "intent": "projects",
    "section": "Operations",
@@ -9207,7 +9460,7 @@
    "kind": "base"
   },
   {
-   "id": 1018,
+   "id": 1046,
    "q": "show me the projects",
    "intent": "projects",
    "section": "Operations",
@@ -9216,7 +9469,7 @@
    "kind": "base"
   },
   {
-   "id": 1019,
+   "id": 1047,
    "q": "কতগুলো প্রকল্প চলছে",
    "intent": "projects",
    "section": "Operations",
@@ -9225,7 +9478,7 @@
    "kind": "base"
   },
   {
-   "id": 1020,
+   "id": 1048,
    "q": "কোন প্রকল্প ঝুঁকিতে",
    "intent": "projects",
    "section": "Operations",
@@ -9234,7 +9487,7 @@
    "kind": "base"
   },
   {
-   "id": 1021,
+   "id": 1049,
    "q": "প্রকল্পের অগ্রগতি কেমন",
    "intent": "projects",
    "section": "Operations",
@@ -9243,7 +9496,7 @@
    "kind": "base"
   },
   {
-   "id": 1022,
+   "id": 1050,
    "q": "কোন প্রজেক্ট পিছিয়ে আছে",
    "intent": "projects",
    "section": "Operations",
@@ -9252,7 +9505,7 @@
    "kind": "base"
   },
   {
-   "id": 1023,
+   "id": 1051,
    "q": "koto project cholche",
    "intent": "projects",
    "section": "Operations",
@@ -9261,7 +9514,7 @@
    "kind": "base"
   },
   {
-   "id": 1024,
+   "id": 1052,
    "q": "kon project jhukite",
    "intent": "projects",
    "section": "Operations",
@@ -9270,7 +9523,7 @@
    "kind": "base"
   },
   {
-   "id": 1025,
+   "id": 1053,
    "q": "show me the office to-dos",
    "intent": "todos",
    "section": "Operations",
@@ -9279,7 +9532,7 @@
    "kind": "base"
   },
   {
-   "id": 1026,
+   "id": 1054,
    "q": "what is on the checklist",
    "intent": "todos",
    "section": "Operations",
@@ -9288,7 +9541,7 @@
    "kind": "base"
   },
   {
-   "id": 1027,
+   "id": 1055,
    "q": "office todo list",
    "intent": "todos",
    "section": "Operations",
@@ -9297,7 +9550,7 @@
    "kind": "base"
   },
   {
-   "id": 1028,
+   "id": 1056,
    "q": "অফিসের কাজের তালিকা দেখাও",
    "intent": "todos",
    "section": "Operations",
@@ -9306,7 +9559,7 @@
    "kind": "base"
   },
   {
-   "id": 1029,
+   "id": 1057,
    "q": "চেকলিস্টে কী আছে",
    "intent": "todos",
    "section": "Operations",
@@ -9315,7 +9568,7 @@
    "kind": "base"
   },
   {
-   "id": 1030,
+   "id": 1058,
    "q": "করণীয় তালিকা",
    "intent": "todos",
    "section": "Operations",
@@ -9324,7 +9577,7 @@
    "kind": "base"
   },
   {
-   "id": 1031,
+   "id": 1059,
    "q": "office todo dekhao",
    "intent": "todos",
    "section": "Operations",
@@ -9333,7 +9586,7 @@
    "kind": "base"
   },
   {
-   "id": 1032,
+   "id": 1060,
    "q": "checklist e ki ache",
    "intent": "todos",
    "section": "Operations",
@@ -9342,7 +9595,7 @@
    "kind": "base"
   },
   {
-   "id": 1033,
+   "id": 1061,
    "q": "what is in the pipeline",
    "intent": "pipeline",
    "section": "CRM",
@@ -9351,7 +9604,7 @@
    "kind": "base"
   },
   {
-   "id": 1034,
+   "id": 1062,
    "q": "how many open leads",
    "intent": "pipeline",
    "section": "CRM",
@@ -9360,7 +9613,7 @@
    "kind": "base"
   },
   {
-   "id": 1035,
+   "id": 1063,
    "q": "what is our conversion rate",
    "intent": "pipeline",
    "section": "CRM",
@@ -9369,7 +9622,7 @@
    "kind": "base"
   },
   {
-   "id": 1036,
+   "id": 1064,
    "q": "show me the CRM status",
    "intent": "pipeline",
    "section": "CRM",
@@ -9378,7 +9631,7 @@
    "kind": "base"
   },
   {
-   "id": 1037,
+   "id": 1065,
    "q": "any follow ups due",
    "intent": "pipeline",
    "section": "CRM",
@@ -9387,7 +9640,7 @@
    "kind": "base"
   },
   {
-   "id": 1038,
+   "id": 1066,
    "q": "how many leads have gone cold",
    "intent": "pipeline",
    "section": "CRM",
@@ -9396,7 +9649,7 @@
    "kind": "base"
   },
   {
-   "id": 1039,
+   "id": 1067,
    "q": "পাইপলাইনে কী আছে",
    "intent": "pipeline",
    "section": "CRM",
@@ -9405,7 +9658,7 @@
    "kind": "base"
   },
   {
-   "id": 1040,
+   "id": 1068,
    "q": "কতগুলো লিড খোলা",
    "intent": "pipeline",
    "section": "CRM",
@@ -9414,7 +9667,7 @@
    "kind": "base"
   },
   {
-   "id": 1041,
+   "id": 1069,
    "q": "কনভার্শন রেট কত",
    "intent": "pipeline",
    "section": "CRM",
@@ -9423,7 +9676,7 @@
    "kind": "base"
   },
   {
-   "id": 1042,
+   "id": 1070,
    "q": "সিআরএম-এর অবস্থা কী",
    "intent": "pipeline",
    "section": "CRM",
@@ -9432,7 +9685,7 @@
    "kind": "base"
   },
   {
-   "id": 1043,
+   "id": 1071,
    "q": "কোনো ফলোআপ বাকি আছে",
    "intent": "pipeline",
    "section": "CRM",
@@ -9441,7 +9694,7 @@
    "kind": "base"
   },
   {
-   "id": 1044,
+   "id": 1072,
    "q": "pipeline e ki ache",
    "intent": "pipeline",
    "section": "CRM",
@@ -9450,7 +9703,7 @@
    "kind": "base"
   },
   {
-   "id": 1045,
+   "id": 1073,
    "q": "koto lead ache",
    "intent": "pipeline",
    "section": "CRM",
@@ -9459,7 +9712,7 @@
    "kind": "base"
   },
   {
-   "id": 1046,
+   "id": 1074,
    "q": "conversion rate koto",
    "intent": "pipeline",
    "section": "CRM",
@@ -9468,7 +9721,7 @@
    "kind": "base"
   },
   {
-   "id": 1047,
+   "id": 1075,
    "q": "how many customers do we have",
    "intent": "customers",
    "section": "CRM",
@@ -9477,7 +9730,7 @@
    "kind": "base"
   },
   {
-   "id": 1048,
+   "id": 1076,
    "q": "who is our biggest customer",
    "intent": "customers",
    "section": "CRM",
@@ -9486,7 +9739,7 @@
    "kind": "base"
   },
   {
-   "id": 1049,
+   "id": 1077,
    "q": "show me the customer list",
    "intent": "customers",
    "section": "CRM",
@@ -9495,7 +9748,7 @@
    "kind": "base"
   },
   {
-   "id": 1050,
+   "id": 1078,
    "q": "top customers",
    "intent": "customers",
    "section": "CRM",
@@ -9504,7 +9757,7 @@
    "kind": "base"
   },
   {
-   "id": 1051,
+   "id": 1079,
    "q": "কতজন গ্রাহক আছে",
    "intent": "customers",
    "section": "CRM",
@@ -9513,7 +9766,7 @@
    "kind": "base"
   },
   {
-   "id": 1052,
+   "id": 1080,
    "q": "সবচেয়ে বড় গ্রাহক কে",
    "intent": "customers",
    "section": "CRM",
@@ -9522,7 +9775,7 @@
    "kind": "base"
   },
   {
-   "id": 1053,
+   "id": 1081,
    "q": "গ্রাহকের তালিকা দেখাও",
    "intent": "customers",
    "section": "CRM",
@@ -9531,7 +9784,7 @@
    "kind": "base"
   },
   {
-   "id": 1054,
+   "id": 1082,
    "q": "koto customer ache",
    "intent": "customers",
    "section": "CRM",
@@ -9540,7 +9793,7 @@
    "kind": "base"
   },
   {
-   "id": 1055,
+   "id": 1083,
    "q": "boro customer ke",
    "intent": "customers",
    "section": "CRM",
@@ -9549,7 +9802,7 @@
    "kind": "base"
   },
   {
-   "id": 1056,
+   "id": 1084,
    "q": "how many suppliers",
    "intent": "suppliers",
    "section": "CRM",
@@ -9558,7 +9811,7 @@
    "kind": "base"
   },
   {
-   "id": 1057,
+   "id": 1085,
    "q": "show me the vendor list",
    "intent": "suppliers",
    "section": "CRM",
@@ -9567,7 +9820,7 @@
    "kind": "base"
   },
   {
-   "id": 1058,
+   "id": 1086,
    "q": "who are our suppliers",
    "intent": "suppliers",
    "section": "CRM",
@@ -9576,7 +9829,7 @@
    "kind": "base"
   },
   {
-   "id": 1059,
+   "id": 1087,
    "q": "কতজন সরবরাহকারী আছে",
    "intent": "suppliers",
    "section": "CRM",
@@ -9585,7 +9838,7 @@
    "kind": "base"
   },
   {
-   "id": 1060,
+   "id": 1088,
    "q": "ভেন্ডরের তালিকা দেখাও",
    "intent": "suppliers",
    "section": "CRM",
@@ -9594,7 +9847,7 @@
    "kind": "base"
   },
   {
-   "id": 1061,
+   "id": 1089,
    "q": "সাপ্লায়ার কারা",
    "intent": "suppliers",
    "section": "CRM",
@@ -9603,7 +9856,7 @@
    "kind": "base"
   },
   {
-   "id": 1062,
+   "id": 1090,
    "q": "koto supplier ache",
    "intent": "suppliers",
    "section": "CRM",
@@ -9612,7 +9865,7 @@
    "kind": "base"
   },
   {
-   "id": 1063,
+   "id": 1091,
    "q": "vendor list dekhao",
    "intent": "suppliers",
    "section": "CRM",
@@ -9621,7 +9874,7 @@
    "kind": "base"
   },
   {
-   "id": 1064,
+   "id": 1092,
    "q": "where do I find the payslips",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9630,7 +9883,7 @@
    "kind": "base"
   },
   {
-   "id": 1065,
+   "id": 1093,
    "q": "where is the trial balance",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9639,7 +9892,7 @@
    "kind": "base"
   },
   {
-   "id": 1066,
+   "id": 1094,
    "q": "which menu has attendance",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9648,7 +9901,7 @@
    "kind": "base"
   },
   {
-   "id": 1067,
+   "id": 1095,
    "q": "where do I set the budget",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9657,7 +9910,7 @@
    "kind": "base"
   },
   {
-   "id": 1068,
+   "id": 1096,
    "q": "how do I get to the general ledger",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9666,7 +9919,7 @@
    "kind": "base"
   },
   {
-   "id": 1069,
+   "id": 1097,
    "q": "where are the payment schedules",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9675,7 +9928,7 @@
    "kind": "base"
   },
   {
-   "id": 1070,
+   "id": 1098,
    "q": "where do I see the leads",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9684,7 +9937,7 @@
    "kind": "base"
   },
   {
-   "id": 1071,
+   "id": 1099,
    "q": "which screen shows the projects",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9693,7 +9946,7 @@
    "kind": "base"
   },
   {
-   "id": 1072,
+   "id": 1100,
    "q": "where is petty cash",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9702,7 +9955,7 @@
    "kind": "base"
   },
   {
-   "id": 1073,
+   "id": 1101,
    "q": "where do I find expenses",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9711,7 +9964,7 @@
    "kind": "base"
   },
   {
-   "id": 1074,
+   "id": 1102,
    "q": "where are the bank accounts",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9720,7 +9973,7 @@
    "kind": "base"
   },
   {
-   "id": 1075,
+   "id": 1103,
    "q": "where do I see holidays",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9729,7 +9982,7 @@
    "kind": "base"
   },
   {
-   "id": 1076,
+   "id": 1104,
    "q": "কোথায় পাবো পে-স্লিপ",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9738,7 +9991,7 @@
    "kind": "base"
   },
   {
-   "id": 1077,
+   "id": 1105,
    "q": "রেওয়ামিল কোথায় দেখব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9747,7 +10000,7 @@
    "kind": "base"
   },
   {
-   "id": 1078,
+   "id": 1106,
    "q": "হাজিরা কোন মেনুতে",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9756,7 +10009,7 @@
    "kind": "base"
   },
   {
-   "id": 1079,
+   "id": 1107,
    "q": "বাজেট কোথায় বসাবো",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9765,7 +10018,7 @@
    "kind": "base"
   },
   {
-   "id": 1080,
+   "id": 1108,
    "q": "খতিয়ান কোথায় পাব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9774,7 +10027,7 @@
    "kind": "base"
   },
   {
-   "id": 1081,
+   "id": 1109,
    "q": "পেমেন্ট সূচি কোথায়",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9783,7 +10036,7 @@
    "kind": "base"
   },
   {
-   "id": 1082,
+   "id": 1110,
    "q": "লিড কোথায় দেখব",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9792,7 +10045,7 @@
    "kind": "base"
   },
   {
-   "id": 1083,
+   "id": 1111,
    "q": "প্রকল্প কোন স্ক্রিনে",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9801,7 +10054,7 @@
    "kind": "base"
   },
   {
-   "id": 1084,
+   "id": 1112,
    "q": "খরচ কোথায় পাবো",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9810,7 +10063,7 @@
    "kind": "base"
   },
   {
-   "id": 1085,
+   "id": 1113,
    "q": "payslip kothay pabo",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9819,7 +10072,7 @@
    "kind": "base"
   },
   {
-   "id": 1086,
+   "id": 1114,
    "q": "trial balance kothay",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9828,7 +10081,7 @@
    "kind": "base"
   },
   {
-   "id": 1087,
+   "id": 1115,
    "q": "hajira kon menu te",
    "intent": "navigation",
    "section": "ERP navigation",
@@ -9837,7 +10090,7 @@
    "kind": "base"
   },
   {
-   "id": 1088,
+   "id": 1116,
    "q": "how does an expense get posted",
    "intent": "howto",
    "section": "ERP rules",
@@ -9846,7 +10099,7 @@
    "kind": "base"
   },
   {
-   "id": 1089,
+   "id": 1117,
    "q": "what happens when a payment schedule is approved",
    "intent": "howto",
    "section": "ERP rules",
@@ -9855,7 +10108,7 @@
    "kind": "base"
   },
   {
-   "id": 1090,
+   "id": 1118,
    "q": "how does the lead workflow work",
    "intent": "howto",
    "section": "ERP rules",
@@ -9864,7 +10117,7 @@
    "kind": "base"
   },
   {
-   "id": 1091,
+   "id": 1119,
    "q": "explain the employee request process",
    "intent": "howto",
    "section": "ERP rules",
@@ -9873,7 +10126,7 @@
    "kind": "base"
   },
   {
-   "id": 1092,
+   "id": 1120,
    "q": "how is a correction handled",
    "intent": "howto",
    "section": "ERP rules",
@@ -9882,7 +10135,7 @@
    "kind": "base"
   },
   {
-   "id": 1093,
+   "id": 1121,
    "q": "why must a shared account have no company",
    "intent": "howto",
    "section": "ERP rules",
@@ -9891,7 +10144,7 @@
    "kind": "base"
   },
   {
-   "id": 1094,
+   "id": 1122,
    "q": "what reports is the ERP missing",
    "intent": "howto",
    "section": "ERP rules",
@@ -9900,7 +10153,7 @@
    "kind": "base"
   },
   {
-   "id": 1095,
+   "id": 1123,
    "q": "how does overtime work",
    "intent": "howto",
    "section": "ERP rules",
@@ -9909,7 +10162,7 @@
    "kind": "base"
   },
   {
-   "id": 1096,
+   "id": 1124,
    "q": "how is the leave balance worked out",
    "intent": "howto",
    "section": "ERP rules",
@@ -9918,7 +10171,7 @@
    "kind": "base"
   },
   {
-   "id": 1097,
+   "id": 1125,
    "q": "খরচের এন্ট্রি কিভাবে বসে",
    "intent": "howto",
    "section": "ERP rules",
@@ -9927,7 +10180,7 @@
    "kind": "base"
   },
   {
-   "id": 1098,
+   "id": 1126,
    "q": "পেমেন্ট সূচি অনুমোদন হলে কী হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9936,7 +10189,7 @@
    "kind": "base"
   },
   {
-   "id": 1099,
+   "id": 1127,
    "q": "লিডের ধাপগুলো কী",
    "intent": "howto",
    "section": "ERP rules",
@@ -9945,7 +10198,7 @@
    "kind": "base"
   },
   {
-   "id": 1100,
+   "id": 1128,
    "q": "কর্মীর আবেদনের প্রক্রিয়া বুঝিয়ে বলো",
    "intent": "howto",
    "section": "ERP rules",
@@ -9954,7 +10207,7 @@
    "kind": "base"
   },
   {
-   "id": 1101,
+   "id": 1129,
    "q": "ভুল এন্ট্রি কিভাবে সংশোধন হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9963,7 +10216,7 @@
    "kind": "base"
   },
   {
-   "id": 1102,
+   "id": 1130,
    "q": "ছুটির হিসাব কিভাবে হয়",
    "intent": "howto",
    "section": "ERP rules",
@@ -9972,7 +10225,7 @@
    "kind": "base"
   },
   {
-   "id": 1103,
+   "id": 1131,
    "q": "ওভারটাইম কিভাবে কাজ করে",
    "intent": "howto",
    "section": "ERP rules",
@@ -9981,7 +10234,7 @@
    "kind": "base"
   },
   {
-   "id": 1104,
+   "id": 1132,
    "q": "khoroch er entry kivabe bose",
    "intent": "howto",
    "section": "ERP rules",
@@ -9990,7 +10243,7 @@
    "kind": "base"
   },
   {
-   "id": 1105,
+   "id": 1133,
    "q": "lead er dhap ki",
    "intent": "howto",
    "section": "ERP rules",
@@ -9999,7 +10252,7 @@
    "kind": "base"
   },
   {
-   "id": 1106,
+   "id": 1134,
    "q": "chutir hisab kivabe hoy",
    "intent": "howto",
    "section": "ERP rules",
@@ -10008,7 +10261,7 @@
    "kind": "base"
   },
   {
-   "id": 1107,
+   "id": 1135,
    "q": "what can you do",
    "intent": "capabilities",
    "section": "Meta",
@@ -10017,7 +10270,7 @@
    "kind": "base"
   },
   {
-   "id": 1108,
+   "id": 1136,
    "q": "what can I ask you",
    "intent": "capabilities",
    "section": "Meta",
@@ -10026,7 +10279,7 @@
    "kind": "base"
   },
   {
-   "id": 1109,
+   "id": 1137,
    "q": "what do you know",
    "intent": "capabilities",
    "section": "Meta",
@@ -10035,7 +10288,7 @@
    "kind": "base"
   },
   {
-   "id": 1110,
+   "id": 1138,
    "q": "help me",
    "intent": "capabilities",
    "section": "Meta",
@@ -10044,7 +10297,7 @@
    "kind": "base"
   },
   {
-   "id": 1111,
+   "id": 1139,
    "q": "তুমি কী কী পারো",
    "intent": "capabilities",
    "section": "Meta",
@@ -10053,7 +10306,7 @@
    "kind": "base"
   },
   {
-   "id": 1112,
+   "id": 1140,
    "q": "কী জিজ্ঞেস করতে পারি",
    "intent": "capabilities",
    "section": "Meta",
@@ -10062,7 +10315,7 @@
    "kind": "base"
   },
   {
-   "id": 1113,
+   "id": 1141,
    "q": "তুমি কী জানো",
    "intent": "capabilities",
    "section": "Meta",
@@ -10071,7 +10324,7 @@
    "kind": "base"
   },
   {
-   "id": 1114,
+   "id": 1142,
    "q": "tumi ki paro",
    "intent": "capabilities",
    "section": "Meta",
@@ -10080,7 +10333,7 @@
    "kind": "base"
   },
   {
-   "id": 1115,
+   "id": 1143,
    "q": "ki jiggesh korte pari",
    "intent": "capabilities",
    "section": "Meta",
@@ -10089,7 +10342,7 @@
    "kind": "base"
   },
   {
-   "id": 1116,
+   "id": 1144,
    "q": "hello",
    "intent": "greeting",
    "section": "Meta",
@@ -10098,7 +10351,7 @@
    "kind": "base"
   },
   {
-   "id": 1117,
+   "id": 1145,
    "q": "good morning",
    "intent": "greeting",
    "section": "Meta",
@@ -10107,7 +10360,7 @@
    "kind": "base"
   },
   {
-   "id": 1118,
+   "id": 1146,
    "q": "hi EON",
    "intent": "greeting",
    "section": "Meta",
@@ -10116,7 +10369,7 @@
    "kind": "base"
   },
   {
-   "id": 1119,
+   "id": 1147,
    "q": "thank you",
    "intent": "greeting",
    "section": "Meta",
@@ -10125,7 +10378,7 @@
    "kind": "base"
   },
   {
-   "id": 1120,
+   "id": 1148,
    "q": "thanks EON",
    "intent": "greeting",
    "section": "Meta",
@@ -10134,7 +10387,7 @@
    "kind": "base"
   },
   {
-   "id": 1121,
+   "id": 1149,
    "q": "হ্যালো",
    "intent": "greeting",
    "section": "Meta",
@@ -10143,7 +10396,7 @@
    "kind": "base"
   },
   {
-   "id": 1122,
+   "id": 1150,
    "q": "শুভ সকাল",
    "intent": "greeting",
    "section": "Meta",
@@ -10152,7 +10405,7 @@
    "kind": "base"
   },
   {
-   "id": 1123,
+   "id": 1151,
    "q": "আসসালামু আলাইকুম",
    "intent": "greeting",
    "section": "Meta",
@@ -10161,7 +10414,7 @@
    "kind": "base"
   },
   {
-   "id": 1124,
+   "id": 1152,
    "q": "ধন্যবাদ",
    "intent": "greeting",
    "section": "Meta",
@@ -10170,7 +10423,7 @@
    "kind": "base"
   },
   {
-   "id": 1125,
+   "id": 1153,
    "q": "salam",
    "intent": "greeting",
    "section": "Meta",
@@ -10179,7 +10432,7 @@
    "kind": "base"
   },
   {
-   "id": 1126,
+   "id": 1154,
    "q": "dhonnobad",
    "intent": "greeting",
    "section": "Meta",
@@ -10188,7 +10441,7 @@
    "kind": "base"
   },
   {
-   "id": 1127,
+   "id": 1155,
    "q": "kemon acho",
    "intent": "greeting",
    "section": "Meta",

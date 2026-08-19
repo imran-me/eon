@@ -273,6 +273,132 @@ final class Insight
         return ['count' => count($out), 'items' => $out];
     }
 
+    /* ---------------- is the bookkeeping itself sound? ----------------
+       Not "is the business doing well" but "can these numbers be trusted".
+       Every finding carries a remedy, because a director asking what is
+       wrong is really asking what to do about it. Nothing here accuses the
+       ERP of a bug: each item states what EON can see and what would
+       reconcile it. */
+    public function ledgerErrors(): array
+    {
+        $out = [];
+        $today = $this->today;
+        $mk = substr($today, 0, 7);
+
+        // 1. the trial balance is the first thing that must hold
+        $tb = $this->A->trialBalance();
+        $gap = $this->f($tb['total_debit'] ?? 0) - $this->f($tb['total_credit'] ?? 0);
+        if (!($tb['balanced'] ?? true) || abs($gap) > 1) {
+            $out[] = ['kind' => 'trial_balance', 'severity' => 'high', 'amount' => $gap,
+                      'fix' => 'shared_scope'];
+        }
+
+        // 2. money invoiced by the desks that never reached the ledger
+        if (method_exists($this->A, 'salesBooked')) {
+            $from = $mk . '-01';
+            $sb = $this->A->salesBooked($from, $today);
+            $pl = $this->A->profitAndLoss($from, $today);
+            $invoiced = $this->f($sb['invoiced'] ?? 0);
+            $booked = $this->f($pl['income'] ?? 0);
+            if ($invoiced > 0 && $invoiced - $booked > 1000) {
+                $out[] = ['kind' => 'unjournalised_sales', 'severity' => 'high',
+                          'invoiced' => $invoiced, 'booked' => $booked,
+                          'gap' => $invoiced - $booked,
+                          'pct' => round($booked / $invoiced * 100, 1),
+                          'invoices' => (int) ($sb['invoices'] ?? 0),
+                          'month' => $mk, 'fix' => 'journalise_sales'];
+            }
+        }
+
+        // 3. payslips whose own arithmetic does not close
+        $bad = [];
+        $mismatchedTotals = 0;
+        foreach ($this->A->rows('payroll') as $p) {
+            $gross = $this->f($p['gross_salary'] ?? 0);
+            $ded = $this->f($p['total_deductions'] ?? 0);
+            $ot = $this->f($p['overtime_salary'] ?? 0);
+            $net = $this->f($p['net_salary'] ?? 0);
+            if ($gross <= 0) continue;
+            $parts = $this->f($p['absent_deduction'] ?? 0) + $this->f($p['leave_deduction'] ?? 0)
+                   + $this->f($p['late_deduction'] ?? 0) + $this->f($p['early_leave_deduction'] ?? 0)
+                   + $this->f($p['loan_deduction'] ?? 0) + $this->f($p['advance_salary_deduction'] ?? 0);
+            if (abs($parts - $ded) > 1) $mismatchedTotals++;
+            if (abs(($gross - $ded + $ot) - $net) > 1) {
+                $bad[] = ['name' => $this->empName($p['user_id'] ?? null), 'month' => (string) ($p['month_key'] ?? ''),
+                          'gross' => $gross, 'deductions' => $ded, 'net' => $net,
+                          'expected' => $gross - $ded + $ot];
+            }
+        }
+        if ($bad) {
+            usort($bad, fn($a, $b) => abs($b['net'] - $b['expected']) <=> abs($a['net'] - $a['expected']));
+            $out[] = ['kind' => 'payslip_math', 'severity' => 'high', 'count' => count($bad),
+                      'total' => count($this->A->rows('payroll')), 'worst' => $bad[0],
+                      'component_mismatch' => $mismatchedTotals, 'fix' => 'payslip_math'];
+        }
+
+        // 4. a shared posting account tagged to one company quietly breaks that
+        //    company's reports — codes that must carry company_id NULL
+        $shared = [];
+        foreach (['1011', '1012', '1311', '2111', '2210', '2240', '6110', '7400', '3400'] as $code) {
+            foreach (($this->D['accounts'] ?? []) as $a) {
+                if ((string) ($a['code'] ?? '') === $code && ($a['company_id'] ?? null) !== null) {
+                    $shared[] = $code . ' ' . (string) ($a['name'] ?? '');
+                }
+            }
+        }
+        if ($shared) {
+            $out[] = ['kind' => 'shared_scope', 'severity' => 'high', 'accounts' => $shared,
+                      'fix' => 'shared_scope'];
+        }
+
+        // 5. a cash or bank account that has gone below zero
+        foreach (($this->A->cash()['accounts'] ?? []) as $a) {
+            if ($this->f($a['balance'] ?? 0) < -1) {
+                $out[] = ['kind' => 'negative_balance', 'severity' => 'high',
+                          'name' => (string) ($a['name'] ?? ''), 'amount' => $this->f($a['balance']),
+                          'fix' => 'negative_balance'];
+            }
+        }
+
+        // 6. the same expense entered twice
+        $seen = [];
+        $dupes = [];
+        foreach ($this->A->rows('expenses') as $e) {
+            $key = strtolower(trim((string) ($e['title'] ?? ''))) . '|' . round($this->f($e['amount'] ?? 0))
+                 . '|' . substr((string) ($e['expense_date'] ?? ''), 0, 10);
+            if (isset($seen[$key])) {
+                $dupes[] = ['title' => (string) ($e['title'] ?? ''), 'amount' => $this->f($e['amount'] ?? 0),
+                            'date' => (string) ($e['expense_date'] ?? '')];
+            }
+            $seen[$key] = true;
+        }
+        if ($dupes) {
+            $out[] = ['kind' => 'duplicate_expense', 'severity' => 'medium', 'count' => count($dupes),
+                      'worst' => $dupes[0], 'fix' => 'duplicate_expense'];
+        }
+
+        // 7. receivables that exist as invoices but as no payment schedule,
+        //    so no report can ever chase them
+        $sched = $this->A->schedules('receive');
+        if (method_exists($this->A, 'invoiceDues')) {
+            $openInvoice = 0.0;
+            foreach ((array) $this->A->invoiceDues('receive') as $r) {
+                $openInvoice += $this->f($r['amount'] ?? 0) - $this->f($r['paid_amount'] ?? 0);
+            }
+            if ($openInvoice > 1000 && $this->f($sched['total'] ?? 0) <= 0) {
+                $out[] = ['kind' => 'no_schedules', 'severity' => 'medium', 'amount' => $openInvoice,
+                          'fix' => 'no_schedules'];
+            }
+        }
+
+        $rank = ['high' => 0, 'medium' => 1, 'low' => 2];
+        usort($out, fn($a, $b) => $rank[$a['severity']] <=> $rank[$b['severity']]);
+        return ['count' => count($out), 'items' => $out,
+                'checked' => ['trial balance', 'sales against the ledger', 'payslip arithmetic',
+                              'shared account scope', 'negative balances', 'duplicate expenses',
+                              'unscheduled receivables']];
+    }
+
     /* ---------------- comparisons ---------------- */
 
     /** every company side by side for the current month */

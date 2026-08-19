@@ -176,6 +176,28 @@ final class Nlu
                 'bl' => ['forecast dao' => 5, 'agami mash' => 4, 'ki hobe' => 3, 'provonota' => 3],
             ],
 
+            'accounts_error' => [
+                'en' => ['accounts error' => 9, 'accounting error' => 9, 'any error' => 8, 'errors' => 6,
+                         'is anything wrong with the accounts' => 10, 'books wrong' => 8, 'wrong in the books' => 9,
+                         'data integrity' => 9, 'mistake' => 6, 'mistakes' => 6, 'discrepancy' => 8,
+                         'does anything not add up' => 9, 'not add up' => 8, 'reconcile' => 7,
+                         'audit' => 6, 'anything broken' => 8, 'accounts problem' => 8],
+                'bn' => ['হিসাবে ভুল' => 10, 'হিসাবের ভুল' => 10, 'একাউন্টে ভুল' => 10, 'হিসাব ভুল' => 9,
+                         'কোনো ভুল আছে' => 9, 'ভুল আছে' => 8, 'গরমিল' => 8, 'অসঙ্গতি' => 8,
+                         'মিলছে না' => 8, 'হিসাব মেলে না' => 9, 'ত্রুটি' => 8],
+                'bl' => ['hisabe bhul' => 10, 'bhul ache' => 8, 'gormil ache' => 8, 'accounts error' => 9],
+            ],
+            'fix' => [
+                'en' => ['how to solve' => 10, 'how do i fix' => 10, 'how to fix' => 10, 'how do we fix' => 10,
+                         'how to correct' => 10, 'what should i do about' => 9, 'how do i resolve' => 10,
+                         'solve that' => 10, 'fix that' => 10, 'fix it' => 9, 'correct it' => 9,
+                         'what is the remedy' => 9, 'how to repair' => 9],
+                'bn' => ['কিভাবে ঠিক করব' => 10, 'কিভাবে সমাধান' => 10, 'সমাধান কি' => 9,
+                         'কিভাবে ঠিক হবে' => 10, 'এটা ঠিক করব কিভাবে' => 10, 'কি করতে হবে' => 8,
+                         'ঠিক করার উপায়' => 10],
+                'bl' => ['kivabe thik korbo' => 10, 'somadhan ki' => 9, 'kivabe solve' => 10],
+            ],
+
             /* ============ CASH & BANK ============ */
             'cash' => [
                 'en' => ['cash' => 4, 'cash position' => 5, 'cash in hand' => 5, 'liquidity' => 4, 'how much money' => 4,
@@ -390,9 +412,9 @@ final class Nlu
             ],
             'company_compare' => [
                 'en' => ['which company' => 5, 'compare companies' => 6, 'company wise' => 6, 'by company' => 5,
-                         'best performing company' => 6, 'worst company' => 5, 'across companies' => 5, 'compare the companies' => 7, 'compare companies' => 7],
+                         'best performing company' => 9, 'worst company' => 8, 'across companies' => 6, 'compare the companies' => 8, 'compare companies' => 8, 'which business' => 9, 'which company' => 9, 'doing well' => 8, 'doing best' => 9, 'performing best' => 9, 'burning money' => 10, 'losing money' => 9, 'most revenue' => 9, 'highest revenue' => 9, 'biggest revenue' => 9, 'most profit' => 9, 'best company' => 9, 'worst performing' => 9],
                 'bn' => ['কোন কোম্পানি' => 5, 'কোম্পানি অনুযায়ী' => 6, 'কোম্পানি ভিত্তিক' => 6,
-                         'সেরা কোম্পানি' => 6, 'কোন প্রতিষ্ঠান' => 5, 'কোম্পানিগুলোর তুলনা' => 8, 'তুলনা দাও' => 6],
+                         'সেরা কোম্পানি' => 9, 'কোন প্রতিষ্ঠান' => 8, 'কোম্পানিগুলোর তুলনা' => 9, 'তুলনা দাও' => 7, 'কোন ব্যবসা' => 9, 'কোন কোম্পানি ভালো' => 10, 'কোন কোম্পানি লোকসান' => 10, 'সবচেয়ে বেশি আয়' => 9, 'কে ভালো করছে' => 8],
                 'bl' => ['kon company' => 5, 'company onujayi' => 5],
             ],
 
@@ -774,7 +796,8 @@ final class Nlu
     public static function slots(string $raw, string $n, string $lang): array
     {
         $s = ['period' => null, 'month' => null, 'year' => null, 'account_code' => null,
-              'top' => null, 'company_hint' => null, 'name_hint' => null, 'compare' => false];
+              'top' => null, 'company_hint' => null, 'name_hint' => null, 'compare' => false,
+              'metric' => null];
 
         // ---- relative period ----
         if (preg_match('/\b(last month|previous month)\b/u', $n) || mb_strpos($n, 'গত মাস') !== false || mb_strpos($n, 'গতমাস') !== false || strpos($n, 'গত maser') !== false || preg_match('/\bgoto mash|got mash|last mash\b/u', $n)) {
@@ -820,6 +843,20 @@ final class Nlu
         if (preg_match('/\btop\s+(\d{1,2})\b/u', $n, $m)) $s['top'] = (int) $m[1];
         elseif (preg_match('/\b(first|top)\b/u', $n)) $s['top'] = 5;
         elseif (mb_strpos($n, 'সেরা') !== false || mb_strpos($n, 'শীর্ষ') !== false) $s['top'] = 5;
+
+        // ---- rank by which measure? "most revenue" and "burning money" are
+        //      the same question about different columns ----
+        $s['metric'] = null;
+        foreach (['revenue' => ['revenue', 'income', 'turnover', 'sales', 'top line', 'আয়', 'বিক্রি', 'রাজস্ব'],
+                  'cash'    => ['cash', 'liquidity', 'bank', 'নগদ', 'ক্যাশ', 'ব্যাংক'],
+                  'people'  => ['headcount', 'staff', 'people', 'employees', 'কর্মী', 'জনবল'],
+                  'loss'    => ['burning', 'losing money', 'loss', 'worst', 'drag', 'লোকসান', 'খারাপ'],
+                  'profit'  => ['profit', 'doing well', 'doing best', 'performing', 'best', 'margin',
+                                'মুনাফা', 'লাভ', 'ভালো']] as $metric => $cues) {
+            foreach ($cues as $c) {
+                if (self::hit($n, $c)) { $s['metric'] = $metric; break 2; }
+            }
+        }
 
         // ---- comparison intent ----
         if (preg_match('/\b(compare|versus|vs|against|than last|change from)\b/u', $n)

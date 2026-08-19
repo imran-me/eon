@@ -266,10 +266,27 @@ const BANK = {
   company_compare: {
     section: 'Accounts',
     en: ['which company is doing best', 'compare the companies', 'company wise profit',
-         'which company is losing money', 'profit by company'],
+         'which company is losing money', 'profit by company', 'which business is doing well',
+         'which company is burning money', 'which company has the most revenue',
+         'which company has the highest revenue', 'which business is doing best'],
     bn: ['কোন কোম্পানি ভালো করছে', 'কোম্পানি অনুযায়ী লাভ', 'কোন প্রতিষ্ঠান লোকসানে',
          'কোম্পানিগুলোর তুলনা দাও'],
     bl: ['kon company valo korche', 'company onujayi lav'],
+  },
+
+  accounts_error: {
+    section: 'Bookkeeping',
+    en: ['any accounts error', 'is anything wrong with the accounts', 'does anything not add up',
+         'any discrepancy in the books', 'are there accounting mistakes', 'anything broken in the accounts'],
+    bn: ['হিসাবে কোনো ভুল আছে', 'হিসাবের ভুল আছে কি', 'কোথাও গরমিল আছে',
+         'একাউন্টে ভুল আছে', 'হিসাব মিলছে না'],
+    bl: ['hisabe bhul ache ki', 'gormil ache ki', 'accounts error ache'],
+  },
+  fix: {
+    section: 'Bookkeeping',
+    en: ['how to solve that error', 'how do I fix that', 'how to correct it', 'what is the remedy'],
+    bn: ['কিভাবে ঠিক করব', 'কিভাবে সমাধান করব', 'এটা ঠিক করার উপায় কি'],
+    bl: ['kivabe thik korbo', 'somadhan ki'],
   },
 
   /* ---------------- payroll & people ---------------- */

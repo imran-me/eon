@@ -695,6 +695,126 @@ final class Answer
                           'কোন অংশে আরও গভীরে যেতে চান, বলুন।');
     }
 
+    /* ================= IS THE BOOKKEEPING SOUND ================= */
+
+    private function a_accounts_error(): string { return $this->ledgerReport(false); }
+    private function a_fix(): string { return $this->ledgerReport(true); }
+
+    /**
+     * $remedyFirst — "how do I solve that" wants the fix, not the diagnosis again.
+     * Re-checking rather than remembering means the answer is right even when the
+     * question arrives cold, in a new session, or after something has been fixed.
+     */
+    private function ledgerReport(bool $remedyFirst): string
+    {
+        if (!method_exists($this->I(), 'ledgerErrors')) return $this->a_anomalies();
+        $this->used('check_accounts');
+        $r = $this->I()->ledgerErrors();
+
+        if (($r['count'] ?? 0) === 0) {
+            return $this->say([$this->open('good'),
+                $this->t('The books check out. I tested the trial balance, sales against the ledger, payslip arithmetic, shared-account scope, negative balances, duplicate expenses and receivables with no schedule.',
+                         'হিসাব ঠিক আছে। আমি দেখেছি রেওয়ামিল, বিক্রির সাথে খতিয়ানের মিল, পে-স্লিপের অঙ্ক, শেয়ার্ড হিসাবের স্কোপ, ঋণাত্মক ব্যালেন্স, ডুপ্লিকেট খরচ আর সূচিহীন পাওনা।')]);
+        }
+
+        $lines = [];
+        $fixes = [];
+        foreach ($r['items'] as $x) {
+            $l = $this->errorLine($x);
+            if ($l !== '') $lines[] = $l;
+            $f = $this->errorFix((string) ($x['fix'] ?? ''));
+            if ($f !== '' && !in_array($f, $fixes, true)) $fixes[] = $f;
+        }
+
+        $head = $this->t(
+            sprintf('%s %s that need an accountant, not a manager.', $this->num($r['count']),
+                Phrase::plural((int) $r['count'], 'thing', 'things')),
+            sprintf('%s টা বিষয় আছে যেগুলো ম্যানেজার না, হিসাবরক্ষকের দেখা দরকার।', $this->num($r['count'])));
+
+        $fixHead = $this->t('How to put each right:', 'কোনটা কিভাবে ঠিক করবেন:');
+
+        if ($remedyFirst) {
+            return $this->say(array_merge([$this->open('bad'), $fixHead], $fixes,
+                [$this->t('That is against these findings:', 'এগুলোর বিপরীতে:')], $lines));
+        }
+        return $this->say(array_merge([$this->open('bad'), $head], $lines, [$fixHead], $fixes));
+    }
+
+    private function errorLine(array $x): string
+    {
+        switch ((string) ($x['kind'] ?? '')) {
+            case 'unjournalised_sales':
+                return $this->t(
+                    sprintf('The desks invoiced %s across %s invoices this month, but only %s reached the ledger — %s of it is not journalised, so every profit figure understates the business by that much.',
+                        $this->m($this->f($x['invoiced'])), $this->num($x['invoices']), $this->m($this->f($x['booked'])), $this->m($this->f($x['gap']))),
+                    sprintf('এ মাসে ডেস্কগুলো %s ইনভয়েস করেছে (%s টা ইনভয়েস), কিন্তু খতিয়ানে পৌঁছেছে মাত্র %s — %s এখনো জার্নাল হয়নি, তাই লাভের প্রতিটা হিসাব ঠিক ততটাই কম দেখাচ্ছে।',
+                        $this->m($this->f($x['invoiced'])), $this->num($x['invoices']), $this->m($this->f($x['booked'])), $this->m($this->f($x['gap']))));
+
+            case 'payslip_math':
+                $w = $x['worst'];
+                return $this->t(
+                    sprintf('%s of %s payslips do not add up on their own numbers. The worst is %s for %s: gross %s less %s of deductions should net %s, but the slip says %s.',
+                        $this->num($x['count']), $this->num($x['total']), (string) $w['name'], Phrase::monthName((string) $w['month'], 'en'),
+                        $this->m($this->f($w['gross'])), $this->m($this->f($w['deductions'])), $this->m($this->f($w['expected'])), $this->m($this->f($w['net']))),
+                    sprintf('%s টার মধ্যে %s টা পে-স্লিপ নিজের অঙ্কেই মিলছে না। সবচেয়ে খারাপ %s এর %s মাসের স্লিপ: গ্রস %s থেকে %s কর্তন হলে নিট %s হওয়ার কথা, কিন্তু স্লিপে আছে %s।',
+                        $this->num($x['total']), $this->num($x['count']), (string) $w['name'], Phrase::monthName((string) $w['month'], 'bn'),
+                        $this->m($this->f($w['gross'])), $this->m($this->f($w['deductions'])), $this->m($this->f($w['expected'])), $this->m($this->f($w['net']))));
+
+            case 'trial_balance':
+                return $this->t(
+                    sprintf('The trial balance is out by %s.', $this->m(abs($this->f($x['amount'])))),
+                    sprintf('রেওয়ামিলে %s গরমিল।', $this->m(abs($this->f($x['amount'])))));
+
+            case 'shared_scope':
+                return $this->t(
+                    'These shared posting accounts carry a company id when they must be NULL: ' . Phrase::join((array) $x['accounts'], 'en') . '.',
+                    'এই শেয়ার্ড হিসাবগুলোতে কোম্পানি আইডি বসে আছে, অথচ NULL থাকার কথা: ' . Phrase::join((array) $x['accounts'], 'bn') . '।');
+
+            case 'negative_balance':
+                return $this->t(
+                    sprintf('%s shows a negative balance of %s, which a real cash account cannot have.', (string) $x['name'], $this->m($this->f($x['amount']))),
+                    sprintf('%s এ ঋণাত্মক ব্যালেন্স %s দেখাচ্ছে — সত্যিকারের নগদ হিসাবে এটা সম্ভব না।', (string) $x['name'], $this->m($this->f($x['amount']))));
+
+            case 'duplicate_expense':
+                $w = $x['worst'];
+                return $this->t(
+                    sprintf('%s expenses look entered twice, for example "%s" at %s.', $this->num($x['count']), (string) $w['title'], $this->m($this->f($w['amount']))),
+                    sprintf('%s টা খরচ দুইবার বসানো মনে হচ্ছে, যেমন "%s" — %s।', $this->num($x['count']), (string) $w['title'], $this->m($this->f($w['amount']))));
+
+            case 'no_schedules':
+                return $this->t(
+                    sprintf('%s of invoices are open with no payment schedule behind them, so no report will ever chase that money.', $this->m($this->f($x['amount']))),
+                    sprintf('%s ইনভয়েস খোলা আছে অথচ পেছনে কোনো পেমেন্ট সূচি নেই, তাই ওই টাকার পেছনে কোনো রিপোর্টই লাগবে না।', $this->m($this->f($x['amount']))));
+        }
+        return '';
+    }
+
+    private function errorFix(string $key): string
+    {
+        $map = [
+            'journalise_sales' => [
+                'Post the missing sales. Each ticket, visa, contract-flight and contract-file invoice needs its journal entry — debit 1311 Customer Receivable, credit the 4xxx income account, direct cost to 5xxx. Ask the accountant to journalise this month before anyone reads a profit figure.',
+                'বাকি বিক্রিগুলো জার্নাল করুন। প্রতিটা টিকিট, ভিসা, কন্ট্রাক্ট ফ্লাইট আর কন্ট্রাক্ট ফাইল ইনভয়েসের এন্ট্রি লাগবে — ডেবিট ১৩১১ Customer Receivable, ক্রেডিট ৪xxx আয়ের হিসাব, সরাসরি খরচ ৫xxx-এ। কেউ লাভের হিসাব দেখার আগে হিসাবরক্ষককে এ মাসেরটা জার্নাল করতে বলুন।'],
+            'payslip_math' => [
+                'Do not pay against these slips until they are recomputed. Check whether an allowance is being added outside gross_salary, and whether total_deductions matches the components it is made of — on several slips it does not. Rerun payroll for the affected months rather than editing the numbers by hand.',
+                'এই স্লিপগুলোর বিপরীতে টাকা দেওয়ার আগে আবার হিসাব করান। দেখুন gross_salary-র বাইরে কোনো ভাতা যোগ হচ্ছে কি না, আর total_deductions তার নিজের উপাদানগুলোর সাথে মেলে কি না — কয়েকটায় মিলছে না। হাতে সংখ্যা বদলানোর বদলে ওই মাসগুলোর পে-রোল আবার চালান।'],
+            'shared_scope' => [
+                'Set company_id back to NULL on the shared posting accounts. Reports filter accounts by company but journal items by entry, so one tagged account silently breaks that company\'s trial balance.',
+                'শেয়ার্ড হিসাবগুলোর company_id আবার NULL করে দিন। রিপোর্ট হিসাব ফিল্টার করে কোম্পানি দিয়ে কিন্তু আইটেম ফিল্টার করে এন্ট্রি দিয়ে, তাই একটা ট্যাগ হয়ে যাওয়া হিসাব চুপচাপ ওই কোম্পানির রেওয়ামিল ভেঙে দেয়।'],
+            'negative_balance' => [
+                'A negative cash account means a payment was posted that the account never held. Find the entry and reverse it — never edit it, the ERP corrects by reversal.',
+                'নগদ হিসাব ঋণাত্মক মানে এমন একটা পেমেন্ট বসেছে যা ওই হিসাবে কখনো ছিল না। এন্ট্রিটা খুঁজে উল্টো এন্ট্রি দিন — কখনো এডিট করবেন না, ERP সংশোধন করে উল্টো এন্ট্রি দিয়ে।'],
+            'duplicate_expense' => [
+                'Reverse the duplicate rather than deleting it, so the audit trail stays whole, and check whether the money actually left twice before you write it off.',
+                'ডুপ্লিকেটটা মুছবেন না, উল্টো এন্ট্রি দিন — তাতে অডিট ট্রেইল অক্ষত থাকে; আর বাতিল করার আগে দেখুন টাকাটা সত্যিই দুইবার বেরিয়েছে কি না।'],
+            'no_schedules' => [
+                'Raise a payment schedule at the point of sale. Receivables live in Payment Schedules in this ERP, so an invoice without one is money nobody is chasing.',
+                'বিক্রির সময়েই পেমেন্ট সূচি খুলুন। এই ERP-তে পাওনা থাকে পেমেন্ট সূচিতে, তাই সূচি ছাড়া ইনভয়েস মানে এমন টাকা যার পেছনে কেউ নেই।'],
+        ];
+        if (!isset($map[$key])) return '';
+        return $this->t($map[$key][0], $map[$key][1]);
+    }
+
     /* ================= CASH ================= */
 
     private function a_cash(): string
@@ -1248,23 +1368,61 @@ final class Answer
         if (!$live) {
             return $this->say([$this->open('ok'), $this->t('No company has any activity booked this month yet.', 'এ মাসে কোনো কোম্পানিতেই এখনো কিছু বসেনি।')]);
         }
-        $best = $live[0];
-        $worst = end($live);
-        $lines = [];
-        foreach (array_slice($live, 0, 5) as $c) {
-            $lines[] = $c['name'] . ' ' . ($c['profit'] >= 0 ? '+' : '−') . $this->m(abs($this->f($c['profit'])));
+
+        // "most revenue", "burning money" and "doing well" are the same question
+        // about three different columns — rank by the one he actually asked for
+        $metric = (string) ($this->c['slots']['metric'] ?? 'profit');
+        $key = ['revenue' => 'income', 'cash' => 'cash', 'people' => 'headcount',
+                'loss' => 'profit', 'profit' => 'profit'][$metric] ?? 'profit';
+        $asc = ($metric === 'loss');
+        usort($live, fn($x, $y) => $asc ? ($x[$key] <=> $y[$key]) : ($y[$key] <=> $x[$key]));
+
+        $label = ['income' => ['revenue', 'আয়'], 'cash' => ['cash', 'নগদ'],
+                  'headcount' => ['headcount', 'জনবল'], 'profit' => ['profit', 'মুনাফা']][$key];
+
+        // on a profit ranking the sign is the point, so show it either way
+        $signed = ($key === 'profit');
+        $fmt = fn($c) => $key === 'headcount'
+            ? $c['name'] . ' ' . $this->num($c[$key])
+            : $c['name'] . ' ' . ($c[$key] >= 0 ? ($signed ? '+' : '') : '−') . $this->m(abs($this->f($c[$key])));
+
+        $lines = array_map($fmt, array_slice($live, 0, 5));
+        $top = $live[0];
+        $bottom = end($live);
+
+        $verdict = $asc
+            ? $this->t(sprintf('%s is burning the most — %s this month.', $top['name'], $this->m(abs($this->f($top['profit'])))),
+                       sprintf('সবচেয়ে বেশি পুড়ছে %s — এ মাসে %s।', $top['name'], $this->m(abs($this->f($top['profit'])))))
+            : $this->t(sprintf('%s leads on %s; %s is at the bottom.', $top['name'], $label[0], $bottom['name']),
+                       sprintf('%s অনুযায়ী এগিয়ে %s; সবার নিচে %s।', $label[1], $top['name'], $bottom['name']));
+
+        // the honest caveat: the ledger is not the whole business this month
+        $caveat = '';
+        if (method_exists($this->I(), 'ledgerErrors')) {
+            foreach ($this->I()->ledgerErrors()['items'] as $x) {
+                if (($x['kind'] ?? '') === 'unjournalised_sales') {
+                    $caveat = $this->t(
+                        sprintf('Treat that ranking carefully: %s of invoiced sales is not journalised yet, so the ledger holds only %s%% of the real trading.',
+                            $this->m($this->f($x['gap'])), $this->num($x['pct'])),
+                        sprintf('এই ক্রমটা একটু সাবধানে নিন: %s ইনভয়েস করা বিক্রি এখনো জার্নাল হয়নি, তাই খতিয়ানে আসল ব্যবসার মাত্র %s%% আছে।',
+                            $this->m($this->f($x['gap'])), $this->num($x['pct'])));
+                    break;
+                }
+            }
         }
+
         return $this->say([
-            $this->open($best['profit'] > 0 ? 'ok' : 'warn'),
-            $this->t(sprintf('For %s, by profit: ', Phrase::monthName((string) $r['month'], 'en')),
-                     sprintf('%s মাসে, মুনাফা অনুযায়ী: ', Phrase::monthName((string) $r['month'], 'bn'))),
+            $this->open($asc ? 'bad' : 'ok'),
+            $this->t(sprintf('For %s, by %s: ', Phrase::monthName((string) $r['month'], 'en'), $label[0]),
+                     sprintf('%s মাসে, %s অনুযায়ী: ', Phrase::monthName((string) $r['month'], 'bn'), $label[1])),
             Phrase::join($lines, $this->L()) . $this->t('.', '।'),
-            $this->t(sprintf('%s is carrying the group; %s is the drag.', $best['name'], $worst['name']),
-                     sprintf('গ্রুপটা টানছে %s; আর ভার হয়ে আছে %s।', $best['name'], $worst['name'])),
-            $this->t(sprintf('Headcount sits mostly in %s with %s people.', $best['name'], $this->num($best['headcount'])),
-                     sprintf('জনবলের বেশিরভাগ %s-এ, %s জন।', $best['name'], $this->num($best['headcount']))),
-            $this->act('the loss-making side is worth an hour before the profitable one is worth a review.',
-                       'যেটা লোকসান দিচ্ছে সেটায় এক ঘণ্টা দেওয়া, যেটা লাভ দিচ্ছে সেটা রিভিউ করার চেয়ে বেশি কাজে দেবে।'),
+            $verdict,
+            $caveat,
+            $asc
+                ? $this->act('the loss-making side is worth an hour before the profitable one is worth a review.',
+                             'যেটা লোকসান দিচ্ছে সেটায় এক ঘণ্টা দেওয়া, যেটা লাভ দিচ্ছে সেটা রিভিউ করার চেয়ে বেশি কাজে দেবে।')
+                : $this->act('ask me why for any one of them and I will take that company apart.',
+                             'এদের যেকোনো একটার কারণ জানতে চাইলে বলুন, ওই কোম্পানিটা খুলে দেখাব।'),
         ]);
     }
 
