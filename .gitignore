@@ -21,6 +21,7 @@ ai-companion/assets/models/*.glb
 server/vendor/
 server/composer.lock
 server/storage/data/*.json
+server/storage/data/*.lock
 !server/storage/data/demo-dataset.json
 server/storage/logs/*.log
 tools/node_modules/

@@ -276,17 +276,34 @@ async function step(D, q, verb, ctx) {
   try {
     if (v === 'assign' && A) return A.propose(await A.planTask(slots.who, slots.task, {}));
     if (v === 'message' && A) return A.propose(await A.planMessage(slots.who, slots.text));
+    /* Money goes through the ERP's own payment form — the salary sheet's
+       "Record Payment" for an employee, the party statement's for a supplier.
+       act.js reads the real fields, fills them and shows them; nothing is
+       posted until the boss says yes to the card it puts up. */
     if (v === 'pay') {
       const monthName = MONTHS[slots.month - 1];
-      return {
+      if (!A) throw new Error(bn ? 'অ্যাকশন লেয়ারটা লোড হয়নি' : 'the action layer is not loaded');
+      const plan = await A.planPayment(slots.who, { month: slots.month, amount: slots.amount });
+      const c = A.propose(plan);
+      // the held summary stays on the card: the boss should see his own words beside the ERP's fields
+      return Object.assign({}, c, {
+        detail: [heldSummary('pay', slots, bn)].filter(Boolean).concat(c.detail || []),
         speak: bn
-          ? `${slots.who.name} — ${monthName} মাসের ${fmtBDT(slots.amount)}। পরিশোধের ফর্মটা এখনো যুক্ত করিনি, তাই টাকাটা আমি পোস্ট করছি না; পেমেন্ট স্ক্রিনে নিয়ে যাচ্ছি, সেখানে অঙ্কটা বসানো আছে।`
-          : `${slots.who.name} — ${monthName}, ${fmtBDT(slots.amount)}. I have not wired the payment form yet, so I am not posting money; I am taking you to the payment screen with the figures ready.`,
-        detail: [heldSummary('pay', slots, bn)],
-        actions: (() => { const n = N(); if (!n) return []; const h = (n.find('payment', 1) || [])[0]; return h ? [{ label: bn ? 'পেমেন্ট স্ক্রিন' : 'Open the payment screen', kind: 'erp-open', href: n.url(h.uri) }] : []; })(),
-      };
+          ? `${slots.who.name} — ${monthName}, ${fmtBDT(slots.amount)}। ${c.speak}`
+          : c.speak,
+      });
     }
   } catch (e) {
+    // a payment that could not be set up must say plainly that no money moved
+    if (v === 'pay') {
+      return {
+        speak: bn
+          ? `কিছুই পোস্ট করিনি — ${e.message}। কোনো টাকা যায়নি।`
+          : `I have posted nothing — ${e.message}. No money has moved.`,
+        detail: [],
+        actions: (() => { const n = N(); if (!n) return []; const h = (n.find('payment schedules', 1) || [])[0]; return h ? [{ label: bn ? 'পেমেন্ট স্ক্রিন' : 'Open the payment screen', kind: 'erp-open', href: n.url(h.uri) }] : []; })(),
+      };
+    }
     return { speak: bn ? `সেটআপ করতে পারলাম না: ${e.message}` : `I could not set that up: ${e.message}`, detail: [] };
   }
   return null;
