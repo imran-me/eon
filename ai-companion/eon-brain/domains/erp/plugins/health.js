@@ -131,7 +131,27 @@ export function scoreCompany(D, company = null) {
     tasks: tk.open.length ? `${tk.overdue.length} of ${tk.open.length} open tasks overdue (${Math.round(taskShare * 100)}%)` : 'No open tasks',
     projects: pj.active.length ? `${pj.atRisk.length} of ${pj.active.length} active projects at risk` : 'No active projects',
   };
-  const drivers = Object.keys(parts).map((k) => ({ part: k, layer: LAYER_OF[k], score: Math.round(parts[k]), lost: r1((100 - parts[k]) * W[k]), text: facts[k] }))
+  /* the same facts in বাংলা. A score is the one answer the boss is most likely
+     to ask for in Bangla ("স্বাস্থ্য স্কোর কত"), and the reason behind it was
+     coming back in English — the number said in Bangla, the explanation not. */
+  const bd = (n) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+  const bk = (n) => bd(fmtBDTk(n));
+  const facts_bn = {
+    margin: `গত মাসে নিট মার্জিন ${bd(pl.margin)}% (${bk(pl.totalIncome)} আয়ে ${pl.netProfit >= 0 ? 'মুনাফা' : 'লোকসান'} ${bk(Math.abs(pl.netProfit))})`,
+    ar_overdue: ar.total > 0 ? `পাওনার ${bd(Math.round(arRatio * 100))}% সময় পার (${bk(ar.total)}-এর মধ্যে ${bk(ar.overdueTotal)})` : 'খোলা কোনো পাওনা নেই',
+    ap_overdue: ap.total > 0 ? `দেনার ${bd(Math.round(apRatio * 100))}% সময় পার (${bk(ap.total)}-এর মধ্যে ${bk(ap.overdueTotal)})` : 'খোলা কোনো দেনা নেই',
+    cash_cover: cover == null ? `হাতে নগদ ${bk(rw.cash)}, খরচের ইতিহাস নেই` : `হাতের নগদ ${bk(rw.cash)} দিয়ে ${bd(r1(cover))} মাসের খরচ চলবে (মাসে ${bk(rw.avgMonthlyOutflow)})`,
+    budget: bud.over.length ? `এ মাসে ${bd(bud.over.length)}টি খাত বাজেট ছাড়িয়েছে (${bud.over.slice(0, 3).map((r) => `${r.category} ${bd(r.pct)}%`).join(', ')})` : 'কোনো খাত এ মাসে বাজেট ছাড়ায়নি',
+    attendance: pt.rows.length ? `গত ৩০ দিনে উপস্থিতি ${bd(pt.avgAttendance)}%` : 'গত ৩০ দিনে হাজিরার কোনো তথ্য নেই',
+    late: pt.chronicLate.length ? `${bd(hc.total)} জনের মধ্যে ${bd(pt.chronicLate.length)} জন নিয়মিত দেরিতে আসেন (${bd(Math.round(lateShare * 100))}%)` : 'কেউ নিয়মিত দেরি করেন না',
+    payroll: pr.pending.length ? `${pr.month} মাসের ${bd(pr.heads)} জনের মধ্যে ${bd(pr.pending.length)} জনের বেতন বাকি (${bk(pr.pending.reduce((n, p) => n + (+p.net_salary || 0), 0))})` : `${pr.month} মাসের বেতন পুরোটাই পরিশোধিত`,
+    conversion: pipe.conversion == null ? 'এখনও কোনো লিডের ফায়সালা হয়নি' : `লিড রূপান্তরের হার ${bd(pipe.conversion)}% (${bd(pipe.won)}টি জেতা / ${bd(pipe.lost)}টি হারা)`,
+    stale: pipe.open.length ? `${bd(pipe.open.length)}টি খোলা লিডের মধ্যে ${bd(st.count)}টি ঠান্ডা হয়ে গেছে (${bd(Math.round(staleShare * 100))}%)` : 'খোলা কোনো লিড নেই',
+    pipeline: pipeRatio == null ? `পাইপলাইন ${bk(pipe.openValue)}, তুলনা করার মতো গত মাসের আয় নেই` : `পাইপলাইন ${bk(pipe.openValue)} — গত মাসের আয়ের ${bd(r1(pipeRatio))} গুণ`,
+    tasks: tk.open.length ? `${bd(tk.open.length)}টি খোলা কাজের মধ্যে ${bd(tk.overdue.length)}টির সময় পার (${bd(Math.round(taskShare * 100))}%)` : 'খোলা কোনো কাজ নেই',
+    projects: pj.active.length ? `${bd(pj.active.length)}টি চলমান প্রকল্পের ${bd(pj.atRisk.length)}টি ঝুঁকিতে` : 'চলমান কোনো প্রকল্প নেই',
+  };
+  const drivers = Object.keys(parts).map((k) => ({ part: k, layer: LAYER_OF[k], score: Math.round(parts[k]), lost: r1((100 - parts[k]) * W[k]), text: facts[k], text_bn: facts_bn[k] }))
     .filter((d) => d.lost > 0).sort((a, b) => b.lost - a.lost).slice(0, 3);
   const co = company == null ? null : (D.companies || []).find((c) => c.id === company);
   // nothing to judge is not the same as healthy: a company with no people, no money owed
@@ -142,7 +162,8 @@ export function scoreCompany(D, company = null) {
     insufficient_data: insufficient,
     company_id: company, company: co ? co.name : 'Epal Group (all companies)', short_name: co ? co.short_name : 'GROUP',
     score, grade: grade(score), sub, parts: Object.fromEntries(Object.keys(parts).map((k) => [k, Math.round(parts[k])])), facts, drivers,
-    top_driver: insufficient ? 'No data for this company yet' : (drivers[0] ? drivers[0].text : 'Nothing is pulling the score down'), trend: null,
+    top_driver: insufficient ? 'No data for this company yet' : (drivers[0] ? drivers[0].text : 'Nothing is pulling the score down'),
+    top_driver_bn: insufficient ? 'এই কোম্পানির মতো তথ্য এখনও নেই' : (drivers[0] ? drivers[0].text_bn : 'কিছুই স্কোর টানে নামাচ্ছে না'), trend: null,
     formula: 'finance×0.40 + people×0.25 + sales×0.20 + ops×0.15',
   };
 }
@@ -169,6 +190,20 @@ const shortLine = (r) => `${r.company}: ${r.score} (${r.grade}) — ${r.top_driv
 const partLine = (d) => `${d.text} → ${d.score}/100 for ${d.part.replace('_', ' ')}, costing ${d.lost} points`;
 const subsLine = (r) => `finance ${r.sub.finance}, people ${r.sub.people}, sales ${r.sub.sales}, operations ${r.sub.ops}`;
 
+/* বাংলা — the score is a number the boss asks for in either language, and a
+   Bangla question must never come back in English. Bengali numerals, and the
+   sub-scores named in Bangla rather than transliterated. */
+const BN = /[ঀ-৿]/;
+const bnDigits = (n) => String(n).replace(/\d/g, (d) => '০১২৩৪৫৬৭৮৯'[+d]);
+const bnSubs = (r) => `আর্থিক ${bnDigits(r.sub.finance)}, জনবল ${bnDigits(r.sub.people)}, বিক্রয় ${bnDigits(r.sub.sales)}, পরিচালন ${bnDigits(r.sub.ops)}`;
+const bnScope = (r) => (r.company_id == null ? 'গ্রুপের' : r.company + '-এর');
+
+function whyAnswerBn(D, r) {
+  return { speak: `${bnScope(r)} স্বাস্থ্য স্কোর ১০০-তে ${bnDigits(r.score)}, গ্রেড ${r.grade}। উপ-স্কোর: ${bnSubs(r)}। ${r.drivers.length ? `যা টেনে নামাচ্ছে: ${r.drivers.map((d) => d.text_bn || d.text).join('; ')}।` : 'কিছুই টেনে নামাচ্ছে না।'}`,
+    detail: [`স্কোর ${bnDigits(r.score)} = আর্থিক ${bnDigits(r.sub.finance)}×০.৪০ + জনবল ${bnDigits(r.sub.people)}×০.২৫ + বিক্রয় ${bnDigits(r.sub.sales)}×০.২০ + পরিচালন ${bnDigits(r.sub.ops)}×০.১৫`].concat(r.drivers.map(partLine)),
+    view: 'brief', data: r };
+}
+
 function whyAnswer(D, r) {
   return { speak: `${scopeName(r).charAt(0).toUpperCase() + scopeName(r).slice(1)} scores ${r.score} out of 100, grade ${r.grade}. Sub-scores: ${subsLine(r)}. ${r.drivers.length ? `What pulls it down: ${r.drivers.map((d) => d.text).join('; ')}.` : 'Nothing is pulling it down.'} Formula: ${r.formula}.`,
     detail: [`Score ${r.score} = finance ${r.sub.finance}×0.40 + people ${r.sub.people}×0.25 + sales ${r.sub.sales}×0.20 + ops ${r.sub.ops}×0.15`].concat(r.drivers.map(partLine)),
@@ -178,10 +213,18 @@ function whyAnswer(D, r) {
 function answer(q) {
   if (typeof window === 'undefined' || !window.EonErp || !window.EonErp.dataset) return null;
   const D = window.EonErp.dataset(); if (!D) return null;
-  const s = String(q || '').toLowerCase().trim();
-  const isHealth = /\b(health ?scores?|company health|health of|how healthy|healthiest|healthy is|health (rank|ranking|leaderboard|grade))\b/.test(s);
-  const isRank = /\b(rank (the |our |all )?compan(y|ies)|ranking of (the |our )?compan(y|ies)|compan(y|ies) (ranking|leaderboard|rank)|leaderboard)\b/.test(s) && !/\b(agent|sales ?(rep|team|person)|employee|staff|people|performer|seller)s?\b/.test(s);
-  const isBestWorst = /\bwhich (company|business|unit) (is|has) (the )?(healthiest|weakest|strongest|best|worst|lowest|highest|sickest)\b|\b(healthiest|weakest|strongest|sickest) (company|business|unit)\b|\b(best|worst) (company|business)\b/.test(s);
+  const raw = String(q || '');
+  const bn = BN.test(raw);
+  const s = raw.toLowerCase().trim();
+  /* বাংলা cues, read off the original string — a lower-cased Bangla string is
+     the same string, but the English patterns below never fire on it. */
+  const bnHealth = /(স্বাস্থ্য\s*(স্কোর|নম্বর|রেটিং)?|হেলথ\s*স্কোর|কোম্পানির অবস্থা কেমন|ব্যবসার অবস্থা কেমন)/.test(raw);
+  const bnRank = /(কোম্পানির? (র‍্যাঙ্কিং|ক্রম|তালিকা)|কোন কোম্পানি (সবচেয়ে )?(ভালো|খারাপ|এগিয়ে|পিছিয়ে))/.test(raw);
+  const bnWorst = /(সবচেয়ে (খারাপ|দুর্বল|পিছিয়ে)|কোন কোম্পানি (সবচেয়ে )?(খারাপ|দুর্বল))/.test(raw);
+  const isHealth = bnHealth || /\b(health ?scores?|company health|health of|how healthy|healthiest|healthy is|health (rank|ranking|leaderboard|grade))\b/.test(s);
+  const isRank = (bnRank || /\b(rank (the |our |all )?compan(y|ies)|ranking of (the |our )?compan(y|ies)|compan(y|ies) (ranking|leaderboard|rank)|leaderboard)\b/.test(s))
+    && !/\b(agent|sales ?(rep|team|person)|employee|staff|people|performer|seller)s?\b/.test(s) && !/(কর্মী|স্টাফ|এজেন্ট)/.test(raw);
+  const isBestWorst = bnRank || /\bwhich (company|business|unit) (is|has) (the )?(healthiest|weakest|strongest|best|worst|lowest|highest|sickest)\b|\b(healthiest|weakest|strongest|sickest) (company|business|unit)\b|\b(best|worst) (company|business)\b/.test(s);
   const isScoreOf = /\b(score|grade) (of|for)\b/.test(s);
   const isWhy = /\bwhy (is|does|did) .+ (at|score|scores|scored|only|get|got|graded?) \d{1,3}\b|\bwhy .+ (score|grade) (is|of) \d{1,3}\b|\bwhy (is|does) .+ (grade|graded) [a-d]\b/.test(s);
   if (!isHealth && !isRank && !isBestWorst && !isScoreOf && !isWhy) return null;
@@ -189,17 +232,23 @@ function answer(q) {
   if ((isScoreOf || isWhy) && !co && !isHealth) return null;   // "score of Rahim" belongs to the people layer
   const wantsGroup = /\b(group|all compan|whole|across)\b/.test(s) && !co;
 
-  if (isWhy || (co && !isRank && !isBestWorst)) return whyAnswer(D, scoreCompany(D, co ? co.id : null));
+  const why = bn ? whyAnswerBn : whyAnswer;
+  if (isWhy || (co && !isRank && !isBestWorst)) return why(D, scoreCompany(D, co ? co.id : null));
   const lb = leaderboard(D); remember(lb);
-  if (!lb.companies.length) return { speak: 'No companies in the dataset to score.', detail: [] };
+  if (!lb.companies.length) return { speak: bn ? 'স্কোর করার মতো কোনো কোম্পানি ডেটাসেটে নেই।' : 'No companies in the dataset to score.', detail: [] };
   if (isBestWorst) {
-    const wantWorst = /weakest|worst|lowest|sickest/.test(s);
+    const wantWorst = /weakest|worst|lowest|sickest/.test(s) || bnWorst;
     const r = wantWorst ? lb.worst : lb.best;
-    return { speak: `${wantWorst ? 'Weakest' : 'Healthiest'} is ${r.company} at ${r.score} (grade ${r.grade}); ${wantWorst ? 'healthiest' : 'weakest'} is ${(wantWorst ? lb.best : lb.worst).company} at ${(wantWorst ? lb.best : lb.worst).score}. ${r.company}: ${subsLine(r)}. ${r.drivers.length ? 'Main driver: ' + r.drivers[0].text + '.' : ''}`,
+    const o = wantWorst ? lb.best : lb.worst;
+    return { speak: bn
+      ? `${wantWorst ? 'সবচেয়ে দুর্বল' : 'সবচেয়ে ভালো'} ${r.company} — ${bnDigits(r.score)} (গ্রেড ${r.grade}); ${wantWorst ? 'সবচেয়ে ভালো' : 'সবচেয়ে দুর্বল'} ${o.company} — ${bnDigits(o.score)}। ${r.company}: ${bnSubs(r)}।`
+      : `${wantWorst ? 'Weakest' : 'Healthiest'} is ${r.company} at ${r.score} (grade ${r.grade}); ${wantWorst ? 'healthiest' : 'weakest'} is ${o.company} at ${o.score}. ${r.company}: ${subsLine(r)}. ${r.drivers.length ? 'Main driver: ' + r.drivers[0].text + '.' : ''}`,
       detail: lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`), view: 'brief', data: lb };
   }
-  if (wantsGroup && !isRank) return whyAnswer(D, lb.group);
+  if (wantsGroup && !isRank) return why(D, lb.group);
   const g = lb.group;
+  if (bn) return { speak: `গ্রুপের স্বাস্থ্য স্কোর ${bnDigits(g.score)} (গ্রেড ${g.grade})। সবচেয়ে ভালো ${lb.best.company} — ${bnDigits(lb.best.score)}; সবচেয়ে দুর্বল ${lb.worst.company} — ${bnDigits(lb.worst.score)}। উপ-স্কোর: ${bnSubs(g)}।`,
+    detail: [`গ্রুপ: ${bnDigits(g.score)} (${g.grade}) — ${bnSubs(g)}`].concat(lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`)), view: 'brief', data: lb };
   return { speak: `Group health ${g.score} (grade ${g.grade}). Leaderboard: ${lb.companies.map((r) => `${r.short_name || r.company} ${r.score}`).join(', ')}. Healthiest ${lb.best.company} at ${lb.best.score}; weakest ${lb.worst.company} at ${lb.worst.score} — ${lb.worst.top_driver}.`,
     detail: [`Group: ${g.score} (${g.grade}) — ${subsLine(g)}`].concat(lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`)), view: 'brief', data: lb };
 }
@@ -214,8 +263,12 @@ addProvider((D, { company } = {}) => {
   return rows.filter((r) => !r.insufficient_data && r.score < 55).map((r) => ({
     id: `health-${r.company_id}`, layer: 'finance', severity: r.score < 40 ? 4 : 3, company_id: r.company_id,
     title: `${r.company} health score ${r.score} (${r.grade}) — ${r.top_driver}`,
+    title_bn: `${r.company}-এর স্বাস্থ্য স্কোর ${bnDigits(r.score)} (গ্রেড ${r.grade}) — ${r.top_driver_bn || r.top_driver}`,
     why: [`Sub-scores: ${subsLine(r)}`].concat(r.drivers.map((d) => `${d.text} (−${d.lost} pts)`)),
     recommend: r.drivers[0] ? `Fix the biggest driver first — ${r.drivers[0].layer === 'finance' ? 'finance' : r.drivers[0].layer} at ${r.company}: ${r.drivers[0].text.toLowerCase()}. Ask EON "why is ${r.company} at ${r.score}" for the full breakdown.` : `Review ${r.company} with its manager this week.`,
+    recommend_bn: r.drivers[0]
+      ? `আগে সবচেয়ে বড় কারণটা ঠিক করুন — ${r.company}-এ ${r.drivers[0].text_bn || r.drivers[0].text}। পুরো হিসাব জানতে EON-কে জিজ্ঞেস করুন “${r.company} এর স্কোর ${bnDigits(r.score)} কেন”।`
+      : `এ সপ্তাহেই ${r.company}-এর ব্যবস্থাপকের সঙ্গে বসুন।`,
     amount: 0, actions: [{ label: `Open ${r.short_name || r.company}`, kind: 'navigate', href: 'finance.html#cash' }],
   }));
 });

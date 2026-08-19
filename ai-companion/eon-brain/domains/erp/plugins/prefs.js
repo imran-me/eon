@@ -47,7 +47,16 @@ const PREFS = load();
 if (W) {
   // something may have set window.EON_PREFS before this module (fill gaps only), then the live object IS window.EON_PREFS
   const prior = W.EON_PREFS && W.EON_PREFS !== PREFS ? W.EON_PREFS : null;
-  if (prior) Object.keys(DEFAULTS).forEach((k) => { if (k !== 'notes' && prior[k] != null && (PREFS[k] == null || PREFS[k] === DEFAULTS[k])) PREFS[k] = prior[k]; });
+  if (prior) {
+    Object.keys(DEFAULTS).forEach((k) => { if (k !== 'notes' && prior[k] != null && (PREFS[k] == null || PREFS[k] === DEFAULTS[k])) PREFS[k] = prior[k]; });
+    /* A preference this file has never heard of is still the boss's preference.
+       `autoConfirm` is act.js's — documented as window.EON_PREFS.autoConfirm and
+       set on the page BEFORE the modules load, which is the only moment that
+       works for an inline script — and walking DEFAULTS alone dropped it on the
+       floor the instant this object replaced his. The setting looked accepted
+       and did nothing, which is the worst way for a confirmation switch to fail. */
+    Object.keys(prior).forEach((k) => { if (!(k in DEFAULTS) && prior[k] !== undefined) PREFS[k] = prior[k]; });
+  }
   W.EON_PREFS = PREFS;
 }
 

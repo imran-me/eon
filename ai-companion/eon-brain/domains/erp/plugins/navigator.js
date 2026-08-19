@@ -415,9 +415,14 @@ function answer(q, ctx) {
   // This plug-in speaks only when the boss is asking where something is or to open it.
   if (!CLAIM.test(s)) return null;
   const hits = find(s, 5);
-  if (!hits.length) return CLAIM.test(s)
-    ? { speak: `I could not find that screen in the ERP. Try the words on the menu — for example “where is payroll”, “open journal entries”, “add an employee”.`, detail: [] }
-    : null;
+  /* No screen matched. Saying so here would be the end of the question: this
+     plug-in sits at 97, above every answerer, so an apology returned from here
+     is the answer the boss gets. "show me the aging" and "where is the money
+     going" both read as navigation and both have a real answer one layer down.
+     So it stands aside, and the apology is registered separately at the very
+     bottom of the stack (`navigator-help`), where it is only reached if nobody
+     else could answer either. */
+  if (!hits.length) return null;
 
   const top = hits[0];
   const acts = abilities(top.controller);
@@ -498,6 +503,20 @@ if (typeof window !== 'undefined') {
     priority: 97,
     claims: (q) => CLAIM.test(String(q || '')),
     answer,
+  });
+  /* the last word, not the first: reached only when no screen matched AND no
+     answerer had anything either — so it never eats a question that has a real
+     answer, and a genuine "where is the thingamajig" still gets a reply */
+  window.__eonDomainQueue.push({
+    id: 'navigator-help',
+    priority: 1,
+    answer: (q) => {
+      if (!CLAIM.test(String(q || ''))) return null;
+      const bn = /[ঀ-৿]/.test(String(q || ''));
+      return bn
+        ? { speak: 'ওই স্ক্রিনটা ইআরপিতে খুঁজে পাইনি। মেনুর শব্দ ব্যবহার করে দেখুন — যেমন “পেরোল কোথায়”, “জার্নাল এন্ট্রি খোলো”, “নতুন কর্মী যোগ করব কোথায়”।', detail: [] }
+        : { speak: 'I could not find that screen in the ERP. Try the words on the menu — for example “where is payroll”, “open journal entries”, “add an employee”.', detail: [] };
+    },
   });
   // the app renders actions as buttons; teach it this kind
   const hook = () => {

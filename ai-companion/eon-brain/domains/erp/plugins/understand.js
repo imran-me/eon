@@ -56,9 +56,12 @@ const T = (D) => (D && D.meta && D.meta.today) || iso(new Date());
 const VERBS = [
   { id: 'howmuch', en: /\b(how much|how many|what is the (total|amount|balance)|what's the (total|amount|balance)|total|how big)\b/, bn: /(কত|কতটুকু|কয়টা|কয়জন|কতজন|মোট)/ },
   /* Paying is tested before assigning, because "বেতন দাও" carries both words. */
-  { id: 'pay',     en: /\b(pay|clear|settle|release)\b/,                                  bn: /(পরিশোধ|ক্লিয়ার|পে করো|(বেতন|টাকা|বিল|পেমেন্ট|বকেয়া)[^।]{0,12}(দাও|দিন))/ },
-  /* "দাও" on its own means "give me" — an instruction needs its noun. */
-  { id: 'assign',  en: /\b(assign|give .* (a )?task|allocate|delegate)\b/,                bn: /(অ্যাসাইন|নিয়োগ|(টাস্ক|কাজ)[^।]{0,10}(দাও|দিন|দে))/ },
+  { id: 'pay',     en: /\b(pay|clear|settle|release)\b/,                                  bn: /(পরিশোধ|ক্লিয়ার|পে করো|(বেতন|টাকা|বিল|পেমেন্ট|বকেয়া)(?:(?!হিসাব|তালিকা|রিপোর্ট|তথ্য|খবর|স্লিপ|শিট|অবস্থা|বিবরণ|পরিমাণ)[^।]){0,12}(দাও|দিন))/ },
+  /* "দাও" on its own means "give me" — an instruction needs its noun.
+     And "দে" must not be read inside দেখাও: "টাস্ক দেখাও" is show me the tasks,
+     not give somebody a task, and EON answered it with "কাকে দেবো?" until the
+     guard went in. A Bangla letter may not follow. */
+  { id: 'assign',  en: /\b(assign|give .* (a )?task|allocate|delegate)\b/,                bn: /(অ্যাসাইন|নিয়োগ|(টাস্ক|কাজ)(?:(?!দেখা|তালিকা|হিসাব|রিপোর্ট)[^।]){0,10}(দাও|দিন|দে(?![ঀ-৿])))/ },
   { id: 'message', en: /\b(message|msg|write to|tell|inform|notify)\b/,                    bn: /(মেসেজ|বার্তা|জানাও|বলে দাও)/ },
   { id: 'open',    en: /\b(open|go to|take me|navigate|show me the|bring up)\b/,           bn: /(খোলো|খুলুন|নিয়ে চলো|দেখাও পেজ|যাও)/ },
   { id: 'where',   en: /\b(where is|where are|where can i|which (page|screen|menu))\b/,    bn: /(কোথায়|কোন পেজ|কোন মেনু)/ },
@@ -115,7 +118,7 @@ const SUBJECTS = [
 
   /* ---- money ---- */
   { id: 'cash', rank: 1, ask: 'cash position', askBn: 'ক্যাশ',
-    en: /\b(cash|cash position|cash in hand|bank balances?|banks?|liquidity|funds?|treasury|money (do we have|in the bank|left)|how much money)\b/,
+    en: /\b(cash ?flows?|cash|cash position|cash in hand|bank balances?|banks?|liquidity|funds?|treasury|money (do we have|in the bank|left)|have (any )?money|how much money|taka ache|nogod)\b/,
     bn: /(ক্যাশ|নগদ|ব্যাংক|তহবিল|হাতে (কত|কী) (টাকা|আছে)|টাকা আছে)/ },
   { id: 'runway', rank: 1, ask: 'runway', askBn: null,
     en: /\b(runway|burn rate|burning cash|how long (will|does) (the )?cash last|months? of (cash|cover)|survive)\b/,
@@ -124,7 +127,7 @@ const SUBJECTS = [
     /* "how much do customers owe us" is a receivables question, not a question
        about customers — the whole phrase is spelled out so it wins on length
        against the bare word "customers". Same trick as payables below. */
-    en: /\b((customers?|clients?|buyers?|part(y|ies)|debtors?|they|people)\s+(still\s+)?owes?\s+us|receivables?|owes? us|owed to us|money in the market|collections?|collect|debtors?|due from|customer dues?|ar)\b/,
+    en: /\b((customers?|clients?|buyers?|part(y|ies)|debtors?|they|people)\s+(still\s+)?owes?\s+us|receivables?|owes? us|owed to us|money in the market|collections?|collect|debtors?|due from|customer dues?|ar|bakeya|bokeya|paona)\b/,
     bn: /(পাওনা|আদায়|রিসিভেবল|কারা টাকা দেবে|টাকা (দেবে|দিবে|পাব))/ },
   { id: 'payable', rank: 1, ask: 'payables', askBn: 'দেনা',
     /* "how much do we owe suppliers" is a payables question, not a question
@@ -143,7 +146,7 @@ const SUBJECTS = [
     en: /\b(owes?|owing|dues?|outstanding|arrears|unpaid|unsettled|balance)\b/,
     bn: /(বাকি|বকেয়া|অপরিশোধিত|কত পাওনা|কত দেনা)/ },
   { id: 'profit', rank: 1, ask: 'profit', askBn: 'মুনাফা',
-    en: /\b(profits?|loss|margins?|p&l|income statement|bottom line|net income|earnings?|revenue|turnover|making money|losing money)\b/,
+    en: /\b(profits?|loss|margins?|p&l|income statement|bottom line|net income|earnings?|revenue|turnover|making money|losing money|lav|labh|munafa|lokshan)\b/,
     bn: /(লাভ|মুনাফা|লোকসান|আয়(-| )?ব্যয়|আয় কত|টার্নওভার|নিট আয়)/ },
   { id: 'trialbalance', rank: 1, ask: 'trial balance', askBn: null,
     en: /\b(trial balance)\b/, bn: /(ট্রায়াল ব্যালেন্স|রেওয়ামিল)/ },
@@ -154,7 +157,7 @@ const SUBJECTS = [
     en: /\b(anomal(y|ies)|unusual|spikes?|suspicious|leakage|abnormal|out of (pattern|line)|irregular)\b/,
     bn: /(অস্বাভাবিক|সন্দেহজনক|হঠাৎ বেড়ে|অনিয়ম)/ },
   { id: 'expense', rank: 1, ask: 'spending', askBn: null,
-    en: /\b(expenses?|spend(ing)?|spent|costs?|budgets?|opex|overheads?|outgoings?|where (is|does) (the )?money go)\b/,
+    en: /\b(expenses?|spend(ing)?|spent|costs?|budgets?|opex|overheads?|outgoings?|where (is|does) (the )?money go|khoroch|khorcha|kharoch|byay)\b/,
     bn: /(খরচ|ব্যয়|বাজেট|খরচা|ওভারহেড)/ },
   { id: 'sale', rank: 1, ask: null, askBn: null,
     en: /\b(sales?|sold|invoices?|bookings?|ticket sales?|billed|top line)\b/,
@@ -164,20 +167,22 @@ const SUBJECTS = [
     bn: /(জার্নাল|লেজার|খতিয়ান|ভাউচার|দাখিলা|লেনদেন)/ },
   { id: 'account', rank: 1, ask: null, askBn: null,
     en: /\b(chart of accounts|coa|account codes?|gl codes?|account heads?|ledger accounts?)\b/,
-    bn: /(হিসাব নম্বর|একাউন্ট কোড|হিসাবের চার্ট|হিসাব খাত)/ },
+    bn: /(হিসাব নম্বর|একাউন্ট কোড|হিসাবের চার্ট|হিসাব খাত|হিসাবের তালিকা|হিসাব তালিকা)/ },
   { id: 'error', rank: 1, ask: null, askBn: null,
     en: /\b(errors?|mistakes?|wrong|problems?|issues?|unbalanced|discrepanc(y|ies)|mismatch|does not balance|doesn't balance)\b/,
     bn: /(ভুল|গরমিল|এরর|মিল নেই|অসামঞ্জস্য|সমস্যা)/ },
 
   /* ---- people ---- */
   { id: 'payroll', rank: 1, ask: 'payroll', askBn: 'বেতন',
-    en: /\b(payroll|salar(y|ies)|wages?|pay ?bill|net pay|remuneration|salary sheet)\b/,
+    /* "what Imran earns" is a payroll question. `earnings` stays with profit —
+       that is the company's line, not a person's — so only the verb form is here. */
+    en: /\b(payroll|salar(y|ies)|wages?|pay ?bill|net pay|remuneration|salary sheet|earns?|take[- ]home|beton)\b/,
     bn: /(বেতন|স্যালারি|পে-?রোল|মজুরি|বেতনের হিসাব)/ },
   { id: 'payslip', rank: 1, ask: 'payslips', askBn: 'বেতন',
     en: /\b(pay ?slips?|salary slips?|pay statements?)\b/, bn: /(পে-?স্লিপ|বেতন স্লিপ|বেতনের স্লিপ)/ },
   { id: 'attendance', rank: 1, ask: 'who is absent today', askBn: 'অনুপস্থিত',
     en: /\b(attendance|present|absent(ees?)?|missing|punch(es|ed)?|who (came|showed up|is in|is here)|has ?n'?t shown up|checked in|in today)\b/,
-    bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|কে আসেনি|কে আসছে|কতজন এসেছে|কে অফিসে)/ },
+    bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|আসেনি|আসছে|এসেছে|এসেছেন|কে অফিসে)/ },
   { id: 'late', rank: 1, ask: 'who came late today', askBn: 'দেরি',
     en: /\b(late ?comers?|came late|arrived late|who (is|was) late|punctual(ity)?|always late|habitually late|tardy)\b/,
     bn: /(দেরি|লেট|বিলম্ব|সময়মতো আসে না)/ },
@@ -196,13 +201,13 @@ const SUBJECTS = [
     en: /\b(performance|evaluat(e|ion)|appraisals?|rating|report card|assess)\b|\bhow (is|good is) .* (doing|performing)\b/,
     bn: /(কেমন করছে|কেমন করছেন|পারফর্ম|মূল্যায়ন|রিপোর্ট কার্ড)/ },
   { id: 'ranking', rank: 1, ask: 'rank employees', askBn: null,
-    en: /\b(rank(ing)? (employees|staff|team)|leaderboard|(best|top|worst|weakest|strongest) (performer|employee|staff)|who (performs|is performing) (best|worst))\b/,
+    en: /\b(rank(ing)? (the |our |all )?(employees|staff|team|people)|leaderboard|(best|top|worst|weakest|strongest) (performer|employee|staff)|who (performs|is performing) (best|worst))\b/,
     bn: /(র‍্যাঙ্কিং|সেরা কর্মী|সবচেয়ে ভালো কর্মী|তালিকা ক্রম)/ },
   { id: 'loan', rank: 1, ask: 'loans', askBn: null,
     en: /\b(loans?|advances?|advance salary|borrowed|employee requests?)\b/,
     bn: /(ঋণ|লোন|অগ্রিম|অ্যাডভান্স)/ },
   { id: 'workload', rank: 1, ask: 'workload', askBn: null,
-    en: /\b(workload|overloaded|who is (busy|free|idle)|capacity|bandwidth|too much work)\b/,
+    en: /\b(workload|overloaded|who is (busy|free|idle)|who (has|have) nothing (to do|assigned)|nothing to do|unassigned|capacity|bandwidth|too much work)\b/,
     bn: /(কাজের চাপ|ব্যস্ত|খালি আছে|সক্ষমতা)/ },
 
   /* ---- customers, sales, work ---- */
@@ -218,7 +223,7 @@ const SUBJECTS = [
   { id: 'vendor', rank: 1, ask: 'top suppliers', askBn: null,
     en: /\b(vendors?|suppliers?|sellers?)\b/, bn: /(সরবরাহকারী|ভেন্ডর|সাপ্লায়ার)/ },
   { id: 'task', rank: 1, ask: 'task board', askBn: 'টাস্ক',
-    en: /\b(tasks?|to-?do items?|assignments?|task board|backlog|work items?|working on)\b/,
+    en: /\b(tasks?|to-?do items?|assignments?|task board|backlog|work items?|working on|kaj|kajgulo)\b/,
     bn: /(টাস্ক|কাজ (বাকি|জমে|দেরি|কী|কি)|কাজের অবস্থা|অসমাপ্ত কাজ|কাজগুলো|কী কাজ)/ },
   { id: 'project', rank: 1, ask: 'projects', askBn: 'প্রকল্প',
     en: /\b(projects?|deliver(y|ies)|milestones?|at risk|behind schedule)\b/,
@@ -248,6 +253,15 @@ function subjectText(q) {
   return m ? s.slice(0, m.index + m[0].length) : s;
 }
 
+/* বাংলা says WHERE with a case ending, not with a preposition: "খতিয়ানে গরমিল"
+   is a discrepancy IN the ledger — the question is about the discrepancy, and
+   খতিয়ান is only the place it lives. Without this the longest match wins and
+   EON answers with the ledger's own summary, which is a confident answer to a
+   question nobody asked. So a subject whose match is immediately followed by a
+   locative vowel sign steps behind any other named subject in the sentence.
+   It only ever changes the order — a locative subject standing alone still
+   answers, which is why "ব্যাংকে কত টাকা" is still a cash question. */
+const LOCATIVE = /^[েয়]/;
 /** every subject this sentence names, best first */
 function subjectsIn(q) {
   const raw = subjectText(q);
@@ -256,12 +270,15 @@ function subjectsIn(q) {
   const hits = [];
   for (const x of SUBJECTS) {
     let m = bn ? x.bn.exec(raw) : x.en.exec(s);
+    let loc = 0;
+    if (m && bn) loc = LOCATIVE.test(raw.slice(m.index + m[0].length)) ? 1 : 0;
     if (!m && bn) m = x.en.exec(s);            // "Imran এর payroll" — a Latin word inside Bangla
-    if (m) hits.push({ subj: x, len: m[0].length });
+    if (m) hits.push({ subj: x, len: m[0].length, loc });
   }
-  // a named part of the business beats a vague word; inside a class the longest
-  // match wins, so "salary bill" is payroll and not a supplier's bill
-  hits.sort((a, b) => a.subj.rank - b.subj.rank || b.len - a.len);
+  // a named part of the business beats a vague word; a place beats nothing;
+  // inside a class the longest match wins, so "salary bill" is payroll and not
+  // a supplier's bill
+  hits.sort((a, b) => a.subj.rank - b.subj.rank || a.loc - b.loc || b.len - a.len);
   return hits.map((h) => h.subj);
 }
 function subjectOf(q) { return subjectsIn(q)[0] || null; }
@@ -315,8 +332,13 @@ function whoIn(D, q) {
       const nm = norm(p.party_name);
       if (nm.length <= 3) continue;
       const words = nm.split(' ').filter((w) => w.length >= 3);
+      if (!words.length) continue;
       const hits = words.filter((w) => nq.includes(w)).length;
-      if (!hits) continue;
+      /* Half the party's own words, at least. One word out of three is how
+         "Green Delta Traders" answers to a sentence about Zaman Traders —
+         "traders", "ceramics", "motors", "textiles" are what these names have
+         in common, not what tells them apart. */
+      if (!hits || hits * 2 < words.length) continue;
       // the whole name, written out, beats any number of loose word hits
       const score = nq.includes(nm) ? words.length + 1 : hits;
       if (!best || score > best.score) best = { kind: 'party', name: p.party_name, side: type, row: p, score };
@@ -761,6 +783,20 @@ const NATIVE = {
       screen: 'user', view: 'people',
     };
   },
+  /* Who is ahead and who is behind. qa.js has an English leaderboard, but there
+     was no Bangla one at all, so "সেরা কর্মী কে" came back in English — the one
+     thing a Bangla answer may never do. Written natively on both sides. */
+  ranking(D, s) {
+    const r = P.ranking(D, s);
+    const top = r.top.slice(0, 3), low = r.bottom.slice(0, 2);
+    if (!top.length) return null;
+    return {
+      en: `Best over the last 30 days: ${top.map((x) => `${x.name} ${x.score}/100 (${x.grade})`).join(', ')}. Weakest: ${low.map((x) => `${x.name} ${x.score}`).join(', ')}.`,
+      bn: `গত ৩০ দিনে সবচেয়ে এগিয়ে: ${top.map((x) => `${x.name} ${bNum(x.score)}/১০০ (গ্রেড ${x.grade})`).join(', ')}। সবচেয়ে পিছিয়ে: ${low.map((x) => `${x.name} ${bNum(x.score)}`).join(', ')}।`,
+      detail: r.top.slice(0, 8).map((x, i) => `${i + 1}. ${x.name} — ${x.score}/100 (${x.grade}), attendance ${x.attendancePct}%, ${x.tasksDone} tasks done`),
+      screen: 'user', view: 'people',
+    };
+  },
   workload(D, s) {
     const t = O.tasks(D, s);
     return {
@@ -983,7 +1019,16 @@ function personAnswer(D, s, subj, who, q, bn) {
 /* Bangla marks a question with a tail word rather than word order:
    "বেতন পরিশোধ হয়েছে?" asks whether salary was paid; "বেতন দাও" orders it.
    Without this every question about paying became an order to pay. */
-const ORDER = /\b(assign|pay|message|msg|send|write to|tell|notify|clear|settle|release)\b|(অ্যাসাইন|নিয়োগ|পরিশোধ করো|পে করো|ক্লিয়ার করো|(টাস্ক|কাজ)[^।]{0,10}(দাও|দিন|দে)|(বেতন|টাকা|বিল|বকেয়া)[^।]{0,12}(দাও|দিন))/i;
+/* "tell me about Imran" is the boss asking, not the boss dictating. `tell`
+   alone read it as an order to message somebody, so EON answered "What should
+   the message say?" — and because that leaves a question open, the NEXT thing
+   he said was swallowed as the body of a message he never wanted to send. */
+/* "pay" is a verb and a noun, and the noun is far commoner in this business:
+   net pay, pay bill, payslip, payroll, payment. "Tanvir's net pay" is a
+   question about his salary — read as an order it opened a payment and asked
+   "Which month?", which is EON offering to move money nobody asked it to move.
+   So the verb is only the verb when no pay-noun is sitting on either side. */
+const ORDER = /\b(assign|(?<!net )(?<!take[- ]home )pay(?!\s?(bill|slips?|rolls?|ments?|ables?|\s?cheque))\b|message|msg|send|write to|tell(?!\s+me\b)|notify|clear|settle|release)\b|(অ্যাসাইন|নিয়োগ|পরিশোধ করো|পে করো|ক্লিয়ার করো|(টাস্ক|কাজ)(?:(?!দেখা|তালিকা|হিসাব|রিপোর্ট)[^।]){0,10}(দাও|দিন|দে(?![ঀ-৿]))|(বেতন|টাকা|বিল|বকেয়া)(?:(?!হিসাব|তালিকা|রিপোর্ট|তথ্য|খবর|স্লিপ|শিট|অবস্থা|বিবরণ|পরিমাণ)[^।]){0,12}(দাও|দিন))/i;
 /* English carries the interrogative at the front, not at the end: "did you pay
    Imran?", "should I pay him?", "who did we pay last month?" all contain the
    word pay and none of them is an instruction to pay anybody. A question mark
@@ -1021,8 +1066,14 @@ async function understand(q, ctx) {
     const hit = (N().find(key, 1) || [])[0];
     if (hit) {
       const url = N().url(hit.uri);
+      const path = url.replace(location.origin, '');
+      /* The screen's name is the ERP's own English label and stays as it is —
+         but the sentence around it must be Bangla when the question was, or the
+         boss is told where something lives in a language he did not ask in. */
       return {
-        speak: `${hit.label || key} — ${url.replace(location.origin, '')}`,
+        speak: bn
+          ? (verb === 'open' ? `${hit.label || key} খুলছি — ${path}` : `${hit.label || key} আছে ${path} ঠিকানায়।`)
+          : `${hit.label || key} — ${path}`,
         detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }],
         navigate: verb === 'open' ? url : null,
       };
