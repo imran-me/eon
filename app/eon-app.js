@@ -184,7 +184,7 @@ function rAsk() {
   const e = env();
   return `<div class="card"><h3>Ask EON <span class="spacer"></span><span class="hint">${e.serverOk ? (e.llm ? 'language model + ERP tools' : 'server · offline brain') : 'offline brain (client)'} · voice ${window.EonVoice && window.EonVoice.available().stt ? 'ready' : 'unavailable in this browser'}</span></h3>
     <div class="chat" id="chat" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with EON">${state.messages.map(msgHtml).join('') || '<div class="msg eon">Ask me anything about the business — by voice or by typing. Try “brief”, “who owes us money”, “who is absent today”, “payroll”, “evaluate Afiqur Rahman”, “forecast the next quarter”, “draft a payment reminder”, “what is 2210”.</div>'}</div>
-    <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk" aria-label="Ask by voice"><span aria-hidden="true">🎙</span></button><input id="askInput" placeholder="Ask EON… (Enter to send)" aria-label="Ask EON a question" autocomplete="off"><button class="btn primary" id="btnAsk">Ask</button></div>
+    <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk" aria-label="Ask by voice"><span aria-hidden="true">🎙</span></button><button class="btn lang" id="btnLang" title="Answer language" aria-label="Switch answer language, now ${state.lang === 'bn-BD' ? 'Bangla' : 'English'}"><span aria-hidden="true">${state.lang === 'bn-BD' ? 'বাং' : 'EN'}</span></button><input id="askInput" placeholder="Ask EON… (Enter to send)" aria-label="Ask EON a question" autocomplete="off"><button class="btn primary" id="btnAsk">Ask</button></div>
     <div class="chips" style="margin-top:10px"><label class="chip"><input type="checkbox" id="convMode" ${state.voiceMode ? 'checked' : ''}> conversation mode (hands-free, say “EON …”)</label><span class="chip" id="langChip">${state.lang === 'bn-BD' ? 'বাংলা' : 'English'} · switch</span><span class="chip" id="muteChip">${window.EonVoice && window.EonVoice.status && localStorage.getItem('eon_mute') === '1' ? '🔇 muted' : '🔊 speaks'}</span>${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></div>`;
 }
 /** which language is this text in? assistive tech needs to be told, per message */
@@ -200,11 +200,43 @@ function msgHtml(m) {
 /* ---------------- ask ---------------- */
 async function ask(q, { voice = false } = {}) {
   q = String(q || '').trim(); if (!q) return;
+  // "yes, take me there" presses the button EON just offered — it must work hands-free
+  if (state.lastOffer && isAffirmative(q)) {
+    const label = state.lastOffer.label || (state.lang === 'bn-BD' ? 'ওটা' : 'that');
+    state.messages.push({ role: 'me', text: q });
+    if (runOfferedAction()) {
+      const done = state.lang === 'bn-BD' ? 'নিয়ে যাচ্ছি — ' + label + '।' : 'Taking you there — ' + label + '.';
+      state.messages.push({ role: 'eon', text: done, speak: done });
+      paintChat();
+      if (voice || state.voiceMode) { try { window.EonVoice.say(done, { lang: state.lang }); } catch {} }
+      return;
+    }
+  }
   if (state.section !== 'ask') { location.hash = '#ask'; await new Promise((r) => setTimeout(r, 30)); }
   state.messages.push({ role: 'me', text: q }); state.messages.push({ role: 'think', text: 'EON is thinking…' }); paintChat();
   const t0 = Date.now(); let out = null;
   const e = env();
-  if (e.serverOk) {
+
+  /* "open bank", "take me to payroll" — a request to GO somewhere is answered by the
+     client, because only it can move the ERP frame. The server's rule brain would
+     describe the screen instead, which is not what was asked. So the local brain gets
+     first refusal, and we use its answer whenever it carries somewhere to go. */
+  try {
+    const local = window.EonDomains ? await window.EonDomains.answer(q, { company: co() }) : null;
+    const goes = local && (local.navigate || (local.actions || []).some((x) => x.kind === 'erp-open' && x.href));
+    if (goes) {
+      out = {
+        text: local.speak, speak: local.speak,
+        detail: Array.isArray(local.detail) ? local.detail.join('\n') : (local.detail || ''),
+        actions: local.actions || [], view: local.view, data: local.data,
+        trace: `client brain · ${local.domain || 'navigator'} · ${Date.now() - t0}ms`,
+      };
+      const href = local.navigate || (local.actions || []).map((x) => x.href).find(Boolean);
+      if (href && window.EonNavigator) window.EonNavigator.go(href);   // moves the ERP, never this panel
+    }
+  } catch (err) { console.warn('[EON] local brain', err); }
+
+  if (!out && e.serverOk) {
     try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: state.lang, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
   }
@@ -215,10 +247,15 @@ async function ask(q, { voice = false } = {}) {
     out = { text: r.speak, speak: r.speak, detail: Array.isArray(r.detail) ? r.detail.join('\n') : (r.detail || ''), actions: r.actions || [], trace: `client brain · ${r.domain || r.view || 'rule'} · ${Date.now() - t0}ms`, view: r.view, data: r.data };
     if (r.view === 'draft' && r.data && r.data.body) { out.detail = ''; out.draft = r.data.body; out.draftTitle = r.data.title; }
   }
-  state.messages.pop(); state.messages.push(Object.assign({ role: 'eon' }, out)); paintChat();
+  state.messages.pop(); const reply = Object.assign({ role: 'eon' }, out); state.messages.push(reply); rememberOffer(reply); paintChat();
   if (voice || state.voiceMode) { try { window.EonVoice.say(out.speak, { lang: state.lang }); } catch {} }
   else if (window.EON && window.EON.ai && out.speak) { try { window.EON.ai.speak(out.speak.slice(0, 120), 4000); } catch {} }
 }
+function rememberOffer(msg) {
+  const acts = (msg && msg.actions) || [];
+  state.lastOffer = acts.length ? acts[0] : null;
+}
+
 function paintChat() { const c = $('#chat'); if (!c) return; c.innerHTML = state.messages.map(msgHtml).join(''); c.scrollTop = c.scrollHeight; wire(); markLanguages(c); }
 
 /* ---------------- actions ---------------- */
@@ -238,6 +275,7 @@ function wire() {
   const inp = $('#askInput'); if (inp) { inp.onkeydown = (e) => { if (e.key === 'Enter') { const q = inp.value; inp.value = ''; ask(q); } }; $('#btnAsk').onclick = () => { const q = inp.value; inp.value = ''; ask(q); }; }
   const m2 = $('#btnMic2'); if (m2) m2.onclick = () => toggleMic();
   const cm = $('#convMode'); if (cm) cm.onchange = () => { state.voiceMode = cm.checked; if (cm.checked) { window.EonVoice.wakeWord(true); window.EonVoice.listen({ continuous: true }); toast('Conversation mode on — say “EON, …”'); } else { window.EonVoice.stop(); } };
+  const lb = $('#btnLang'); if (lb) lb.onclick = () => { setLang(state.lang === 'bn-BD' ? 'en-US' : 'bn-BD'); };
   const lc = $('#langChip'); if (lc) lc.onclick = () => { state.lang = state.lang === 'bn-BD' ? 'en-US' : 'bn-BD'; localStorage.setItem('eon_lang', state.lang); window.EonVoice.setLang(state.lang); render(); };
   const mc = $('#muteChip'); if (mc) mc.onclick = () => { const on = localStorage.getItem('eon_mute') !== '1'; localStorage.setItem('eon_mute', on ? '1' : '0'); window.EonVoice.mute(on); render(); };
 }
@@ -248,6 +286,47 @@ function toggleMic() {
   if (!V.available().stt) { toast('Voice input needs Chrome or Edge with a microphone.'); return; }
   if (V.status() === 'listening') V.stop(); else V.listen({ continuous: false });
 }
+function setLang(lang) {
+  state.lang = lang;
+  localStorage.setItem('eon_lang', lang);
+  if (window.EonVoice && window.EonVoice.setLang) window.EonVoice.setLang(lang);
+  render();
+  toast(lang === 'bn-BD' ? 'এখন থেকে বাংলায় উত্তর দেব।' : 'Answering in English from now on.');
+}
+
+/* "yes, take me there" is the same as pressing the button EON just offered.
+   Spoken confirmation has to work hands-free, so the last offer is remembered and
+   a plain yes fires it — in English, বাংলা or Banglish. */
+const AFFIRM_YES = ['yes','yeah','yep','yup','ok','okay','sure','please','do it','go ahead',
+  'take me there','open it','show me','haa','hae','hyan','jee','ji','accha','thik ache','niye cholo','dekhao',
+  'হ্যাঁ','হ্যা','জি','জ্বি','আচ্ছা','ঠিক আছে','নিয়ে চলো','নিয়ে চল','দেখাও','খুলে দাও','হ্যাঁ নিয়ে চলো'];
+// A plain yes answers the offer EON just made. Matched on words rather than a pattern:
+// this has to read the same in three scripts, and a regex here is a place for bugs to hide.
+function isAffirmative(text) {
+  let t = String(text || '').toLowerCase().trim();
+  t = t.replace(/[?!.,।]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!t) return false;
+  if (AFFIRM_YES.includes(t)) return true;
+  // "yes, take me there" — every word must belong to the yes vocabulary
+  const words = t.split(' ');
+  if (words.length > 5) return false;
+  return words.every((w) => AFFIRM_YES.some((y) => y === w || y.split(' ').includes(w)));
+}
+function runOfferedAction() {
+  const a = state.lastOffer;
+  if (!a) return false;
+  state.lastOffer = null;
+  const btn = document.querySelector('[data-act]');
+  if (a.kind === 'navigate' && a.href) {
+    const [page, hash] = a.href.split('#');
+    const sec = page.replace('.html', '').replace('index', 'brief').replace('operations', 'ops');
+    location.hash = '#' + sec + (hash ? '/' + hash : '');
+    return true;
+  }
+  if (btn) { btn.click(); return true; }
+  return false;
+}
+
 function setMic(on) { document.querySelectorAll('.btn.mic').forEach((b) => b.classList.toggle('on', on)); }
 
 /* ---------------- boot ---------------- */
