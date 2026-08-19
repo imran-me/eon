@@ -122,7 +122,7 @@ export class Nudger {
       #eon-nudge .en-l{margin:3px 0 9px;color:#16203a}
       #eon-nudge .en-b{display:flex;gap:7px}
       #eon-nudge button{flex:1;border:0;border-radius:8px;padding:5px 5px;cursor:pointer;font:700 10.5px system-ui;white-space:nowrap}
-      #eon-nudge .en-go{background:#1f6dff;color:#fff}#eon-nudge .en-go:hover{background:#1559d8}
+      #eon-nudge .en-go{background:#1863ee;color:#fff}#eon-nudge .en-go:hover{background:#1559d8}
       #eon-nudge .en-later{background:#eef1f7;color:#52607a}#eon-nudge .en-later:hover{background:#e2e7f2}
       #eon-nudge .en-no{background:#fff0f0;color:#c0392b}#eon-nudge .en-no:hover{background:#ffe2e2}`;
     document.head.appendChild(s);

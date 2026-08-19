@@ -52,11 +52,28 @@ function name(el) {
           el.textContent.replace(/\s+/g, ' ').trim()).trim();
 }
 
+// Wait for the page to actually settle. A fixed timeout once measured a
+// half-loaded panel and reported "no contrast failures" when six buttons were
+// still failing — the count of focusable controls has to stop moving first.
+function whenSettled(d, done, tries) {
+  tries = tries || 0;
+  const n = d.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])').length;
+  if (tries > 2 && n === whenSettled.last && n > 0) { done(); return; }
+  whenSettled.last = n;
+  if (tries > 40) { done(); return; }
+  setTimeout(() => whenSettled(d, done, tries + 1), 400);
+}
+
 setTimeout(() => {
   const f = document.getElementById('f');
   const d = f.contentDocument;
-  const out = [];
   if (!d) { document.getElementById('r').textContent = 'could not read the frame'; return; }
+  whenSettled(d, () => audit(d));
+}, 1500);
+
+function audit(d) {
+  const out = [];
+  out.push(['controls when measured', d.querySelectorAll('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])').length]);
 
   out.push(['html lang', d.documentElement.getAttribute('lang') || 'MISSING']);
   out.push(['title', (d.title || 'MISSING').slice(0, 50)]);
@@ -118,6 +135,6 @@ setTimeout(() => {
   out.push(['live regions', d.querySelectorAll('[aria-live]').length]);
 
   document.getElementById('r').textContent = JSON.stringify(out);
-}, 6000);
+}
 </script>
 </body>

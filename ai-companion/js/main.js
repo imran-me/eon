@@ -36,7 +36,7 @@ const DEFAULTS = {
   idle:     { goHome: 5 * 60000, activity: 10 * 60000, sleep: 20 * 60000 },
   lifeTick: 45000,
   palette: {
-    ocean: '#1f6dff', blue: '#2f8bff', cyan: '#28c7d8', lime: '#7ed957',
+    ocean: '#1863ee', blue: '#2f8bff', cyan: '#28c7d8', lime: '#7ed957',
     navy: '#10225e', violet: '#7b54e0', purple: '#b08ff0', white: '#eef4ff',
   },
   features: { pet: false, home: false, speech: true, particles: true, dayNight: true, sound: false },

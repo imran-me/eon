@@ -261,7 +261,7 @@ export class OwnerCompanion {
     s.textContent = `
       #eon-board{position:fixed;right:16px;bottom:66px;z-index:2147483600;width:330px;max-width:calc(100vw - 32px);
         background:#fff;color:#10225e;border-radius:16px;box-shadow:0 16px 44px rgba(16,34,94,.26);
-        border:1.5px solid #1f6dff33;opacity:0;transform:translateY(8px);pointer-events:none;
+        border:1.5px solid #1863ee33;opacity:0;transform:translateY(8px);pointer-events:none;
         transition:opacity .2s ease,transform .2s ease;font:500 13.5px/1.4 system-ui,sans-serif;overflow:hidden}
       #eon-board.show{opacity:1;transform:none;pointer-events:auto}
       #eon-board .eb-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#10225e;color:#fff}
@@ -272,7 +272,7 @@ export class OwnerCompanion {
       #eon-board .eb-body{padding:14px;font-weight:600;color:#16203a;min-height:42px}
       #eon-board .eb-btns{display:flex;gap:7px;padding:0 14px 14px}
       #eon-board button{flex:1;border:0;border-radius:9px;padding:6px 5px;cursor:pointer;font:700 11.5px system-ui}
-      #eon-board .eb-go{background:#1f6dff;color:#fff}
+      #eon-board .eb-go{background:#1863ee;color:#fff}
       #eon-board .eb-go:hover{background:#1559d8}
       #eon-board .eb-l{background:#eef1f7;color:#52607a}
       #eon-board .eb-l:hover{background:#e2e7f2}

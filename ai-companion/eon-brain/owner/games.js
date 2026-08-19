@@ -236,7 +236,7 @@ export class Games {
     s.textContent = `
       #eon-controls #eon-games-btn { order: 2; }
       #eon-games-menu{position:fixed;right:16px;bottom:50px;z-index:2147483600;width:230px;
-        background:#fff;border-radius:14px;border:1.5px solid #1f6dff33;box-shadow:0 16px 44px rgba(16,34,94,.26);
+        background:#fff;border-radius:14px;border:1.5px solid #1863ee33;box-shadow:0 16px 44px rgba(16,34,94,.26);
         padding:7px;opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s;font:600 13px system-ui}
       #eon-games-menu.show{opacity:1;transform:none;pointer-events:auto}
       #eon-games-menu .egm-h{font:800 11px system-ui;letter-spacing:.4px;color:#616a8e;text-transform:uppercase;padding:6px 8px 4px}
@@ -245,10 +245,10 @@ export class Games {
       #eon-games-menu button:hover{background:#eef3ff}
       #eon-games-menu button .egm-i{font-size:16px}
       #eon-game{position:fixed;right:16px;bottom:50px;z-index:2147483600;width:300px;max-width:calc(100vw - 32px);
-        background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1f6dff33;box-shadow:0 16px 44px rgba(16,34,94,.26);
+        background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1863ee33;box-shadow:0 16px 44px rgba(16,34,94,.26);
         opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s;overflow:hidden;font:500 13px system-ui}
       #eon-game.show{opacity:1;transform:none;pointer-events:auto}
-      #eon-game .eg-h{display:flex;align-items:center;padding:10px 12px;background:#1f6dff;color:#fff;font-weight:700;font-size:12.5px}
+      #eon-game .eg-h{display:flex;align-items:center;padding:10px 12px;background:#1863ee;color:#fff;font-weight:700;font-size:12.5px}
       #eon-game .eg-x{margin-left:auto;cursor:pointer;opacity:.85;font-size:14px}
       #eon-game .eg-b{padding:12px}
       #eon-game .eg-msg{font-weight:600;color:#16203a;margin-bottom:10px;min-height:20px;font-size:13px}
@@ -257,24 +257,24 @@ export class Games {
       #eon-game .eg-col{display:flex;flex-direction:column;gap:7px}
       #eon-game .eg-big{flex:1;border:1.5px solid #e2e7f2;border-radius:11px;background:#f7f9ff;cursor:pointer;
         font-size:26px;padding:10px 0;transition:transform .1s,border-color .15s}
-      #eon-game .eg-big:hover{transform:translateY(-3px);border-color:#1f6dff}
+      #eon-game .eg-big:hover{transform:translateY(-3px);border-color:#1863ee}
       #eon-game .eg-opt{border:1.5px solid #e2e7f2;border-radius:10px;background:#f7f9ff;cursor:pointer;padding:9px 11px;font:600 13px system-ui;color:#16203a;text-align:left}
-      #eon-game .eg-opt:hover{border-color:#1f6dff;background:#eef3ff}
+      #eon-game .eg-opt:hover{border-color:#1863ee;background:#eef3ff}
       #eon-game .eg-opt:disabled{opacity:.7;cursor:default}
       #eon-game .eg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:200px;margin:0 auto}
       #eon-game .eg-cell{aspect-ratio:1;border:1.5px solid #e2e7f2;border-radius:10px;background:#f7f9ff;font-size:26px;cursor:pointer;color:#10225e}
-      #eon-game .eg-cell:hover:not(:disabled){border-color:#1f6dff}
+      #eon-game .eg-cell:hover:not(:disabled){border-color:#1863ee}
       #eon-game .eg-cell.on{background:#eef3ff}
       #eon-game .eg-pads{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:200px;margin:0 auto}
       #eon-game .eg-pad{font-size:34px;border:0;background:transparent;border-radius:12px;cursor:pointer;padding:6px;opacity:.55;transition:opacity .12s,transform .12s}
       #eon-game .eg-pad.lit{opacity:1;transform:scale(1.12)}
       #eon-game .eg-reflex{width:100%;border:0;border-radius:12px;padding:34px 0;font:800 16px system-ui;color:#fff;cursor:pointer}
       #eon-game .eg-reflex.wait{background:#c0392b}#eon-game .eg-reflex.go{background:#7ed957;color:#10225e}
-      #eon-game .eg-reflex.bad{background:#e67e22}#eon-game .eg-reflex.done{background:#1f6dff}
+      #eon-game .eg-reflex.bad{background:#e67e22}#eon-game .eg-reflex.done{background:#1863ee}
       #eon-game .eg-score{text-align:center;font:600 12px system-ui;color:#52607a;margin-top:12px}
       #eon-game .eg-foot{display:flex;gap:7px;margin-top:10px}
       #eon-game .eg-foot button{flex:1;border:0;border-radius:9px;padding:7px;cursor:pointer;font:700 12px system-ui}
-      #eon-game .eg-again{background:#1f6dff;color:#fff}#eon-game .eg-again:hover{background:#1559d8}
+      #eon-game .eg-again{background:#1863ee;color:#fff}#eon-game .eg-again:hover{background:#1559d8}
       #eon-game .eg-menu{background:#eef1f7;color:#52607a}#eon-game .eg-menu:hover{background:#e2e7f2}`;
     document.head.appendChild(s);
   }

@@ -341,7 +341,7 @@ export class Backpack {
       #eon-bag .eb-n{position:absolute;top:-5px;right:-6px;background:#7ed957;color:#10225e;border-radius:9px;
         min-width:15px;height:15px;padding:0 3px;font:700 9px/15px system-ui;text-align:center}
       #eon-pockets{position:fixed;right:16px;bottom:50px;z-index:2147483600;width:300px;max-width:calc(100vw - 32px);
-        max-height:60vh;overflow:auto;background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1f6dff33;
+        max-height:60vh;overflow:auto;background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1863ee33;
         box-shadow:0 16px 44px rgba(16,34,94,.26);opacity:0;transform:translateY(8px);pointer-events:none;
         transition:opacity .18s ease,transform .18s ease;font:500 13px system-ui}
       #eon-pockets.show{opacity:1;transform:none;pointer-events:auto}
@@ -364,10 +364,10 @@ export class Backpack {
       #eon-pockets .ep-tools{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;background:#f6f8fc;border-top:1px solid #eef1f7}
       #eon-pockets .ep-tools button{flex:1 1 28%;border:0;border-radius:8px;padding:6px 3px;cursor:pointer;background:#eaeefb;color:#10225e;font:700 11px system-ui}
       #eon-pockets .ep-tools button:hover{background:#dde4f8}
-      #eon-pockets .ep-tools button.on{background:#1f6dff;color:#fff}
+      #eon-pockets .ep-tools button.on{background:#1863ee;color:#fff}
       #eon-pockets .ep-foot{display:none;gap:6px;padding:8px 12px;background:#f6f8fc;border-top:1px solid #eef1f7}
       #eon-pockets .ep-foot.show{display:flex}
-      #eon-pockets .ep-foot button{flex:1;border:0;border-radius:8px;padding:7px 4px;cursor:pointer;font:700 11.5px system-ui;background:#1f6dff;color:#fff}
+      #eon-pockets .ep-foot button{flex:1;border:0;border-radius:8px;padding:7px 4px;cursor:pointer;font:700 11.5px system-ui;background:#1863ee;color:#fff}
       #eon-pockets .ep-foot button.ep-cancel{background:#eef1f7;color:#52607a}
       #eon-pockets .ep-chk{cursor:pointer;font-size:13px;opacity:.8}
       .eon-chart{font:600 13px system-ui;color:#16203a}
@@ -376,7 +376,7 @@ export class Backpack {
       #eon-pockets .ep-tool{cursor:pointer;opacity:.5;font-size:12px}
       #eon-pockets .ep-tool:hover{opacity:1}
       #eon-tools-menu{position:fixed;z-index:2147483641;background:#fff;color:#10225e;border-radius:10px;
-        border:1px solid #1f6dff33;box-shadow:0 12px 30px rgba(16,34,94,.22);padding:5px;display:none;min-width:158px;font:600 12.5px system-ui}
+        border:1px solid #1863ee33;box-shadow:0 12px 30px rgba(16,34,94,.22);padding:5px;display:none;min-width:158px;font:600 12.5px system-ui}
       #eon-tools-menu.show{display:block}
       #eon-tools-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 9px;border-radius:7px;cursor:pointer;color:#16203a;font:600 12.5px system-ui}
       #eon-tools-menu button:hover{background:#eef1f7}
@@ -387,14 +387,14 @@ export class Backpack {
       #eon-magnify .em-x{position:fixed;top:18px;right:24px;color:#fff;font-size:26px;cursor:pointer;line-height:1}
       body.eon-grab, body.eon-grab *{cursor:crosshair !important}
       #eon-go{position:fixed;z-index:2147483600;max-width:260px;transform:translate(-50%,-100%);background:#fff;color:#10225e;
-        border-radius:14px;padding:11px 13px;box-shadow:0 12px 34px rgba(16,34,94,.24);border:1.5px solid #1f6dff44;
+        border-radius:14px;padding:11px 13px;box-shadow:0 12px 34px rgba(16,34,94,.24);border:1.5px solid #1863ee44;
         font:600 13px/1.35 system-ui;opacity:0;pointer-events:none;transition:opacity .18s}
       #eon-go.show{opacity:1;pointer-events:auto}
       #eon-go .eg-t{font-size:11px;color:#1863ee;font-weight:800;letter-spacing:.3px}
       #eon-go .eg-l{margin:3px 0 9px;color:#16203a}
       #eon-go .eg-b{display:flex;gap:6px}
       #eon-go button{flex:1;border:0;border-radius:8px;padding:5px 7px;cursor:pointer;font:700 11px system-ui}
-      #eon-go .eg-go{background:#1f6dff;color:#fff}#eon-go .eg-go:hover{background:#1559d8}
+      #eon-go .eg-go{background:#1863ee;color:#fff}#eon-go .eg-go:hover{background:#1559d8}
       #eon-go .eg-no{background:#eef1f7;color:#52607a}#eon-go .eg-no:hover{background:#e2e7f2}`;
     document.head.appendChild(s);
   }
@@ -529,10 +529,10 @@ export class Backpack {
     const step = (w - pad * 2) / (nums.length - 1);
     const xy = (n, i) => [pad + i * step, h - pad - ((n - min) / span) * (h - pad * 2)];
     const line = nums.map((n, i) => xy(n, i).map((v) => v.toFixed(1)).join(',')).join(' ');
-    const dots = nums.map((n, i) => { const [x, y] = xy(n, i); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#1f6dff"/>`; }).join('');
+    const dots = nums.map((n, i) => { const [x, y] = xy(n, i); return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="#1863ee"/>`; }).join('');
     const avg = nums.reduce((a, b) => a + b, 0) / nums.length;
     this._magnifyHtml(`<div class="eon-chart"><b>📊 ${nums.length} values</b>
-      <svg width="${w}" height="${h}"><polyline points="${line}" fill="none" stroke="#1f6dff" stroke-width="2"/>${dots}</svg>
+      <svg width="${w}" height="${h}"><polyline points="${line}" fill="none" stroke="#1863ee" stroke-width="2"/>${dots}</svg>
       <div class="ec-meta">min ${this._fmtNum(min)} · max ${this._fmtNum(max)} · avg ${this._fmtNum(avg)}</div></div>`);
     this._react('📊', "Here's the shape of it. 📊", 'point');
   }

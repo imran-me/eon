@@ -408,23 +408,23 @@ export class AskEon {
     const s = document.createElement('style'); s.id = 'eon-ask-style';
     s.textContent = `
       #eon-ask-chip{position:relative;display:none;align-items:center;gap:5px;height:26px;white-space:nowrap;
-        background:#1f6dff;color:#fff;border:0;border-radius:14px;padding:0 11px;cursor:pointer;line-height:1;
+        background:#1863ee;color:#fff;border:0;border-radius:14px;padding:0 11px;cursor:pointer;line-height:1;
         box-shadow:0 4px 12px rgba(31,109,255,.3);font:700 12px system-ui;transition:transform .15s,background .15s}
       #eon-ask-chip:hover{background:#1559d8;transform:translateY(-2px)}
       #eon-ask{position:fixed;right:16px;bottom:50px;z-index:2147483600;width:320px;max-width:calc(100vw - 32px);
-        background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1f6dff33;box-shadow:0 16px 44px rgba(16,34,94,.26);
+        background:#fff;color:#10225e;border-radius:14px;border:1.5px solid #1863ee33;box-shadow:0 16px 44px rgba(16,34,94,.26);
         opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s;font:500 13px system-ui;overflow:hidden}
       #eon-ask.show{opacity:1;transform:none;pointer-events:auto}
-      #eon-ask .ea-h{display:flex;align-items:center;padding:10px 12px;background:#1f6dff;color:#fff;font-weight:700;font-size:12.5px}
+      #eon-ask .ea-h{display:flex;align-items:center;padding:10px 12px;background:#1863ee;color:#fff;font-weight:700;font-size:12.5px}
       #eon-ask .ea-x{margin-left:auto;cursor:pointer;opacity:.85;font-size:14px}
       #eon-ask .ea-in{display:flex;gap:6px;padding:10px 12px}
       #eon-ask input{flex:1;border:1.5px solid #e2e7f2;border-radius:9px;padding:8px 10px;font:500 13px system-ui;color:#16203a}
-      #eon-ask input:focus{outline:none;border-color:#1f6dff}
-      #eon-ask .ea-go{border:0;border-radius:9px;background:#1f6dff;color:#fff;padding:0 12px;cursor:pointer;font:700 13px system-ui}
+      #eon-ask input:focus{outline:none;border-color:#1863ee}
+      #eon-ask .ea-go{border:0;border-radius:9px;background:#1863ee;color:#fff;padding:0 12px;cursor:pointer;font:700 13px system-ui}
       #eon-ask .ea-a{padding:0 12px 12px;white-space:pre-wrap;color:#16203a;max-height:42vh;overflow:auto;font-weight:600}
       #eon-ask .ea-keep{display:none;margin:0 12px 12px;border:0;border-radius:9px;background:#eef1f7;color:#10225e;padding:7px 10px;cursor:pointer;font:700 12px system-ui}
       #eon-ask .ea-keep:hover{background:#e2e7f2}
-      #eon-ask .ea-go-there{display:none;margin:0 12px 8px;border:0;border-radius:9px;background:#1f6dff;color:#fff;padding:7px 10px;cursor:pointer;font:700 12px system-ui}
+      #eon-ask .ea-go-there{display:none;margin:0 12px 8px;border:0;border-radius:9px;background:#1863ee;color:#fff;padding:7px 10px;cursor:pointer;font:700 12px system-ui}
       #eon-ask .ea-go-there:hover{background:#1559d8}
       #eon-ask .ea-ex{padding:2px 12px 10px;color:#616a8e;font-size:11px}`;
     document.head.appendChild(s);

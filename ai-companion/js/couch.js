@@ -39,7 +39,7 @@ export class Couch {
         <rect x="40" y="158" width="16" height="22" rx="5" fill="#7a4a26"/>
         <rect x="244" y="158" width="16" height="22" rx="5" fill="#7a4a26"/>
         <!-- back cushions -->
-        <rect x="58" y="28" width="184" height="92" rx="20" fill="#1f6dff"/>
+        <rect x="58" y="28" width="184" height="92" rx="20" fill="#1863ee"/>
         <rect x="66" y="34" width="84" height="80" rx="16" fill="#2f8bff"/>
         <rect x="150" y="34" width="84" height="80" rx="16" fill="#2f8bff"/>
         <!-- base -->
@@ -48,8 +48,8 @@ export class Couch {
         <rect x="56" y="104" width="92" height="44" rx="14" fill="#28c7d8"/>
         <rect x="152" y="104" width="92" height="44" rx="14" fill="#28c7d8"/>
         <!-- armrests -->
-        <rect x="26" y="78" width="40" height="86" rx="16" fill="#1f6dff"/>
-        <rect x="234" y="78" width="40" height="86" rx="16" fill="#1f6dff"/>
+        <rect x="26" y="78" width="40" height="86" rx="16" fill="#1863ee"/>
+        <rect x="234" y="78" width="40" height="86" rx="16" fill="#1863ee"/>
         <rect x="30" y="82" width="32" height="30" rx="12" fill="#2f8bff"/>
         <rect x="238" y="82" width="32" height="30" rx="12" fill="#2f8bff"/>
         <!-- accent pillow -->

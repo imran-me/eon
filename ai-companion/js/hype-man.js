@@ -556,7 +556,7 @@ export class HypeMan {
       #eon-hook.show{opacity:1;pointer-events:auto}
       #eon-hook .eh-b{display:flex;gap:7px;margin-top:9px}
       #eon-hook button{flex:1;border:0;border-radius:9px;padding:6px 8px;cursor:pointer;font:700 12.5px system-ui;}
-      #eon-hook .eh-y{background:#1f6dff;color:#fff}
+      #eon-hook .eh-y{background:#1863ee;color:#fff}
       #eon-hook .eh-y:hover{background:#1559d8}
       #eon-hook .eh-n{background:#eef1f7;color:#52607a}
       #eon-hook .eh-n:hover{background:#e2e7f2}`;
