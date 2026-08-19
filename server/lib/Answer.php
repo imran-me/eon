@@ -50,6 +50,59 @@ final class Answer
     /* ---------------- small helpers ---------------- */
 
     private function bn(): bool { return $this->c['lang'] === 'bn'; }
+
+    /* A Bangla sentence must be Bangla all the way through. The ERP stores its statuses,
+       stages and month names in English, and printing them raw produced half-and-half
+       lines like "১৪ accounts হলো Loan" or "সর্বশেষ পে-স্লিপ July — Pending". Data the
+       boss owns (people, companies, account names) stays as written; the system's own
+       vocabulary gets said in the language he asked in. */
+    private const TERMS_BN = [
+        // payment and document state
+        'paid' => 'পরিশোধিত', 'unpaid' => 'অপরিশোধিত', 'pending' => 'অপেক্ষমাণ', 'partial' => 'আংশিক',
+        'due' => 'বাকি', 'overdue' => 'মেয়াদ পার', 'cancelled' => 'বাতিল', 'canceled' => 'বাতিল',
+        'draft' => 'খসড়া', 'confirm' => 'নিশ্চিত', 'confirmed' => 'নিশ্চিত', 'active' => 'সচল', 'inactive' => 'নিষ্ক্রিয়',
+        // visa desk
+        'delivered' => 'হস্তান্তরিত', 'approved' => 'অনুমোদিত', 'rejected' => 'প্রত্যাখ্যাত',
+        'in_embassy' => 'দূতাবাসে', 'in embassy' => 'দূতাবাসে', 'processing' => 'প্রক্রিয়াধীন',
+        'submitted' => 'জমা দেওয়া', 'collected' => 'সংগ্রহ করা',
+        // CRM
+        'new' => 'নতুন', 'contacted' => 'যোগাযোগ হয়েছে', 'qualified' => 'যাচাই হয়েছে',
+        'proposal_sent' => 'প্রস্তাব পাঠানো', 'proposal sent' => 'প্রস্তাব পাঠানো',
+        'negotiation' => 'দরকষাকষি', 'won' => 'জেতা', 'lost' => 'হারানো',
+        // work
+        'todo' => 'বাকি', 'to do' => 'বাকি', 'in_progress' => 'চলমান', 'in progress' => 'চলমান',
+        'review' => 'পর্যালোচনা', 'done' => 'সম্পন্ন', 'completed' => 'সম্পন্ন', 'note' => 'নোট',
+        // EON's own labels
+        'visa vendor' => 'ভিসা ভেন্ডর', 'ticket vendor' => 'টিকিট ভেন্ডর', 'unnamed client' => 'নামহীন গ্রাহক',
+        'unnamed vendor' => 'নামহীন ভেন্ডর', 'air ticket' => 'এয়ার টিকিট', 'visa' => 'ভিসা',
+        'contract file' => 'কন্ট্রাক্ট ফাইল', 'contract flight' => 'কন্ট্রাক্ট ফ্লাইট', 'ticket purchase' => 'টিকিট কেনা',
+    ];
+    private const MONTHS_BN = [
+        'january' => 'জানুয়ারি', 'february' => 'ফেব্রুয়ারি', 'march' => 'মার্চ', 'april' => 'এপ্রিল',
+        'may' => 'মে', 'june' => 'জুন', 'july' => 'জুলাই', 'august' => 'আগস্ট',
+        'september' => 'সেপ্টেম্বর', 'october' => 'অক্টোবর', 'november' => 'নভেম্বর', 'december' => 'ডিসেম্বর',
+    ];
+
+    /** say a stored status, stage or month in the answer's own language */
+    private function term(?string $w): string
+    {
+        $w = trim((string) $w);
+        if ($w === '' || !$this->bn()) return $w;
+        $k = mb_strtolower($w);
+        if (isset(self::TERMS_BN[$k])) return self::TERMS_BN[$k];
+        if (isset(self::MONTHS_BN[$k])) return self::MONTHS_BN[$k];
+        // "Visa vendor — Malaysia" keeps the country, translates the label
+        foreach (self::TERMS_BN as $en => $bn) {
+            if (str_starts_with($k, $en . ' —') || str_starts_with($k, $en . ' -')) {
+                return $bn . mb_substr($w, mb_strlen($en));
+            }
+        }
+        // "2026-07" or "July 2026"
+        if (preg_match('/^([A-Za-z]+)\s+(\d{4})$/', $w, $m) && isset(self::MONTHS_BN[mb_strtolower($m[1])])) {
+            return self::MONTHS_BN[mb_strtolower($m[1])] . ' ' . $this->d($m[2]);
+        }
+        return $w;
+    }
     private function L(): string { return $this->c['lang']; }
     private function A(): Analytics { return $this->c['A']; }
     private function I(): Insight { return $this->c['I']; }
@@ -1825,7 +1878,7 @@ final class Answer
         }
         $cost = $this->f($vp['cost_total'] ?? 0); $sale = $this->f($vp['sale_total'] ?? 0);
         $margin = $sale - $cost;
-        $stages = implode(', ', array_map(fn($s) => (string) $s['stage'] . ' ' . $this->num($s['count']), array_slice($vp['by_stage'] ?? [], 0, 5)));
+        $stages = implode(', ', array_map(fn($s) => $this->term((string) $s['stage']) . ' ' . $this->num($s['count']), array_slice($vp['by_stage'] ?? [], 0, 5)));
         $head = $this->t(
             sprintf('%s visa files are in hand — %s.', $this->num($n), $stages),
             sprintf('হাতে %s টা ভিসা ফাইল আছে — %s।', $this->num($n), $stages));
@@ -2058,7 +2111,7 @@ final class Answer
                     ? $this->t(sprintf('The last payslip on record is %s: gross %s, deductions %s, net %s — %s.',
                             (string) ($latest['month'] ?? $latest['month_key'] ?? ''), $this->m($this->f($latest['gross_salary'])), $this->m($this->f($latest['total_deductions'])), $this->m($this->f($latest['net_salary'])), (string) ($latest['status'] ?? '')),
                         sprintf('সর্বশেষ পে-স্লিপ %s: মোট %s, কর্তন %s, নিট %s — %s।',
-                            (string) ($latest['month'] ?? $latest['month_key'] ?? ''), $this->m($this->f($latest['gross_salary'])), $this->m($this->f($latest['total_deductions'])), $this->m($this->f($latest['net_salary'])), (string) ($latest['status'] ?? '')))
+                            $this->term((string) ($latest['month'] ?? $latest['month_key'] ?? '')), $this->m($this->f($latest['gross_salary'])), $this->m($this->f($latest['total_deductions'])), $this->m($this->f($latest['net_salary'])), $this->term((string) ($latest['status'] ?? ''))))
                     : $this->t('No payslip has been generated for them yet.', 'তাঁর কোনো পে-স্লিপ এখনো তৈরি হয়নি।');
                 $due = $this->f($p['payroll']['scheduled_due']);
                 $owed = $due > 0
@@ -2081,7 +2134,7 @@ final class Answer
                     $this->t(sprintf('Over the last %s days %s was present on %s of %s recorded days%s.', $this->num($p['days']), $who, $this->num($a['present']), $this->num($a['recorded']), $a['pct'] !== null ? ' (' . $this->pc((float) $a['pct']) . ')' : ''),
                         sprintf('গত %s দিনে %s %s দিনের মধ্যে %s দিন উপস্থিত ছিলেন%s।', $this->num($p['days']), $who, $this->num($a['recorded']), $this->num($a['present']), $a['pct'] !== null ? ' (' . $this->pc((float) $a['pct']) . ')' : '')),
                     $today ? $this->t(sprintf('Today: %s, in at %s.', (string) $today['status'], (string) ($today['check_in'] ?? '—')),
-                                      sprintf('আজ: %s, ঢুকেছেন %s-এ।', (string) $today['status'], (string) ($today['check_in'] ?? '—')))
+                                      sprintf('আজ: %s, ঢুকেছেন %s-এ।', $this->term((string) $today['status']), (string) ($today['check_in'] ?? '—')))
                            : $this->t('Nothing recorded for today yet.', 'আজকের কিছু এখনো ওঠেনি।'),
                     $a['absent'] ? $this->t($this->num($a['absent']) . ' absent, ' . $this->num($a['on_leave']) . ' on leave.', $this->num($a['absent']) . ' দিন অনুপস্থিত, ' . $this->num($a['on_leave']) . ' দিন ছুটিতে।') : '']);
 
@@ -2142,7 +2195,7 @@ final class Answer
                 return $this->say([$this->open($rq ? 'warn' : 'ok'),
                     $rq
                         ? $this->t(sprintf('%s has %s request(s) on file; latest is %s.', $who, $this->num(count($rq)), (string) ($rq[0]['status'] ?? '—')),
-                            sprintf('%s-এর %s টি আবেদন আছে; সর্বশেষটির অবস্থা %s।', $who, $this->num(count($rq)), (string) ($rq[0]['status'] ?? '—')))
+                            sprintf('%s-এর %s টি আবেদন আছে; সর্বশেষটির অবস্থা %s।', $who, $this->num(count($rq)), $this->term((string) ($rq[0]['status'] ?? '—'))))
                         : $this->t(sprintf('%s has no open request.', $who), sprintf('%s-এর কোনো আবেদন নেই।', $who))]);
 
             case 'ledger':
@@ -2170,7 +2223,7 @@ final class Answer
                 return $this->say([$this->open($r ? 'warn' : 'ok'),
                     $r
                         ? $this->t(sprintf('%s resigned on %s, last working day %s — %s.', $who, (string) $r['resign_date'], (string) $r['last_working_day'], (string) $r['status']),
-                            sprintf('%s %s তারিখে পদত্যাগ করেছেন, শেষ কর্মদিবস %s — %s।', $who, (string) $r['resign_date'], (string) $r['last_working_day'], (string) $r['status']))
+                            sprintf('%s %s তারিখে পদত্যাগ করেছেন, শেষ কর্মদিবস %s — %s।', $who, $this->d((string) $r['resign_date']), $this->d((string) $r['last_working_day']), $this->term((string) $r['status'])))
                         : $this->t(sprintf('%s has not resigned.', $who), sprintf('%s পদত্যাগ করেননি।', $who))]);
 
             case 'department':
@@ -2220,8 +2273,8 @@ final class Answer
                     $this->t(sprintf('%s — passport %s, %s.', $name, (string) ($h['passport_no'] ?: '—'), (string) ($h['nationality'] ?: '—')),
                              sprintf('%s — পাসপোর্ট %s, %s।', $name, (string) ($h['passport_no'] ?: '—'), (string) ($h['nationality'] ?: '—'))),
                     $exp !== '' ? $this->t(sprintf('Expires %s (%s days).', $exp, $this->num((int) $daysLeft)), sprintf('মেয়াদ শেষ %s (%s দিন)।', $this->d($exp), $this->num((int) $daysLeft))) : '',
-                    $visas ? $this->t(sprintf('%s visa file(s): %s.', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . (string) ($v['status'] ?? ''), array_slice($visas, 0, 3)))),
-                                      sprintf('%s টি ভিসা ফাইল: %s।', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . (string) ($v['status'] ?? ''), array_slice($visas, 0, 3)))))
+                    $visas ? $this->t(sprintf('%s visa file(s): %s.', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . $this->term((string) ($v['status'] ?? '')), array_slice($visas, 0, 3)))),
+                                      sprintf('%s টি ভিসা ফাইল: %s।', $this->num(count($visas)), implode(', ', array_map(fn($v) => (string) ($v['country'] ?? '') . ' ' . $this->term((string) ($v['status'] ?? '')), array_slice($visas, 0, 3)))))
                            : $this->t('No visa file on record.', 'কোনো ভিসা ফাইল নেই।'),
                     $daysLeft !== null && $daysLeft < 180 ? $this->act('under six months left — most embassies will refuse it.', 'ছয় মাসের কম মেয়াদ — বেশির ভাগ দূতাবাস নেবে না।') : '']);
 
@@ -2233,7 +2286,7 @@ final class Answer
                 $open = array_values(array_filter($tasks, fn($t) => ($t['status'] ?? '') !== 'done'));
                 return $this->say([$this->open(($p['progress'] ?? 0) < 50 ? 'warn' : 'ok'),
                     $this->t(sprintf('%s — %s, %s%% done, %s.', $name, (string) ($p['status'] ?? '—'), $this->num($p['progress'] ?? 0), (string) ($p['customer'] ?: 'no customer')),
-                             sprintf('%s — %s, %s%% শেষ, %s।', $name, (string) ($p['status'] ?? '—'), $this->num($p['progress'] ?? 0), (string) ($p['customer'] ?: 'গ্রাহক নেই'))),
+                             sprintf('%s — %s, %s%% শেষ, %s।', $name, $this->term((string) ($p['status'] ?? '—')), $this->num($p['progress'] ?? 0), (string) ($p['customer'] ?: 'গ্রাহক নেই'))),
                     $this->t(sprintf('Budget %s, %s of %s tasks still open, due %s.', $this->m($this->f($p['budget'] ?? 0)), $this->num(count($open)), $this->num(count($tasks)), (string) ($p['end_date'] ?: '—')),
                              sprintf('বাজেট %s, %s টির মধ্যে %s টি কাজ বাকি, শেষ তারিখ %s।', $this->m($this->f($p['budget'] ?? 0)), $this->num(count($tasks)), $this->num(count($open)), $this->d((string) ($p['end_date'] ?: '—'))))]);
 
