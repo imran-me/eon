@@ -93,6 +93,7 @@ eon/
 | **EON answers "why"** — `Reason` decomposes a figure until it reaches something actionable: which of income, direct cost or overhead actually moved and by how much, whether overheads exceed income outright, how much of the overhead is payroll, what is still unapproved and therefore absent from the number, and for cash whether collecting every overdue taka would even close the gap. `a_why` renders the chain as an argument in both languages; a rule question inside a why question gets the rule instead | done — Reasoning section added to the bank, **1163/1163** |
 
 | **The panel works signed out** — `domains/erp/index.js` imports the domain registry itself, so Ask EON no longer waits on the 1.3 MB avatar bundle; the adapter reads `health.php`'s `auth` verdict instead of discovering it from a 401, and falls back to the demo company saying so | done — headless against the live site: 14/14 globals, dataset present, answers in both languages, **zero failed requests and zero console errors** |
+| **The write path, re-proven end to end** — the whole chain through `EonDomains.answer()` in headless Chrome against a mock built from the real map: "assign Imran a task: check ledger entries" and "ইমরানকে টাস্ক দাও: লেজার চেক করো" → proposal → "yes"/"হ্যাঁ" → the ERP's own form receives it; message and notice plans asserted field by field. Confirmation policy: money and deletions always ask, `EON_PREFS.autoConfirm` lets task/message/notice go straight in (a whitelist, so a new action is confirmed by default), and a half-filled form still stops. A screen that answers with the login page is now reported as a sign-in, never as "no form on /x" | done — **36/36** headless |
 
 ## Signed out is a first-class state (2026-08-19)
 
@@ -157,6 +158,13 @@ Bangla traps already paid for: `trim($s, "…।…")` takes a list of **bytes**
 shares its lead byte with every Bangla letter — it silently produces invalid UTF-8 and the
 next `/u` regex returns null, so the reply comes back empty. And `Nlu::norm()` folds কী → কি,
 so a cue must be written in its normalised form or it never fires.
+
+The same trap in JavaScript, and it cost a whole feature: `\b` is defined on
+`[A-Za-z0-9_]`, so it **never fires after a Bangla letter**. `/^হ্যাঁ\b/` matches
+nothing at all — the boss's "হ্যাঁ" fell through every domain to no answer while a
+task sat waiting for exactly that word. Bangla alternatives need a
+`(?![ঀ-৿])` guard instead, which also keeps "না" from cancelling when the boss
+actually said "নামগুলো দেখাও".
 
 ## Next steps (in order)
 1. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
