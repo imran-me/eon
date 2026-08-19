@@ -114,7 +114,9 @@ final class Tts
             return ['ok' => false, 'error' => 'every speech provider failed', 'tried' => $tried];
         }
 
-        if ($file !== null) @file_put_contents($file, $audio);
+        // the cache is what makes a demo safe: once a sentence has been rendered
+        // it never needs the network again, whatever the provider does later
+        if ($file !== null) @file_put_contents($file, $audio, LOCK_EX);
         return ['ok' => true, 'mime' => 'audio/mpeg', 'bytes' => strlen($audio),
                 'path' => $file, 'data' => $audio, 'provider' => $provider, 'cached' => false];
     }
@@ -196,12 +198,24 @@ final class Tts
     {
         $out = '';
         foreach (self::chunks($text) as $part) {
-            $url = 'https://translate.google.com/translate_tts'
-                 . '?ie=UTF-8&client=tw-ob&ttsspeed=0.95'
-                 . '&tl=' . ($lang === 'bn' ? 'bn' : 'en')
-                 . '&q=' . rawurlencode($part);
-            $mp3 = self::get($url, ['User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)']);
-            if ($mp3 === null || strlen($mp3) < 256) return null;
+            $mp3 = null;
+            // this endpoint rate-limits. Two quick retries turn a stumble into a
+            // pause instead of a failed answer in front of a room.
+            foreach ([0, 400000, 1200000] as $wait) {
+                if ($wait) usleep($wait);
+                foreach (['tw-ob', 'gtx'] as $client) {
+                    $url = 'https://translate.google.com/translate_tts'
+                         . '?ie=UTF-8&client=' . $client . '&ttsspeed=0.95'
+                         . '&tl=' . ($lang === 'bn' ? 'bn' : 'en')
+                         . '&total=1&idx=0&textlen=' . mb_strlen($part)
+                         . '&q=' . rawurlencode($part);
+                    $mp3 = self::get($url, ['User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                                            'Referer: https://translate.google.com/']);
+                    if ($mp3 !== null && strlen($mp3) >= 256) break 2;
+                    $mp3 = null;
+                }
+            }
+            if ($mp3 === null) return null;
             $out .= $mp3;
         }
         return $out !== '' ? $out : null;

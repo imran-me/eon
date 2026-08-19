@@ -86,8 +86,10 @@ worth showing that it works) · `beton porishodh hoyeche`
 
 ## Do not ask on stage
 
-- **`anything unusual`** — currently finds nothing, which reads as a failure.
-  Ask `any accounts error?` instead; it is the same idea with a real answer.
+- ~~`anything unusual`~~ — **fixed.** It reported nothing while the books were
+  out by ৳5 L, because the sweep and the ledger check were separate. The ledger
+  findings now feed the sweep, so it names both. Safe to ask, though `any
+  accounts error?` is still the sharper phrasing.
 - **Attendance questions before the shift starts** — "today's attendance has not
   come through yet" is true but anticlimactic. Only 27 of 87 staff are on the
   device, so this is EON's weakest ground.

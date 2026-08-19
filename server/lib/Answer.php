@@ -337,7 +337,7 @@ final class Answer
                          'ডুপ্লিকেট খরচ, প্রতিটা খাতের নিজের গড়ের তুলনায় হঠাৎ বেশি খরচ, পড়ে থাকা অনুমোদন, ঋণাত্মক ব্যালেন্স আর না-মেলা রেওয়ামিল — সব খুঁজে দেখলাম। কিছু পাইনি।')]);
         }
         $lines = [];
-        foreach (array_slice($an['items'], 0, 4) as $x) {
+        foreach (array_slice($an['items'], 0, 5) as $x) {
             $lines[] = $this->anomalyLine($x);
         }
         return $this->say([
@@ -369,12 +369,10 @@ final class Answer
             case 'trial_balance_off':
                 return $this->t(sprintf('The trial balance is out by %s — that is almost always a shared account tagged to one company.', $this->m(abs($this->f($x['amount'])))),
                                 sprintf('রেওয়ামিল %s গরমিল — এটা প্রায় সবসময়ই শেয়ার্ড হিসাব এক কোম্পানিতে ট্যাগ হওয়ার কারণে হয়।', $this->m(abs($this->f($x['amount'])))));
-            case 'payslip_math':
-                return $this->t(sprintf('%s\'s %s payslip does not add up: gross %s less %s deductions should not net %s.',
-                                    $x['title'], $x['month'], $this->m($this->f($x['gross'])), $this->m($this->f($x['deductions'])), $this->m($this->f($x['net']))),
-                                sprintf('%s এর %s মাসের স্লিপ মিলছে না: গ্রস %s থেকে %s কর্তন হলে নিট %s হওয়ার কথা না।',
-                                    $x['title'], $x['month'], $this->m($this->f($x['gross'])), $this->m($this->f($x['deductions'])), $this->m($this->f($x['net']))));
         }
+        // the ledger findings share this renderer now
+        $l = $this->errorLine($x);
+        if ($l !== '') return $l;
         return (string) ($x['title'] ?? $kind);
     }
 
