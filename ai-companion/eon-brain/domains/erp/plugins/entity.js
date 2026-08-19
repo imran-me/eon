@@ -271,7 +271,13 @@ function assign(D, q, s) {
 const TAKE_ME = /\b(take me|go|open|show me)\b[\s\S]*\b(task board|board|profile|payroll|salary|attendance|tasks)\b/i;
 function takeMe(D, q, s) {
   if (!TAKE_ME.test(q)) return null;
-  const person = resolve(D, q);
+  /* "take me to his profile" resolves nobody from this sentence alone — the
+     person is the one named a moment ago, which the understander remembers.
+     Borrow that memory rather than opening a screen with no name on it. */
+  let person = resolve(D, q);
+  if ((!person || person.kind !== 'employee') && /\b(he|him|his|she|her|they|them|their)\b|(তার|তাঁর|ওর|তাকে|ওকে|উনার|উনি|তিনি)/i.test(q)) {
+    try { person = (window.EonUnderstand && window.EonUnderstand.subject_of_last && window.EonUnderstand.subject_of_last()) || person; } catch (e) { /* keep what we had */ }
+  }
   const what = /task board|board|tasks/i.test(q) ? 'tasks'
     : /payroll|salary/i.test(q) ? 'employee salaries'
     : /attendance/i.test(q) ? 'attendances'

@@ -15,23 +15,46 @@
    That combination is what covers "কে টাকা পাবে?", "মফিজের কত বাকি",
    "ইমরানকে একটা টাস্ক দাও", "show Fahim's attendance last month".
 
-   It answers in the language it was asked in, and it never invents:
-   when it cannot tell what was meant it says so and offers the
-   nearest thing it does know.
+   Two rules keep it honest:
+
+   1. **The subject decides the answer, never the sentence.** Once EON
+      has read a subject out of the question it asks the layer that
+      owns THAT subject — it never hands the raw sentence back to
+      another matcher, because a Bangla sentence about leads
+      ("লিড কেমন চলছে?") also carries the words of a morning brief
+      ("কেমন চলছে") and used to come back as the brief.
+   2. **It answers in the language it was asked in**, and it never
+      invents: when it cannot tell what was meant it says so and
+      offers the nearest thing it does know.
+
+   NOTE FOR WHOEVER EDITS THIS FILE: write it with an editor, never
+   with a shell heredoc. A heredoc turns every \b in these regexes
+   into a literal backspace byte; the pattern then silently stops
+   matching and the answer simply disappears. That is exactly what
+   killed the `dues` subject once already — "how much does he owe"
+   came back with nothing at all because of two invisible bytes.
    ============================================================ */
 import * as P from '../people.js';
 import * as F from '../finance.js';
 import * as O from '../ops.js';
-import { fmtBDT, iso, MONTHS } from '../dataset.js';
+import * as BNG from './bangla.js';
+import { fmtBDT, iso, MONTHS, monthKey } from '../dataset.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp ? window.EonErp.dataset() : null);
 const N = () => (typeof window !== 'undefined' ? window.EonNavigator : null);
 const BN = /[ঀ-৿]/;
 const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 
+/* Bangla money and numerals, so a Bangla sentence never carries an English figure */
+const bMoney = (n) => BNG.money(n);
+const bNum = (n) => BNG.digits(Math.round(Number(n) || 0));
+const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+const bMonthKey = (mk) => `${BN_MONTH[+String(mk).slice(5) - 1]} ${BNG.digits(String(mk).slice(0, 4))}`;
+const T = (D) => (D && D.meta && D.meta.today) || iso(new Date());
+
 /* ---------- 1. the verb: what does he want done ---------- */
 const VERBS = [
-  { id: 'howmuch', en: /\b(how much|how many|what is the (total|amount|balance)|total)\b/, bn: /(কত|কতটুকু|কয়টা|কতজন|মোট)/ },
+  { id: 'howmuch', en: /\b(how much|how many|what is the (total|amount|balance)|what's the (total|amount|balance)|total|how big)\b/, bn: /(কত|কতটুকু|কয়টা|কয়জন|কতজন|মোট)/ },
   /* Paying is tested before assigning, because "বেতন দাও" carries both words. */
   { id: 'pay',     en: /\b(pay|clear|settle|release)\b/,                                  bn: /(পরিশোধ|ক্লিয়ার|পে করো|(বেতন|টাকা|বিল|পেমেন্ট|বকেয়া)[^।]{0,12}(দাও|দিন))/ },
   /* "দাও" on its own means "give me" — an instruction needs its noun. */
@@ -39,7 +62,7 @@ const VERBS = [
   { id: 'message', en: /\b(message|msg|write to|tell|inform|notify)\b/,                    bn: /(মেসেজ|বার্তা|জানাও|বলে দাও)/ },
   { id: 'open',    en: /\b(open|go to|take me|navigate|show me the|bring up)\b/,           bn: /(খোলো|খুলুন|নিয়ে চলো|দেখাও পেজ|যাও)/ },
   { id: 'where',   en: /\b(where is|where are|where can i|which (page|screen|menu))\b/,    bn: /(কোথায়|কোন পেজ|কোন মেনু)/ },
-  { id: 'list',    en: /\b(list|show|what are|which|who are|give me)\b/,                   bn: /(দেখাও|তালিকা|কারা|কোনগুলো|কী কী)/ },
+  { id: 'list',    en: /\b(list|show|what are|which|who are|give me|give)\b/,              bn: /(দেখাও|তালিকা|কারা|কোনগুলো|কী কী)/ },
   { id: 'any',     en: /\b(any|is there|are there|anything)\b/,                            bn: /(কোনো|আছে কি|কিছু আছে)/ },
   { id: 'why',     en: /\b(why|explain|how does|how is .* calculated)\b/,                  bn: /(কেন|কিভাবে|ব্যাখ্যা)/ },
 ];
@@ -51,39 +74,181 @@ function verbOf(q) {
 
 /* ---------- 2. the subject: which part of the business ----------
    Built from the ERP's own menu and tables, plus the words the boss
-   uses for them in both languages. */
+   actually uses for them in both languages — all of them, not one
+   canonical form, because nobody says the canonical form out loud.
+
+   ask     — an English probe that domains/erp/qa.js really matches.
+             Every one below was walked against that file's INTENTS in
+             order, so the probe lands on the intent named here and not
+             on an earlier one. Several used to miss: "overdue tasks"
+             landed on overdue *invoices* (it now reads "task board"),
+             and "any ticket sale today", "last transaction", "chart of
+             accounts", "any accounting error" and "vendor meeting"
+             matched no intent at all — those subjects are answered
+             here instead, natively, in both languages.
+   askBn   — a Bangla probe that plugins/bangla.js really matches.
+   rank    — 1 = a named part of the business, 5 = a vague word that
+             should only win when nothing specific was said. */
 const SUBJECTS = [
-  { id: 'cash',        en: /\b(cash|bank|balance|liquidity|fund)s?\b/,               bn: /(ক্যাশ|নগদ|ব্যাংক|তহবিল)/,        ask: 'cash position' },
-  { id: 'receivable',  en: /\b(receivable|owes? us|collect|debtor|due from)\b/,      bn: /(পাওনা|আদায়|বাকি টাকা)/,          ask: 'who owes us money' },
-  { id: 'payable',     en: /\b(payable|we owe|creditor|supplier due|bill)s?\b/,      bn: /(দেনা|পরিশোধযোগ্য|পাওনাদার)/,     ask: 'what do we owe' },
-  { id: 'dues',        en: /(owes?|owing|due|dues|outstanding|balance)/,             bn: /(বাকি|বকেয়া|পাওনা কত|দেনা কত)/,   ask: 'who owes us money' },
-  { id: 'payroll',     en: /\b(payroll|salary|salaries|payslip|wage)s?\b/,           bn: /(বেতন|স্যালারি|পে-?রোল|মজুরি)/,    ask: 'payroll' },
-  { id: 'attendance',  en: /\b(attendance|present|absent|late|punch)\b/,             bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|দেরি)/,  ask: 'who is absent today' },
-  { id: 'leave',       en: /\b(leave|holiday|vacation)s?\b/,                         bn: /(ছুটি)/,                          ask: 'leave requests' },
-  { id: 'task',        en: /\b(task|to-?do|work|assignment|board)s?\b/,              bn: /(কাজ|টাস্ক|বোর্ড)/,               ask: 'overdue tasks' },
-  { id: 'project',     en: /\b(project|delivery|milestone)s?\b/,                     bn: /(প্রজেক্ট|প্রকল্প)/,               ask: 'projects' },
-  { id: 'lead',        en: /\b(lead|pipeline|prospect|crm|deal)s?\b/,                bn: /(লিড|পাইপলাইন|সম্ভাব্য)/,          ask: 'pipeline' },
-  { id: 'sale',        en: /\b(sale|invoice|ticket sale|booking|revenue)s?\b/,       bn: /(বিক্রি|সেল|ইনভয়েস|টিকিট)/,       ask: 'any ticket sale today' },
-  { id: 'expense',     en: /\b(expense|spend|cost|budget)s?\b/,                      bn: /(খরচ|ব্যয়|বাজেট)/,                ask: 'spending' },
-  { id: 'journal',     en: /\b(journal|ledger|entry|entries|voucher|posting)s?\b/,   bn: /(জার্নাল|লেজার|খতিয়ান|ভাউচার)/,   ask: 'last transaction' },
-  { id: 'account',     en: /\b(account|chart of accounts|coa)s?\b/,                  bn: /(হিসাব|একাউন্ট|চার্ট)/,            ask: 'chart of accounts' },
-  { id: 'employee',    en: /\b(employee|staff|people|headcount|worker)s?\b/,         bn: /(কর্মী|স্টাফ|জনবল|লোক)/,           ask: 'headcount' },
-  { id: 'customer',    en: /\b(customer|client|party)s?\b/,                          bn: /(ক্রেতা|গ্রাহক|পার্টি)/,           ask: 'top customers' },
-  { id: 'vendor',      en: /\b(vendor|supplier)s?\b/,                                bn: /(সরবরাহকারী|ভেন্ডর)/,             ask: 'top suppliers' },
-  { id: 'meeting',     en: /\b(meeting|appointment|visit)s?\b/,                      bn: /(মিটিং|সভা|অ্যাপয়েন্টমেন্ট)/,     ask: 'vendor meeting' },
-  { id: 'notice',      en: /\b(notice|announcement|circular)s?\b/,                   bn: /(নোটিশ|বিজ্ঞপ্তি)/,               ask: 'office todos' },
-  { id: 'loan',        en: /\b(loan|advance)s?\b/,                                   bn: /(ঋণ|লোন|অগ্রিম)/,                 ask: 'loans' },
-  { id: 'error',       en: /\b(error|mistake|wrong|problem|issue|unbalanced)s?\b/,   bn: /(ভুল|সমস্যা|গরমিল|এরর)/,          ask: 'any accounting error' },
-  { id: 'profit',      en: /\b(profit|loss|margin|p&l|income statement)\b/,          bn: /(লাভ|মুনাফা|লোকসান)/,             ask: 'profit' },
-  { id: 'profile',     en: /\b(profile|details|record|information|info|who is)\b/,       bn: /(প্রোফাইল|তথ্য|বিস্তারিত|পরিচয়)/,  ask: 'user' },
-  { id: 'payslip',     en: /\b(payslip|pay slip|salary slip|pay statement)\b/,           bn: /(পে-?স্লিপ|বেতন স্লিপ)/,          ask: 'payslips' },
-  { id: 'brief',       en: /\b(brief|summary|situation|status|overview|today)\b/,    bn: /(ব্রিফ|সারসংক্ষেপ|অবস্থা|আজকের)/,  ask: 'brief' },
+  /* ---- the day ---- */
+  { id: 'brief', rank: 5, ask: 'brief', askBn: 'ব্রিফ',
+    en: /\b(brief|briefing|morning report|daily report|status report|overview|situation|catch me up|update me|where do we stand|how (are|is) (things|business|the company|everything|we doing)|what('?s| is) (going on|happening|the situation|new)|summary of the day)\b/,
+    bn: /(ব্রিফ|সারসংক্ষেপ|আজকের অবস্থা|আজকের রিপোর্ট|খবর (কি|কী)|সব কেমন চলছে|সার্বিক অবস্থা|দিনের অবস্থা)/ },
+  { id: 'decision', rank: 5, ask: 'what should i do', askBn: 'সিদ্ধান্ত',
+    en: /\b(what should i do|what do i do|priorit(y|ies)|urgent|critical|needs (my )?attention|top (issue|risk|decision)|decisions?|burning|on fire|action list)\b/,
+    bn: /(কী করা উচিত|কি করা উচিত|জরুরি|গুরুত্বপূর্ণ|সিদ্ধান্ত|নজর দেওয়া|মনোযোগ|অগ্রাধিকার)/ },
+  { id: 'approval', rank: 1, ask: 'approvals', askBn: 'অনুমোদন',
+    en: /\b(approvals?|approve|waiting (on|for) me|pending (my )?(sign|approval)|sign[- ]?offs?|authoris(e|ation)|authoriz(e|ation))\b/,
+    bn: /(অনুমোদন|সই|অনুমতি|পেন্ডিং|অপেক্ষমাণ)/ },
+
+  /* ---- money ---- */
+  { id: 'cash', rank: 1, ask: 'cash position', askBn: 'ক্যাশ',
+    en: /\b(cash|cash position|cash in hand|bank balances?|banks?|liquidity|funds?|treasury|money (do we have|in the bank|left)|how much money)\b/,
+    bn: /(ক্যাশ|নগদ|ব্যাংক|তহবিল|হাতে (কত|কী) (টাকা|আছে)|টাকা আছে)/ },
+  { id: 'runway', rank: 1, ask: 'runway', askBn: null,
+    en: /\b(runway|burn rate|burning cash|how long (will|does) (the )?cash last|months? of (cash|cover)|survive)\b/,
+    bn: /(রানওয়ে|কতদিন চলবে|নগদ কতদিন|বার্ন রেট)/ },
+  { id: 'receivable', rank: 1, ask: 'receivables', askBn: 'পাওনা',
+    en: /\b(receivables?|owes? us|owed to us|money in the market|collections?|collect|debtors?|due from|customer dues?|ar)\b/,
+    bn: /(পাওনা|আদায়|রিসিভেবল|কারা টাকা দেবে|টাকা (দেবে|দিবে|পাব))/ },
+  { id: 'payable', rank: 1, ask: 'payables', askBn: 'দেনা',
+    /* "how much do we owe suppliers" is a payables question, not a question
+       about suppliers — so the longer phrase is spelled out and wins on length. */
+    en: /\b(we owe (the )?(suppliers?|vendors?|creditors?|them)|payables?|we owe|creditors?|supplier dues?|bills? (to pay|due)|bills?|payments? due|ap)\b/,
+    bn: /(দেনা|পাওনাদার|পেয়েবল|কাকে (টাকা )?দিতে|বিল পরিশোধ)/ },
+  /* "overdue" is an adjective, not a part of the business: "what tasks are
+     overdue" is a question about tasks. Rank 3 lets any real noun win. */
+  { id: 'overdue', rank: 3, ask: 'overdue', askBn: null,
+    en: /\b(overdue|past due|late payments?|aged debt|not paid on time)\b/,
+    bn: /(সময় পার|মেয়াদ পার|বকেয়া পড়ে|দেরিতে পরিশোধ)/ },
+  { id: 'aging', rank: 1, ask: 'aging', askBn: null,
+    en: /\b(aging|ageing|aged (analysis|buckets?)|how old are (the )?dues?)\b/,
+    bn: /(এজিং|বয়সভিত্তিক|কত পুরনো বকেয়া)/ },
+  { id: 'dues', rank: 5, ask: 'outstanding invoices', askBn: 'পাওনা',
+    en: /\b(owes?|owing|dues?|outstanding|arrears|unpaid|unsettled|balance)\b/,
+    bn: /(বাকি|বকেয়া|অপরিশোধিত|কত পাওনা|কত দেনা)/ },
+  { id: 'profit', rank: 1, ask: 'profit', askBn: 'মুনাফা',
+    en: /\b(profits?|loss|margins?|p&l|income statement|bottom line|net income|earnings?|revenue|turnover|making money|losing money)\b/,
+    bn: /(লাভ|মুনাফা|লোকসান|আয়(-| )?ব্যয়|আয় কত|টার্নওভার|নিট আয়)/ },
+  { id: 'trialbalance', rank: 1, ask: 'trial balance', askBn: null,
+    en: /\b(trial balance)\b/, bn: /(ট্রায়াল ব্যালেন্স|রেওয়ামিল)/ },
+  { id: 'balancesheet', rank: 1, ask: 'balance sheet', askBn: null,
+    en: /\b(balance sheet|net worth|assets? and liabilit|what do we own|equity)\b/,
+    bn: /(ব্যালেন্স শিট|স্থিতিপত্র|সম্পদ ও দায়|নিট সম্পদ)/ },
+  { id: 'anomaly', rank: 1, ask: 'anomalies', askBn: null,
+    en: /\b(anomal(y|ies)|unusual|spikes?|suspicious|leakage|abnormal|out of (pattern|line)|irregular)\b/,
+    bn: /(অস্বাভাবিক|সন্দেহজনক|হঠাৎ বেড়ে|অনিয়ম)/ },
+  { id: 'expense', rank: 1, ask: 'spending', askBn: null,
+    en: /\b(expenses?|spend(ing)?|spent|costs?|budgets?|opex|overheads?|outgoings?|where (is|does) (the )?money go)\b/,
+    bn: /(খরচ|ব্যয়|বাজেট|খরচা|ওভারহেড)/ },
+  { id: 'sale', rank: 1, ask: null, askBn: null,
+    en: /\b(sales?|sold|invoices?|bookings?|ticket sales?|billed|top line)\b/,
+    bn: /(বিক্রি|সেল|ইনভয়েস|টিকিট বিক্রি|বিক্রয়|চালান)/ },
+  { id: 'journal', rank: 1, ask: null, askBn: null,
+    en: /\b(journals?|ledgers?|entr(y|ies)|vouchers?|postings?|transactions?|book ?keeping)\b/,
+    bn: /(জার্নাল|লেজার|খতিয়ান|ভাউচার|দাখিলা|লেনদেন)/ },
+  { id: 'account', rank: 1, ask: null, askBn: null,
+    en: /\b(chart of accounts|coa|account codes?|gl codes?|account heads?|ledger accounts?)\b/,
+    bn: /(হিসাব নম্বর|একাউন্ট কোড|হিসাবের চার্ট|হিসাব খাত)/ },
+  { id: 'error', rank: 1, ask: null, askBn: null,
+    en: /\b(errors?|mistakes?|wrong|problems?|issues?|unbalanced|discrepanc(y|ies)|mismatch|does not balance|doesn't balance)\b/,
+    bn: /(ভুল|গরমিল|এরর|মিল নেই|অসামঞ্জস্য|সমস্যা)/ },
+
+  /* ---- people ---- */
+  { id: 'payroll', rank: 1, ask: 'payroll', askBn: 'বেতন',
+    en: /\b(payroll|salar(y|ies)|wages?|pay ?bill|net pay|remuneration|salary sheet)\b/,
+    bn: /(বেতন|স্যালারি|পে-?রোল|মজুরি|বেতনের হিসাব)/ },
+  { id: 'payslip', rank: 1, ask: 'payslips', askBn: 'বেতন',
+    en: /\b(pay ?slips?|salary slips?|pay statements?)\b/, bn: /(পে-?স্লিপ|বেতন স্লিপ|বেতনের স্লিপ)/ },
+  { id: 'attendance', rank: 1, ask: 'who is absent today', askBn: 'অনুপস্থিত',
+    en: /\b(attendance|present|absent(ees?)?|missing|punch(es|ed)?|who (came|showed up|is in|is here)|has ?n'?t shown up|checked in|in today)\b/,
+    bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|কে আসেনি|কে আসছে|কতজন এসেছে|কে অফিসে)/ },
+  { id: 'late', rank: 1, ask: 'who came late today', askBn: 'দেরি',
+    en: /\b(late ?comers?|came late|arrived late|who (is|was) late|punctual(ity)?|always late|habitually late|tardy)\b/,
+    bn: /(দেরি|লেট|বিলম্ব|সময়মতো আসে না)/ },
+  { id: 'online', rank: 1, ask: 'who is online', askBn: null,
+    en: /\b(online|logged in|active (now|users)|at (their|the) desk right now)\b/,
+    bn: /(অনলাইনে|লগইন|এখন সক্রিয়)/ },
+  { id: 'leave', rank: 1, ask: 'leave requests', askBn: null,
+    en: /\b(leaves?|leave (request|application|balance)|on leave|holidays?|vacations?|day off|time off)\b/,
+    bn: /(ছুটি|ছুটির আবেদন|ছুটিতে)/ },
+  /* "staff" / "কর্মী" qualifies almost anything the boss says — "staff loans",
+     "কর্মী ঋণ", "staff attendance" — so rank 2: it wins only on its own. */
+  { id: 'employee', rank: 2, ask: 'headcount', askBn: 'জনবল',
+    en: /\b(employees?|staff|people|headcount|workers?|manpower|workforce|team size|departments?|how many (people|staff|employees))\b/,
+    bn: /(কর্মী|স্টাফ|জনবল|লোকবল|কতজন (কর্মী|লোক|স্টাফ)|কর্মী সংখ্যা|বিভাগ)/ },
+  { id: 'performance', rank: 1, ask: 'evaluate', askBn: null,
+    en: /\b(performance|evaluat(e|ion)|appraisals?|rating|report card|assess)\b|\bhow (is|good is) .* (doing|performing)\b/,
+    bn: /(কেমন করছে|কেমন করছেন|পারফর্ম|মূল্যায়ন|রিপোর্ট কার্ড)/ },
+  { id: 'ranking', rank: 1, ask: 'rank employees', askBn: null,
+    en: /\b(rank(ing)? (employees|staff|team)|leaderboard|(best|top|worst|weakest|strongest) (performer|employee|staff)|who (performs|is performing) (best|worst))\b/,
+    bn: /(র‍্যাঙ্কিং|সেরা কর্মী|সবচেয়ে ভালো কর্মী|তালিকা ক্রম)/ },
+  { id: 'loan', rank: 1, ask: 'loans', askBn: null,
+    en: /\b(loans?|advances?|advance salary|borrowed|employee requests?)\b/,
+    bn: /(ঋণ|লোন|অগ্রিম|অ্যাডভান্স)/ },
+  { id: 'workload', rank: 1, ask: 'workload', askBn: null,
+    en: /\b(workload|overloaded|who is (busy|free|idle)|capacity|bandwidth|too much work)\b/,
+    bn: /(কাজের চাপ|ব্যস্ত|খালি আছে|সক্ষমতা)/ },
+
+  /* ---- customers, sales, work ---- */
+  { id: 'lead', rank: 1, ask: 'pipeline', askBn: 'পাইপলাইন',
+    en: /\b(leads?|pipelines?|prospects?|crm|sales funnel|funnel|conversion|win rate)\b/,
+    bn: /(লিড|পাইপলাইন|সম্ভাব্য (ক্রেতা|গ্রাহক)|ফানেল)/ },
+  { id: 'deal', rank: 1, ask: 'deals closing soon', askBn: 'পাইপলাইন',
+    en: /\b(deals?|closing (soon|this)|expected revenue|forecast)\b/, bn: /(ডিল|চুক্তি হবে|ক্লোজ হবে)/ },
+  { id: 'followup', rank: 1, ask: 'follow ups', askBn: null,
+    en: /\b(follow[- ]?ups?|call list|who (should|do) (i|we) call)\b/, bn: /(ফলোআপ|ফলো-আপ|কাকে কল)/ },
+  { id: 'customer', rank: 1, ask: 'top customers', askBn: null,
+    en: /\b(customers?|clients?|buyers?|part(y|ies))\b/, bn: /(ক্রেতা|গ্রাহক|পার্টি|কাস্টমার)/ },
+  { id: 'vendor', rank: 1, ask: 'top suppliers', askBn: null,
+    en: /\b(vendors?|suppliers?|sellers?)\b/, bn: /(সরবরাহকারী|ভেন্ডর|সাপ্লায়ার)/ },
+  { id: 'task', rank: 1, ask: 'task board', askBn: 'টাস্ক',
+    en: /\b(tasks?|to-?do items?|assignments?|task board|backlog|work items?|working on)\b/,
+    bn: /(টাস্ক|কাজ (বাকি|জমে|দেরি|কী|কি)|কাজের অবস্থা|অসমাপ্ত কাজ|কাজগুলো|কী কাজ)/ },
+  { id: 'project', rank: 1, ask: 'projects', askBn: 'প্রকল্প',
+    en: /\b(projects?|deliver(y|ies)|milestones?|at risk|behind schedule)\b/,
+    bn: /(প্রজেক্ট|প্রকল্প|ডেলিভারি|ঝুঁকিতে|ঝুঁকি)/ },
+  { id: 'todo', rank: 1, ask: 'office todos', askBn: null,
+    en: /\b(office to-?dos?|checklists?|compliance|licen[cs]es?|vat return|mushak|renewals?)\b/,
+    bn: /(অফিস চেকলিস্ট|লাইসেন্স|ভ্যাট|নবায়ন|কমপ্লায়েন্স)/ },
+  { id: 'meeting', rank: 1, ask: null, askBn: null,
+    en: /\b(meetings?|appointments?|visits?)\b/, bn: /(মিটিং|সভা|অ্যাপয়েন্টমেন্ট|বৈঠক)/ },
+  { id: 'notice', rank: 1, ask: null, askBn: null,
+    en: /\b(notices?|announcements?|circulars?|bulletins?)\b/, bn: /(নোটিশ|বিজ্ঞপ্তি|ঘোষণা)/ },
+
+  /* ---- a record ---- */
+  { id: 'profile', rank: 5, ask: null, askBn: null,
+    en: /\b(profiles?|details|records?|information|info|who is|tell me about|dossier)\b/,
+    bn: /(প্রোফাইল|তথ্য|বিস্তারিত|পরিচয়|কে ইনি|সম্পর্কে বলো)/ },
 ];
-function subjectOf(q) {
+
+/** every subject this sentence names, best first */
+function subjectsIn(q) {
   const s = norm(q);
   const bn = BN.test(q);
-  const hits = SUBJECTS.filter((x) => (bn ? x.bn.test(q) : false) || x.en.test(s));
-  return hits.length ? hits[0] : null;
+  const hits = [];
+  for (const x of SUBJECTS) {
+    let m = bn ? x.bn.exec(q) : x.en.exec(s);
+    if (!m && bn) m = x.en.exec(s);            // "Imran এর payroll" — a Latin word inside Bangla
+    if (m) hits.push({ subj: x, len: m[0].length });
+  }
+  // a named part of the business beats a vague word; inside a class the longest
+  // match wins, so "salary bill" is payroll and not a supplier's bill
+  hits.sort((a, b) => a.subj.rank - b.subj.rank || b.len - a.len);
+  return hits.map((h) => h.subj);
+}
+function subjectOf(q) { return subjectsIn(q)[0] || null; }
+
+/* "cash and receivables" — cheap chains, answered in one breath */
+const CHAIN = /\band\b|\bplus\b|\bas well as\b|,| ও | এবং |আর /;
+function chainOf(q) {
+  if (!CHAIN.test(String(q))) return null;
+  const all = subjectsIn(q).filter((x) => x.rank === 1).slice(0, 2);
+  if (all.length < 2) return null;
+  // answer them in the order he said them: "cash and receivables" starts with cash
+  const s = norm(q), bn = BN.test(q);
+  const at = (x) => { const m = (bn ? x.bn.exec(q) : null) || x.en.exec(s); return m ? m.index : 1e9; };
+  return all.sort((a, b) => at(a) - at(b));
 }
 
 /* ---------- 3. who and when ----------
@@ -91,12 +256,15 @@ function subjectOf(q) {
    payroll" … "take me to his profile" … "give pay to him". EON remembers the
    last person named — in either language — so the follow-ups land. */
 let lastWho = null;
-const PRONOUN = /\b(he|him|his|she|her|hers|they|them|their|the same|that person)\b|(তার|ওর|তাকে|ওকে|উনার|তিনি)/i;
+const PRONOUN = /\b(he|him|his|she|her|hers|they|them|their|the same|that person)\b|(তার|তাঁর|ওর|তাকে|ওকে|উনার|উনি|তিনি)/i;
 export function subject_of_last() { return lastWho; }
+/** let another layer hand EON the person it has just answered about */
+export function remember(w) { if (w && w.name) lastWho = w; return lastWho; }
 function whoIn(D, q) {
+  if (!D) return null;
   // a person the ERP knows — try the longest capitalised run, then any word
   const caps = String(q).match(/\b[A-Z][a-z.]{1,15}(?:\s+[A-Z][a-z.]{1,15}){0,3}\b/g) || [];
-  const skip = /^(What|How|Any|Who|Show|Take|Assign|Last|The|Is|Are|Do|Can|EON|ERP)$/;
+  const skip = /^(What|How|Any|Who|Show|Take|Assign|Last|The|Is|Are|Do|Can|Give|Open|Where|When|Why|EON|ERP)$/;
   for (const c of caps.filter((x) => !skip.test(x)).sort((a, b) => b.length - a.length)) {
     const e = P.findEmployee(D, c);
     if (e) {
@@ -114,16 +282,16 @@ function whoIn(D, q) {
   return null;
 }
 
-/** who this sentence is about — the name in it, or the last person named */
+/** who this sentence is about — the name in it, or the last person named.
+    Possessives and of-forms need no special case: whoIn scans the whole
+    sentence, so "X's attendance", "attendance of X" and "X attendance" all
+    reach the same person, in any order, for every subject there is. */
 function whoOrLast(D, q) {
   const w = whoIn(D, q);
   if (w) { lastWho = w; return w; }
   if (PRONOUN.test(q) && lastWho) return lastWho;
-  // "payroll of Imran", "Imran's payroll", "give Imran's payroll" — the name may sit
-  // anywhere; whoIn already scans, so a miss here means no name was said at all
   return null;
 }
-const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 function monthIn(q) {
   const s = norm(latinDigits(q));
   const i = MONTHS.findIndex((m) => s.includes(m.toLowerCase().slice(0, 3)));
@@ -354,6 +522,413 @@ async function step(D, q, verb, ctx) {
   return null;
 }
 
+/* ============================================================
+   EON'S OWN WORDS — the subjects no answerer covers.
+
+   qa.js has no intent for a chart of accounts, a notice board, the
+   last voucher or today's sales; bangla.js has no intent for
+   expenses, leave, loans or ageing. Rather than hand a Bangla
+   question an English answer — or nothing at all — EON writes those
+   sentences itself, off the same layer functions, natively in both
+   languages. Nothing here is translated from the other side.
+   ============================================================ */
+const openA = (bn, query) => { const n = N(); if (!n) return []; const h = (n.find(query, 1) || [])[0]; return h ? [{ label: bn ? 'খুলুন' : 'Open', kind: 'erp-open', href: n.url(h.uri) }] : []; };
+
+const NATIVE = {
+  sale(D, s) {
+    const t = T(D), mk = monthKey(t), co = s.company;
+    const rows = [].concat(D.sales || [], D.ticket_sales || [], D.visa_sales || [])
+      .filter((x) => co == null || +x.company_id === co);
+    const today = rows.filter((x) => String(x.date || '').slice(0, 10) === t);
+    const month = rows.filter((x) => String(x.date || '').slice(0, 7) === mk);
+    const S = (a) => a.reduce((n, r) => n + (+r.total || 0), 0);
+    const due = (a) => a.reduce((n, r) => n + (+r.due_amount || 0), 0);
+    return {
+      en: `${today.length} sale${today.length === 1 ? '' : 's'} today for ${fmtBDT(S(today))}; ${month.length} this month for ${fmtBDT(S(month))}, of which ${fmtBDT(due(month))} is still unpaid.`,
+      bn: `আজ ${bNum(today.length)}টি বিক্রি, ${bMoney(S(today))}; এ মাসে ${bNum(month.length)}টি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`,
+      detail: month.slice(-6).reverse().map((r) => `${r.date} · ${r.invoice_no || r.invoice || r.id} — ${fmtBDT(+r.total || 0)}`),
+      screen: 'sales', view: 'crm',
+    };
+  },
+  expense(D, s) {
+    const e = F.expensesVsBudget(D, s);
+    return {
+      en: `Spending this month is ${fmtBDT(e.totalSpent)} against a budget of ${fmtBDT(e.totalBudget)}${e.over.length ? `; ${e.over.length} categor${e.over.length === 1 ? 'y is' : 'ies are'} over` : ', nothing over budget'}.`,
+      bn: `${bMonthKey(e.month)} মাসে খরচ ${bMoney(e.totalSpent)}, বাজেট ${bMoney(e.totalBudget)}${e.over.length ? `; ${bNum(e.over.length)}টি খাত বাজেট ছাড়িয়েছে` : '; কোনো খাত বাজেট ছাড়ায়নি'}।`,
+      detail: e.rows.slice(0, 6).map((r) => `${r.category}: ${fmtBDT(r.spent)}${r.budget ? ` / ${fmtBDT(r.budget)}` : ''}`),
+      screen: 'expenses', view: 'finance',
+    };
+  },
+  leave(D, s) {
+    const l = P.leaves(D, s);
+    return {
+      en: `${l.pending.length} leave request${l.pending.length === 1 ? '' : 's'} waiting, ${l.onLeaveToday.length} on leave today, ${l.upcoming.length} starting within a fortnight.`,
+      bn: `${bNum(l.pending.length)}টি ছুটির আবেদন অপেক্ষমাণ, আজ ছুটিতে ${bNum(l.onLeaveToday.length)} জন, দুই সপ্তাহের মধ্যে ছুটি নেবেন ${bNum(l.upcoming.length)} জন।`,
+      detail: l.pending.slice(0, 6).map((x) => `${x.name} — ${x.leave_type} ${x.days}d (${x.start_date})`),
+      screen: 'leave', view: 'people',
+    };
+  },
+  loan(D, s) {
+    const ln = P.loans(D, s);
+    return {
+      en: `${ln.running.length} staff loan${ln.running.length === 1 ? '' : 's'} running, ${fmtBDT(ln.outstanding)} outstanding, recovering ${fmtBDT(ln.monthlyRecovery)} a month; ${ln.advancesPending.length} advance request${ln.advancesPending.length === 1 ? '' : 's'} pending.`,
+      bn: `${bNum(ln.running.length)}টি কর্মী ঋণ চলমান, বাকি ${bMoney(ln.outstanding)}, মাসে আদায় ${bMoney(ln.monthlyRecovery)}; ${bNum(ln.advancesPending.length)}টি অগ্রিমের আবেদন অপেক্ষমাণ।`,
+      detail: ln.running.slice(0, 6).map((l) => `${l.name} — ${fmtBDT(+l.remaining_amount || 0)} left of ${fmtBDT(+l.amount || 0)}`),
+      screen: 'loan', view: 'people',
+    };
+  },
+  journal(D, s) {
+    const co = s.company;
+    const rows = (D.journal_entries || []).filter((e) => co == null || +e.company_id === co)
+      .slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || (+b.id || 0) - (+a.id || 0));
+    if (!rows.length) return { en: 'The ledger has no entries yet.', bn: 'খতিয়ানে এখনো কোনো দাখিলা নেই।', detail: [], screen: 'journals', view: 'finance' };
+    const e = rows[0];
+    const amt = (e.items || []).reduce((n, i) => n + (+i.debit || 0), 0);
+    return {
+      en: `${rows.length} journal entries on file. The last posting was ${e.date} — ${e.description || e.reference || e.source} for ${fmtBDT(amt)}.`,
+      bn: `খতিয়ানে ${bNum(rows.length)}টি দাখিলা আছে। সর্বশেষ পোস্টিং ${e.date} — ${e.description || e.reference || e.source}, ${bMoney(amt)}।`,
+      detail: (e.items || []).slice(0, 6).map((i) => `${i.account_code || ''} ${i.account_name || ''} — ${(+i.debit || 0) ? 'Dr ' + fmtBDT(+i.debit) : 'Cr ' + fmtBDT(+i.credit)}`),
+      screen: 'journals', view: 'finance',
+    };
+  },
+  account(D, s) {
+    const co = s.company;
+    const acc = (D.accounts || []).filter((a) => co == null || a.company_id == null || +a.company_id === co);
+    const by = {};
+    acc.forEach((a) => { const t = a.type || 'other'; by[t] = (by[t] || 0) + 1; });
+    const tb = F.trialBalance(D, s);
+    return {
+      en: `The chart of accounts holds ${acc.length} heads (${Object.keys(by).map((k) => `${by[k]} ${k}`).join(', ')}). The trial balance ${tb.balanced ? 'balances' : 'does NOT balance'} at ${fmtBDT(tb.totalDebit)}.`,
+      bn: `হিসাবের চার্টে ${bNum(acc.length)}টি খাত আছে। রেওয়ামিল ${tb.balanced ? 'মিলেছে' : 'মেলেনি'} — ${bMoney(tb.totalDebit)}।`,
+      detail: Object.keys(by).map((k) => `${k}: ${by[k]}`),
+      screen: 'chart of accounts', view: 'finance',
+    };
+  },
+  error(D, s) {
+    let r = null;
+    try { r = typeof window !== 'undefined' && window.EonEntity ? window.EonEntity.accountingErrors(s) : null; } catch (x) { r = null; }
+    if (!r) {
+      const co = s.company;
+      const entries = (D.journal_entries || []).filter((e) => co == null || +e.company_id === co);
+      let bad = 0;
+      entries.forEach((e) => {
+        const dr = (e.items || []).reduce((n, i) => n + (+i.debit || 0), 0);
+        const cr = (e.items || []).reduce((n, i) => n + (+i.credit || 0), 0);
+        if (Math.abs(dr - cr) > 0.5) bad++;
+      });
+      r = { problems: bad ? [{ text: `${bad} journal entries do not balance` }] : [], checked: entries.length, samples: [] };
+    }
+    if (!r.problems.length) return {
+      en: `I checked ${r.checked} journal entries — every one balances, every account exists, none are future-dated. Nothing is wrong in the books.`,
+      bn: `${bNum(r.checked)}টি দাখিলা যাচাই করেছি — সবগুলো মিলেছে, চার্টের বাইরের কোনো হিসাব খাত নেই, ভবিষ্যৎ তারিখের দাখিলাও নেই। হিসাবে কোনো ভুল পাইনি।`,
+      detail: [], screen: 'journals', view: 'finance',
+    };
+    return {
+      en: `Yes — ${r.problems.map((p) => p.text).join('; ')}, out of ${r.checked} entries checked.`,
+      bn: `হ্যাঁ — ${bNum(r.checked)}টি দাখিলার মধ্যে গরমিল আছে: ${r.problems.map((p) => p.text).join('; ')}।`,
+      detail: (r.samples || []).slice(0, 6), screen: 'journals', view: 'finance',
+    };
+  },
+  customer(D, s) {
+    const tp = F.topParties(D, s), c = tp.customers, ar = F.receivables(D, s);
+    return {
+      en: `${(D.customers || []).length} customers on file; over the last ${tp.window} days the biggest is ${c[0] ? `${c[0].name} at ${fmtBDT(c[0].total)}` : 'none'}. ${fmtBDT(ar.total)} is receivable from customers.`,
+      bn: `খাতায় ${bNum((D.customers || []).length)} জন ক্রেতা; গত ${bNum(tp.window)} দিনে সবচেয়ে বড় ${c[0] ? `${c[0].name} — ${bMoney(c[0].total)}` : 'কেউ নেই'}। ক্রেতাদের কাছে পাওনা ${bMoney(ar.total)}।`,
+      detail: c.slice(0, 6).map((x, i) => `${i + 1}. ${x.name} — ${fmtBDT(x.total)}${x.due ? ` (due ${fmtBDT(x.due)})` : ''}`),
+      screen: 'customers', view: 'finance',
+    };
+  },
+  vendor(D, s) {
+    const tp = F.topParties(D, s), v = tp.suppliers, ap = F.payables(D, s);
+    return {
+      en: `${(D.suppliers || []).length} suppliers on file; over the last ${tp.window} days the biggest is ${v[0] ? `${v[0].name} at ${fmtBDT(v[0].total)}` : 'none'}. ${fmtBDT(ap.total)} is payable to suppliers.`,
+      bn: `খাতায় ${bNum((D.suppliers || []).length)} জন সরবরাহকারী; গত ${bNum(tp.window)} দিনে সবচেয়ে বড় ${v[0] ? `${v[0].name} — ${bMoney(v[0].total)}` : 'কেউ নেই'}। সরবরাহকারীদের দেনা ${bMoney(ap.total)}।`,
+      detail: v.slice(0, 6).map((x, i) => `${i + 1}. ${x.name} — ${fmtBDT(x.total)}${x.due ? ` (due ${fmtBDT(x.due)})` : ''}`),
+      screen: 'suppliers', view: 'finance',
+    };
+  },
+  meeting(D, s) {
+    const t = T(D);
+    const want = /meeting|appointment|visit|মিটিং|সভা/i;
+    const todos = (D.office_todos || []).filter((x) => (s.company == null || +x.company_id === s.company) && want.test(x.title || '') && x.status !== 'completed');
+    const tk = (O.tasks(D, s).open || []).filter((k) => want.test(k.title || ''));
+    const rows = todos.map((x) => ({ what: x.title, when: x.due_date })).concat(tk.map((k) => ({ what: k.title, when: k.due_date })))
+      .sort((a, b) => String(a.when || '').localeCompare(String(b.when || '')));
+    if (!rows.length) return { en: 'Nothing like a meeting is on the books.', bn: 'খাতায় কোনো মিটিং নেই।', detail: [], screen: 'todo', view: 'ops' };
+    const today = rows.filter((r) => r.when === t);
+    return {
+      en: `${rows.length} meeting${rows.length === 1 ? '' : 's'} on the books${today.length ? `, ${today.length} today` : ''}. Next: ${rows[0].what}${rows[0].when ? ` on ${rows[0].when}` : ''}.`,
+      bn: `খাতায় ${bNum(rows.length)}টি মিটিং আছে${today.length ? `, আজ ${bNum(today.length)}টি` : ''}। পরেরটি: ${rows[0].what}${rows[0].when ? ` — ${rows[0].when}` : ''}।`,
+      detail: rows.slice(0, 6).map((r) => `${r.when || 'no date'} — ${r.what}`),
+      screen: 'todo', view: 'ops',
+    };
+  },
+  notice(D, s) {
+    const t = T(D);
+    const all = (D.notices || []).filter((x) => s.company == null || +x.company_id === s.company);
+    const live = all.filter((x) => !x.expires_at || x.expires_at >= t);
+    if (!all.length) return { en: 'No notices have been published.', bn: 'কোনো নোটিশ প্রকাশ করা হয়নি।', detail: [], screen: 'notice', view: 'ops' };
+    return {
+      en: `${live.length} notice${live.length === 1 ? '' : 's'} still live out of ${all.length}. Latest: ${all[all.length - 1].title}.`,
+      bn: `${bNum(all.length)}টি নোটিশের মধ্যে ${bNum(live.length)}টি এখনো কার্যকর। সর্বশেষ: ${all[all.length - 1].title}।`,
+      detail: live.slice(0, 6).map((x) => `${x.published_at} — ${x.title}`),
+      screen: 'notice', view: 'ops',
+    };
+  },
+  overdue(D, s) {
+    const ar = F.receivables(D, s), ap = F.payables(D, s);
+    return {
+      en: `${fmtBDT(ar.overdueTotal)} is overdue from customers across ${ar.overdue.length} items, and ${fmtBDT(ap.overdueTotal)} is overdue to suppliers.`,
+      bn: `ক্রেতাদের কাছ থেকে ${bMoney(ar.overdueTotal)} সময় পার হয়ে গেছে (${bNum(ar.overdue.length)}টি), আর সরবরাহকারীদের ${bMoney(ap.overdueTotal)} দেরিতে পড়ে আছে।`,
+      detail: ar.byParty.filter((x) => x.overdue > 0).slice(0, 6).map((x, i) => `${i + 1}. ${x.party_name} — ${fmtBDT(x.overdue)} · ${x.oldest}d`),
+      screen: 'payment schedule', view: 'finance',
+    };
+  },
+  aging(D, s) {
+    const ar = F.receivables(D, s);
+    return {
+      en: `Receivables by age: ${ar.buckets.map((b) => `${b.bucket} ${fmtBDT(b.amount)}`).join(', ')}.`,
+      bn: `পাওনার বয়স অনুযায়ী: ${ar.buckets.map((b) => `${b.bucket} — ${bMoney(b.amount)}`).join(', ')}।`,
+      detail: ar.buckets.map((b) => `${b.bucket}: ${b.count} items, ${fmtBDT(b.amount)}`),
+      screen: 'payment schedule', view: 'finance',
+    };
+  },
+  runway(D, s) {
+    const r = F.runway(D, s);
+    return {
+      en: `Cash ${fmtBDT(r.cash)} against an average monthly outflow of ${fmtBDT(r.avgMonthlyOutflow)} — ${r.monthsOfCover == null ? 'no outflow history yet' : `${r.monthsOfCover} months of cover`}${r.burning ? ', and the business is burning cash' : ''}.`,
+      bn: `হাতে নগদ ${bMoney(r.cash)}, মাসে গড় খরচ ${bMoney(r.avgMonthlyOutflow)} — ${r.monthsOfCover == null ? 'হিসাব করার মতো ইতিহাস নেই' : `${BNG.digits(r.monthsOfCover)} মাস চলার মতো`}${r.burning ? ', এবং নগদ কমছে' : ''}।`,
+      detail: [], screen: 'bank', view: 'finance',
+    };
+  },
+  online(D, s) {
+    const now = Date.now();
+    const on = (D.employees || []).filter((e) => e.status === 'active' && (s.company == null || +e.company_id === s.company) && e.last_seen_at && now - Date.parse(e.last_seen_at) < 15 * 60000);
+    return {
+      en: `${on.length} ${on.length === 1 ? 'person is' : 'people are'} active in the ERP right now.`,
+      bn: `এই মুহূর্তে ইআরপিতে সক্রিয় আছেন ${bNum(on.length)} জন।`,
+      detail: on.slice(0, 8).map((e) => `${e.name} — ${e.department || ''}`),
+      screen: 'user', view: 'people',
+    };
+  },
+  workload(D, s) {
+    const t = O.tasks(D, s);
+    return {
+      en: `${t.open.length} open tasks across ${t.load.length} people; ${t.overloaded.length} carry six or more, and ${t.idle.length} skilled staff have nothing assigned.`,
+      bn: `${bNum(t.load.length)} জনের হাতে ${bNum(t.open.length)}টি খোলা কাজ; ${bNum(t.overloaded.length)} জনের চাপ বেশি, আর ${bNum(t.idle.length)} জন দক্ষ কর্মীর হাতে কোনো কাজ নেই।`,
+      detail: t.load.slice(0, 6).map((r) => `${r.name} — ${r.open} open, ${r.overdue} overdue`),
+      screen: 'tasks', view: 'ops',
+    };
+  },
+  todo(D, s) {
+    const td = O.todos(D, s);
+    return {
+      en: `${td.open.length} office to-dos are open, ${td.overdue.length} of them overdue${td.high.length ? `, ${td.high.length} marked high` : ''}.`,
+      bn: `অফিসের ${bNum(td.open.length)}টি কাজ খোলা আছে, তার ${bNum(td.overdue.length)}টির সময় পার${td.high.length ? `, ${bNum(td.high.length)}টি জরুরি` : ''}।`,
+      detail: td.overdue.slice(0, 6).map((x) => `${x.due_date} — ${x.title}`),
+      screen: 'todo', view: 'ops',
+    };
+  },
+  profile(D, s) {
+    const h = P.headcount(D, s);
+    const one = (D.employees || []).find((e) => e.status === 'active') || {};
+    return {
+      en: `I can pull a dossier on any of the ${h.total} people on the payroll — say the name, for example “tell me about ${one.name || 'Imran'}”.`,
+      bn: `বেতনভুক্ত ${bNum(h.total)} জনের যে কারো পূর্ণ তথ্য দিতে পারি — নামটা বলুন, যেমন “${one.name || 'Imran'} সম্পর্কে বলো”।`,
+      detail: [], screen: 'user', view: 'people',
+    };
+  },
+  dues(D, s) {
+    const ar = F.receivables(D, s), ap = F.payables(D, s);
+    return {
+      en: `${fmtBDT(ar.total)} is due to us and ${fmtBDT(ap.total)} is due from us; ${fmtBDT(ar.overdueTotal)} of the receivable is already overdue.`,
+      bn: `আমাদের পাওনা ${bMoney(ar.total)}, দেনা ${bMoney(ap.total)}; পাওনার মধ্যে ${bMoney(ar.overdueTotal)} সময় পার হয়ে গেছে।`,
+      detail: ar.byParty.slice(0, 6).map((x, i) => `${i + 1}. ${x.party_name} — ${fmtBDT(x.due)}`),
+      screen: 'payment schedule', view: 'finance',
+    };
+  },
+};
+
+/* ---------- the subject, answered by whoever owns it ---------- */
+function subjectAnswer(D, s, subj, q, bn) {
+  const c = { company: s.company };
+  /* 1. the answerer that owns THIS subject — never the raw sentence.
+        Handing the sentence back is what turned "লিড কেমন চলছে?" into the
+        morning brief: bangla.js sees "কেমন চলছে" and answers that instead. */
+  if (bn && subj.askBn && typeof window !== 'undefined' && window.EonBangla && window.EonBangla.answer) {
+    try { const r = window.EonBangla.answer(subj.askBn, c); if (r && r.speak) return r; } catch (e) { /* fall on */ }
+  }
+  if (!bn && subj.ask && typeof window !== 'undefined' && window.EonErpQA) {
+    try { const r = window.EonErpQA.answer(subj.ask, c); if (r && r.speak) return r; } catch (e) { /* fall on */ }
+  }
+  // 2. EON's own sentence, written natively in the language asked
+  const nat = NATIVE[subj.id];
+  if (nat) {
+    try {
+      const n = nat(D, s);
+      if (n) return { speak: bn ? n.bn : n.en, detail: n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
+    } catch (e) { /* fall on */ }
+  }
+  // 3. asked in Bangla, but only the English answerer computes this one
+  if (bn && subj.ask && typeof window !== 'undefined' && window.EonErpQA) {
+    try { const r = window.EonErpQA.answer(subj.ask, c); if (r && r.speak) return r; } catch (e) { /* fall on */ }
+  }
+  // 4. nothing computes it — open the screen rather than look deaf
+  const n2 = N();
+  const hit = n2 ? (n2.find(subj.ask || subj.id, 1) || [])[0] : null;
+  if (hit) {
+    const url = n2.url(hit.uri);
+    return {
+      speak: bn ? `${subj.id} নিয়ে সরাসরি হিসাব এখনো নেই, তবে স্ক্রিনটা খুলে দিতে পারি।`
+                : `I do not have a figure for ${subj.id} yet, but I can open the screen.`,
+      detail: [], actions: [{ label: bn ? 'খুলুন' : 'Open', kind: 'erp-open', href: url }],
+    };
+  }
+  return null;
+}
+
+/* ---------- one person, one subject ----------
+   Every subject that means something about a human answers about that
+   human — in either language, with the name said in any order. */
+function personAnswer(D, s, subj, who, q, bn) {
+  // "take me to his profile" / "Imran's payslip" — the record screen for that person
+  if ((subj.id === 'profile' || subj.id === 'payslip') && N()) {
+    const key = subj.id === 'profile' ? 'user' : 'payslips';
+    const rec = who.kind === 'employee' && subj.id === 'profile' ? N().findRecord(`user ${who.id}`) : null;
+    const url = rec ? N().url(rec.uri) : (() => { const h = (N().find(key, 1) || [])[0]; return h ? N().url(h.uri) : null; })();
+    if (url) return {
+      speak: say(q, `${who.name} — ${subj.id === 'profile' ? 'profile' : 'payslips'}. Opening it.`,
+                    `${who.name} — ${subj.id === 'profile' ? 'প্রোফাইল' : 'পে-স্লিপ'}। খুলছি।`),
+      detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }], navigate: url,
+    };
+  }
+
+  if (who.kind !== 'employee') {
+    // a customer or a supplier in the ledger — what they have is a balance
+    if (['dues', 'receivable', 'payable', 'overdue', 'aging', 'customer', 'vendor', 'sale', 'profile'].includes(subj.id)) {
+      const row = who.row || {};
+      return {
+        speak: say(q, `${who.name}: ${fmtBDT(row.due || 0)} outstanding, ${fmtBDT(row.overdue || 0)} of it overdue${row.oldest ? ` (oldest ${row.oldest} days)` : ''}.`,
+                      `${who.name}: ${bMoney(row.due || 0)} বকেয়া, তার ${bMoney(row.overdue || 0)} সময় পার${row.oldest ? ` (সবচেয়ে পুরনো ${bNum(row.oldest)} দিন)` : ''}।`),
+        detail: [], actions: openA(bn, 'party statement'), view: 'finance',
+      };
+    }
+    return null;
+  }
+
+  const e = who.row || {};
+  switch (subj.id) {
+    case 'task': case 'workload': case 'todo': {
+      const mine = (O.tasks(D, s).all || []).filter((t) => (t.assigned_to || []).includes(who.id));
+      const open = mine.filter((t) => t.status !== 'done');
+      const late = open.filter((t) => t.due_date && t.due_date < T(D));
+      return {
+        speak: say(q, `${who.name} has ${open.length} active task${open.length === 1 ? '' : 's'}${late.length ? `, ${late.length} overdue` : ''}${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}.`,
+          `${who.name}-এর ${bNum(open.length)}টি চলমান কাজ আছে${late.length ? `, ${bNum(late.length)}টির সময় পার` : ''}${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}।`),
+        detail: open.slice(0, 6).map((t) => `${t.title} — ${t.status}${t.due_date ? `, ${t.due_date}` : ''}`),
+        actions: openA(bn, 'tasks'), view: 'ops',
+      };
+    }
+    case 'payroll': {
+      const pr = P.payroll(D, s);
+      const mine = (pr.rows || []).filter((p) => p.user_id === who.id || p.name === who.name);
+      const unpaid = mine.filter((p) => p.status === 'Pending').reduce((n, p) => n + (+p.net_salary || 0), 0);
+      const left = (P.loans(D, s).running || []).filter((l) => l.user_id === who.id).reduce((n, l) => n + (+l.remaining_amount || 0), 0);
+      const sal = +e.salary || 0;
+      const bits = [
+        sal ? say(q, `salary ${fmtBDT(sal)}/month`, `বেতন ${bMoney(sal)}/মাস`) : null,
+        unpaid ? say(q, `${fmtBDT(unpaid)} unpaid`, `${bMoney(unpaid)} বকেয়া`) : say(q, `${pr.month} paid`, `${bMonthKey(pr.month)} পরিশোধিত`),
+        left ? say(q, `loan ${fmtBDT(left)} left`, `ঋণ বাকি ${bMoney(left)}`) : null,
+      ].filter(Boolean);
+      return {
+        speak: `${who.name} — ${bits.join(', ')}${bn ? '।' : '.'}`,
+        detail: [`${e.designation || ''}${e.department ? ' · ' + e.department : ''}`.trim()].filter(Boolean),
+        actions: openA(bn, 'employee salaries'), view: 'people',
+      };
+    }
+    case 'dues': case 'receivable': case 'payable': case 'overdue': case 'loan': {
+      const pr = P.payroll(D, s);
+      const unpaid = (pr.pending || []).filter((p) => p.user_id === who.id || p.name === who.name)
+        .reduce((n, p) => n + (+p.net_salary || +p.net || 0), 0);
+      const ln = P.loans(D, s);
+      const loans = (ln.running || []).filter((l) => l.user_id === who.id);
+      const left = loans.reduce((n, l) => n + (+l.remaining_amount || 0), 0);
+      const adv = (ln.advancesApproved || []).concat(ln.advancesPending || []).filter((a) => a.user_id === who.id);
+      const advTotal = adv.reduce((n, a) => n + (+a.amount || 0), 0);
+      const en = [], bnp = [];
+      if (unpaid) { en.push(`unpaid salary ${fmtBDT(unpaid)}`); bnp.push(`বকেয়া বেতন ${bMoney(unpaid)}`); }
+      if (left) { en.push(`loan outstanding ${fmtBDT(left)}`); bnp.push(`ঋণ বাকি ${bMoney(left)}`); }
+      if (advTotal) { en.push(`advances ${fmtBDT(advTotal)}`); bnp.push(`অগ্রিম ${bMoney(advTotal)}`); }
+      if (!en.length) return {
+        speak: say(q, `Nothing is outstanding for ${who.name} — no unpaid salary, no loan, no advance.`,
+                      `${who.name}-এর কিছুই বকেয়া নেই — বেতন, ঋণ বা অগ্রিম কোনোটাই নয়।`),
+        detail: [], view: 'people',
+      };
+      return {
+        speak: say(q, `${who.name}: ${en.join(', ')}.`, `${who.name}: ${bnp.join(', ')}।`),
+        detail: loans.slice(0, 4).map((l) => `Loan ${fmtBDT(+l.amount || 0)} — ${fmtBDT(+l.remaining_amount || 0)} left, ${fmtBDT(+l.monthly_deduction || 0)}/month`),
+        actions: openA(bn, 'employee salaries'), view: 'people',
+      };
+    }
+    case 'attendance': case 'late': case 'online': {
+      const ev = P.evaluate(D, who.id);
+      if (!ev) return null;
+      return {
+        speak: say(q, `${who.name}: attendance ${ev.attendancePct}% over ${ev.days} days, late on ${ev.lateDays}${ev.absent ? `, absent ${ev.absent}` : ''}.`,
+          `${who.name}: ${bNum(ev.days)} দিনে উপস্থিতি ${bNum(ev.attendancePct)} শতাংশ, দেরি ${bNum(ev.lateDays)} দিন${ev.absent ? `, অনুপস্থিত ${bNum(ev.absent)} দিন` : ''}।`),
+        detail: (ev.concerns || []).slice(0, 4), actions: openA(bn, 'attendances'), view: 'people',
+      };
+    }
+    case 'leave': {
+      const bal = P.leaveBalance(D, who.id) || [];
+      const left = bal.reduce((n, b) => n + b.remaining, 0);
+      const mine = (P.leaves(D, s).pending || []).filter((l) => l.user_id === who.id);
+      return {
+        speak: say(q, `${who.name} has ${left} leave days left${mine.length ? `, and ${mine.length} request${mine.length === 1 ? '' : 's'} waiting for approval` : ''}.`,
+          `${who.name}-এর ছুটি বাকি ${bNum(left)} দিন${mine.length ? `, আর ${bNum(mine.length)}টি আবেদন অনুমোদনের অপেক্ষায়` : ''}।`),
+        detail: bal.map((b) => `${b.type}: ${b.used}/${b.entitlement} used, ${b.remaining} left`),
+        actions: openA(bn, 'leave'), view: 'people',
+      };
+    }
+    case 'performance': case 'employee': case 'ranking': case 'profile': {
+      const ev = P.evaluate(D, who.id);
+      if (!ev) return null;
+      return {
+        speak: say(q, `${who.name} — ${e.designation || ''}${e.department ? `, ${e.department}` : ''}. Score ${ev.score}, grade ${ev.grade}: attendance ${ev.attendancePct}%, ${ev.lateDays} late days, ${ev.tasksDone} tasks done.`,
+          `${who.name} — ${e.designation || ''}${e.department ? `, ${e.department}` : ''}। স্কোর ${bNum(ev.score)}, গ্রেড ${ev.grade}: উপস্থিতি ${bNum(ev.attendancePct)} শতাংশ, দেরি ${bNum(ev.lateDays)} দিন, সম্পন্ন কাজ ${bNum(ev.tasksDone)}টি।`),
+        detail: [].concat((ev.strengths || []).map((x) => `+ ${x}`), (ev.concerns || []).map((x) => `− ${x}`)).slice(0, 5),
+        actions: openA(bn, 'user'), view: 'people',
+      };
+    }
+    case 'project': {
+      const pj = O.projects(D, s).all.filter((p) => p.manager_id === who.id || (p.team || []).includes(who.id));
+      if (!pj.length) return {
+        speak: say(q, `${who.name} is not on any project right now.`, `${who.name} এখন কোনো প্রকল্পে নেই।`),
+        detail: [], view: 'ops',
+      };
+      return {
+        speak: say(q, `${who.name} is on ${pj.length} project${pj.length === 1 ? '' : 's'}: ${pj.slice(0, 3).map((p) => p.project_name).join('; ')}.`,
+          `${who.name} ${bNum(pj.length)}টি প্রকল্পে আছেন: ${pj.slice(0, 3).map((p) => p.project_name).join('; ')}।`),
+        detail: pj.slice(0, 6).map((p) => `${p.project_name} — ${p.riskLabel}, ${p.progress}%`),
+        actions: openA(bn, 'projects'), view: 'ops',
+      };
+    }
+    case 'expense': {
+      const co = s.company;
+      const mine = (D.expenses || []).filter((x) => (co == null || +x.company_id === co) && (x.user_id === who.id || x.user_name === who.name));
+      const tot = mine.reduce((n, x) => n + (+x.amount || 0), 0);
+      return {
+        speak: say(q, `${who.name} has claimed ${mine.length} expense${mine.length === 1 ? '' : 's'} totalling ${fmtBDT(tot)}.`,
+          `${who.name} ${bNum(mine.length)}টি খরচ দাখিল করেছেন, মোট ${bMoney(tot)}।`),
+        detail: mine.slice(0, 6).map((x) => `${x.expense_date} — ${x.title} ${fmtBDT(+x.amount || 0)} (${x.approval_status})`),
+        actions: openA(bn, 'expenses'), view: 'finance',
+      };
+    }
+    default:
+      return null;      // not a person-shaped subject — let the company answer stand
+  }
+}
+
 /* ---------- the composer ---------- */
 /* Bangla marks a question with a tail word rather than word order:
    "বেতন পরিশোধ হয়েছে?" asks whether salary was paid; "বেতন দাও" orders it.
@@ -369,148 +944,52 @@ async function understand(q, ctx) {
 
   // a half command, or an answer to what EON asked a moment ago
   if ((NEEDS[verb] && isOrder) || (convo && convo.asked)) {
-    const s = await step(D, q, verb, ctx);
-    if (s) return s;
+    const held = await step(D, q, verb, ctx);
+    if (held) return held;
   }
+
+  const bn = BN.test(q);
   const subj = subjectOf(q);
   const who = whoOrLast(D, q);
-  const month = monthIn(q);
-  const amount = amountIn(q);
-  const bn = BN.test(q);
-
-  // (assign / pay / message are handled above by the dialogue)
-  if (false && typeof window !== 'undefined' && window.EonAct) {
-    if (verb === 'assign' && who && who.kind === 'employee') {
-      const task = String(q).replace(/^[\s\S]*?(?:task|কাজ|টাস্ক)\s*(?:is|:|—|-|হলো|হল)?\s*/i, '').trim();
-      if (task && task.length > 2) {
-        try { return window.EonAct.propose(await window.EonAct.planTask(who, task, {})); } catch (e) { /* fall through to the plain answer */ }
-      }
-      return { speak: say(q, `What should ${who.name} do? Say it as “assign ${who.name} a task: check the ledger”.`, `${who.name}-কে কী কাজ দেবো? বলুন — “${who.name} কে টাস্ক দাও: লেজার চেক করো”।`), detail: [] };
-    }
-    if (verb === 'pay') {
-      // money is never posted from a guess: name the person, the month and the amount first
-      const parts = [who ? who.name : null, month ? MONTHS[month - 1] : null, amount ? fmtBDT(amount) : null].filter(Boolean);
-      return {
-        speak: say(q,
-          `Paying is the one thing I will not do from a half-sentence. Tell me who, which month and how much — for example “pay ${who ? who.name : 'Imran'} July salary 30000” — and I will show you the exact payment before anything is posted.`,
-          `টাকা পরিশোধ আমি অনুমান করে করি না। কাকে, কোন মাসের, কত — যেমন “${who ? who.name : 'ইমরান'} কে জুলাই মাসের ৩০০০০ বেতন দাও” — বললে পোস্ট করার আগে পুরোটা দেখিয়ে নেবো।`),
-        detail: parts.length ? [say(q, 'So far I have: ' + parts.join(' · '), 'এ পর্যন্ত পেয়েছি: ' + parts.join(' · '))] : [],
-      };
-    }
-  }
+  const s = { company: (ctx && ctx.company != null) ? +ctx.company : (typeof window !== 'undefined' && window.EonErp && window.EonErp.company ? window.EonErp.company() : null) };
 
   // a question about one person
   if (who && subj) {
-    const s = { company: null };
-
-    // "take me to his profile" / "Imran's payslip" — the record screen for that person
-    if ((subj.id === 'profile' || subj.id === 'payslip') && N()) {
-      const key = subj.id === 'profile' ? 'user' : 'payslips';
-      const rec = who.kind === 'employee' && subj.id === 'profile' ? N().findRecord(`user ${who.id}`) : null;
-      const url = rec ? N().url(rec.uri) : (() => { const h = (N().find(key, 1) || [])[0]; return h ? N().url(h.uri) : null; })();
-      if (url) return {
-        speak: say(q, `${who.name} — ${subj.id === 'profile' ? 'profile' : 'payslips'}. Opening it.`,
-                      `${who.name} — ${subj.id === 'profile' ? 'প্রোফাইল' : 'পে-স্লিপ'}। খুলছি।`),
-        detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }], navigate: url,
-      };
-    }
-    if (subj.id === 'task' && who.kind === 'employee') {
-      const mine = (O.tasks(D, s).all || []).filter((t) => (t.assigned_to || []).includes(who.id));
-      const open = mine.filter((t) => t.status !== 'done');
-      return {
-        speak: say(q, `${who.name} has ${open.length} active task${open.length === 1 ? '' : 's'}${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}.`,
-          `${who.name}-এর ${open.length}টি চলমান কাজ আছে${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}।`),
-        detail: open.slice(0, 6).map((t) => `${t.title} — ${t.status}${t.due_date ? `, ${t.due_date}` : ''}`),
-        view: 'ops',
-      };
-    }
-    if (subj.id === 'payroll' || subj.id === 'payslip' || subj.id === 'dues' || subj.id === 'receivable' || subj.id === 'payable' || subj.id === 'loan') {
-      // let the entity plug-in answer the money question, then translate the lead line
-      const r = typeof window !== 'undefined' && window.EonEntity ? null : null;
-      const pr = P.payroll(D, s);
-      const pend = (pr.pending || []).filter((p) => p.id === who.id || p.name === who.name);
-      const ln = P.loans(D, s);
-      const loans = (ln.loans || ln.rows || []).filter((l) => l.user_id === who.id);
-      const unpaid = pend.reduce((n, p) => n + (+p.net || +p.net_salary || 0), 0);
-      const left = loans.reduce((n, l) => n + (+l.remaining_amount || 0), 0);
-      if (who.kind === 'party') {
-        const row = who.row;
-        return { speak: say(q, `${who.name}: ${fmtBDT(row.due)} outstanding, ${fmtBDT(row.overdue)} of it overdue.`, `${who.name}: ${fmtBDT(row.due)} বকেয়া, তার ${fmtBDT(row.overdue)} সময় পার।`), detail: [], view: 'finance' };
-      }
-      // "Imran's payroll" wants his pay, not only what is owed
-      if (subj.id === 'payroll' || subj.id === 'payslip') {
-        const sal = +(who.row && who.row.salary) || 0;
-        const bits = [
-          sal ? say(q, `salary ${fmtBDT(sal)}/month`, `বেতন ${fmtBDT(sal)}/মাস`) : null,
-          unpaid ? say(q, `${fmtBDT(unpaid)} unpaid`, `${fmtBDT(unpaid)} বকেয়া`) : say(q, `${pr.month} paid`, `${pr.month} পরিশোধিত`),
-          left ? say(q, `loan ${fmtBDT(left)} left`, `ঋণ বাকি ${fmtBDT(left)}`) : null,
-        ].filter(Boolean);
-        const n = N();
-        const hit = n ? (n.find('employee salaries', 1) || [])[0] : null;
-        return {
-          speak: `${who.name} — ${bits.join(', ')}.`,
-          detail: who.row ? [`${who.row.designation || ''}${who.row.department ? ' · ' + who.row.department : ''}`.trim()].filter(Boolean) : [],
-          actions: hit ? [{ label: say(q, 'Open payroll', 'পে-রোল খুলুন'), kind: 'erp-open', href: n.url(hit.uri) }] : [],
-          view: 'people',
-        };
-      }
-      if (!unpaid && !left) return { speak: say(q, `Nothing is outstanding for ${who.name}.`, `${who.name}-এর কিছু বকেয়া নেই।`), detail: [], view: 'people' };
-      return {
-        speak: say(q, `${who.name}: ${unpaid ? `unpaid salary ${fmtBDT(unpaid)}` : ''}${unpaid && left ? ', ' : ''}${left ? `loan outstanding ${fmtBDT(left)}` : ''}.`,
-          `${who.name}: ${unpaid ? `বকেয়া বেতন ${fmtBDT(unpaid)}` : ''}${unpaid && left ? ', ' : ''}${left ? `ঋণ বাকি ${fmtBDT(left)}` : ''}।`),
-        detail: [], view: 'people',
-      };
-    }
-    if (subj.id === 'attendance' && who.kind === 'employee') {
-      const ev = P.evaluate(D, who.id);
-      if (ev) return {
-        speak: say(q, `${who.name}: attendance ${ev.attendancePct}% over ${ev.days} days, late on ${ev.lateDays}.`,
-          `${who.name}: ${ev.days} দিনে উপস্থিতি ${ev.attendancePct}%, দেরি ${ev.lateDays} দিন।`),
-        detail: (ev.concerns || []).slice(0, 4), view: 'people',
-      };
-    }
+    const r = personAnswer(D, s, subj, who, q, bn);
+    if (r) return r;
   }
 
   // "where is X" / "open X" — the navigator owns the ERP's geography
   if ((verb === 'where' || verb === 'open') && N()) {
-    const key = subj ? subj.ask : q;
+    const key = subj ? (subj.ask || subj.id) : q;
     const hit = (N().find(key, 1) || [])[0];
     if (hit) {
       const url = N().url(hit.uri);
       return {
-        speak: say(q, `${hit.label || key} — ${url.replace(location.origin, '')}`, `${hit.label || key} — ${url.replace(location.origin, '')}`),
+        speak: `${hit.label || key} — ${url.replace(location.origin, '')}`,
         detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }],
         navigate: verb === 'open' ? url : null,
       };
     }
   }
 
-  // a plain question about a subject: hand it to the answerer that owns it,
-  // in the language it was asked
-  if (subj) {
-    const askEn = subj.ask;
-    let r = null;
-    try {
-      if (bn && typeof window !== 'undefined' && window.EonBangla && window.EonBangla.answer) r = window.EonBangla.answer(q, ctx);
-      if (!r && typeof window !== 'undefined' && window.EonErpQA) r = window.EonErpQA.answer(askEn, ctx);
-    } catch {}
-    if (r && r.speak) return r;
-    // the subject is understood but no answerer covers it — say that plainly
-    // rather than returning nothing and looking deaf
-    const N2 = N();
-    const hit = N2 ? (N2.find(subj.ask || subj.id, 1) || [])[0] : null;
-    if (hit) {
-      const url = N2.url(hit.uri);
-      return {
-        speak: bn
-          ? `${subj.id} নিয়ে সরাসরি হিসাব এখনো নেই, তবে স্ক্রিনটা খুলে দিতে পারি।`
-          : `I do not have a figure for ${subj.id} yet, but I can open the screen.`,
-        detail: [], actions: [{ label: bn ? 'খুলুন' : 'Open', kind: 'erp-open', href: url }],
-      };
-    }
+  if (!subj) return null;
+
+  // "cash and receivables" — two subjects, one breath
+  const chain = who ? null : chainOf(q);
+  if (chain) {
+    const a = subjectAnswer(D, s, chain[0], q, bn);
+    const b = subjectAnswer(D, s, chain[1], q, bn);
+    if (a && b && a.speak !== b.speak) return {
+      speak: `${a.speak} ${b.speak}`,
+      detail: [].concat(a.detail || [], b.detail || []).slice(0, 8),
+      actions: [].concat(a.actions || [], b.actions || []).slice(0, 3),
+      view: a.view || b.view,
+    };
+    if (a) return a;
   }
 
-  return null;
+  return subjectAnswer(D, s, subj, q, bn);
 }
 
 /* ---------- registration ---------- */
@@ -522,12 +1001,12 @@ const CLAIM = (q) => {
 };
 
 if (typeof window !== 'undefined') {
-  window.EonUnderstand = { verbOf, subjectOf, whoIn: (q) => whoIn(D0(), q), monthIn, amountIn, understand, conversation, forget };
-  // below the specialists (99 act · 98 entity · 97 navigator · 95 bangla) — it catches
-  // what none of them matched, which is where the odd phrasings land
-  // above the phrase matchers (bangla 95) so "X কে টাস্ক দাও" is an instruction,
-  // not a question about tasks; still below act (99) and entity (98)
+  window.EonUnderstand = { verbOf, subjectOf, subjectsIn, whoIn: (q) => whoIn(D0(), q), monthIn, amountIn, understand, conversation, forget, remember, subject_of_last, SUBJECTS };
+  // below the specialists (99 act · 98 entity · 97 navigator) — it catches what
+  // none of them matched, which is where the odd phrasings land; above the
+  // phrase matchers (bangla 95) so "X কে টাস্ক দাও" is an instruction rather
+  // than a question about tasks, and so a Bangla sentence is read subject-first
   (window.__eonDomainQueue = window.__eonDomainQueue || []).push({ id: 'understand', priority: 96, claims: CLAIM, answer: understand });
 }
 
-export default { understand, verbOf, subjectOf };
+export default { understand, verbOf, subjectOf, subjectsIn };
