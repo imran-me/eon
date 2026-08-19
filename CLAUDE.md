@@ -92,6 +92,42 @@ eon/
 | **The ERP side menu collapses** — `embed/eon-sidebar.js`, injected like the companion, collapses the sidebar to its 64px icon rail (toggle in the header, Ctrl+\, hover to peek, remembered per browser, inert below 768px). **No ERP file is edited** | done — headless-tested against a fixture of the real sidebar DOM, live |
 | **EON answers "why"** — `Reason` decomposes a figure until it reaches something actionable: which of income, direct cost or overhead actually moved and by how much, whether overheads exceed income outright, how much of the overhead is payroll, what is still unapproved and therefore absent from the number, and for cash whether collecting every overdue taka would even close the gap. `a_why` renders the chain as an argument in both languages; a rule question inside a why question gets the rule instead | done — Reasoning section added to the bank, **1163/1163** |
 
+| **The panel works signed out** — `domains/erp/index.js` imports the domain registry itself, so Ask EON no longer waits on the 1.3 MB avatar bundle; the adapter reads `health.php`'s `auth` verdict instead of discovering it from a 401, and falls back to the demo company saying so | done — headless against the live site: 14/14 globals, dataset present, answers in both languages, **zero failed requests and zero console errors** |
+
+## Signed out is a first-class state (2026-08-19)
+
+Most visitors hit `/eon/` with no ERP session. Three things were wrong there, and
+only the first was visible:
+
+- **Ask EON answered nothing at all.** `window.EonDomains` is created by
+  `eon-brain/domains.js`, whose only importer was `owner/ask.js` — reached solely
+  through `js/main.js`, whose module graph also pulls `three.module.js` (1.3 MB).
+  An ES module graph does not execute until *every* file in it has arrived, so
+  while Three.js was on the wire `domains.js` sat fetched-but-unevaluated: the
+  registry did not exist and all thirteen answerers stayed parked on the
+  `window.__eonDomainQueue` array that nothing drained. Docked beside the ERP
+  (`EON_DOCK`) `main.js` is never imported, so it never arrived at all. The ERP
+  domain owns those answerers, so it now imports the registry itself, first.
+  **The local harnesses hid this** by importing `domains.js` by hand — a test that
+  builds the thing it is testing proves nothing about the page.
+- **Two requests could only fail.** `dataset.php` and `memory.php` are fail-closed
+  and answer 401 without a session — correct, and unchanged. But `health.php`
+  already reports how the current request authenticated (`erp-session` | `token` |
+  `open-demo` | `token-required`) over the same cookies and bearer token, so the
+  adapter reads that verdict rather than knocking on a door it has been told is
+  locked. A stale token is deliberately *not* treated as a session: that is exactly
+  when health says `token-required`.
+- **`server/api/prefs.php` has never existed**, so every preference change 404'd.
+  Preferences are a browser record until it ships (`SERVER_PREFS` in `plugins/prefs.js`).
+
+The status pill also read "Server · ERP data" while showing demo figures, because it
+keyed off the server *having* a database rather than off the data in hand.
+
+**Not ours, do not chase it:** a cold, cookie-less browser gets one `403` on `/eon/`
+followed by `/hcdn-cgi/jschallenge` and an immediate `200`. That is Hostinger's CDN
+(`Server: hcdn`) running its browser check — `curl` gets a plain 200, and the second
+page view is clean. No `.htaccess` rule is involved and none should be relaxed for it.
+
 ## What the audit found in the ERP's own data (not code bugs — tell the accountant)
 
 1. **৳5.3 L of August sales are not journalised.** The desks invoiced ৳9.1 L; the ledger carries ৳3.8 L (42%). EON reports both and names the gap rather than under-reporting the business.
