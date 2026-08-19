@@ -282,8 +282,11 @@ async function act(kind, payload, summary) {
   // actions.php is fail-closed too. Without a session it 401'd and the local branch was
   // skipped, so an approval pressed while signed out was recorded nowhere at all and the
   // toast still said it was queued. Keep it in the browser instead.
-  try { if (env().serverOk && env().authed) await api('actions.php', { method: 'POST', body: JSON.stringify(rec) }); else if (window.EonBrain && window.EonBrain.mergeStore) await window.EonBrain.mergeStore('actions', { [Date.now()]: rec }); } catch (e) { console.warn('action log failed', e); }
-  toast(`${summary} — queued for the ERP`);
+  let sent = false;
+  try { if (env().serverOk && env().authed) { await api('actions.php', { method: 'POST', body: JSON.stringify(rec) }); sent = true; } else if (window.EonBrain && window.EonBrain.mergeStore) await window.EonBrain.mergeStore('actions', { [Date.now()]: rec }); } catch (e) { console.warn('action log failed', e); }
+  // and say which of the two happened — telling the boss it went to the ERP when it is
+  // sitting in this browser is the same lie the local fallback was added to stop.
+  toast(sent ? `${summary} — queued for the ERP` : `${summary} — kept in this browser; sign in to the ERP to queue it`);
 }
 
 /* ---------------- wiring ---------------- */
