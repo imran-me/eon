@@ -621,7 +621,9 @@ export async function confirm() {
 /** the one honest sentence for a screen that wanted a password instead */
 function signInSpeak(bn) {
   return bn
-    ? `আমি কিছুই তৈরি করিনি — ${SIGN_IN} (ERP আগে সাইন ইন চাইল, ফর্মটাই দেখাল না)। এই ব্রাউজারে ERP-তে লগইন করে আবার বলুন।`
+    /* the English cause was being spliced into the Bangla sentence and then
+       explained again in Bangla — one sentence, one language */
+    ? 'আমি কিছুই তৈরি করিনি — ইআরপি ফর্মটা দেখানোর আগে সাইন ইন চেয়েছে। এই ব্রাউজারে ইআরপিতে লগইন করে আবার বলুন।'
     : `I have created nothing: ${SIGN_IN}. Sign in to the ERP in this browser and ask me again.`;
 }
 
@@ -763,7 +765,7 @@ async function answer(q, ctx) {
   } catch (e) {
     // "no form on /x" is a lie when the ERP simply wanted a password first
     if (e && e.signIn) return { speak: signInSpeak(bn), detail: [] };
-    return { speak: bn ? `সেটআপ করতে পারলাম না: ${e.message}` : `I could not set that up: ${e.message}`, detail: [] };
+    return { speak: bn ? 'সেটআপ করতে পারলাম না — ইআরপির ফর্মটা পাওয়া যায়নি।' : `I could not set that up: ${e.message}`, detail: bn ? [e.message] : [] };
   }
   return null;
 }

@@ -579,17 +579,22 @@ async function step(D, q, verb, ctx) {
       });
     }
   } catch (e) {
-    // a payment that could not be set up must say plainly that no money moved
+    /* The cause is an English Error message, and dropping it whole into a Bangla
+       sentence is the leak this file exists to prevent. The one cause that
+       happens in the room — the ERP wanting a password first — gets its own
+       Bangla sentence; anything else keeps the English detail on its own line
+       rather than inside the Bangla one. */
+    const why = speakBn ? (e.signIn ? 'ইআরপি ফর্মটা দেখানোর আগে সাইন ইন চেয়েছে' : 'ইআরপির ফর্মটা পাওয়া যায়নি') : e.message;
     if (v === 'pay') {
       return {
         speak: speakBn
-          ? `কিছুই পোস্ট করিনি — ${e.message}। কোনো টাকা যায়নি।`
+          ? `কিছুই পোস্ট করিনি — ${why}। কোনো টাকা যায়নি।`
           : `I have posted nothing — ${e.message}. No money has moved.`,
         detail: [],
         actions: (() => { const n = N(); if (!n) return []; const h = (n.find('payment schedules', 1) || [])[0]; return h ? [{ label: speakBn ? 'পেমেন্ট স্ক্রিন' : 'Open the payment screen', kind: 'erp-open', href: n.url(h.uri) }] : []; })(),
       };
     }
-    return { speak: speakBn ? `সেটআপ করতে পারলাম না: ${e.message}` : `I could not set that up: ${e.message}`, detail: [] };
+    return { speak: speakBn ? `সেটআপ করতে পারলাম না — ${why}।` : `I could not set that up: ${e.message}`, detail: speakBn && !e.signIn ? [e.message] : [] };
   }
   return null;
 }
@@ -787,13 +792,16 @@ const NATIVE = {
      was no Bangla one at all, so "সেরা কর্মী কে" came back in English — the one
      thing a Bangla answer may never do. Written natively on both sides. */
   ranking(D, s) {
+    /* evaluate() returns the employee row under `employee`, not a flat `name` —
+       reading x.name printed "undefined 91/100" in both languages */
+    const nameOf = (x) => (x.employee && x.employee.name) || x.name || '';
     const r = P.ranking(D, s);
     const top = r.top.slice(0, 3), low = r.bottom.slice(0, 2);
     if (!top.length) return null;
     return {
-      en: `Best over the last 30 days: ${top.map((x) => `${x.name} ${x.score}/100 (${x.grade})`).join(', ')}. Weakest: ${low.map((x) => `${x.name} ${x.score}`).join(', ')}.`,
-      bn: `গত ৩০ দিনে সবচেয়ে এগিয়ে: ${top.map((x) => `${x.name} ${bNum(x.score)}/১০০ (গ্রেড ${x.grade})`).join(', ')}। সবচেয়ে পিছিয়ে: ${low.map((x) => `${x.name} ${bNum(x.score)}`).join(', ')}।`,
-      detail: r.top.slice(0, 8).map((x, i) => `${i + 1}. ${x.name} — ${x.score}/100 (${x.grade}), attendance ${x.attendancePct}%, ${x.tasksDone} tasks done`),
+      en: `Best over the last 30 days: ${top.map((x) => `${nameOf(x)} ${x.score}/100 (${x.grade})`).join(', ')}. Weakest: ${low.map((x) => `${nameOf(x)} ${x.score}`).join(', ')}.`,
+      bn: `গত ৩০ দিনে সবচেয়ে এগিয়ে: ${top.map((x) => `${nameOf(x)} ${bNum(x.score)}/১০০ (গ্রেড ${x.grade})`).join(', ')}। সবচেয়ে পিছিয়ে: ${low.map((x) => `${nameOf(x)} ${bNum(x.score)}`).join(', ')}।`,
+      detail: r.top.slice(0, 8).map((x, i) => `${i + 1}. ${nameOf(x)} — ${x.score}/100 (${x.grade}), attendance ${x.attendancePct}%, ${x.tasksDone} tasks done`),
       screen: 'user', view: 'people',
     };
   },

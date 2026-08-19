@@ -492,7 +492,8 @@ const INTENTS = [
     const p = O.projects(D, s);
     return {
       speak: `${num(p.active.length)}টি প্রকল্প চলমান, তার মধ্যে ${num(p.atRisk.length)}টি ঝুঁকিতে আছে।`,
-      detail: p.atRisk.slice(0, 6).map((x) => `${x.name} — ${x.late ? 'সময় পার' : x.overBudget ? 'বাজেট ছাড়িয়েছে' : 'পিছিয়ে আছে'} · অগ্রগতি ${percent(x.progress || 0)}`),
+      /* the column is project_name, not name — this line read "undefined — সময় পার" */
+      detail: p.atRisk.slice(0, 6).map((x) => `${x.project_name || x.name} — ${x.late ? 'সময় পার' : x.overBudget ? 'বাজেট ছাড়িয়েছে' : 'পিছিয়ে আছে'} · অগ্রগতি ${percent(x.progress || 0)}`),
       view: 'ops',
     };
   } },

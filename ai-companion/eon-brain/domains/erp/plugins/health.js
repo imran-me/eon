@@ -187,6 +187,7 @@ function remember(lb) {
 /* ---------- Ask EON ---------- */
 const scopeName = (r) => (r.company_id == null ? 'the group' : r.company);
 const shortLine = (r) => `${r.company}: ${r.score} (${r.grade}) — ${r.top_driver}`;
+const shortLineBn = (r) => `${r.company}: ${bnDigits(r.score)} (${r.grade}) — ${r.top_driver_bn || r.top_driver}`;
 const partLine = (d) => `${d.text} → ${d.score}/100 for ${d.part.replace('_', ' ')}, costing ${d.lost} points`;
 const subsLine = (r) => `finance ${r.sub.finance}, people ${r.sub.people}, sales ${r.sub.sales}, operations ${r.sub.ops}`;
 
@@ -243,12 +244,12 @@ function answer(q) {
     return { speak: bn
       ? `${wantWorst ? 'সবচেয়ে দুর্বল' : 'সবচেয়ে ভালো'} ${r.company} — ${bnDigits(r.score)} (গ্রেড ${r.grade}); ${wantWorst ? 'সবচেয়ে ভালো' : 'সবচেয়ে দুর্বল'} ${o.company} — ${bnDigits(o.score)}। ${r.company}: ${bnSubs(r)}।`
       : `${wantWorst ? 'Weakest' : 'Healthiest'} is ${r.company} at ${r.score} (grade ${r.grade}); ${wantWorst ? 'healthiest' : 'weakest'} is ${o.company} at ${o.score}. ${r.company}: ${subsLine(r)}. ${r.drivers.length ? 'Main driver: ' + r.drivers[0].text + '.' : ''}`,
-      detail: lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`), view: 'brief', data: lb };
+      detail: lb.companies.map((x, i) => `${bn ? bnDigits(i + 1) : i + 1}. ${(bn ? shortLineBn : shortLine)(x)}`), view: 'brief', data: lb };
   }
   if (wantsGroup && !isRank) return why(D, lb.group);
   const g = lb.group;
   if (bn) return { speak: `গ্রুপের স্বাস্থ্য স্কোর ${bnDigits(g.score)} (গ্রেড ${g.grade})। সবচেয়ে ভালো ${lb.best.company} — ${bnDigits(lb.best.score)}; সবচেয়ে দুর্বল ${lb.worst.company} — ${bnDigits(lb.worst.score)}। উপ-স্কোর: ${bnSubs(g)}।`,
-    detail: [`গ্রুপ: ${bnDigits(g.score)} (${g.grade}) — ${bnSubs(g)}`].concat(lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`)), view: 'brief', data: lb };
+    detail: [`গ্রুপ: ${bnDigits(g.score)} (${g.grade}) — ${bnSubs(g)}`].concat(lb.companies.map((x, i) => `${bnDigits(i + 1)}. ${shortLineBn(x)}`)), view: 'brief', data: lb };
   return { speak: `Group health ${g.score} (grade ${g.grade}). Leaderboard: ${lb.companies.map((r) => `${r.short_name || r.company} ${r.score}`).join(', ')}. Healthiest ${lb.best.company} at ${lb.best.score}; weakest ${lb.worst.company} at ${lb.worst.score} — ${lb.worst.top_driver}.`,
     detail: [`Group: ${g.score} (${g.grade}) — ${subsLine(g)}`].concat(lb.companies.map((x, i) => `${i + 1}. ${shortLine(x)}`)), view: 'brief', data: lb };
 }
