@@ -11,7 +11,9 @@ import * as C from './crm.js';
 import * as O from './ops.js';
 
 const T = (D) => (D.meta && D.meta.today) || iso(new Date());
-const LAYERS = { finance: 'Finance', people: 'People', crm: 'Sales & CRM', ops: 'Operations' };
+// exported by name as well as on the object below: the panel reads it as
+// EonErp.decisionsLayer.LAYERS, and a namespace import only carries named exports
+export const LAYERS = { finance: 'Finance', people: 'People', crm: 'Sales & CRM', ops: 'Operations' };
 export const SEVERITY = { 5: 'critical', 4: 'high', 3: 'medium', 2: 'low', 1: 'info' };
 
 export function kpis(D, { company = null } = {}) {

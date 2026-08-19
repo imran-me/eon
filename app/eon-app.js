@@ -236,7 +236,11 @@ async function ask(q, { voice = false } = {}) {
     }
   } catch (err) { console.warn('[EON] local brain', err); }
 
-  if (!out && e.serverOk) {
+  // ask.php is fail-closed like dataset.php and memory.php: without an ERP session it
+  // answers 401, so a signed-out visitor paid a failed round trip on every question and
+  // waited for it before the local brain replied. health.php has already said whether
+  // this browser is authenticated — believe it and go straight to the brain.
+  if (!out && e.serverOk && e.authed) {
     try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: state.lang, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
   }
@@ -261,7 +265,10 @@ function paintChat() { const c = $('#chat'); if (!c) return; c.innerHTML = state
 /* ---------------- actions ---------------- */
 async function act(kind, payload, summary) {
   const rec = { kind, payload, summary, at: new Date().toISOString() };
-  try { if (env().serverOk) await api('actions.php', { method: 'POST', body: JSON.stringify(rec) }); else if (window.EonBrain && window.EonBrain.mergeStore) await window.EonBrain.mergeStore('actions', { [Date.now()]: rec }); } catch (e) { console.warn('action log failed', e); }
+  // actions.php is fail-closed too. Without a session it 401'd and the local branch was
+  // skipped, so an approval pressed while signed out was recorded nowhere at all and the
+  // toast still said it was queued. Keep it in the browser instead.
+  try { if (env().serverOk && env().authed) await api('actions.php', { method: 'POST', body: JSON.stringify(rec) }); else if (window.EonBrain && window.EonBrain.mergeStore) await window.EonBrain.mergeStore('actions', { [Date.now()]: rec }); } catch (e) { console.warn('action log failed', e); }
   toast(`${summary} — queued for the ERP`);
 }
 
