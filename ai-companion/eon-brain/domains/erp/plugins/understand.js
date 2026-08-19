@@ -66,9 +66,21 @@ const VERBS = [
   { id: 'any',     en: /\b(any|is there|are there|anything)\b/,                            bn: /(কোনো|আছে কি|কিছু আছে)/ },
   { id: 'why',     en: /\b(why|explain|how does|how is .* calculated)\b/,                  bn: /(কেন|কিভাবে|ব্যাখ্যা)/ },
 ];
+/* "did we pay the suppliers?" asks what already happened — it does not order a
+   payment, and it used to open one ("Who should I pay?"). A perfect or past
+   auxiliary in front of an action word makes the sentence a question about
+   history, so the acting verbs are skipped and the books answer instead. */
+const ASKED_NOT_TOLD = /\b(did|have|has|had|was|were)\b[^?]{0,24}\b(pay|paid|clear|cleared|settle|settled|release|released|assign|assigned|send|sent|message[d]?)\b/;
+/* বাংলায় একই কথা: "পরিশোধ হয়েছে" জানতে চাওয়া, করতে বলা নয়। */
+const ASKED_NOT_TOLD_BN = /(পরিশোধ|দেওয়া|দেয়া|করা|পাঠানো|অ্যাসাইন)\s*(হয়েছে|হয়েছিল|হয়ে গেছে|হলো|হয়নি)/;
+const ACTING = new Set(['pay', 'assign', 'message']);
 function verbOf(q) {
   const s = norm(q);
-  for (const v of VERBS) if ((BN.test(q) ? v.bn : v.en).test(s) || v.en.test(s)) return v.id;
+  const asking = ASKED_NOT_TOLD.test(s) || ASKED_NOT_TOLD_BN.test(String(q || ''));
+  for (const v of VERBS) {
+    if (asking && ACTING.has(v.id)) continue;
+    if ((BN.test(q) ? v.bn : v.en).test(s) || v.en.test(s)) return v.id;
+  }
   return 'list';
 }
 
@@ -109,12 +121,15 @@ const SUBJECTS = [
     en: /\b(runway|burn rate|burning cash|how long (will|does) (the )?cash last|months? of (cash|cover)|survive)\b/,
     bn: /(রানওয়ে|কতদিন চলবে|নগদ কতদিন|বার্ন রেট)/ },
   { id: 'receivable', rank: 1, ask: 'receivables', askBn: 'পাওনা',
-    en: /\b(receivables?|owes? us|owed to us|money in the market|collections?|collect|debtors?|due from|customer dues?|ar)\b/,
+    /* "how much do customers owe us" is a receivables question, not a question
+       about customers — the whole phrase is spelled out so it wins on length
+       against the bare word "customers". Same trick as payables below. */
+    en: /\b((customers?|clients?|buyers?|part(y|ies)|debtors?|they|people)\s+(still\s+)?owes?\s+us|receivables?|owes? us|owed to us|money in the market|collections?|collect|debtors?|due from|customer dues?|ar)\b/,
     bn: /(পাওনা|আদায়|রিসিভেবল|কারা টাকা দেবে|টাকা (দেবে|দিবে|পাব))/ },
   { id: 'payable', rank: 1, ask: 'payables', askBn: 'দেনা',
     /* "how much do we owe suppliers" is a payables question, not a question
        about suppliers — so the longer phrase is spelled out and wins on length. */
-    en: /\b(we owe (the )?(suppliers?|vendors?|creditors?|them)|payables?|we owe|creditors?|supplier dues?|bills? (to pay|due)|bills?|payments? due|ap)\b/,
+    en: /\b(we owe (the |our |their |any )?(suppliers?|vendors?|creditors?|part(y|ies)|them)|payables?|we owe|creditors?|supplier dues?|bills? (to pay|due)|bills?|payments? due|ap)\b/,
     bn: /(দেনা|পাওনাদার|পেয়েবল|কাকে (টাকা )?দিতে|বিল পরিশোধ)/ },
   /* "overdue" is an adjective, not a part of the business: "what tasks are
      overdue" is a question about tasks. Rank 3 lets any real noun win. */
@@ -222,13 +237,25 @@ const SUBJECTS = [
     bn: /(প্রোফাইল|তথ্য|বিস্তারিত|পরিচয়|কে ইনি|সম্পর্কে বলো)/ },
 ];
 
+/* "assign him a task: check the ledger" — everything after that colon is the
+   task's own wording, not what the sentence is about. Only the head is read for
+   the subject, otherwise "check the ledger" turns an instruction into a
+   question about journals and "call the customer" into one about customers. */
+const BODY_CUE = /(tasks?|to-?dos?|assignments?|messages?|msgs?|notes?|notices?|reminders?|টাস্ক|কাজ|মেসেজ|বার্তা|নোটিশ)[^:]{0,20}:/i;
+function subjectText(q) {
+  const s = String(q || '');
+  const m = BODY_CUE.exec(s);
+  return m ? s.slice(0, m.index + m[0].length) : s;
+}
+
 /** every subject this sentence names, best first */
 function subjectsIn(q) {
-  const s = norm(q);
+  const raw = subjectText(q);
+  const s = norm(raw);
   const bn = BN.test(q);
   const hits = [];
   for (const x of SUBJECTS) {
-    let m = bn ? x.bn.exec(q) : x.en.exec(s);
+    let m = bn ? x.bn.exec(raw) : x.en.exec(s);
     if (!m && bn) m = x.en.exec(s);            // "Imran এর payroll" — a Latin word inside Bangla
     if (m) hits.push({ subj: x, len: m[0].length });
   }
@@ -272,13 +299,30 @@ function whoIn(D, q) {
       if (tok(c).some((w) => tok(e.name).includes(w))) return { kind: 'employee', id: e.id, name: e.name, row: e };
     }
   }
-  // a party in the ledger, named in either script
+  /* A party in the ledger, named in either script — the best match, not the
+     first one the loop happens to reach. Matching on the party's first word
+     alone made "Bengal Plywood" (a supplier we owe) resolve to "Bengal Agro"
+     (a customer who owes us), because the receivables side is scanned first.
+     That was cosmetic while a party was only ever the subject of a question;
+     it is money as soon as the name decides who gets paid. Counting how many
+     of the party's own words the sentence actually carries settles it — two
+     beats one — while a one-word name still matches on its one word, so
+     "pay Berger 45000" is not lost. */
+  const nq = norm(q);
+  let best = null;
   for (const type of ['receive', 'pay']) {
     for (const p of F.schedules(D, type, {}).byParty || []) {
       const nm = norm(p.party_name);
-      if (nm.length > 3 && norm(q).includes(nm.split(' ')[0])) return { kind: 'party', name: p.party_name, side: type, row: p };
+      if (nm.length <= 3) continue;
+      const words = nm.split(' ').filter((w) => w.length >= 3);
+      const hits = words.filter((w) => nq.includes(w)).length;
+      if (!hits) continue;
+      // the whole name, written out, beats any number of loose word hits
+      const score = nq.includes(nm) ? words.length + 1 : hits;
+      if (!best || score > best.score) best = { kind: 'party', name: p.party_name, side: type, row: p, score };
     }
   }
+  if (best) { delete best.score; return best; }
   return null;
 }
 
@@ -383,8 +427,13 @@ function bareSlot(D, q, need) {
   return t.length > 2 ? t : null;     // task / text: take it as said
 }
 
+/* A salary settles one month's schedule, so EON will not pick the month itself.
+   A party payment is the other case entirely: recordPayment has no month field
+   to fill, so holding the conversation open for one stops a payment the ERP is
+   already willing to take. */
 function nextMissing(verb, slots) {
-  return (NEEDS[verb] || []).find((k) => slots[k] == null);
+  const monthless = verb === 'pay' && slots.who && slots.who.kind === 'party';
+  return (NEEDS[verb] || []).find((k) => !(monthless && k === 'month') && slots[k] == null);
 }
 
 function askFor(need, verb, bn) {
@@ -396,7 +445,8 @@ function askFor(need, verb, bn) {
 function heldSummary(verb, slots, bn) {
   const bits = [];
   if (slots.who) bits.push(slots.who.name);
-  if (slots.month) bits.push(MONTHS[slots.month - 1]);
+  // the month is EON's own word, so a Bangla card must not read "July"
+  if (slots.month) bits.push((bn ? BN_MONTH : MONTHS)[slots.month - 1]);
   if (slots.amount) bits.push(fmtBDT(slots.amount));
   if (slots.task) bits.push('“' + slots.task + '”');
   if (slots.text) bits.push('“' + slots.text + '”');
@@ -933,14 +983,20 @@ function personAnswer(D, s, subj, who, q, bn) {
 /* Bangla marks a question with a tail word rather than word order:
    "বেতন পরিশোধ হয়েছে?" asks whether salary was paid; "বেতন দাও" orders it.
    Without this every question about paying became an order to pay. */
-const QUESTION = /\?\s*$|\b(হয়েছে|হয়েছে কি|আছে কি|কি\b|কী\b|কেমন|কত|কারা|কোথায়|কয়টা)\b|\b(is|are|was|were|has|have|did|does|do|what|which|who|how|why|when|where|any)\b/i;
 const ORDER = /\b(assign|pay|message|msg|send|write to|tell|notify|clear|settle|release)\b|(অ্যাসাইন|নিয়োগ|পরিশোধ করো|পে করো|ক্লিয়ার করো|(টাস্ক|কাজ)[^।]{0,10}(দাও|দিন|দে)|(বেতন|টাকা|বিল|বকেয়া)[^।]{0,12}(দাও|দিন))/i;
+/* English carries the interrogative at the front, not at the end: "did you pay
+   Imran?", "should I pay him?", "who did we pay last month?" all contain the
+   word pay and none of them is an instruction to pay anybody. A question mark
+   is not the test — "can you pay Imran?" ends in one and is an order — so what
+   is read is the opening word. Bangla needs no equivalent: its ORDER cues
+   already require দাও / দিন / করো, which a question never carries. */
+const ASKING = /^\s*(did|does|do|has|have|had|was|were|is|are|am|should|shall|who|whom|whose|what|which|when|where|why|how)\b/i;
 
 async function understand(q, ctx) {
   const D = D0();
   if (!D) return null;
   const verb = verbOf(q);
-  const isOrder = ORDER.test(q) && !(QUESTION.test(q) && !ORDER.test(String(q).replace(/[?？]/g, '')));
+  const isOrder = ORDER.test(q) && !ASKING.test(q);
 
   // a half command, or an answer to what EON asked a moment ago
   if ((NEEDS[verb] && isOrder) || (convo && convo.asked)) {

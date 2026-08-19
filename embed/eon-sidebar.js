@@ -90,6 +90,24 @@
 
       '}',
 
+      /* the concept-note tile at the foot of the company rail. Fully self-styled,
+         so it still looks right if the ERP ever drops .rail-icon-btn */
+      /* box-sizing is set here rather than inherited: the ERP's reset supplies it
+         today, but a 2px border on a 40px tile is 44px without it, and the rail
+         measures its neighbours to the pixel */
+      '.eon-sb-doc{box-sizing:border-box;width:40px;height:40px;border-radius:10px;display:flex;align-items:center;',
+      '  justify-content:center;flex-shrink:0;border:2px solid transparent;background:transparent;',
+      '  cursor:pointer;padding:0;margin-top:6px;position:relative;color:#64748b;',
+      '  transition:background .15s,color .15s;}',
+      '.eon-sb-doc::before{content:"";position:absolute;top:-4px;left:8px;right:8px;height:1px;background:#e5e7eb;}',
+      '.eon-sb-doc:hover{background:#eef2ff;color:#4f46e5;}',
+      '.eon-sb-doc:focus-visible{outline:2px solid #4f46e5;outline-offset:2px;}',
+      '.eon-sb-doc svg{width:20px;height:20px;pointer-events:none;}',
+      /* the header fallback, for single-company users who get no rail */
+      '.eon-sb-doc.eon-sb-doc-head{width:28px;height:28px;border-radius:8px;margin-top:0;background:#f3f4f6;}',
+      '.eon-sb-doc.eon-sb-doc-head::before{display:none;}',
+      '.eon-sb-doc.eon-sb-doc-head svg{width:15px;height:15px;}',
+
       /* a collapsed sidebar with no rail still needs a way back */
       '.eon-sb-reveal{position:fixed;top:14px;left:14px;z-index:60;width:34px;height:34px;',
       '  border:0;border-radius:10px;cursor:pointer;background:#2563eb;color:#fff;',
@@ -107,6 +125,8 @@
   /* ---------- icons ---------- */
   var ICON_IN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 9l-3 3 3 3"/></svg>';
   var ICON_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M13 9l3 3-3 3"/></svg>';
+  /* a page with a spark on it — the concept note */
+  var ICON_DOC = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h4"/><path d="M9 17h3"/><path d="M16.6 12.1l.5 1.3 1.3.5-1.3.5-.5 1.3-.5-1.3-1.3-.5 1.3-.5z" fill="currentColor" stroke-width="1"/></svg>';
 
   /* ---------- find the ERP's parts once and tag them ---------- */
   function tag(sidebar) {
@@ -230,6 +250,37 @@
     paintToggle();
   }
 
+  /* ---------- the concept note, at the foot of the company rail ----------
+     Opens /eon/concept.html in a new tab, so the ERP page the reader is on is
+     never lost — and, framed by the workspace shell, so the split view stays
+     put behind it. The rail is the natural home: it is the one strip that is
+     present on every screen and belongs to no single company. Users locked to
+     one company get no rail at all, so there it rides beside the collapse
+     toggle in the sidebar header instead. */
+  var DOC_URL = '/eon/concept.html';
+  var DOC_TITLE = 'EON — concept note (opens in a new tab)';
+
+  function mountDoc(sidebar) {
+    if (document.querySelector('.eon-sb-doc')) return;
+    var rail = sidebar.querySelector('[data-eon-sb="rail"]') || sidebar.querySelector('#sidebarRail');
+    var host = rail || sidebar.querySelector('[data-eon-sb="brand"]') || sidebar.firstElementChild;
+    if (!host) return;
+
+    var a = document.createElement('a');
+    a.href = DOC_URL;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.className = 'eon-sb-doc' + (rail ? ' rail-icon-btn' : ' eon-sb-doc-head');
+    a.setAttribute('data-eon', '');
+    a.title = DOC_TITLE;
+    a.setAttribute('aria-label', DOC_TITLE);
+    a.innerHTML = ICON_DOC;
+    // the rail's own active ring reads from these, so hover matches its neighbours
+    a.style.setProperty('--rail-accent', '#4f46e5');
+    a.style.setProperty('--rail-tint', '#eef2ff');
+    host.appendChild(a);
+  }
+
   /* ---------- peek on hover, only while collapsed ---------- */
   function peek(sidebar) {
     var t = null;
@@ -275,6 +326,7 @@
     styles();
     tag(sidebar);
     mountToggle(sidebar);
+    mountDoc(sidebar);
     peek(sidebar);
     state.ready = true;
     return true;
