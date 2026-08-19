@@ -221,8 +221,9 @@ async function ask(q, { voice = false } = {}) {
      client, because only it can move the ERP frame. The server's rule brain would
      describe the screen instead, which is not what was asked. So the local brain gets
      first refusal, and we use its answer whenever it carries somewhere to go. */
+  let local = null;
   try {
-    const local = window.EonDomains ? await window.EonDomains.answer(q, { company: co() }) : null;
+    local = window.EonDomains ? await window.EonDomains.answer(q, { company: co() }) : null;
     const goes = local && (local.navigate || (local.actions || []).some((x) => x.kind === 'erp-open' && x.href));
     if (goes) {
       out = {
@@ -243,6 +244,19 @@ async function ask(q, { voice = false } = {}) {
   if (!out && e.serverOk && e.authed) {
     try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: state.lang, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
+  }
+  /* No server answer coming (signed out, or the server refused): the thirteen registered
+     domains are then the best brain in the room, and they were being thrown away unless
+     the answer happened to carry somewhere to go. That is how "which table holds salaries"
+     came back as the payroll figures and a Bangla question came back in English — the
+     domain had answered both correctly and qa.js answered instead. */
+  if (!out && local && local.speak) {
+    out = {
+      text: local.speak, speak: local.speak,
+      detail: Array.isArray(local.detail) ? local.detail.join('\n') : (local.detail || ''),
+      actions: local.actions || [], view: local.view, data: local.data,
+      trace: `client brain · ${local.domain || 'domain'} · ${Date.now() - t0}ms`,
+    };
   }
   if (!out) {
     let r = null; try { r = EonErp.answer(q); } catch {}
