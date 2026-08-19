@@ -190,6 +190,20 @@ function slotsIn(D, q, verb) {
   return out;
 }
 
+/* When EON has just read a list off the ERP's own form — "City Bank Current ·
+   bKash Merchant" — the boss answers by naming one of them. Those names carry
+   ordinary subject words ("bank", "cash"), so without this the reply reads as a
+   brand-new question about cash and the held payment is thrown away. What EON
+   offered a moment ago is the answer to what EON asked a moment ago. */
+function offered(q) {
+  const list = (convo && convo.options) || [];
+  const t = String(q).trim().toLowerCase();
+  if (!list.length || !t) return null;
+  return list.find((o) => String(o).toLowerCase() === t)
+    || list.find((o) => String(o).toLowerCase().includes(t) || t.includes(String(o).toLowerCase()))
+    || null;
+}
+
 /** a bare reply to EON's question — "July", "30000", "Imran", "লেজার চেক করো" */
 function bareSlot(D, q, need) {
   const t = String(q).trim();
@@ -197,6 +211,7 @@ function bareSlot(D, q, need) {
   if (need === 'month') { const m = monthIn(t) || (/^\d{1,2}$/.test(t) && +t >= 1 && +t <= 12 ? +t : null); return m; }
   if (need === 'amount') { const a = amountIn(t) || (/^[\d,]+$/.test(t) ? +t.replace(/,/g, '') : null); return a; }
   if (need === 'who') { const w = whoIn(D, t) || (P.findEmployee(D, t) ? { kind: 'employee', name: P.findEmployee(D, t).name, id: P.findEmployee(D, t).id, row: P.findEmployee(D, t) } : null); return w; }
+  if (need === 'account') return offered(t) || (t.length > 2 ? t : null);
   return t.length > 2 ? t : null;     // task / text: take it as said
 }
 
@@ -204,9 +219,8 @@ function nextMissing(verb, slots) {
   return (NEEDS[verb] || []).find((k) => slots[k] == null);
 }
 
-function askFor(need, verb, q) {
+function askFor(need, verb, bn) {
   const a = ASK[need];
-  const bn = BN.test(q);
   return { speak: bn ? a.bn(verb) : a.en(verb), detail: [], awaiting: need };
 }
 
@@ -239,33 +253,47 @@ async function step(D, q, verb, ctx) {
   if (convo && convo.asked) {
     const ownSubject = subjectOf(q);
     const wordy = String(q).trim().split(/\s+/).length >= 3;
-    const answersTheSlot = bareSlot(D, q, convo.asked) != null && !ownSubject;
+    // naming one of the options EON just offered is an answer, whatever words it contains
+    const answersTheSlot = bareSlot(D, q, convo.asked) != null && (!ownSubject || !!offered(q));
     if (ownSubject && wordy && !answersTheSlot) convo = null;
   }
 
   // continuing a held command with a bare answer
+  let justAnswered = false;
   if (convo && convo.asked) {
     const val = bareSlot(D, q, convo.asked);
     if (val != null) {
       convo.slots[convo.asked] = val;
       convo.asked = null;
       convo.at = now;
+      justAnswered = true;
     }
   }
 
-  // starting, or adding to, an instruction
-  if (NEEDS[verb]) {
-    if (!convo || convo.verb !== verb) convo = { verb, slots: {}, asked: null, at: now };
+  /* Starting, or adding to, an instruction. Not when the utterance was the
+     answer to EON's own question: "City Bank Current" reads as a verb to the
+     scorer, and rebuilding the conversation around it would throw away the who,
+     the month and the amount the boss has already given. */
+  if (NEEDS[verb] && !justAnswered) {
+    if (!convo || convo.verb !== verb) convo = { verb, slots: {}, asked: null, at: now, lang: bn ? 'bn' : 'en' };
     Object.assign(convo.slots, slotsIn(D, q, verb));
+    if (bn) convo.lang = 'bn';
     convo.at = now;
   }
   if (!convo) return null;
 
+  /* The language belongs to the conversation, not to the last word said. EON
+     asks "কোন অ্যাকাউন্ট থেকে যাবে?" and the boss answers "City Bank Current",
+     because that is what the ERP calls the account — there is no Bangla spelling
+     of it to type. Re-reading the language off that reply would answer a Bangla
+     instruction with an English payment card. */
+  const speakBn = convo.lang ? convo.lang === 'bn' : bn;
+
   const need = nextMissing(convo.verb, convo.slots);
   if (need) {
     convo.asked = need;
-    const a = askFor(need, convo.verb, q);
-    const held = heldSummary(convo.verb, convo.slots, bn);
+    const a = askFor(need, convo.verb, speakBn);
+    const held = heldSummary(convo.verb, convo.slots, speakBn);
     return { speak: a.speak, detail: held ? [held] : [], awaiting: need };
   }
 
@@ -281,30 +309,47 @@ async function step(D, q, verb, ctx) {
        act.js reads the real fields, fills them and shows them; nothing is
        posted until the boss says yes to the card it puts up. */
     if (v === 'pay') {
-      const monthName = MONTHS[slots.month - 1];
-      if (!A) throw new Error(bn ? 'অ্যাকশন লেয়ারটা লোড হয়নি' : 'the action layer is not loaded');
-      const plan = await A.planPayment(slots.who, { month: slots.month, amount: slots.amount });
-      const c = A.propose(plan);
+      if (!A) throw new Error(speakBn ? 'অ্যাকশন লেয়ারটা লোড হয়নি' : 'the action layer is not loaded');
+      const plan = await A.planPayment(slots.who, { month: slots.month, amount: slots.amount, bank: slots.account });
+
+      /* The ERP's mark-paid form has bank_id => required. An account is not a
+         detail EON may pick on the boss's behalf — money leaves the one he
+         names — so the conversation stays open for it, exactly like the month
+         and the amount, and the ERP's own list is what he chooses from. */
+      if (plan.needsAccount && !slots.account) {
+        const names = (plan.accounts || []).map((o) => o.text);
+        convo = { verb: 'pay', slots, asked: 'account', at: Date.now(), options: names, lang: speakBn ? 'bn' : 'en' };
+        return {
+          speak: speakBn ? 'কোন অ্যাকাউন্ট থেকে যাবে?' : 'Which account should it come from?',
+          detail: [heldSummary('pay', slots, speakBn)].filter(Boolean).concat(names.length ? [names.join(' · ')] : []),
+          awaiting: 'account',
+        };
+      }
+      if (speakBn) {
+        plan.lang = 'bn';
+        const mon = slots.month ? BN_MONTH[slots.month - 1] : null;
+        plan.summary_bn = slots.who.kind === 'employee'
+          ? `${slots.who.name}-কে ${mon ? mon + ' মাসের ' : ''}বেতন বাবদ ${fmtBDT(slots.amount)} দেবো`
+          : `${slots.who.name}-কে ${fmtBDT(slots.amount)} দেবো, পার্টি স্টেটমেন্টে বসিয়ে`;
+      }
+      const c = await A.propose(plan);
       // the held summary stays on the card: the boss should see his own words beside the ERP's fields
       return Object.assign({}, c, {
-        detail: [heldSummary('pay', slots, bn)].filter(Boolean).concat(c.detail || []),
-        speak: bn
-          ? `${slots.who.name} — ${monthName}, ${fmtBDT(slots.amount)}। ${c.speak}`
-          : c.speak,
+        detail: [heldSummary('pay', slots, speakBn)].filter(Boolean).concat(c.detail || []),
       });
     }
   } catch (e) {
     // a payment that could not be set up must say plainly that no money moved
     if (v === 'pay') {
       return {
-        speak: bn
+        speak: speakBn
           ? `কিছুই পোস্ট করিনি — ${e.message}। কোনো টাকা যায়নি।`
           : `I have posted nothing — ${e.message}. No money has moved.`,
         detail: [],
-        actions: (() => { const n = N(); if (!n) return []; const h = (n.find('payment schedules', 1) || [])[0]; return h ? [{ label: bn ? 'পেমেন্ট স্ক্রিন' : 'Open the payment screen', kind: 'erp-open', href: n.url(h.uri) }] : []; })(),
+        actions: (() => { const n = N(); if (!n) return []; const h = (n.find('payment schedules', 1) || [])[0]; return h ? [{ label: speakBn ? 'পেমেন্ট স্ক্রিন' : 'Open the payment screen', kind: 'erp-open', href: n.url(h.uri) }] : []; })(),
       };
     }
-    return { speak: bn ? `সেটআপ করতে পারলাম না: ${e.message}` : `I could not set that up: ${e.message}`, detail: [] };
+    return { speak: speakBn ? `সেটআপ করতে পারলাম না: ${e.message}` : `I could not set that up: ${e.message}`, detail: [] };
   }
   return null;
 }

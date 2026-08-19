@@ -461,6 +461,9 @@ export async function planPayment(who, opts = {}) {
 
     return {
       what: 'payment', money: true, form: sch.form, values, missing, notes,
+      // markPaid has bank_id => required: without it there is nothing to propose, only a question
+      needsAccount: !!bankF && acct.value == null,
+      accounts: (bankF && bankF.options) || [],
       summary: `Pay ${sch.erpName} ৳${amount.toLocaleString('en-US')} against the ${sch.period} salary schedule`,
     };
   }
@@ -489,6 +492,9 @@ export async function planPayment(who, opts = {}) {
 
   return {
     what: 'payment', money: true, form, values, missing, notes,
+    // recordPayment leaves bank_id optional, so a party payment is never blocked on it
+    needsAccount: false,
+    accounts: (bankF && bankF.options) || [],
     summary: `Pay ${party.name} ৳${amount.toLocaleString('en-US')} and record it on their party statement`,
   };
 }
@@ -543,10 +549,12 @@ function card(plan) {
   const bn = isBn(plan), sum = summaryOf(plan);
   return {
     speak: blocked
-      ? `${sum} — but the ERP will not take it without ${plan.missing.join(' and ')}. Tell me that and I will show you the payment again.`
+      ? (bn
+        ? `${sum} — কিন্তু ${plan.missing.join(' আর ')} ছাড়া ERP এটা নেবে না। ওটা বলুন, পুরো পেমেন্টটা আবার দেখিয়ে দিচ্ছি।`
+        : `${sum} — but the ERP will not take it without ${plan.missing.join(' and ')}. Tell me that and I will show you the payment again.`)
       : bn
-        ? `${sum}। এখনো কিছু সেভ হয়নি। “হ্যাঁ” বললে ERP-র নিজের ফর্ম দিয়েই বসিয়ে দিচ্ছি।`
-        : `${sum}. Nothing has left any account yet. Say “yes” and I will post it through the ERP's own form.`,
+        ? `${sum}। ${plan.money ? 'কোনো অ্যাকাউন্ট থেকে এখনো টাকা যায়নি' : 'এখনো কিছু সেভ হয়নি'}। “হ্যাঁ” বললে ERP-র নিজের ফর্ম দিয়েই বসিয়ে দিচ্ছি।`
+        : `${sum}. ${plan.money ? 'Nothing has left any account yet' : 'Nothing is saved yet'}. Say “yes” and I will post it through the ERP's own form.`,
     detail,
     actions: (blocked ? [] : [{ label: bn ? 'হ্যাঁ, করে দাও' : plan.money ? 'Yes, pay it' : 'Yes, do it', kind: 'eon-confirm' }])
       .concat([{ label: bn ? 'ফর্মটা খুলে দাও' : 'Open the form instead', kind: 'erp-open', href: plan.form.action.replace(/\?.*$/, '') }]),
