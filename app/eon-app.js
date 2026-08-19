@@ -30,9 +30,15 @@ const sevClass = (n) => 's' + Math.max(1, Math.min(5, n));
 /* ---------------- shell ---------------- */
 function paintEnv() {
   const e = env(); const pill = $('#envPill'); const src = EonErp.source();
-  const mode = e.serverOk ? (e.llm ? 'live' : 'server') : 'demo';
+  // Name what the boss is actually looking at, not what the server merely holds. e.db only
+  // says the server has an ERP database; without a session its private endpoints stay shut
+  // (correctly) and the panel runs on the demo company — which it must admit, not hide.
+  const onDemo = src !== 'erp';
+  const mode = onDemo ? 'demo' : (e.llm ? 'live' : 'server');
   pill.className = 'pill ' + mode;
-  $('#envText').textContent = mode === 'live' ? 'Live · ERP + language model' : mode === 'server' ? (e.db ? 'Server · ERP data · offline brain' : 'Server · demo data') : (src === 'demo' ? 'Static · demo data · offline brain' : 'Static');
+  $('#envText').textContent = mode === 'live' ? 'Live · ERP + language model'
+    : mode === 'server' ? 'Server · ERP data · offline brain'
+    : e.serverOk ? 'Demo company · offline brain' : 'Offline · demo company';
   const build = e.commit ? ` · build ${e.commit}` : '';
   // signed into the ERP → EON uses that session; otherwise say so in plain words
   const who = e.user ? ' · signed in' : (e.authError ? ' · ⚠ sign in to the ERP to see live data' : '');

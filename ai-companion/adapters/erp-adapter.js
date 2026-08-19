@@ -45,7 +45,7 @@
   const writeLS = (k, v) => { try { localStorage.setItem(LS + k, JSON.stringify(v)); } catch { /* quota — keep in memory */ } };
   const mem = {};
   const deepMerge = (dst, src) => { Object.keys(src || {}).forEach((k) => { if (src[k] && typeof src[k] === 'object' && !Array.isArray(src[k]) && dst[k] && typeof dst[k] === 'object' && !Array.isArray(dst[k])) deepMerge(dst[k], src[k]); else dst[k] = src[k]; }); return dst; };
-  const ENV = window.EON_ENV = { mode: 'static', server: SERVER, serverOk: false, llm: false, db: false, company: CFG.company, source: null, adapter: 'erp', checkedAt: null, authError: null, commit: null, deployed: null, php: null };
+  const ENV = window.EON_ENV = { mode: 'static', server: SERVER, serverOk: false, llm: false, db: false, company: CFG.company, source: null, adapter: 'erp', checkedAt: null, authError: null, authed: false, reason: null, commit: null, deployed: null, php: null };
   const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
   // token: ?token=… once (remembered), then localStorage 'eon_token' — sent as Authorization: Bearer
   try { const qt = new URLSearchParams(location.search).get('token'); if (qt) { localStorage.setItem('eon_token', qt); history.replaceState(null, '', location.pathname + location.hash); } } catch {}
@@ -58,7 +58,8 @@
     return {
       async get() {
         let v = mem[key] !== undefined ? mem[key] : null;
-        if (v == null && isBrain && ENV.serverOk) { try { const r = await api('memory.php?doc=' + encodeURIComponent(key)); v = r && r.data != null ? r.data : null; } catch { /* fall through */ } }
+        // memory.php is fail-closed without a session; asking anyway only logs a 401
+        if (v == null && isBrain && ENV.serverOk && ENV.authed) { try { const r = await api('memory.php?doc=' + encodeURIComponent(key)); v = r && r.data != null ? r.data : null; } catch { /* fall through */ } }
         if (v == null) v = readLS(key);
         if (v != null) mem[key] = v;
         return { exists: v != null, data: () => (v == null ? undefined : JSON.parse(JSON.stringify(v))) };
@@ -67,7 +68,7 @@
         const cur = mem[key] !== undefined ? mem[key] : (readLS(key) || {});
         const next = (o && o.merge) ? deepMerge(JSON.parse(JSON.stringify(cur)), v) : JSON.parse(JSON.stringify(v));
         mem[key] = next; if (isBrain) writeLS(key, next);
-        if (isBrain && ENV.serverOk) { try { await api('memory.php?doc=' + encodeURIComponent(key), { method: 'PUT', body: JSON.stringify({ data: next }) }); } catch { /* offline — localStorage has it */ } }
+        if (isBrain && ENV.serverOk && ENV.authed) { try { await api('memory.php?doc=' + encodeURIComponent(key), { method: 'PUT', body: JSON.stringify({ data: next }) }); } catch { /* offline — localStorage has it */ } }
       },
       async update(v) { return this.set(v, { merge: true }); },
     };
@@ -124,7 +125,22 @@
         const h = await api('health.php', { timeout: 3500 });
         ENV.serverOk = true; ENV.db = !!h.db; ENV.llm = !!h.llm; ENV.mode = h.db ? (h.llm ? 'live' : 'server') : 'static';
         ENV.commit = h.commit || null; ENV.deployed = h.deployed || null; ENV.php = h.php || null; ENV.user = h.user || null; ENV.erpLogin = !!h.erp_login;
-        if (h.db) {
+        // health.php reports how THIS request authenticated — it is sent with the same
+        // cookies and the same bearer token as everything else, so its verdict is the
+        // answer for all of them: 'erp-session' | 'token' | 'open-demo' mean we are in,
+        // 'token-required' means we are not. The private endpoints (dataset.php,
+        // memory.php) are fail-closed and answer 401 without a session, which is correct —
+        // so ask health first and never knock on a door we have been told is locked.
+        // (Deliberately not "or we hold a token": a stale token is exactly the case where
+        // health says token-required, and trusting it would put the 401 straight back.)
+        ENV.auth = h.auth || null;
+        ENV.authed = ['erp-session', 'token', 'open-demo'].includes(h.auth);
+        if (h.db && !ENV.authed) {
+          ENV.authError = 401;
+          ENV.reason = 'not signed in to the ERP — showing the demo company';
+          console.info('[EON erp] no ERP session — the live dataset stays locked; using the demo dataset');
+        }
+        if (h.db && ENV.authed) {
           const cacheKey = 'dataset:' + (CFG.company || 'all'); const cached = readLS(cacheKey);
           if (cached && cached.at && Date.now() - cached.at < CFG.cacheMinutes * 60000 && cached.D) { await publish(cached.D); }
           const D = await api('dataset.php' + (CFG.company ? '?company=' + CFG.company : ''), { timeout: 30000 });

@@ -8,8 +8,8 @@
    Storage
      • localStorage 'eon_prefs'   (browser, always)
      • window.EonBrain.mergeStore('prefs', …)   when the brain store exists
-     • server/api/prefs.php       when the Command Center reports serverOk
-       (the same record Brain.php injects into the model prompt)
+     • server/api/prefs.php       NOT YET BUILT — see SERVER_PREFS below; until that
+       endpoint ships, preferences are a browser-local record
 
    Surfaces
      • window.EON_PREFS  — the live object (decisions.js reads .name)
@@ -78,9 +78,15 @@ function persist(opts = {}) {
   if (!opts.noServer) { clearTimeout(syncTimer); syncTimer = setTimeout(() => sync('POST'), 400); }
   try { W && W.dispatchEvent(new CustomEvent('eon:prefs', { detail: Object.assign({}, PREFS) })); } catch {}
 }
+/* server/api/prefs.php is not built yet, so preferences live in the browser. Asking for
+   it only produced a 404 on every keystroke that changed a preference. Flip this to true
+   the day the endpoint ships — nothing else here needs to change. */
+const SERVER_PREFS = false;
 async function sync(method = 'POST') {
   try {
+    if (!SERVER_PREFS) return null;
     const app = W && W.EonApp; if (!app || !app.env || !app.env().serverOk || typeof app.api !== 'function') return null;
+    if (!app.env().authed) return null;                       // fail-closed server: no session, no request
     if (method === 'GET') { const r = await app.api('prefs.php'); return r && r.prefs ? r.prefs : null; }
     const r = await app.api('prefs.php', { method: 'POST', body: JSON.stringify(PREFS) });
     return r && r.prefs ? r.prefs : null;
@@ -246,7 +252,7 @@ if (W) {
       const app = W.EonApp;
       if (t.dataset.prefsForget) { EonPrefs.forget(t.dataset.prefsForget); app && app.toast && app.toast('Forgotten'); }
       else if (t.dataset.prefsForgetAll) { EonPrefs.forget('everything'); app && app.toast && app.toast('Preferences and notes cleared'); }
-      else if (t.dataset.prefsSync) { EonPrefs.pull().then((r) => { app && app.toast && app.toast(r ? 'Preferences synced with the server' : 'Server not reachable — kept locally'); app && app.render && app.render(); }); return; }
+      else if (t.dataset.prefsSync) { EonPrefs.pull().then((r) => { app && app.toast && app.toast(r ? 'Preferences synced with the server' : 'Preferences are kept in this browser'); app && app.render && app.render(); }); return; }
       app && app.render && app.render();
     });
   }

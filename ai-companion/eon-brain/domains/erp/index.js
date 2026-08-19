@@ -13,6 +13,16 @@
        finance, people, crm, ops, knowledge, qa, draft
      }
    ============================================================ */
+// The domain registry FIRST. Every layer below (qa.js and the plug-ins) hands its
+// answerer to window.EonDomains, falling back to the window.__eonDomainQueue array
+// when the registry is not there yet — and something has to drain that queue.
+// It used to be drained only by owner/ask.js, which is reached solely through
+// js/main.js, whose module graph also pulls the 1.3 MB Three.js avatar bundle: until
+// that finished downloading the whole graph stayed unevaluated, so window.EonDomains
+// did not exist and every queued answerer sat idle (Ask EON returned nothing at all).
+// Docked beside the ERP main.js is never imported, so it never arrived. The ERP domain
+// owns these answerers, so it owns the registry too — no avatar, no network, required.
+import '../../domains.js';
 import * as K from './knowledge.js';
 import * as F from './finance.js';
 import * as P from './people.js';
