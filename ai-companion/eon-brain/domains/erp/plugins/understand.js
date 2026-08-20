@@ -307,7 +307,12 @@ export function remember(w) { if (w && w.name) lastWho = w; return lastWho; }
 function whoIn(D, q) {
   if (!D) return null;
   // a person the ERP knows — try the longest capitalised run, then any word
-  const caps = String(q).match(/\b[A-Z][a-z.]{1,15}(?:\s+[A-Z][a-z.]{1,15}){0,3}\b/g) || [];
+  /* Half of a hyphenated name is not a name. "Ha-Meem Group" is a party in the
+     ledger; the run after the hyphen reads as "Meem Group", which found the
+     employee Meem Rahman — EON answering about a person when the boss named a
+     company, which is the money-shaped version of answering about the wrong
+     human. A hyphen on either side disqualifies the run. */
+  const caps = String(q).match(/(?<![A-Za-z-])[A-Z][a-z.]{1,15}(?:\s+[A-Z][a-z.]{1,15}){0,3}(?![-A-Za-z])/g) || [];
   const skip = /^(What|How|Any|Who|Show|Take|Assign|Last|The|Is|Are|Do|Can|Give|Open|Where|When|Why|EON|ERP)$/;
   for (const c of caps.filter((x) => !skip.test(x)).sort((a, b) => b.length - a.length)) {
     const e = P.findEmployee(D, c);
@@ -364,6 +369,50 @@ function monthIn(q) {
   if (i >= 0) return i + 1;
   const j = BN_MONTH.findIndex((m) => q.includes(m));
   return j >= 0 ? j + 1 : null;
+}
+
+/* ============================================================
+   A NAMED MONTH IS PART OF THE QUESTION.
+
+   "what did we spend on marketing in June" came back with August's
+   figures — the right shape of answer about the wrong period, said
+   with the same confidence as a right one. That is worse than saying
+   nothing, and it is the same class of mistake as answering about the
+   wrong person.
+
+   monthIn() above is deliberately loose because it also reads the
+   month out of an ORDER ("pay Imran July salary 30000"), where the
+   word is nearly always meant. A question is different: "who may
+   approve this" is not about May, and "march the files over" is not
+   about March. So a question's month must be a whole word, and bare
+   "may"/"march" only counts when a year, the word month, or a
+   preposition marks it as a date.
+   ============================================================ */
+/* The whole word or the usual abbreviation, and nothing else. A three-letter
+   prefix with a wildcard after it reads "marketing" as March, which is how
+   "what did we spend on marketing in June" answered about March — a month
+   nobody mentioned, taken from the middle of another word. */
+const MONTH_WORD = new RegExp(`\\b(${MONTHS.map((m) => `${m.toLowerCase()}|${m.slice(0, 3).toLowerCase()}`).join('|')}|sept)\\b`, 'i');
+const AMBIGUOUS = /^(may|march|mar)$/i;
+function namedMonth(q) {
+  const s = norm(latinDigits(q));
+  const m = MONTH_WORD.exec(s);
+  if (m) {
+    const i = MONTHS.findIndex((x) => x.toLowerCase().startsWith(m[1].toLowerCase().slice(0, 3)));
+    if (i >= 0) {
+      if (AMBIGUOUS.test(m[0]) && !/\b(in|of|for|during|last|this)\s+$|month|\b(19|20)\d\d\b/.test(s.slice(0, m.index) + s.slice(m.index + m[0].length))) return null;
+      return i + 1;
+    }
+  }
+  const j = BN_MONTH.findIndex((x) => String(q).includes(x));
+  return j >= 0 ? j + 1 : null;
+}
+/** the named month as a YYYY-MM key, never in the future of the dataset */
+function monthKeyFor(D, mon) {
+  if (!mon) return null;
+  const t = T(D); const y = +t.slice(0, 4), cur = +t.slice(5, 7);
+  const year = mon > cur ? y - 1 : y;
+  return `${year}-${String(mon).padStart(2, '0')}`;
 }
 /* ৩০০০০ is thirty thousand — the boss speaks money in Bangla digits too */
 const BN_DIGITS = { '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4', '৫': '5', '৬': '6', '৭': '7', '৮': '8', '৯': '9' };
@@ -613,7 +662,11 @@ const openA = (bn, query) => { const n = N(); if (!n) return []; const h = (n.fi
 
 const NATIVE = {
   sale(D, s) {
-    const t = T(D), mk = monthKey(t), co = s.company;
+    /* a named month replaces this one, and "today" only means anything inside
+       the current month — asked about June, EON must not report June's total
+       beside today's sales */
+    const t = T(D), mk = s.month || monthKey(t), co = s.company;
+    const thisMonth = mk === monthKey(t);
     const rows = [].concat(D.sales || [], D.ticket_sales || [], D.visa_sales || [])
       .filter((x) => co == null || +x.company_id === co);
     const today = rows.filter((x) => String(x.date || '').slice(0, 10) === t);
@@ -621,16 +674,48 @@ const NATIVE = {
     const S = (a) => a.reduce((n, r) => n + (+r.total || 0), 0);
     const due = (a) => a.reduce((n, r) => n + (+r.due_amount || 0), 0);
     return {
-      en: `${today.length} sale${today.length === 1 ? '' : 's'} today for ${fmtBDT(S(today))}; ${month.length} this month for ${fmtBDT(S(month))}, of which ${fmtBDT(due(month))} is still unpaid.`,
-      bn: `আজ ${bNum(today.length)}টি বিক্রি, ${bMoney(S(today))}; এ মাসে ${bNum(month.length)}টি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`,
+      en: thisMonth
+        ? `${today.length} sale${today.length === 1 ? '' : 's'} today for ${fmtBDT(S(today))}; ${month.length} this month for ${fmtBDT(S(month))}, of which ${fmtBDT(due(month))} is still unpaid.`
+        : `${MONTHS[+mk.slice(5) - 1]} ${mk.slice(0, 4)}: ${month.length} sale${month.length === 1 ? '' : 's'} for ${fmtBDT(S(month))}, of which ${fmtBDT(due(month))} is still unpaid.`,
+      bn: thisMonth
+        ? `আজ ${bNum(today.length)}টি বিক্রি, ${bMoney(S(today))}; এ মাসে ${bNum(month.length)}টি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`
+        : `${bMonthKey(mk)} মাসে ${bNum(month.length)}টি বিক্রি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`,
       detail: month.slice(-6).reverse().map((r) => `${r.date} · ${r.invoice_no || r.invoice || r.id} — ${fmtBDT(+r.total || 0)}`),
       screen: 'sales', view: 'crm',
     };
   },
+  /* Profit and payroll for a NAMED month. Without these the answerers own both
+     subjects, and neither of them takes a month — which is how "June" came back
+     with August's numbers. */
+  profit(D, s) {
+    if (!s.month) return null;                    // this month is the answerers' job
+    const pl = F.profitAndLoss(D, { from: s.month + '-01', to: s.month + '-31', company: s.company });
+    const when = MONTHS[+s.month.slice(5) - 1] + ' ' + s.month.slice(0, 4);
+    return {
+      en: `${when}: revenue ${fmtBDT(pl.totalIncome)}, direct cost ${fmtBDT(pl.totalDirect || 0)}, operating expenses ${fmtBDT(pl.totalOpex)} — net ${pl.netProfit >= 0 ? 'profit' : 'loss'} ${fmtBDT(Math.abs(pl.netProfit))} (${pl.margin}% margin).`,
+      bn: `${bMonthKey(s.month)} মাসে আয় ${bMoney(pl.totalIncome)}, পরিচালন খরচ ${bMoney(pl.totalOpex)}, নিট ${pl.netProfit >= 0 ? 'মুনাফা' : 'লোকসান'} ${bMoney(Math.abs(pl.netProfit))} — মার্জিন ${bNum(pl.margin)} শতাংশ।`,
+      detail: [], screen: 'profit loss', view: 'finance',
+    };
+  },
+  payroll(D, s) {
+    if (!s.month) return null;
+    const pr = P.payroll(D, { company: s.company, month: s.month });
+    if (!pr || !pr.heads) return {
+      en: `There is no payroll run for ${MONTHS[+s.month.slice(5) - 1]} ${s.month.slice(0, 4)} in the ERP.`,
+      bn: `${bMonthKey(s.month)} মাসের কোনো বেতনের রান ইআরপিতে নেই।`,
+      detail: [], screen: 'payroll', view: 'people',
+    };
+    return {
+      en: `Payroll for ${MONTHS[+s.month.slice(5) - 1]} ${s.month.slice(0, 4)}: ${pr.heads} payslips, gross ${fmtBDT(pr.gross)}, deductions ${fmtBDT(pr.deductions)}, net ${fmtBDT(pr.net)}${pr.pending.length ? `; ${pr.pending.length} still unpaid` : '; all paid'}.`,
+      bn: `${bMonthKey(s.month)} মাসের বেতন: ${bNum(pr.heads)}টি পে-স্লিপ, মোট ${bMoney(pr.gross)}, কর্তন ${bMoney(pr.deductions)}, নিট ${bMoney(pr.net)}${pr.pending.length ? `; ${bNum(pr.pending.length)} জনের এখনো বাকি` : '; সবার পরিশোধিত'}।`,
+      detail: [], screen: 'payroll', view: 'people',
+    };
+  },
   expense(D, s) {
     const e = F.expensesVsBudget(D, s);
+    const when = s.month ? MONTHS[+e.month.slice(5) - 1] + ' ' + e.month.slice(0, 4) : 'this month';
     return {
-      en: `Spending this month is ${fmtBDT(e.totalSpent)} against a budget of ${fmtBDT(e.totalBudget)}${e.over.length ? `; ${e.over.length} categor${e.over.length === 1 ? 'y is' : 'ies are'} over` : ', nothing over budget'}.`,
+      en: `Spending ${s.month ? 'in ' + when : when} is ${fmtBDT(e.totalSpent)} against a budget of ${fmtBDT(e.totalBudget)}${e.over.length ? `; ${e.over.length} categor${e.over.length === 1 ? 'y is' : 'ies are'} over` : ', nothing over budget'}.`,
       bn: `${bMonthKey(e.month)} মাসে খরচ ${bMoney(e.totalSpent)}, বাজেট ${bMoney(e.totalBudget)}${e.over.length ? `; ${bNum(e.over.length)}টি খাত বাজেট ছাড়িয়েছে` : '; কোনো খাত বাজেট ছাড়ায়নি'}।`,
       detail: e.rows.slice(0, 6).map((r) => `${r.category}: ${fmtBDT(r.spent)}${r.budget ? ` / ${fmtBDT(r.budget)}` : ''}`),
       screen: 'expenses', view: 'finance',
@@ -844,8 +929,22 @@ const NATIVE = {
 };
 
 /* ---------- the subject, answered by whoever owns it ---------- */
+/* the subjects whose answer is a period, and which therefore must honour a month
+   the boss named rather than quietly reporting the current one */
+const MONTHLY = new Set(['expense', 'sale', 'profit', 'payroll', 'payslip']);
+
 function subjectAnswer(D, s, subj, q, bn) {
   const c = { company: s.company };
+  /* A named month goes straight to EON's own sentence: qa.js and bangla.js both
+     answer these subjects, and neither takes a month, so handing them the
+     question returns this month's figures under June's question. */
+  if (s.month && MONTHLY.has(subj.id)) {
+    const nat = NATIVE[subj.id];
+    try {
+      const n = nat && nat(D, s);
+      if (n) return { speak: bn ? n.bn : n.en, detail: n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
+    } catch (e) { /* fall through and say so */ }
+  }
   /* 1. the answerer that owns THIS subject — never the raw sentence.
         Handing the sentence back is what turned "লিড কেমন চলছে?" into the
         morning brief: bangla.js sees "কেমন চলছে" and answers that instead. */
@@ -1061,6 +1160,8 @@ async function understand(q, ctx) {
   const subj = subjectOf(q);
   const who = whoOrLast(D, q);
   const s = { company: (ctx && ctx.company != null) ? +ctx.company : (typeof window !== 'undefined' && window.EonErp && window.EonErp.company ? window.EonErp.company() : null) };
+  const mon = namedMonth(q);
+  if (mon) s.month = monthKeyFor(D, mon);
 
   // a question about one person
   if (who && subj) {
