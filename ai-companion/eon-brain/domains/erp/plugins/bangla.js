@@ -449,7 +449,10 @@ const INTENTS = [
   } },
   { id: 'attendance', re: /উপস্থিত|অনুপস্থিত|হাজিরা|কে আসেনি|কে আসছে|কতজন এসেছে/, a(D, s) {
     const td = P.today(D, s);
-    if (td.weekend || td.holiday) return { speak: `আজ ${td.holiday ? td.holiday : WORD.weekend} — অফিস বন্ধ।`, detail: [], view: 'people' };
+    /* An answer must name what it is about. "অফিস বন্ধ" on its own is true but
+       reads as a non-sequitur to "কে কে আসেনি" — the English side already says
+       "no attendance expected", so the Bangla says whose হাজিরা is not expected. */
+    if (td.weekend || td.holiday) return { speak: `আজ ${td.holiday ? td.holiday : WORD.weekend} — অফিস বন্ধ, তাই কারও হাজিরা প্রত্যাশিত নয়।`, detail: [], view: 'people' };
     return {
       speak: `আজ ${num(td.total)} জনের মধ্যে ${num(td.present.length)} জন উপস্থিত, ${num(td.absent.length)} জন অনুপস্থিত এবং ${num(td.late.length)} জন দেরিতে এসেছেন।`,
       detail: td.absent.slice(0, 8).map((e) => `${WORD.absent}: ${e.name} — ${e.department || ''}`),

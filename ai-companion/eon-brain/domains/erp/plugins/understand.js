@@ -262,6 +262,16 @@ function subjectText(q) {
    It only ever changes the order — a locative subject standing alone still
    answers, which is why "ব্যাংকে কত টাকা" is still a cash question. */
 const LOCATIVE = /^[েয়]/;
+
+/* The same idea one step further: some cues are a bare VERB rather than the
+   name of a subject. "এসেছে" (came) means attendance only when nothing else in
+   the sentence says what kind of coming — in "কে দেরিতে এসেছে" the manner word
+   দেরি is the actual subject and এসেছে is just the verb it hangs on. Left
+   alone the longest match wins, এসেছে (5) beats দেরি (4), and a lateness
+   question is answered with the attendance roll. So a weak cue steps behind
+   any other named subject, exactly as a locative does; standing alone it still
+   answers, which keeps "কে কে আসেনি" an attendance question. */
+const WEAK_BN = /^(এসেছে|এসেছেন|আসছে|আসেনি|আসেন)$/;
 /** every subject this sentence names, best first */
 function subjectsIn(q) {
   const raw = subjectText(q);
@@ -271,7 +281,7 @@ function subjectsIn(q) {
   for (const x of SUBJECTS) {
     let m = bn ? x.bn.exec(raw) : x.en.exec(s);
     let loc = 0;
-    if (m && bn) loc = LOCATIVE.test(raw.slice(m.index + m[0].length)) ? 1 : 0;
+    if (m && bn) loc = LOCATIVE.test(raw.slice(m.index + m[0].length)) || WEAK_BN.test(m[0]) ? 1 : 0;
     if (!m && bn) m = x.en.exec(s);            // "Imran এর payroll" — a Latin word inside Bangla
     if (m) hits.push({ subj: x, len: m[0].length, loc });
   }
@@ -929,12 +939,26 @@ const NATIVE = {
 };
 
 /* ---------- the subject, answered by whoever owns it ---------- */
+/* the words that mean a statutory obligation rather than an office chore */
+const STATUTORY = /\b(vat|mushak|tds|vds|licen[cs]e|rjsc|agm|compliance|statutory|withholding|tax return|income tax|advance tax|annual return)\b|(ভ্যাট|মুসক|টিডিএস|লাইসেন্স|রিটার্ন|নবায়ন|কমপ্লায়েন্স|আরজেএসসি|আয়কর|উৎসে কর)/i;
+
 /* the subjects whose answer is a period, and which therefore must honour a month
    the boss named rather than quietly reporting the current one */
 const MONTHLY = new Set(['expense', 'sale', 'profit', 'payroll', 'payslip']);
 
 function subjectAnswer(D, s, subj, q, bn) {
   const c = { company: s.company };
+  /* VAT, a licence, a tax return and an RJSC filing are statutory obligations,
+     not office chores — but they are also the words the ERP's own to-do titles
+     use, so the `todo` subject matched them and answered "13 office to-dos
+     open" to "ভ্যাট রিটার্ন কবে". The compliance calendar owns those words; it
+     sits below this layer and would never have been reached. It answers first
+     when the question is really about one of them, and falls through to the
+     to-do list when it has nothing (an office checklist question is still an
+     office checklist question). */
+  if (subj.id === 'todo' && STATUTORY.test(String(q)) && typeof window !== 'undefined' && window.EonCompliance && window.EonCompliance.answer) {
+    try { const r = window.EonCompliance.answer(q); if (r && r.speak) return r; } catch (e) { /* fall on */ }
+  }
   /* A named month goes straight to EON's own sentence: qa.js and bangla.js both
      answer these subjects, and neither takes a month, so handing them the
      question returns this month's figures under June's question. */

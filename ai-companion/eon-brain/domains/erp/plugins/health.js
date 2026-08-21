@@ -146,22 +146,22 @@ export function scoreCompany(D, company = null) {
     if (v >= 1e3) return `${sign}৳${bd(t(v / 1e3))} হাজার`;
     return `${sign}৳${bd(Math.round(v))}`;
   };
-  const BN_M = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+  const BN_M = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
   const bnMonth = (mk) => `${BN_M[+String(mk).slice(5) - 1]} ${bd(String(mk).slice(0, 4))}`;
   const bp = (n) => `${bd(Math.abs(Math.round(Number(n) || 0)))} শতাংশ`;
   const facts_bn = {
-    margin: `গত মাসে নিট মার্জিন ${bp(pl.margin)}${pl.margin < 0 ? ' ঋণাত্মক' : ''} (${bk(pl.totalIncome)} আয়ে ${pl.netProfit >= 0 ? 'মুনাফা' : 'লোকসান'} ${bk(Math.abs(pl.netProfit))})`,
-    ar_overdue: ar.total > 0 ? `পাওনার ${bp(Math.round(arRatio * 100))} সময় পার (${bk(ar.total)}-এর মধ্যে ${bk(ar.overdueTotal)})` : 'খোলা কোনো পাওনা নেই',
-    ap_overdue: ap.total > 0 ? `দেনার ${bp(Math.round(apRatio * 100))} সময় পার (${bk(ap.total)}-এর মধ্যে ${bk(ap.overdueTotal)})` : 'খোলা কোনো দেনা নেই',
-    cash_cover: cover == null ? `হাতে নগদ ${bk(rw.cash)}, খরচের ইতিহাস নেই` : `হাতের নগদ ${bk(rw.cash)} দিয়ে ${bd(r1(cover))} মাসের খরচ চলবে (মাসে ${bk(rw.avgMonthlyOutflow)})`,
-    budget: bud.over.length ? `এ মাসে ${bd(bud.over.length)}টি খাত বাজেট ছাড়িয়েছে (${bud.over.slice(0, 3).map((r) => `${r.category} ${bp(r.pct)}`).join(', ')})` : 'কোনো খাত এ মাসে বাজেট ছাড়ায়নি',
+    margin: `গত মাসে নিট মার্জিন ${bp(pl.margin)}${pl.margin < 0 ? ' ঋণাত্মক' : ''} (${bk(pl.totalIncome)} আয়ে ${pl.netProfit >= 0 ? 'মুনাফা' : 'লোকসান'} ${bk(Math.abs(pl.netProfit))})`,
+    ar_overdue: ar.total > 0 ? `পাওনার ${bp(Math.round(arRatio * 100))} সময় পার (${bk(ar.total)}-এর মধ্যে ${bk(ar.overdueTotal)})` : 'খোলা কোনো পাওনা নেই',
+    ap_overdue: ap.total > 0 ? `দেনার ${bp(Math.round(apRatio * 100))} সময় পার (${bk(ap.total)}-এর মধ্যে ${bk(ap.overdueTotal)})` : 'খোলা কোনো দেনা নেই',
+    cash_cover: cover == null ? `হাতে নগদ ${bk(rw.cash)}, খরচের ইতিহাস নেই` : `হাতের নগদ ${bk(rw.cash)} দিয়ে ${bd(r1(cover))} মাসের খরচ চলবে (মাসে ${bk(rw.avgMonthlyOutflow)})`,
+    budget: bud.over.length ? `এ মাসে ${bd(bud.over.length)}টি খাত বাজেট ছাড়িয়েছে (${bud.over.slice(0, 3).map((r) => `${r.category} ${bp(r.pct)}`).join(', ')})` : 'কোনো খাত এ মাসে বাজেট ছাড়ায়নি',
     attendance: pt.rows.length ? `গত ৩০ দিনে উপস্থিতি ${bp(pt.avgAttendance)}` : 'গত ৩০ দিনে হাজিরার কোনো তথ্য নেই',
-    late: pt.chronicLate.length ? `${bd(hc.total)} জনের মধ্যে ${bd(pt.chronicLate.length)} জন নিয়মিত দেরিতে আসেন (${bp(Math.round(lateShare * 100))})` : 'কেউ নিয়মিত দেরি করেন না',
+    late: pt.chronicLate.length ? `${bd(hc.total)} জনের মধ্যে ${bd(pt.chronicLate.length)} জন নিয়মিত দেরিতে আসেন (${bp(Math.round(lateShare * 100))})` : 'কেউ নিয়মিত দেরি করেন না',
     payroll: pr.pending.length ? `${bnMonth(pr.month)} মাসের ${bd(pr.heads)} জনের মধ্যে ${bd(pr.pending.length)} জনের বেতন বাকি (${bk(pr.pending.reduce((n, p) => n + (+p.net_salary || 0), 0))})` : `${bnMonth(pr.month)} মাসের বেতন পুরোটাই পরিশোধিত`,
-    conversion: pipe.conversion == null ? 'এখনও কোনো লিডের ফায়সালা হয়নি' : `লিড রূপান্তরের হার ${bp(pipe.conversion)} (${bd(pipe.won)}টি জেতা / ${bd(pipe.lost)}টি হারা)`,
-    stale: pipe.open.length ? `${bd(pipe.open.length)}টি খোলা লিডের মধ্যে ${bd(st.count)}টি ঠান্ডা হয়ে গেছে (${bp(Math.round(staleShare * 100))})` : 'খোলা কোনো লিড নেই',
-    pipeline: pipeRatio == null ? `পাইপলাইন ${bk(pipe.openValue)}, তুলনা করার মতো গত মাসের আয় নেই` : `পাইপলাইন ${bk(pipe.openValue)} — গত মাসের আয়ের ${bd(r1(pipeRatio))} গুণ`,
-    tasks: tk.open.length ? `${bd(tk.open.length)}টি খোলা কাজের মধ্যে ${bd(tk.overdue.length)}টির সময় পার (${bp(Math.round(taskShare * 100))})` : 'খোলা কোনো কাজ নেই',
+    conversion: pipe.conversion == null ? 'এখনও কোনো লিডের ফায়সালা হয়নি' : `লিড রূপান্তরের হার ${bp(pipe.conversion)} (${bd(pipe.won)}টি জেতা / ${bd(pipe.lost)}টি হারা)`,
+    stale: pipe.open.length ? `${bd(pipe.open.length)}টি খোলা লিডের মধ্যে ${bd(st.count)}টি ঠান্ডা হয়ে গেছে (${bp(Math.round(staleShare * 100))})` : 'খোলা কোনো লিড নেই',
+    pipeline: pipeRatio == null ? `পাইপলাইন ${bk(pipe.openValue)}, তুলনা করার মতো গত মাসের আয় নেই` : `পাইপলাইন ${bk(pipe.openValue)} — গত মাসের আয়ের ${bd(r1(pipeRatio))} গুণ`,
+    tasks: tk.open.length ? `${bd(tk.open.length)}টি খোলা কাজের মধ্যে ${bd(tk.overdue.length)}টির সময় পার (${bp(Math.round(taskShare * 100))})` : 'খোলা কোনো কাজ নেই',
     projects: pj.active.length ? `${bd(pj.active.length)}টি চলমান প্রকল্পের ${bd(pj.atRisk.length)}টি ঝুঁকিতে` : 'চলমান কোনো প্রকল্প নেই',
   };
   const drivers = Object.keys(parts).map((k) => ({ part: k, layer: LAYER_OF[k], score: Math.round(parts[k]), lost: r1((100 - parts[k]) * W[k]), text: facts[k], text_bn: facts_bn[k] }))
@@ -204,9 +204,9 @@ const shortLineBn = (r) => `${r.company}: ${bnDigits(r.score)} (${r.grade}) — 
 const partLine = (d) => `${d.text} → ${d.score}/100 for ${d.part.replace('_', ' ')}, costing ${d.lost} points`;
 /* the part key is an internal English word (ar_overdue, cash_cover); it is named
    in Bangla here rather than printed raw inside a Bangla line */
-const PART_BN = { margin: 'মার্জিন', ar_overdue: 'পাওনা আদায়', ap_overdue: 'দেনা পরিশোধ', cash_cover: 'নগদের সংগতি', budget: 'বাজেট',
-  attendance: 'উপস্থিতি', late: 'সময়ানুবর্তিতা', payroll: 'বেতন', conversion: 'লিড রূপান্তর', stale: 'ঠান্ডা লিড', pipeline: 'পাইপলাইন', tasks: 'কাজ', projects: 'প্রকল্প' };
-const partLineBn = (d) => `${d.text_bn || d.text} → ${PART_BN[d.part] || d.part} অংশে ${bnDigits(d.score)}/১০০, হারাল ${bnDigits(d.lost)} পয়েন্ট`;
+const PART_BN = { margin: 'মার্জিন', ar_overdue: 'পাওনা আদায়', ap_overdue: 'দেনা পরিশোধ', cash_cover: 'নগদের সংগতি', budget: 'বাজেট',
+  attendance: 'উপস্থিতি', late: 'সময়ানুবর্তিতা', payroll: 'বেতন', conversion: 'লিড রূপান্তর', stale: 'ঠান্ডা লিড', pipeline: 'পাইপলাইন', tasks: 'কাজ', projects: 'প্রকল্প' };
+const partLineBn = (d) => `${d.text_bn || d.text} → ${PART_BN[d.part] || d.part} অংশে ${bnDigits(d.score)}/১০০, হারাল ${bnDigits(d.lost)} পয়েন্ট`;
 const subsLine = (r) => `finance ${r.sub.finance}, people ${r.sub.people}, sales ${r.sub.sales}, operations ${r.sub.ops}`;
 
 /* বাংলা — the score is a number the boss asks for in either language, and a

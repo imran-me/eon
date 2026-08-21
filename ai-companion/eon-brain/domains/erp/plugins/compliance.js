@@ -149,6 +149,26 @@ const line = (i) => `${i.date} · ${i.name} — ${i.status}${i.amount ? ` · ${k
 const say = (i) => `${i.name}, ${i.status === 'overdue' ? `overdue since ${i.date}` : i.days === 0 ? 'due today' : `due ${i.date}, in ${i.days} day${i.days > 1 ? 's' : ''}`}`;
 const openAction = { label: 'Open compliance calendar', kind: 'navigate', href: 'operations.html#compliance' };
 
+/* বাংলা. A statutory question is one of the likeliest to be asked in Bangla —
+   "ভ্যাট রিটার্ন কবে" — and the whole answerer was English, so the understander
+   handed it to the office-checklist instead and the boss was told how many
+   office chores were open. Same items, same dates, Bangla sentence. */
+const BNRE = /[\u0980-\u09FF]/;
+const bd = (n) => String(n).replace(/[0-9]/g, (d) => '\u09e6\u09e7\u09e8\u09e9\u09ea\u09eb\u09ec\u09ed\u09ee\u09ef'[+d]);
+const nameBn = (i) => i.name_bn || i.name;
+const sayBn = (i) => `${nameBn(i)} \u2014 ${i.status === 'overdue'
+  ? `${i.date} \u09a5\u09c7\u0995\u09c7 \u09ac\u0995\u09c7\u09df\u09be`
+  : i.days === 0 ? '\u0986\u099c\u0987 \u09a6\u09bf\u09a4\u09c7 \u09b9\u09ac\u09c7'
+  : `${i.date} \u09a4\u09be\u09b0\u09bf\u0996\u09c7, ${bd(i.days)} \u09a6\u09bf\u09a8 \u09aa\u09b0\u09c7`}`;
+const lineBn = (i) => `${i.date} \u00b7 ${nameBn(i)} \u2014 ${i.status === 'overdue' ? '\u09b8\u09ae\u09df \u09aa\u09be\u09b0' : i.status === 'due soon' ? '\u09b6\u09c0\u0998\u09cd\u09b0\u0987' : '\u0986\u09b8\u099b\u09c7'}${i.amount ? ` \u00b7 \u09f3${bd(Math.round(i.amount))}` : ''}`;
+
+function replyBn(cal, items, intro, opts = {}) {
+  if (!items.length) return { speak: `${intro} \u0986\u0997\u09be\u09ae\u09c0 ${bd(WINDOW)} \u09a6\u09bf\u09a8\u09c7 \u098f \u09b0\u0995\u09ae \u0995\u09bf\u099b\u09c1 \u09a8\u09c7\u0987\u0964`, detail: [], view: 'ops', data: { items: [] } };
+  const first = items[0]; const od = items.filter((i) => i.status === 'overdue');
+  const speak = `${intro} ${items.length === 1 ? '' : `\u09ae\u09cb\u099f ${bd(items.length)}\u099f\u09bf\u0964 `}${od.length ? `${bd(od.length)}\u099f\u09bf\u09b0 \u09b8\u09ae\u09df \u09aa\u09be\u09b0 \u2014 \u09b8\u09ac\u099a\u09c7\u09df\u09c7 \u0986\u0997\u09c7 ${sayBn(od[0])}\u0964 ` : ''}${first.status !== 'overdue' ? `\u09aa\u09b0\u09c7\u09b0\u099f\u09bf: ${sayBn(first)}\u0964 ` : ''}`.trim();
+  return { speak, detail: items.slice(0, 10).map(lineBn), view: 'ops', data: { items, today: cal.today }, actions: [openAction] };
+}
+
 function reply(cal, items, intro, opts = {}) {
   if (!items.length) return { speak: `${intro} Nothing falls due in the next ${WINDOW} days.`, detail: [], view: 'ops', data: { items: [] } };
   const first = items[0]; const od = items.filter((i) => i.status === 'overdue');
@@ -157,14 +177,14 @@ function reply(cal, items, intro, opts = {}) {
 }
 
 const INTENTS = [
-  { re: /\b(compliance|statutory|regulatory)\b( calendar| deadlines?| obligations?| items?)?|\bstatutory calendar\b|(what|which) (filings?|returns?) (are|is) due|government (deadlines?|filings?)/i, a(cal) { return reply(cal, cal.items, `Compliance calendar for the next ${WINDOW} days across the group.`); } },
-  { re: /\bvat\b.*\b(due|return|deadline|when|file|filing|submit)\b|\b(when|what)\b.*\bvat\b|\bmushak\b/i, a(cal) { const r = RULES.find((x) => x.id === 'vat-return'); const items = cal.items.filter((i) => /^(vat-return|vds-deposit)$/.test(i.id) || (i.source === 'erp' && /vat|mushak/i.test(i.name))); return reply(cal, items, `VAT: Mushak 9.1 for each month is filed and paid by the 15th of the next month.`, { basis: true, tail: r ? '' : '' }); } },
-  { re: /\btds\b|salary tax|tax deducted at source|withholding (tax|return)/i, a(cal) { const items = cal.items.filter((i) => /^(tds-salary|wht-return|salary-statement)$/.test(i.id)); return reply(cal, items, 'TDS on salaries under the Income Tax Act 2023: deduct at the average rate, deposit monthly, file the half-yearly withholding return and the annual salary statement.', { basis: true }); } },
-  { re: /tax (deadlines?|calendar|dates|due dates?)|advance (income )?tax|income tax return|\btax day\b|when is (the )?(tax|return) due|company (tax )?return/i, a(cal) { const items = cal.items.filter((i) => /^(tds-salary|wht-return|salary-statement|ait|company-return|tin-bin|vat-return|vds-deposit)$/.test(i.id) || (i.source === 'erp' && /tax|return/i.test(i.name))); return reply(cal, items, 'Tax deadlines: advance income tax falls on 15 Sep, 15 Dec, 15 Mar and 15 Jun; the company return is due on Tax Day, 15 January for a June year-end; VAT and TDS run monthly.', { basis: true }); } },
-  { re: /trade licen[cs]e|fire licen[cs]e|licen[cs]e renewal|renew (the |our )?licen[cs]es?/i, a(cal) { const items = cal.items.filter((i) => /licence/.test(i.id) || (i.source === 'erp' && /licen[cs]e/i.test(i.name))); return reply(cal, items, 'Trade licences renew each fiscal year by 30 June with the city corporation; the fire licence renews annually with Fire Service & Civil Defence.', { basis: true }); } },
-  { re: /\brjsc\b|annual return|\bagm\b|annual general meeting|companies act/i, a(cal) { const items = cal.items.filter((i) => /^(agm|rjsc-return)$/.test(i.id) || (i.source === 'erp' && /rjsc|return|agm/i.test(i.name))); return reply(cal, items, 'RJSC: hold the AGM within 15 months of the last one and file the annual return within 21 days of it (Companies Act 1994 s.81, s.36).', { basis: true }); } },
+  { bnRe: /(কমপ্লায়েন্স|সরকারি বাধ্যবাধকতা|আইনি কাজ|কি কি জমা দিতে হবে)/, bnIntro: "আগামী ৪৫ দিনের কমপ্লায়েন্স ক্যালেন্ডার।", re: /\b(compliance|statutory|regulatory)\b( calendar| deadlines?| obligations?| items?)?|\bstatutory calendar\b|(what|which) (filings?|returns?) (are|is) due|government (deadlines?|filings?)/i, a(cal) { return reply(cal, cal.items, `Compliance calendar for the next ${WINDOW} days across the group.`); } },
+  { bnRe: /(ভ্যাট|মুসক)/, bnIntro: "ভ্যাট: প্রতি মাসের মুসক ৯.১ পরের মাসের ১৫ তারিখের মধ্যে দাখিল ও পরিশোধ করতে হয়।", re: /\bvat\b.*\b(due|return|deadline|when|file|filing|submit)\b|\b(when|what)\b.*\bvat\b|\bmushak\b/i, a(cal) { const r = RULES.find((x) => x.id === 'vat-return'); const items = cal.items.filter((i) => /^(vat-return|vds-deposit)$/.test(i.id) || (i.source === 'erp' && /vat|mushak/i.test(i.name))); return reply(cal, items, `VAT: Mushak 9.1 for each month is filed and paid by the 15th of the next month.`, { basis: true, tail: r ? '' : '' }); } },
+  { bnRe: /(টিডিএস|উৎসে কর|বেতনের কর)/, bnIntro: "বেতনের উৎসে কর: গড় হারে কর্তন, প্রতি মাসে জমা, ষাণ্মাসিক রিটার্ন ও বার্ষিক বিবরণী।", re: /\btds\b|salary tax|tax deducted at source|withholding (tax|return)/i, a(cal) { const items = cal.items.filter((i) => /^(tds-salary|wht-return|salary-statement)$/.test(i.id)); return reply(cal, items, 'TDS on salaries under the Income Tax Act 2023: deduct at the average rate, deposit monthly, file the half-yearly withholding return and the annual salary statement.', { basis: true }); } },
+  { bnRe: /(আয়কর|অগ্রিম কর|ট্যাক্স ডে|করের সময়সীমা)/, bnIntro: "করের সময়সীমা: অগ্রিম আয়কর ১৫ সেপ্টেম্বর, ১৫ ডিসেম্বর, ১৫ মার্চ ও ১৫ জুন; কোম্পানির রিটার্ন ট্যাক্স ডে-তে।", re: /tax (deadlines?|calendar|dates|due dates?)|advance (income )?tax|income tax return|\btax day\b|when is (the )?(tax|return) due|company (tax )?return/i, a(cal) { const items = cal.items.filter((i) => /^(tds-salary|wht-return|salary-statement|ait|company-return|tin-bin|vat-return|vds-deposit)$/.test(i.id) || (i.source === 'erp' && /tax|return/i.test(i.name))); return reply(cal, items, 'Tax deadlines: advance income tax falls on 15 Sep, 15 Dec, 15 Mar and 15 Jun; the company return is due on Tax Day, 15 January for a June year-end; VAT and TDS run monthly.', { basis: true }); } },
+  { bnRe: /(লাইসেন্স|নবায়ন|ট্রেড লাইসেন্স|ফায়ার লাইসেন্স)/, bnIntro: "ট্রেড লাইসেন্স প্রতি অর্থবছরে ৩০ জুনের মধ্যে সিটি কর্পোরেশন থেকে নবায়ন; ফায়ার লাইসেন্স বছরে একবার।", re: /trade licen[cs]e|fire licen[cs]e|licen[cs]e renewal|renew (the |our )?licen[cs]es?/i, a(cal) { const items = cal.items.filter((i) => /licence/.test(i.id) || (i.source === 'erp' && /licen[cs]e/i.test(i.name))); return reply(cal, items, 'Trade licences renew each fiscal year by 30 June with the city corporation; the fire licence renews annually with Fire Service & Civil Defence.', { basis: true }); } },
+  { bnRe: /(আরজেএসসি|বার্ষিক সাধারণ সভা|এজিএম|বার্ষিক রিটার্ন)/, bnIntro: "আরজেএসসি: আগের এজিএম-এর ১৫ মাসের মধ্যে সভা, আর তার ২১ দিনের মধ্যে বার্ষিক রিটার্ন।", re: /\brjsc\b|annual return|\bagm\b|annual general meeting|companies act/i, a(cal) { const items = cal.items.filter((i) => /^(agm|rjsc-return)$/.test(i.id) || (i.source === 'erp' && /rjsc|return|agm/i.test(i.name))); return reply(cal, items, 'RJSC: hold the AGM within 15 months of the last one and file the annual return within 21 days of it (Companies Act 1994 s.81, s.36).', { basis: true }); } },
   { re: /\btin\b|\bbin\b.*(valid|renew|expir|status)|proof of (return|submission)|\bpsr\b/i, a(cal) { const items = cal.items.filter((i) => i.id === 'tin-bin'); return reply(cal, items, 'TIN and BIN do not expire, but every company needs a fresh proof of return submission each year for licences, banks and tenders.', { basis: true }); } },
-  { re: /labou?r (law|act)|salary (deadline|due date|payment deadline)|wages? (deadline|due|payment)|when (must|should|do) (we|i) pay (the )?(salar|wage)|by when .*salar/i, a(cal) { const items = cal.items.filter((i) => i.id === 'wages'); const tail = cal.payroll ? `The ERP still shows ${cal.payroll.pending} pending payslip${cal.payroll.pending > 1 ? 's' : ''} for ${MONTHS[+cal.payroll.month.slice(5) - 1]}, ${k(cal.payroll.amount)} net.` : 'The ERP shows no pending payslips.'; return reply(cal, items, 'Labour law: wages must be paid within seven working days after the wage period ends (Bangladesh Labour Act 2006 s.123).', { basis: true, tail }); } },
+  { bnRe: /(শ্রম আইন|বেতন কবে দিতে|মজুরি কবে)/, bnIntro: "শ্রম আইন: মজুরিকাল শেষ হওয়ার সাত কর্মদিবসের মধ্যে মজুরি পরিশোধ করতে হবে।", re: /labou?r (law|act)|salary (deadline|due date|payment deadline)|wages? (deadline|due|payment)|when (must|should|do) (we|i) pay (the )?(salar|wage)|by when .*salar/i, a(cal) { const items = cal.items.filter((i) => i.id === 'wages'); const tail = cal.payroll ? `The ERP still shows ${cal.payroll.pending} pending payslip${cal.payroll.pending > 1 ? 's' : ''} for ${MONTHS[+cal.payroll.month.slice(5) - 1]}, ${k(cal.payroll.amount)} net.` : 'The ERP shows no pending payslips.'; return reply(cal, items, 'Labour law: wages must be paid within seven working days after the wage period ends (Bangladesh Labour Act 2006 s.123).', { basis: true, tail }); } },
   { re: /what do we owe (the )?(government|govt|nbr|state)|(government|govt|nbr) (dues|payments|liabilit)|owe (the )?(government|nbr)/i, a(cal) {
     const items = cal.items.filter((i) => /^(vat-return|vds-deposit|tds-salary|ait|company-return|trade-licence|fire-licence|rjsc-return)$/.test(i.id));
     return reply(cal, items, `Government dues in the next ${WINDOW} days — VAT with the monthly return, TDS on salaries, advance tax instalments and licence fees; amounts come from the accountant’s computation, EON tracks the dates.`, { basis: false });
@@ -173,10 +193,22 @@ const INTENTS = [
 
 function answer(q) {
   const s = String(q || '').trim(); if (!s) return null;
-  const hit = INTENTS.find((i) => i.re.test(s)); if (!hit) return null;
+  const bn = BNRE.test(s);
+  const hit = INTENTS.find((i) => (bn && i.bnRe && i.bnRe.test(s)) || i.re.test(s));
+  if (!hit) return null;
   const D = (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset && window.EonErp.dataset()) || null; if (!D) return null;
   const company = (window.EonErp.company && window.EonErp.company()) || null;
-  try { return hit.a(calendar(T(D), D, company), s); } catch (e) { console.warn('[EON compliance] answer failed:', e); return null; }
+  try {
+    const cal = calendar(T(D), D, company);
+    const r = hit.a(cal, s);
+    /* Asked in Bangla, answered in Bangla. The intent has already chosen which
+       obligations the question is about and handed them back on `data.items`;
+       replyBn writes the same selection as a Bangla sentence. An intent with no
+       Bangla wording of its own keeps the English answer rather than going
+       silent — a date the boss needs beats a language preference. */
+    if (bn && hit.bnIntro && r && r.data && r.data.items) return replyBn(cal, r.data.items, hit.bnIntro);
+    return r;
+  } catch (e) { console.warn('[EON compliance] answer failed:', e); return null; }
 }
 
 /* ---------- panel (ops, order 40) ---------- */

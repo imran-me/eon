@@ -269,7 +269,16 @@ final class Insight
                       'amount' => $this->f($tb['total_debit'] ?? 0) - $this->f($tb['total_credit'] ?? 0)];
         }
 
-        usort($out, fn($a, $b) => ['high' => 0, 'medium' => 1, 'low' => 2][$a['severity']] <=> ['high' => 0, 'medium' => 1, 'low' => 2][$b['severity']]);
+        // Anything the ledger check found is unusual by definition — a sweep that
+        // reports "nothing" while the books are out by ৳5 L is not a sweep.
+        foreach ($this->ledgerErrors()['items'] as $e) {
+            $kind = (string) ($e['kind'] ?? '');
+            if ($kind === 'duplicate_expense' || $kind === 'negative_balance') continue;  // already counted above
+            $out[] = $e + ['severity' => (string) ($e['severity'] ?? 'medium')];
+        }
+
+        $rank = ['high' => 0, 'medium' => 1, 'low' => 2];
+        usort($out, fn($a, $b) => ($rank[$a['severity']] ?? 2) <=> ($rank[$b['severity']] ?? 2));
         return ['count' => count($out), 'items' => $out];
     }
 

@@ -765,7 +765,7 @@ async function answer(q, ctx) {
   } catch (e) {
     // "no form on /x" is a lie when the ERP simply wanted a password first
     if (e && e.signIn) return { speak: signInSpeak(bn), detail: [] };
-    return { speak: bn ? 'সেটআপ করতে পারলাম না — ইআরপির ফর্মটা পাওয়া যায়নি।' : `I could not set that up: ${e.message}`, detail: bn ? [e.message] : [] };
+    return { speak: bn ? 'সেটআপ করতে পারলাম না — ইআরপির ফর্মটা পাওয়া যায়নি।' : `I could not set that up: ${e.message}`, detail: bn ? [e.message] : [] };
   }
   return null;
 }
