@@ -14,6 +14,7 @@
    ============================================================ */
 import { fmtBDTk } from '../dataset.js';
 import { addProvider } from '../decisions.js';
+import { money as bnMoney, digits as bnDigits } from './bangla.js';
 
 const KEY = 'eon_since_snapshots';
 const MAX_DAYS = 30;
@@ -136,14 +137,71 @@ function speakOf(x) {
   return parts.join(' ');
 }
 
+/* ---------- the same answer, written in Bangla ----------
+
+   "গতকাল থেকে কী বদলেছে" is the second question anyone asks in বাংলা and this
+   plug-in had no Bangla at all — it did not even match, so the boss got
+   silence. The sentence is written here from the same diff the English side
+   reads, never translated from it, and every figure goes through the Bangla
+   money formatter: converting only the digits leaves "৳১৩ L" with an English
+   unit word, which is this layer's oldest trap. */
+const KPI_BN = {
+  cash: 'নগদ ও ব্যাংক', receivables: 'পাওনা', receivables_overdue: 'মেয়াদোত্তীর্ণ পাওনা',
+  payables: 'দেনা', payables_overdue: 'মেয়াদোত্তীর্ণ দেনা', revenue: 'এ মাসের আয়',
+  headcount: 'জনবল', present_pct: 'আজকের উপস্থিতি', pipeline_value: 'পাইপলাইন',
+  tasks_overdue: 'সময় পার হওয়া কাজ', projects_at_risk: 'ঝুঁকিতে থাকা প্রকল্প',
+};
+const bnValOf = (k, v) => (k.money ? bnMoney(v) : k.unit === '%' ? `${bnDigits(v)} শতাংশ` : bnDigits(v));
+const bnKpiLine = (k) => {
+  const label = KPI_BN[k.key] || k.label;
+  if (k.direction === 'flat') return `${label} আগের মতোই ${bnValOf(k, k.after)}`;
+  const verb = k.direction === 'up' ? 'বেড়ে' : 'কমে';
+  return `${label} ${bnValOf(k, Math.abs(k.delta))} ${verb} ${bnValOf(k, k.after)} হয়েছে`;
+};
+const HEAD = ['cash', 'receivables_overdue', 'payables_overdue', 'revenue'];
+function speakBn(x) {
+  if (x.first) return 'আজকেরটাই আমার প্রথম স্ন্যাপশট — তুলনা করার মতো আগের কোনো দিন নেই। কাল থেকে কী বদলাল তা বলতে পারব।';
+  const since = x.days === 1 ? 'গতকাল থেকে' : `${bnDigits(x.days)} দিন আগের তুলনায়`;
+  if (!x.changed) return `${since} কিছুই বদলায়নি: একই হিসাব, একই খোলা কাজ, ${bnDigits(x.approvals.after)}টি অনুমোদন অপেক্ষমাণ।`;
+  const moved = x.kpis.filter((k) => k.direction !== 'flat');
+  const parts = [];
+  const head = moved.filter((k) => HEAD.includes(k.key)).slice(0, 4);
+  if (head.length) parts.push(`${since}: ${head.map(bnKpiLine).join('; ')}।`);
+  else parts.push(`${since} ${bnDigits(moved.length)}টি সূচক নড়েছে।`);
+  const rest = moved.filter((k) => !HEAD.includes(k.key)).slice(0, 4);
+  if (rest.length) parts.push(rest.map(bnKpiLine).join('; ') + '।');
+  if (x.new_decisions.length) {
+    const crit = x.new_decisions.filter((d) => d.severity >= 4);
+    parts.push(`তালিকায় ${bnDigits(x.new_decisions.length)}টি নতুন বিষয় যোগ হয়েছে${crit.length ? `, তার ${bnDigits(crit.length)}টি জরুরি` : ''}।`);
+  }
+  if (x.resolved_decisions.length) parts.push(`${bnDigits(x.resolved_decisions.length)}টি বিষয় নিষ্পত্তি হয়েছে।`);
+  if (x.approvals.delta) parts.push(`অনুমোদন ${bnDigits(Math.abs(x.approvals.delta))}টি ${x.approvals.delta > 0 ? 'বেড়ে' : 'কমে'} ${bnDigits(x.approvals.after)}টি হয়েছে।`);
+  return parts.join(' ');
+}
+
 /* ---------- Ask EON domain ---------- */
 const RX = /\b(since (yesterday|last (time|snapshot|check))|what('s| has| is|s)? (changed|new|different|moved)|what changed|compared? (to|with) yesterday|daily (delta|diff|change)|anything new|any(thing)? changes?|new since|day[- ]over[- ]day)\b/i;
+/* বাংলা marks "since" with a postposition (থেকে) after the day, so the cue is
+   the day plus the change verb; কী নতুন / কী বদলেছে stand on their own. */
+const RX_BN = /(গতকাল|গত ?কাল|আগের দিন|কালকের) ?(থেকে|তুলনায়|চেয়ে)?[^।]{0,20}(বদল|পরিবর্তন|নতুন|নড়|পাল্টা)|কী (বদলেছে|বদলাল|পাল্টেছে|নতুন)|কি (বদলেছে|বদলাল|পাল্টেছে|নতুন)|নতুন কী (এসেছে|আছে|হয়েছে)|কী কী (বদলেছে|পাল্টেছে)/;
 function answer(q) {
   const s = String(q || '');
-  if (!RX.test(s)) return null;
+  const bn = /[ঀ-৿]/.test(s) && RX_BN.test(s);
+  if (!bn && !RX.test(s)) return null;
   const E = erp(); if (!E || !E.dataset()) return null;
   const x = diff(); if (!x) return null;
   const detail = [];
+  if (bn) {
+    if (x.first) detail.push(`${x.date} তারিখের স্ন্যাপশট রাখা হলো। কাল আবার জিজ্ঞেস করুন।`);
+    else {
+      x.kpis.filter((k) => k.direction !== 'flat').forEach((k) => detail.push(`${k.good === false ? '⚠ ' : ''}${bnKpiLine(k)}`));
+      if (!x.kpis.some((k) => k.direction !== 'flat')) detail.push('সব সূচক আগের মতোই।');
+      x.new_decisions.slice(0, 6).forEach((d) => detail.push(`নতুন: ${d.title}`));
+      x.resolved_decisions.slice(0, 6).forEach((d) => detail.push(`নিষ্পত্তি: ${d.title}`));
+      detail.push(`অনুমোদন: ${bnDigits(x.approvals.before)} → ${bnDigits(x.approvals.after)}`);
+    }
+    return { speak: speakBn(x), detail, view: 'brief', data: x, actions: [{ label: 'ব্রিফ খুলুন', kind: 'navigate', href: 'index.html#since' }] };
+  }
   if (x.first) detail.push(`Snapshot saved for ${x.date}. Ask again tomorrow.`);
   else {
     x.kpis.filter((k) => k.direction !== 'flat').forEach((k) => detail.push(`${k.good === false ? '⚠ ' : ''}${k.text}`));

@@ -118,7 +118,7 @@ const SUBJECTS = [
 
   /* ---- money ---- */
   { id: 'cash', rank: 1, ask: 'cash position', askBn: 'ক্যাশ',
-    en: /\b(cash ?flows?|cash|cash position|cash in hand|bank balances?|banks?|liquidity|funds?|treasury|money (do we have|in the bank|left)|have (any )?money|how much money|taka ache|nogod)\b/,
+    en: /\b(cash ?flows?|cash|cash position|(cash|money|taka) in hand|bank balances?|banks?|liquidity|funds?|treasury|money (do we have|in the bank|left)|have (any )?money|how much money|taka ache|nogod)\b/,
     bn: /(ক্যাশ|নগদ|ব্যাংক|তহবিল|হাতে (কত|কী) (টাকা|আছে)|টাকা আছে)/ },
   { id: 'runway', rank: 1, ask: 'runway', askBn: null,
     en: /\b(runway|burn rate|burning cash|how long (will|does) (the )?cash last|months? of (cash|cover)|survive)\b/,
@@ -167,10 +167,15 @@ const SUBJECTS = [
     bn: /(জার্নাল|লেজার|খতিয়ান|ভাউচার|দাখিলা|লেনদেন)/ },
   { id: 'account', rank: 1, ask: null, askBn: null,
     en: /\b(chart of accounts|coa|account codes?|gl codes?|account heads?|ledger accounts?)\b/,
-    bn: /(হিসাব নম্বর|একাউন্ট কোড|হিসাবের চার্ট|হিসাব খাত|হিসাবের তালিকা|হিসাব তালিকা)/ },
+    bn: /(হিসাব নম্বর|একাউন্ট কোড|হিসাবের চার্ট|হিসাবে?র? খাত|হিসাবের তালিকা|হিসাব তালিকা|খাতের তালিকা)/ },
+  /* "is the ledger balanced" is a question about whether the books are right,
+     not about the ledger — and `ledger` alone would hand it to the journal
+     summary, which is a confident answer to a question nobody asked. The whole
+     phrase is spelled out so it wins on length, the same trick receivables and
+     payables use against "customers" and "suppliers". */
   { id: 'error', rank: 1, ask: null, askBn: null,
-    en: /\b(errors?|mistakes?|wrong|problems?|issues?|unbalanced|discrepanc(y|ies)|mismatch|does not balance|doesn't balance)\b/,
-    bn: /(ভুল|গরমিল|এরর|মিল নেই|অসামঞ্জস্য|সমস্যা)/ },
+    en: /\b(errors?|mistakes?|wrong|problems?|issues?|unbalanced|discrepanc(y|ies)|mismatch|does not balance|doesn't balance|(is|are|do|does) (the |our )?(ledgers?|books?|accounts?|numbers?) (balanced?|tall(y|ies)|add up|right|correct|clean)|out of balance|books? (do ?n'?t|do not) (balance|tally|add up))\b/,
+    bn: /(ভুল|গরমিল|এরর|মিল নেই|অসামঞ্জস্য|সমস্যা|(খাতা|হিসাব|খতিয়ান)(পত্র)? ঠিক আছে|মিলছে না)/ },
 
   /* ---- people ---- */
   { id: 'payroll', rank: 1, ask: 'payroll', askBn: 'বেতন',
@@ -184,7 +189,10 @@ const SUBJECTS = [
     en: /\b(attendance|present|absent(ees?)?|missing|punch(es|ed)?|who (came|showed up|is in|is here)|has ?n'?t shown up|checked in|in today)\b/,
     bn: /(উপস্থিত|অনুপস্থিত|হাজিরা|আসেনি|আসছে|এসেছে|এসেছেন|কে অফিসে)/ },
   { id: 'late', rank: 1, ask: 'who came late today', askBn: 'দেরি',
-    en: /\b(late ?comers?|came late|arrived late|who (is|was) late|punctual(ity)?|always late|habitually late|tardy)\b/,
+    /* Banglish puts the verb last: "ke late ashche" is a lateness question, but
+       bare `late` cannot be a cue on its own — "late payments" is overdue — so
+       it only counts when the coming-verb follows it. */
+    en: /\b(late ?comers?|came late|arrived late|who (is|was) late|punctual(ity)?|always late|habitually late|tardy|late (ashche|asche|ashen|eshe|elo|ase)|deri(te)? (ashche|asche|eshe))\b/,
     bn: /(দেরি|লেট|বিলম্ব|সময়মতো আসে না)/ },
   { id: 'online', rank: 1, ask: 'who is online', askBn: null,
     en: /\b(online|logged in|active (now|users)|at (their|the) desk right now)\b/,
@@ -196,10 +204,10 @@ const SUBJECTS = [
      "কর্মী ঋণ", "staff attendance" — so rank 2: it wins only on its own. */
   { id: 'employee', rank: 2, ask: 'headcount', askBn: 'জনবল',
     en: /\b(employees?|staff|people|headcount|workers?|manpower|workforce|team size|departments?|how many (people|staff|employees))\b/,
-    bn: /(কর্মী|স্টাফ|জনবল|লোকবল|কতজন (কর্মী|লোক|স্টাফ)|কর্মী সংখ্যা|বিভাগ)/ },
+    bn: /(কর্মচারী|কর্মকর্তা|কর্মী|স্টাফ|জনবল|লোকবল|কতজন (কর্মচারী|কর্মী|লোক|স্টাফ)|কর্মী সংখ্যা|বিভাগ)/ },
   { id: 'performance', rank: 1, ask: 'evaluate', askBn: null,
     en: /\b(performance|evaluat(e|ion)|appraisals?|rating|report card|assess)\b|\bhow (is|good is) .* (doing|performing)\b/,
-    bn: /(কেমন করছে|কেমন করছেন|পারফর্ম|মূল্যায়ন|রিপোর্ট কার্ড)/ },
+    bn: /(কেমন করছে|কেমন করছেন|পারফর|মূল্যায়ন|রিপোর্ট কার্ড|কেমন কাজ কর)/ },
   { id: 'ranking', rank: 1, ask: 'rank employees', askBn: null,
     en: /\b(rank(ing)? (the |our |all )?(employees|staff|team|people)|leaderboard|(best|top|worst|weakest|strongest) (performer|employee|staff)|who (performs|is performing) (best|worst))\b/,
     bn: /(র‍্যাঙ্কিং|সেরা কর্মী|সবচেয়ে ভালো কর্মী|তালিকা ক্রম)/ },
