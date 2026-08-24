@@ -34,7 +34,14 @@ $T = new Tools($D, null);
 $A = new Analytics($D, null);
 
 /** the fallback wordings each language uses when nothing matched */
-$FALLBACK = ['did not catch', 'did not match', 'ধরতে পারিনি', 'বুঝতে পারিনি', 'মিলছে না'];
+/* What EON says when it did not understand — and nothing else.
+   'মিলছে না' was in this list and is not a refusal at all: it is how EON says a
+   trial balance does not reconcile and how it reports payslips whose own
+   arithmetic disagrees. Four correct anomaly answers were being scored as
+   failures for containing their own finding, and a correct trial-balance answer
+   would have been too. Match the sentence EON actually refuses with, never a
+   phrase that can appear inside a real answer. */
+$FALLBACK = ['did not catch', 'did not match', 'ধরতে পারিনি', 'বুঝতে পারিনি'];
 
 $rows = [];
 $langs = ['en', 'bn', 'bl'];

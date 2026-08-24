@@ -31,7 +31,7 @@ $show = isset($opt['show']) ? (int) $opt['show'] : 0;
 
 /* ---------- load EON ---------- */
 foreach (['Config', 'Log', 'Db', 'Dataset', 'Erp', 'Memory', 'Analytics',
-          'ErpMap', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Speech', 'Insight', 'Reason', 'Tools', 'Answer'] as $c) {
+          'ErpMap', 'Scope', 'Grammar', 'Nlu', 'Phrase', 'Kb', 'Loc', 'Speech', 'Insight', 'Reason', 'Tools', 'Answer'] as $c) {
     $f = EON_ROOT . '/lib/' . $c . '.php';
     if (is_file($f)) require_once $f;
 }

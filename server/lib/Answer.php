@@ -36,6 +36,17 @@ final class Answer
         $method = $intent !== null ? 'a_' . $intent : null;
         $text = null;
 
+        /* Two periods in one sentence is a comparison, whatever the cues scored.
+           Left alone, "this month vs last month profit" landed on profit_loss and
+           answered about one month — a confident answer to half the question, which
+           is the same defect as answering about a neighbouring subject. */
+        $sl = $self->c['slots'];
+        $askedOutright = !empty($sl['compare_explicit']);
+        if (!empty($sl['compare']) && (self::comparable($intent) || ($askedOutright && $intent === 'howto'))) {
+            $method = 'a_compare';
+            $intent = 'compare';
+        }
+
         if ($method !== null && method_exists($self, $method)) {
             $text = $self->$method();
         }
@@ -43,7 +54,15 @@ final class Answer
             $text = $self->fallback($parse);
         }
 
+        /* The narrowing half of the question. If the answerer applied it, it says
+           so itself; if it did not, the boss hears that the figure is wider than
+           what he asked for — before he acts on it, not after. */
+        $note = $self->scopeNote();
+        if ($note !== '') $text = Phrase::sentence([$text, $note]);
+
         return ['text' => $text, 'intent' => $intent, 'lang' => $parse['lang'],
+                'scope' => $self->c['slots']['scope'] ?? null,
+                'scope_applied' => $self->c['scope_applied'] ?? false,
                 'tools_used' => array_values(array_unique($self->c['used']))];
     }
 
@@ -137,6 +156,352 @@ final class Answer
         }
         if ($s['period'] === 'last_month') return date('Y-m', strtotime('-1 month', strtotime(substr($today, 0, 7) . '-01')));
         return substr($today, 0, 7);
+    }
+
+    /* ================= THE NARROWING HALF OF A QUESTION ================= */
+
+    /** the scope the question carries, if any */
+    private function scope(): ?array
+    {
+        $s = $this->c['slots']['scope'] ?? null;
+        return is_array($s) ? $s : null;
+    }
+
+    /** a scope that names something the data really has */
+    private function liveScope(): ?array
+    {
+        $s = $this->scope();
+        return ($s !== null && ($s['resolved'] ?? false)) ? $s : null;
+    }
+
+    /** the answerer honoured the filter — no caveat needed */
+    private function scopeDone(): void { $this->c['scope_applied'] = true; }
+
+    /**
+     * What to say about a filter that was asked for and not applied.
+     *
+     * There are two ways to be wrong here and only one of them is visible. EON
+     * used to take "in Chittagong" and answer about the whole country, with a
+     * real number and no hedge — and a real number is exactly what gets acted
+     * on. So an unhonoured filter is now said out loud, and it names what EON
+     * *can* narrow by, so the boss's next sentence works.
+     */
+    private function scopeNote(): string
+    {
+        $s = $this->scope();
+        if ($s === null || !empty($this->c['scope_applied'])) return '';
+
+        $label = (string) $s['label'];
+        $dims = Scope::dimensions($this->c['D'] ?? null, $this->L());
+
+        if ($s['resolved'] ?? false) {
+            // it exists, this answer just does not slice by it
+            return $this->t(
+                sprintf('One caution: that figure is the whole business, not %s alone — this particular answer does not split by %s.',
+                        $label, $s['dim'] === 'company' ? 'company' : 'department'),
+                sprintf('একটা কথা: এই হিসাবটা পুরো ব্যবসার, শুধু %s-এর নয় — এই উত্তরটা %s অনুযায়ী ভাগ করে না।',
+                        $label, $s['dim'] === 'company' ? 'কোম্পানি' : 'বিভাগ'));
+        }
+
+        return $this->t(
+            sprintf('One caution before you act on that: it covers the whole business, not %s. The ERP does not record a location on these rows, so I could not narrow it and I will not pretend I did. I can narrow by %s.',
+                    $label, $dims),
+            sprintf('কাজে লাগানোর আগে একটা কথা: এটা পুরো ব্যবসার হিসাব, শুধু %s-এর নয়। এই সারিগুলোতে ERP কোনো এলাকা রাখে না, তাই আলাদা করতে পারিনি — পেরেছি বলে চালিয়ে দেব না। %s অনুযায়ী আলাদা করতে পারি।',
+                    $label, $dims));
+    }
+
+    /* ================= COMPARISON ACROSS PERIODS ================= */
+
+    /** intents whose figure means something when set beside another period */
+    private const COMPARABLE = ['profit_loss', 'revenue', 'expenses', 'payroll', 'cash',
+                                'headcount', 'sales', 'expense_by_category', null];
+
+    private static function comparable(?string $intent): bool
+    {
+        return in_array($intent, self::COMPARABLE, true);
+    }
+
+    /** a period name → the dates it covers, and what to call it */
+    private function rangeOf(string $p): array
+    {
+        $t = strtotime($this->A()->today());
+        $mStart = date('Y-m-01', $t);
+        switch ($p) {
+            case 'this_month':
+                return [$mStart, date('Y-m-d', $t), Phrase::monthName(date('Y-m', $t), $this->L()), 'month'];
+            case 'last_month':
+                $s = strtotime('-1 month', strtotime($mStart));
+                return [date('Y-m-01', $s), date('Y-m-t', $s), Phrase::monthName(date('Y-m', $s), $this->L()), 'month'];
+            case 'this_year':
+                return [date('Y-01-01', $t), date('Y-m-d', $t),
+                        $this->t(date('Y', $t), $this->d(date('Y', $t))), 'year'];
+            case 'last_year':
+                $y = (int) date('Y', $t) - 1;
+                return [$y . '-01-01', $y . '-12-31', $this->t((string) $y, $this->d((string) $y)), 'year'];
+            case 'today':
+                return [date('Y-m-d', $t), date('Y-m-d', $t), $this->t('today', 'আজ'), 'day'];
+            case 'yesterday':
+                $s = strtotime('-1 day', $t);
+                return [date('Y-m-d', $s), date('Y-m-d', $s), $this->t('yesterday', 'গতকাল'), 'day'];
+            case 'this_week':
+                $s = $this->weekStart($t);
+                return [date('Y-m-d', $s), date('Y-m-d', $t), $this->t('this week', 'এই সপ্তাহ'), 'week'];
+            case 'last_week':
+                $s = strtotime('-7 days', $this->weekStart($t));
+                return [date('Y-m-d', $s), date('Y-m-d', strtotime('+6 days', $s)), $this->t('last week', 'গত সপ্তাহ'), 'week'];
+            case 'quarter':
+                $q = (int) floor(((int) date('n', $t) - 1) / 3);
+                $s = mktime(0, 0, 0, $q * 3 + 1, 1, (int) date('Y', $t));
+                return [date('Y-m-d', $s), date('Y-m-d', $t),
+                        $this->t('Q' . ($q + 1) . ' ' . date('Y', $t), 'Q' . $this->d((string) ($q + 1)) . ' ' . $this->d(date('Y', $t))), 'quarter'];
+            case 'last_quarter':
+                $q = (int) floor(((int) date('n', $t) - 1) / 3) - 1;
+                $y = (int) date('Y', $t);
+                if ($q < 0) { $q = 3; $y--; }
+                $s = mktime(0, 0, 0, $q * 3 + 1, 1, $y);
+                return [date('Y-m-d', $s), date('Y-m-t', strtotime('+2 months', $s)),
+                        $this->t('Q' . ($q + 1) . ' ' . $y, 'Q' . $this->d((string) ($q + 1)) . ' ' . $this->d((string) $y)), 'quarter'];
+        }
+        // an explicit YYYY-MM
+        if (preg_match('/^(\d{4})-(\d{2})$/', $p, $m)) {
+            $s = strtotime($p . '-01');
+            return [date('Y-m-01', $s), date('Y-m-t', $s), Phrase::monthName($p, $this->L()), 'month'];
+        }
+        return [$mStart, date('Y-m-d', $t), Phrase::monthName(date('Y-m', $t), $this->L()), 'month'];
+    }
+
+    /** the week here runs Saturday to Thursday, so it starts on a Saturday */
+    private function weekStart(int $t): int
+    {
+        $dow = (int) date('w', $t);                 // 0 Sun … 6 Sat
+        $back = ($dow + 1) % 7;                     // Saturday is day 0 of the local week
+        return strtotime("-$back days", $t);
+    }
+
+    /** a period that has already closed */
+    private function isPast(string $p): bool
+    {
+        if (in_array($p, ['last_month', 'last_year', 'last_week', 'last_quarter', 'yesterday'], true)) return true;
+        return (bool) preg_match('/^\d{4}-\d{2}$/', $p) && $p < substr($this->A()->today(), 0, 7);
+    }
+
+    /** the period this one is naturally set against */
+    private function counterpart(string $p): string
+    {
+        return ['this_month' => 'last_month', 'last_month' => 'this_month',
+                'this_year' => 'last_year', 'last_year' => 'this_year',
+                'today' => 'yesterday', 'yesterday' => 'today',
+                'this_week' => 'last_week', 'last_week' => 'this_week',
+                'quarter' => 'last_quarter'][$p]
+            ?? (preg_match('/^(\d{4})-(\d{2})$/', $p, $m)
+                ? date('Y-m', strtotime('-1 month', strtotime($p . '-01')))
+                : 'last_month');
+    }
+
+    /** the two months named outright in the sentence, if there are two */
+    private function monthsNamed(): array
+    {
+        $n = $this->c['norm'];
+        $y = (int) substr($this->A()->today(), 0, 4);
+        if (preg_match('/(?<!\d)(20\d{2})(?!\d)/u', $n, $m)) $y = (int) $m[1];
+        $hits = [];
+        foreach (['january' => 1, 'february' => 2, 'march' => 3, 'april' => 4, 'may' => 5, 'june' => 6,
+                  'july' => 7, 'august' => 8, 'september' => 9, 'october' => 10, 'november' => 11, 'december' => 12,
+                  'জানুয়ারি' => 1, 'ফেব্রুয়ারি' => 2, 'মার্চ' => 3, 'এপ্রিল' => 4, 'মে' => 5, 'জুন' => 6,
+                  'জুলাই' => 7, 'আগস্ট' => 8, 'সেপ্টেম্বর' => 9, 'অক্টোবর' => 10, 'নভেম্বর' => 11, 'ডিসেম্বর' => 12] as $name => $num) {
+            $pos = preg_match('/^[a-z]+$/', $name)
+                ? (preg_match('/(?<![a-z])' . $name . '(?![a-z])/u', $n, $mm, PREG_OFFSET_CAPTURE) ? (int) $mm[0][1] : null)
+                : (($p = mb_strpos($n, $name)) === false ? null : (int) $p);
+            if ($pos === null) continue;
+            $key = sprintf('%04d-%02d', $y, $num);
+            if (!isset($hits[$key])) $hits[$key] = $pos;
+        }
+        asort($hits);
+        return array_slice(array_keys($hits), 0, 2);
+    }
+
+    /** which measure is being compared? */
+    private function compareMetric(): string
+    {
+        $s = $this->c['slots'];
+        $n = $this->c['norm'];
+        $m = (string) ($s['metric'] ?? '');
+        if ($m === 'loss') $m = 'profit';
+        if (in_array($m, ['revenue', 'profit', 'cash', 'people'], true)) {
+            // "expenses" and "payroll" do not have a metric cue of their own
+            if ($m === 'revenue' && Nlu::mentions($n, 'expense')) return 'expenses';
+            return $m;
+        }
+        foreach (['expenses' => ['expense', 'expenses', 'spend', 'spending', 'cost', 'costs', 'overhead',
+                                 'খরচ', 'ব্যয়', 'khoroch'],
+                  'payroll'  => ['payroll', 'salary', 'salaries', 'wage', 'wages', 'বেতন', 'beton'],
+                  'revenue'  => ['revenue', 'income', 'sales', 'turnover', 'আয়', 'বিক্রি', 'aay'],
+                  'profit'   => ['profit', 'margin', 'bottom line', 'মুনাফা', 'লাভ', 'lav']] as $metric => $cues) {
+            foreach ($cues as $c) if (Nlu::mentions($n, $c)) return $metric;
+        }
+        return 'profit';
+    }
+
+    /** the measure over one date range — or null when it is not a flow */
+    private function measure(string $metric, string $from, string $to): ?float
+    {
+        $A = $this->A();
+        switch ($metric) {
+            case 'revenue':
+                $pl = $A->profitAndLoss($from, $to);
+                return $this->f($pl['income']);
+            case 'profit':
+                $pl = $A->profitAndLoss($from, $to);
+                return $this->f($pl['net_profit']);
+            case 'expenses':
+                $pl = $A->profitAndLoss($from, $to);
+                return $this->f($pl['direct_cost']) + $this->f($pl['opex']) + $this->f($pl['finance_cost']);
+            case 'payroll':
+                // payroll is booked a month at a time; a range that is not a whole month cannot be split
+                if (substr($from, 0, 7) !== substr($to, 0, 7)) return null;
+                $p = $A->payroll(substr($from, 0, 7));
+                return (int) ($p['heads'] ?? 0) === 0 ? null : $this->f($p['net']);
+        }
+        return null;                                   // cash and headcount are positions, not flows
+    }
+
+    private function metricName(string $metric): string
+    {
+        return match ($metric) {
+            'revenue'  => $this->t('income', 'আয়'),
+            'expenses' => $this->t('spending', 'খরচ'),
+            'payroll'  => $this->t('payroll', 'বেতন'),
+            'cash'     => $this->t('cash', 'নগদ'),
+            'people'   => $this->t('headcount', 'জনবল'),
+            default    => $this->t('profit', 'মুনাফা'),
+        };
+    }
+
+    private function a_compare(): string
+    {
+        $this->used('compare_periods');
+        $s = $this->c['slots'];
+        $metric = $this->compareMetric();
+
+        /* A position is not a flow. "Compare cash with last month" sounds like a
+           question EON should answer and is not one it can: the ERP stores today's
+           balance, not last month's closing. Saying so beats subtracting two
+           numbers that were never the same kind of number. */
+        if ($metric === 'cash' || $metric === 'people') {
+            $alt = $metric === 'cash'
+                ? $this->t('income and spending', 'আয় আর খরচ')
+                : $this->t('payroll', 'বেতন');
+            return $this->say([
+                $this->open('warn'),
+                $this->t(sprintf('I cannot set %s beside another period honestly — the ERP keeps today\'s position, not what it stood at on a past date, so the older figure would be invented.',
+                            $this->metricName($metric)),
+                         sprintf('%s আগের কোনো সময়ের সঙ্গে সৎভাবে মেলাতে পারব না — ERP আজকের অবস্থাটা রাখে, আগের তারিখে কত ছিল সেটা রাখে না, তাই পুরোনো সংখ্যাটা বানাতে হতো।',
+                            $this->metricName($metric))),
+                $this->act(sprintf('ask me to compare %s across the two periods instead — those are recorded with their dates.', $alt),
+                           sprintf('বরং দুই সময়ের %s তুলনা করতে বলুন — ওগুলো তারিখসহ লেখা আছে।', $alt)),
+            ]);
+        }
+
+        // which two periods?
+        $named = $this->monthsNamed();
+        if (count($named) >= 2) {
+            [$pa, $pb] = [$named[0], $named[1]];
+        } else {
+            $ps = (array) ($s['periods'] ?? []);
+            $pa = (string) ($ps[0] ?? ($s['period'] ?: ($named[0] ?? 'this_month')));
+            $pb = (string) ($ps[1] ?? ($s['compare_to'] ?: $this->counterpart($pa)));
+            /* "compare with last year" names one period and means two, and the one it
+               names is the *far* side. Left as read, the far side became the left-hand
+               figure and the whole verdict inverted: a year that lost money read as
+               money gained. Whoever is named, now is always the side being judged. */
+            if (count($ps) < 2 && $this->isPast($pa)) { $pb = $pa; $pa = $this->counterpart($pa); }
+        }
+        [$fa, $ta, $la] = $this->rangeOf((string) $pa);
+        [$fb, $tb, $lb] = $this->rangeOf((string) $pb);
+
+        $va = $this->measure($metric, $fa, $ta);
+        $vb = $this->measure($metric, $fb, $tb);
+
+        if ($va === null || $vb === null) {
+            return $this->say([
+                $this->open('warn'),
+                $this->t(sprintf('%s is not booked for both of those periods, so a comparison would be reading one side off an empty month.', $this->metricName($metric)),
+                         sprintf('দুটো সময়ের একটাতেই %s বসানো নেই, তাই তুলনা করলে এক পাশটা ফাঁকা মাসের উপর দাঁড়াবে।', $this->metricName($metric))),
+                $this->act('ask me for either period on its own and I will read what is actually there.',
+                           'যেকোনো একটা সময়ের হিসাব আলাদা করে চাইলে যা সত্যিই আছে সেটাই পড়ে দেব।'),
+            ]);
+        }
+
+        $delta = $va - $vb;
+        $pct = abs($vb) > 0.5 ? (int) round($delta / abs($vb) * 100) : null;
+
+        // an expense going up is bad news; income going up is good — the same
+        // arithmetic, the opposite verdict
+        $goodUp = ($metric !== 'expenses');
+        $up = $delta > 0;
+        $mood = abs($delta) < max(1.0, abs($vb) * 0.02) ? 'ok' : (($up === $goodUp) ? 'ok' : 'warn');
+
+        $dirWord = $up
+            ? $this->t('up', 'বেড়েছে')
+            : ($delta < 0 ? $this->t('down', 'কমেছে') : $this->t('flat', 'একই'));
+
+        $headline = $this->t(
+            sprintf('%s: %s in %s against %s in %s.', ucfirst($this->metricName($metric)), $this->m($va), $la, $this->m($vb), $lb),
+            sprintf('%s: %s-এ %s, আর %s-এ %s।', $this->metricName($metric), $la, $this->m($va), $lb, $this->m($vb)));
+
+        $move = abs($delta) < 0.5
+            ? $this->t('That is the same figure on both sides.', 'দুই পাশেই হিসাবটা এক।')
+            : ($pct === null
+                ? $this->t(sprintf('That is %s %s, from nothing at all on the %s side.', $this->m(abs($delta)), $dirWord, $lb),
+                           sprintf('অর্থাৎ %s %s — %s দিকটায় কিছুই ছিল না।', $this->m(abs($delta)), $dirWord, $lb))
+                : $this->t(sprintf('That is %s %s, %s%%.', $this->m(abs($delta)), $dirWord, $this->num(abs($pct))),
+                           sprintf('অর্থাৎ %s %s, %s%%।', $this->m(abs($delta)), $dirWord, $this->num(abs($pct)))));
+
+        // one line of why, from the same layer the single-period answer reads
+        $why = '';
+        if (in_array($metric, ['profit', 'revenue', 'expenses'], true)) {
+            $A = $this->A();
+            $pa2 = $A->profitAndLoss($fa, $ta);
+            $pb2 = $A->profitAndLoss($fb, $tb);
+            $parts = [
+                ['n' => $this->t('income', 'আয়'), 'd' => $this->f($pa2['income']) - $this->f($pb2['income'])],
+                ['n' => $this->t('direct cost', 'সরাসরি খরচ'), 'd' => $this->f($pa2['direct_cost']) - $this->f($pb2['direct_cost'])],
+                ['n' => $this->t('overheads', 'ওভারহেড'), 'd' => $this->f($pa2['opex']) - $this->f($pb2['opex'])],
+            ];
+            usort($parts, fn($x, $y) => abs($y['d']) <=> abs($x['d']));
+            if (abs($parts[0]['d']) > 0.5) {
+                $w = $parts[0];
+                $why = $this->t(
+                    sprintf('The line that actually moved is %s — %s by %s.', $w['n'],
+                            $w['d'] > 0 ? 'up' : 'down', $this->m(abs($w['d']))),
+                    sprintf('আসল নড়াচড়াটা %s-এ — %s %s।', $w['n'], $this->m(abs($w['d'])),
+                            $w['d'] > 0 ? 'বেড়েছে' : 'কমেছে'));
+            }
+        }
+
+        // the same caveat the single-period answers carry: the ledger is not the whole business
+        $caveat = '';
+        if (in_array($metric, ['revenue', 'profit'], true)) {
+            $sa = $this->A()->salesBooked($fa, $ta);
+            $gap = $this->f($sa['invoiced']) - $this->f($this->A()->profitAndLoss($fa, $ta)['income']);
+            if ($gap > 1000) {
+                $caveat = $this->t(
+                    sprintf('Both sides are read off the ledger, and %s of what the desks invoiced in %s never reached it — the gap is real, not a swing.',
+                            $this->m($gap), $la),
+                    sprintf('দুই পাশই খতিয়ান থেকে পড়া, আর %s-এ ডেস্ক যা ইনভয়েস করেছে তার %s খতিয়ানে ওঠেইনি — এই ফাঁকটা আসল, ওঠানামা নয়।',
+                            $la, $this->m($gap)));
+            }
+        }
+
+        return $this->say([
+            $this->open($mood),
+            $headline,
+            $move,
+            $why,
+            $caveat,
+            $this->act(sprintf('ask me why %s moved and I will take it apart line by line.', $this->metricName($metric)),
+                       sprintf('%s কেন নড়ল জানতে চাইলে বলুন, লাইন ধরে ধরে খুলে দেখাব।', $this->metricName($metric))),
+        ]);
     }
 
     /* ================= EXECUTIVE ================= */
@@ -1211,6 +1576,8 @@ final class Answer
 
     private function a_expenses(): string
     {
+        $scoped = $this->expensesScoped();
+        if ($scoped !== null) return $scoped;
         $this->used('get_expenses_vs_budget');
         $mk = $this->monthKey();
         $cat = $this->I()->expenseByCategory($mk);
@@ -1233,6 +1600,83 @@ final class Answer
                             sprintf('সবচেয়ে বড় খাত %s — %s, মোট খরচের %s।', $top['category'], $this->m($this->f($top['amount'])), $this->pc($this->f($top['pct'])))) : '',
             $this->act('ask me for the breakdown by category if you want the rest of the list.',
                        'বাকি তালিকাটা চাইলে খাত অনুযায়ী ভাগ করে দিতে বলুন।'),
+        ]);
+    }
+
+    /**
+     * The expenses question, actually narrowed.
+     *
+     * Expense rows carry a company, a department and a category, so when the
+     * question names one of those the answer is that slice and nothing else —
+     * and it says which slice, so nobody reads it as the company total. When
+     * the slice is empty that is the answer too: an empty slice is a fact,
+     * not a reason to widen back out to a number that was not asked for.
+     */
+    private function expensesScoped(): ?string
+    {
+        $sc = $this->liveScope();
+        if ($sc === null || !in_array($sc['dim'], ['company', 'department', 'expense_department', 'category'], true)) {
+            return null;
+        }
+        $this->used('get_expenses_vs_budget');
+        $mk = $this->monthKey();
+        $period = Phrase::monthName($mk, $this->L());
+        $label = (string) $sc['label'];
+
+        $rows = [];
+        foreach ($this->A()->rows('expenses') as $e) {
+            if (substr((string) ($e['expense_date'] ?? ''), 0, 7) !== $mk) continue;
+            if (!Scope::keeps($sc, $e)) continue;
+            $rows[] = $e;
+        }
+        $this->scopeDone();
+
+        if ($rows === []) {
+            return $this->say([$this->open('ok'),
+                $this->t(sprintf('Nothing was booked against %s in %s. That is the whole answer for that slice — I am not widening it back out to the company figure.', $label, $period),
+                         sprintf('%s মাসে %s-এর নামে কোনো খরচ বসেনি। ওই ভাগটার উত্তর এটুকুই — পুরো কোম্পানির হিসাব দিয়ে ফাঁকটা ভরাট করব না।', $period, $label)),
+                $this->act('ask me for the whole month if you want the company total beside it.',
+                           'পাশে পুরো কোম্পানির হিসাব চাইলে গোটা মাসটা চাইতে পারেন।')]);
+        }
+
+        $total = 0.0; $pending = 0.0; $by = [];
+        foreach ($rows as $e) {
+            $amt = $this->f($e['amount'] ?? 0);
+            $total += $amt;
+            if (($e['approval_status'] ?? 'approved') !== 'approved') $pending += $amt;
+            $k = (string) ($e['category'] ?? 'Uncategorised');
+            $by[$k] = ($by[$k] ?? 0) + $amt;
+        }
+        arsort($by);
+        $topName = (string) array_key_first($by);
+        $topAmt = $this->f($by[$topName]);
+
+        // the company total, so the slice can be read as a share rather than in a vacuum
+        $all = 0.0;
+        foreach ($this->A()->rows('expenses') as $e) {
+            if (substr((string) ($e['expense_date'] ?? ''), 0, 7) === $mk) $all += $this->f($e['amount'] ?? 0);
+        }
+        $share = $all > 0 ? (int) round($total / $all * 100) : null;
+
+        return $this->say([
+            $this->open($pending > 0 ? 'warn' : 'ok'),
+            $this->t(sprintf('%s spent %s in %s, across %s %s.', $label, $this->m($total), $period,
+                        $this->num(count($rows)), Phrase::plural(count($rows), 'entry', 'entries')),
+                     sprintf('%s মাসে %s-এর খরচ %s, %s টা এন্ট্রিতে।', $period, $label, $this->m($total), $this->num(count($rows)))),
+            count($by) > 1
+                ? $this->t(sprintf('The biggest line is %s at %s.', $this->term($topName), $this->m($topAmt)),
+                           sprintf('সবচেয়ে বড় খাত %s — %s।', $this->term($topName), $this->m($topAmt)))
+                : '',
+            $share !== null
+                ? $this->t(sprintf('That is %s%% of the %s the whole business spent that month.', $this->num($share), $this->m($all)),
+                           sprintf('ওই মাসে গোটা ব্যবসার খরচ ছিল %s — তার %s%%।', $this->m($all), $this->num($share)))
+                : '',
+            $pending > 0
+                ? $this->t(sprintf('%s of it is still unapproved, so it is not in the ledger yet.', $this->m($pending)),
+                           sprintf('এর %s এখনো অনুমোদন হয়নি, তাই খতিয়ানে ওঠেনি।', $this->m($pending)))
+                : '',
+            $this->act('ask me for another department the same way, or for the month as a whole.',
+                       'একইভাবে অন্য বিভাগ, বা গোটা মাসের হিসাব চাইতে পারেন।'),
         ]);
     }
 
@@ -1621,6 +2065,10 @@ final class Answer
 
     private function a_headcount(): string
     {
+        // "how many in the ticketing department" is a question about that department,
+        // not about the company with the department named as background
+        $one = $this->departmentScoped();
+        if ($one !== null) return $one;
         $this->used('get_headcount');
         $h = $this->I()->headcount();
         $depts = $h['by_department'] ?? [];
@@ -1649,6 +2097,8 @@ final class Answer
 
     private function a_departments(): string
     {
+        $one = $this->departmentScoped();
+        if ($one !== null) return $one;
         $this->used('get_headcount');
         $r = $this->I()->byDepartment();
         $lines = [];
@@ -1664,6 +2114,64 @@ final class Answer
             Phrase::join($lines, $this->L()) . $this->t('.', '।'),
             $this->act('HR → Departments is where the structure is maintained.',
                        'কাঠামোটা রাখা হয় এইচআর → বিভাগ-এ।'),
+        ]);
+    }
+
+    /**
+     * One department, asked about by name.
+     *
+     * Naming a department and getting the list of all thirteen back reads as
+     * EON not having heard the question — the same defect the instance layer
+     * was built to end for people and parties. A named department now answers
+     * about itself: who is in it, what it costs, and what it spent.
+     */
+    private function departmentScoped(): ?string
+    {
+        $sc = $this->liveScope();
+        if ($sc === null || !in_array($sc['dim'], ['department', 'expense_department'], true)) return null;
+
+        $this->used('get_headcount');
+        $label = (string) $sc['label'];
+        $staff = [];
+        foreach ($this->A()->rows('employees') as $e) {
+            if (($e['status'] ?? 'active') !== 'active') continue;
+            if (!Scope::keeps($sc, $e)) continue;
+            $staff[] = $e;
+        }
+        $spend = 0.0;
+        $mk = $this->monthKey();
+        foreach ($this->A()->rows('expenses') as $x) {
+            if (substr((string) ($x['expense_date'] ?? ''), 0, 7) !== $mk) continue;
+            if (Scope::keeps($sc, $x)) $spend += $this->f($x['amount'] ?? 0);
+        }
+        $this->scopeDone();
+
+        if ($staff === [] && $spend <= 0) {
+            return $this->say([$this->open('warn'),
+                $this->t(sprintf('%s has nobody active against it and nothing booked to it this month.', $label),
+                         sprintf('%s-এ এই মাসে কেউ সক্রিয় নেই, কোনো খরচও বসেনি।', $label)),
+                $this->act('the department may exist without anybody assigned — HR → Departments shows the structure.',
+                           'বিভাগটা থাকতে পারে অথচ কেউ যুক্ত না থাকতে পারে — কাঠামোটা এইচআর → বিভাগ-এ।')]);
+        }
+
+        $salary = 0.0;
+        foreach ($staff as $e) $salary += $this->f($e['salary'] ?? 0);
+        $names = array_slice(array_map(fn($e) => (string) $e['name'], $staff), 0, 6);
+
+        return $this->say([
+            $this->open('ok'),
+            $staff !== []
+                ? $this->t(sprintf('%s has %s %s on %s of salary a month.', $label, $this->num(count($staff)),
+                            Phrase::plural(count($staff), 'person', 'people'), $this->m($salary)),
+                           sprintf('%s-এ %s জন, মাসে বেতন %s।', $label, $this->num(count($staff)), $this->m($salary)))
+                : $this->t(sprintf('%s has nobody assigned to it.', $label), sprintf('%s-এ কেউ যুক্ত নেই।', $label)),
+            $names !== [] ? Phrase::join($names, $this->L()) . $this->t('.', '।') : '',
+            $spend > 0
+                ? $this->t(sprintf('It spent %s in %s.', $this->m($spend), Phrase::monthName($mk, 'en')),
+                           sprintf('%s মাসে খরচ করেছে %s।', Phrase::monthName($mk, 'bn'), $this->m($spend)))
+                : '',
+            $this->act('ask me for anyone on that list by name and I will open their record.',
+                       'ওই তালিকার কারও নাম বললে তার রেকর্ডটা খুলে দেব।'),
         ]);
     }
 

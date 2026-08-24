@@ -233,7 +233,10 @@ final class Nlu
                 'en' => ['receivable' => 5, 'receivables' => 5, 'who owes us' => 5, 'owes us money' => 5, 'debtor' => 4,
                          'debtors' => 4, 'collect from' => 4, 'to collect' => 4, 'money coming in' => 4,
                          'outstanding from customer' => 7, 'outstanding from customers' => 7, 'ar aging' => 5, 'due to us' => 6, 'have to collect' => 7, 'not paid us' => 7, 'to collect' => 5],
-                'bn' => ['কে টাকা দেবে' => 5, 'টাকা+দেবে' => 5, 'টাকা+পাব' => 5, 'পাওনা' => 5, 'বকেয়া আদায়' => 5, 'গ্রাহক বকেয়া' => 5,
+                // bare বকেয়া is the word a boss actually says, and it scored nothing at
+                // all — but it is weaker than any named subject, so "কত টাস্ক বকেয়া"
+                // still belongs to the tasks queue
+                'bn' => ['বকেয়া' => 3, 'কে টাকা দেবে' => 5, 'টাকা+দেবে' => 5, 'টাকা+পাব' => 5, 'পাওনা' => 5, 'বকেয়া আদায়' => 5, 'গ্রাহক বকেয়া' => 5,
                          'আমাদের পাওনা' => 5, 'কার কাছে পাওনা' => 5, 'টাকা পাব' => 5, 'আদায়যোগ্য' => 5, 'পাওয়ার আছে' => 6, 'টাকা+পাওয়ার' => 6],
                 'bl' => ['ke taka debe' => 5, 'pawna' => 5, 'paona koto' => 5, 'taka pabo' => 5,
                          'amader taka' => 5, 'taka debe' => 5, 'taka dibe' => 5, 'ke dibe taka' => 5],
@@ -515,7 +518,10 @@ final class Nlu
             'tasks' => [
                 'en' => ['task' => 4, 'tasks' => 4, 'overdue task' => 6, 'overdue tasks' => 7, 'workload' => 5, 'to do' => 3,
                          'assignments' => 4, 'pending work' => 6, 'work is pending' => 6, 'who is overloaded' => 6],
-                'bn' => ['টাস্ক' => 5, 'কাজ' => 3, 'বকেয়া কাজ' => 6, 'কাজের চাপ' => 6, 'অসম্পূর্ণ কাজ' => 6],
+                // বাংলা word order is free, so "বকেয়া কাজ" and "কাজ … বকেয়া" are the
+                // same question; the ordered cue only caught one of them
+                'bn' => ['টাস্ক' => 5, 'কাজ' => 3, 'বকেয়া কাজ' => 6, 'কাজ+বকেয়া' => 7, 'টাস্ক+বকেয়া' => 7,
+                         'কাজের চাপ' => 6, 'অসম্পূর্ণ কাজ' => 6],
                 'bl' => ['task' => 4, 'kaj baki' => 5, 'kajer chap' => 6],
             ],
             'projects' => [
@@ -742,7 +748,39 @@ final class Nlu
             $D = self::$dataset;
             if ($D !== null) {
                 $inst = Grammar::instance($raw, trim($n), $lang, $D);
-                if ($inst['kind'] !== null && ($intent === null || $inst['aspect'] !== null || $inst['possessive'])) {
+                /* A department named as a department is a department. The ERP holds a
+                   project called "TICKET DEPARTMENT", so "who is in the ticketing
+                   department" was answered with that project's budget and task count —
+                   the instance layer matched a record whose name merely contains the
+                   word the question used to say what kind of thing it meant. When the
+                   sentence marks a department and Scope resolved one, a record of some
+                   other kind does not get to take the question. */
+                $sc = $slots['scope'] ?? null;
+                $deptAsked = $inst['kind'] !== null
+                    /* The possessive is what separates the two readings, and only the
+                       possessive. "OPERATIONS MANAGEMENT-এর বিভাগ" owns its aspect: the
+                       record is the subject and department is what is being asked about
+                       it. "who is in the ticketing department" owns nothing — there the
+                       word is a noun the adjective *ticketing* qualifies, and the record
+                       that matched it is a project called TICKET DEPARTMENT which the
+                       question was never about. */
+                    && empty($inst['possessive'])
+                    /* A filter lifted out of the record's own name is not a filter.
+                       The ERP has a project called "MARKETING TEAM", and the word
+                       *team* is itself a department marker, so every aspect asked of
+                       that project — its profile, its tasks — resolved a Marketing
+                       department scope and got answered about the department instead
+                       of the project. If the cue is inside the record's name, the
+                       record is what the question is about. */
+                    && mb_stripos((string) $inst['label'], (string) $sc['text']) === false
+                    && is_array($sc) && ($sc['resolved'] ?? false)
+                    && in_array($sc['dim'], ['department', 'expense_department'], true)
+                    && !in_array($inst['kind'], ['employee', 'party', 'passenger'], true)
+                    && (preg_match('/(?<![a-z])(?:department|dept|team|section)(?![a-z])/u', $n) === 1
+                        || mb_strpos($n, "\u{09AC}\u{09BF}\u{09AD}\u{09BE}\u{0997}") !== false);
+                if ($deptAsked) {
+                    $intent = 'departments';
+                } elseif ($inst['kind'] !== null && ($intent === null || $inst['aspect'] !== null || $inst['possessive'])) {
                     $routed = Grammar::routeInstance($inst['kind'], $inst['aspect']);
                     // a named record with an aspect beats a generic cue: "Imran's leave"
                     // is about Imran, not about the leave queue
@@ -797,7 +835,7 @@ final class Nlu
     {
         $s = ['period' => null, 'month' => null, 'year' => null, 'account_code' => null,
               'top' => null, 'company_hint' => null, 'name_hint' => null, 'compare' => false,
-              'metric' => null];
+              'metric' => null, 'scope' => null, 'periods' => [], 'compare_to' => null];
 
         // ---- relative period ----
         if (preg_match('/\b(last month|previous month)\b/u', $n) || mb_strpos($n, 'গত মাস') !== false || mb_strpos($n, 'গতমাস') !== false || strpos($n, 'গত maser') !== false || preg_match('/\bgoto mash|got mash|last mash\b/u', $n)) {
@@ -858,9 +896,30 @@ final class Nlu
             }
         }
 
+        // ---- every period the sentence names, in the order it names them ----
+        //      "compare this month with last month" carries two, and answering
+        //      about one of them is the confident-but-wrong shape all over again
+        $s['periods'] = self::periodsIn($n);
+        if (count($s['periods']) >= 2) {
+            $s['period'] = $s['periods'][0];
+            $s['compare_to'] = $s['periods'][1];
+        }
+
         // ---- comparison intent ----
-        if (preg_match('/\b(compare|versus|vs|against|than last|change from)\b/u', $n)
-            || mb_strpos($n, 'তুলনা') !== false || mb_strpos($n, 'চেয়ে') !== false) {
+        //      an explicit "compare"/"তুলনা" is recorded separately: it is strong
+        //      enough to outrank the how-to frame, where two bare periods are not
+        /* চেয়ে means "than", and it lives inside সবচেয়ে, which means "most" — so
+           "সবচেয়ে বেশি খরচ কোনটা" read as a comparison against another period and
+           answered about two months instead of ranking the categories. The same
+           byte-boundary trap as everywhere else in বাংলা: a stem must not bleed
+           into the longer word it sits inside. */
+        $s['compare_explicit'] = (bool) (preg_match('/\b(compare|compared|comparison|versus|vs|against last|than last|year on year|month on month|yoy|mom)\b/u', $n)
+            || mb_strpos($n, 'তুলনা') !== false
+            || preg_match('/(?<![\x{0980}-\x{09FF}])\x{099A}\x{09C7}\x{09AF}\x{09BC}\x{09C7}/u', $n));
+        if ($s['compare_explicit']
+            || preg_match('/\b(against|change from|change since)\b/u', $n)
+            || mb_strpos($n, 'সাথে') !== false && $s['period'] !== null
+            || count($s['periods']) >= 2) {
             $s['compare'] = true;
         }
 
@@ -880,7 +939,68 @@ final class Nlu
         // ---- person name hint: capitalised words in the raw text, or text after "of/about/এর" ----
         $s['name_hint'] = self::nameHint($raw, $n, $lang);
 
+        // ---- which part of the business? read it, and let Scope say whether it can be honoured ----
+        if (class_exists('Scope')) {
+            $s['scope'] = Scope::read($raw, $n, $lang, self::$dataset);
+        }
+
         return $s;
+    }
+
+    /** the period cues, longest first so "last month" is never read as "month" */
+    private const PERIOD_CUES = [
+        'last_month'  => ['last month', 'previous month', 'the month before', 'গত মাস', 'গতমাস', 'আগের মাস', 'goto mash', 'got mash', 'last mash'],
+        'this_month'  => ['this month', 'current month', 'month to date', 'mtd', 'এই মাস', 'চলতি মাস', 'ei mash', 'ei maser'],
+        'last_year'   => ['last year', 'previous year', 'the year before', 'গত বছর', 'আগের বছর', 'goto bochor'],
+        'this_year'   => ['this year', 'current year', 'year to date', 'ytd', 'এই বছর', 'চলতি বছর', 'ei bochor'],
+        'last_week'   => ['last week', 'previous week', 'গত সপ্তাহ'],
+        'this_week'   => ['this week', 'current week', 'এই সপ্তাহ'],
+        'yesterday'   => ['yesterday', 'গতকাল', 'gotokal', 'kalke'],
+        'today'       => ['today', 'so far today', 'আজ', 'ajke'],
+        'quarter'     => ['this quarter', 'quarter', 'quarterly', 'প্রান্তিক'],
+    ];
+
+    /**
+     * Every period named in the sentence, in the order it says them.
+     * Order matters: "last month against this month" is not the same
+     * sentence as "this month against last month", and the boss expects
+     * the first one he said to be the one on the left.
+     */
+    private static function periodsIn(string $n): array
+    {
+        $found = [];
+        foreach (self::PERIOD_CUES as $key => $cues) {
+            $best = null;
+            foreach ($cues as $c) {
+                $pos = self::cuePos($n, $c);
+                if ($pos !== null && ($best === null || $pos < $best)) $best = $pos;
+            }
+            if ($best !== null) $found[$key] = $best;
+        }
+        // "this month" sits inside no other cue, but "month"-only cues can overlap
+        // a longer one that already matched at the same place — keep the earliest
+        asort($found);
+        $out = [];
+        $taken = [];
+        foreach ($found as $key => $pos) {
+            if (isset($taken[$pos])) continue;       // two names for the same span
+            $taken[$pos] = true;
+            $out[] = $key;
+        }
+        return $out;
+    }
+
+    /** byte position of a cue, word-bounded for latin, or null */
+    private static function cuePos(string $hay, string $cue): ?int
+    {
+        if (preg_match('/^[a-z0-9 \'-]+$/', $cue)) {
+            if (preg_match('/(?<![a-z0-9])' . preg_quote($cue, '/') . '(?![a-z0-9])/u', $hay, $m, PREG_OFFSET_CAPTURE)) {
+                return (int) $m[0][1];
+            }
+            return null;
+        }
+        $p = mb_strpos($hay, $cue, 0, 'UTF-8');
+        return $p === false ? null : (int) $p;
     }
 
     /** best guess at a person's name inside the question */

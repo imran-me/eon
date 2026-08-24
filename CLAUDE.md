@@ -97,6 +97,97 @@ eon/
 | **EON pays, through the ERP's own payment screens** — `planPayment()` in `act.js`. A salary goes to `role.payment-schedules.mark-paid`, the route behind the sheet's own Record Payment button, with the schedule id read off that button (`data-schedule_id`) rather than invented; a supplier goes to `role.party-statement.payment`, whose modal is not a `<form>` at all, so the ids `pmAmount`/`pmMode`/`pmBank`/`pmDate`/`pmRef`/`pmNotes` are read and posted under the names the page's own `submitPayment()` uses. "pay X July 30000" now ends in the real form instead of an apology. The account is asked for, never guessed — `bank_id` is `required` on mark-paid — and a 200 is no longer taken as success: `{success:false}` and the layout's red flash toast are both reported as refusals | done — **54/54** headless (33 unit, 21 through the whole `EonDomains.answer()` chain in both languages) |
 | **The concept note, reachable from the ERP itself** — `eon/concept.html`, three A4 pages: what EON is and how it was built, how a question travels through it, and what it is worth commercially. Opened from a tile `eon-sidebar.js` appends to the foot of the ERP's company rail (its own 40px tile below a hairline, `target="_blank"`, header fallback for users locked to one company, no ERP file edited). **The print trap:** a bare `max-width` query fires on paper too — print lays out at the page content width, ~680 CSS px — so every column stacked and three sections became six sheets; it must be `@media screen and (…)`. And `--print-to-pdf` forces Letter and ignores `@page` unless `preferCSSPageSize` is set, so its page count is not the browser's | done — **14/14** headless against the sidebar fixture; three A4 pages verified through DevTools, 96%/93%/99% full |
 
+| **The whole-system sweep** — `scratchpad/t-sweep.mjs` + `sweep-cases.mjs`: 242 questions and orders (142 English, 90 বাংলা, 10 Banglish; formal, sloppy, one-word, company-wide, person-bound, questions and orders) put through `EonDomains.answer()` in headless Chrome against the mock ERP, so `DOMParser` and `fetch` are real and the write path is exercised rather than stubbed. Every case asserts four things: that it answered, **which domain answered**, that the answer is *about the thing asked* (a keyword it must carry), and that a Bangla question came back in Bangla. Fifty-three cases were written after the bank already read 100% and were never used to tune a cue — that held-out batch found most of what follows | done — **242/242**, zero console errors |
+| **Eleven wrong-subject defects, all fixed.** The navigator apologised from priority 97 and ate questions that had a real answer one layer down ("show me the aging"); its apology now sits at priority 1, reached only when nothing else can answer. `দে` matched inside `দেখাও`, so "টাস্ক দেখাও" tried to assign a task — the same shape as the `\b` trap, one letter later. `বেতন…দাও` read "বেতনের হিসাব দাও" as an order to pay. `pay` is more often a noun in this business, so "Tanvir's net pay" opened a payment and asked which month. বাংলা marks *where* with a case ending, so "খতিয়ানে গরমিল" let the place beat the topic; a subject followed by the locative vowel sign now steps behind any other subject, while standing alone it still answers. Bangla ranking, Bangla navigation and the company health score answered in English. And `do we have money`, `cashflow?`, `rank the employees`, `who has nothing to do`, `what Imran earns`, `কে কে আসেনি`, and khoroch/bakeya/lav/kaj matched nothing at all | done |
+| **A named month is honoured** — "what did we spend on marketing in June" answered with **August's** figures: the month was read out of the sentence and then thrown away, because expense/sale/profit/payroll are answered by `qa.js` and `bangla.js` and neither takes one. They now route to EON's own sentence, which passes the month down to the layer functions that always accepted it. Reading the month is the delicate half — a three-letter prefix with a wildcard finds *March* inside "marketing", so a question's month must be the whole word or its usual abbreviation, and bare "may"/"march" only count when a year, the word month or a preposition marks them as a date | done — **20/20** on `t-month2.mjs`; "who may approve this" is still about approvals |
+| **The Bangla brief stops quoting English at the boss** — the layers bake their figures into an English sentence and the Bangla brief repeated them verbatim, so the first question anyone asks in Bangla came back as বাংলা with three English clauses inside it. Every decision is now written in Bangla in `bangla.js` from the same layer functions the English side reads, so the numbers are the same numbers; the compliance and health plug-ins carry their own `title_bn`/`recommend_bn`. Money must go through the Bangla formatter — `fmtBDTk` writes "৳3.5 L" and converting only the digits leaves the unit word in English (`৳১৩ L`), which is this layer's oldest trap | done — English fragments across the 30-question Bangla probe down 9 → **6**, and all six are names the ERP itself stores in English |
+| **Two `undefined`s read aloud, and a mixed-language apology** — "সেরা কর্মী কে" said "undefined ৯১/১০০" three times in both languages (`evaluate()` returns the row under `employee`, there is no flat `name`), "প্রজেক্ট কয়টা ঝুঁকিতে?" listed "undefined — সময় পার" (the column is `project_name`), and a Bangla order the ERP would not show a form for spliced the English cause into the Bangla sentence and then explained it again in Bangla. `t-undef.mjs` now reads twenty-six Bangla answers for undefined/NaN/null/[object Object] | done — **26/26** |
+| **`EON_PREFS.autoConfirm` set before the modules load was silently dropped** — `prefs.js` merged only the keys in its own `DEFAULTS`, and `autoConfirm` is `act.js`'s. The documented way of turning off the confirmation gate looked accepted and did nothing, which is the worst way for that particular switch to fail. Unknown keys now carry across | done — the write-path suite went 21/23 → **23/23** |
+| **Live check** — `scratchpad/t-livecheck.mjs`, headless against `eon.gulfrabit.com`: `/eon/` (no console errors, no failed requests, 14/14 globals, the dataset, 971 routes and 203 tables of the ERP map, 14 domains, eight questions answered in both languages, and no English clause in any Bangla answer); `/eon/workspace.html`; `/login` (the embed tag is present and the script resolves); the ERP's compiled CSS bundle (200, 120 KB); `health.php`. **The frame test had to be rewritten to prove anything:** `EonWorkspace.navigate()` calls `contentWindow.location.assign`, so `iframe.src` never changes, and a signed-out `/super-admin/…` lands back on `/login` — the address is identical before and after. Both live documents are therefore marked, and after the navigation the ERP's mark must be *gone* while EON's survives with its brain still loaded | done — **34/34** |
+| **The demo script** — `docs/demo-script.md`: twenty questions in the order to ask them, English and বাংলা, each with the answer captured from the live site, plus an honest list of what not to ask and why | done |
+| **The sweep is date-dependent, and the calendar found two more defects (2026-08-21).** Re-run unchanged a day later the bank fell 242 → **236**: the date had rolled to Friday, which is the weekend here, and six Bangla attendance cases changed answer. Both causes were real. (1) The Bangla weekend reply was `আজ সাপ্তাহিক ছুটি — অফিস বন্ধ।` — true, but it never names হাজিরা, so it reads as a non-sequitur to the question asked; the English side had always said "no attendance expected". An answer must name what it is about. (2) `আজ কে দেরিতে এসেছে` was answered with the attendance roll: both subjects are rank 1, so the longest match wins, and attendance matches এসেছে (5) where late matches দেরি (4) — **the arrival verb outran the word saying what kind of arrival**. That is the locative trap one step on: some cues are a bare VERB, not the name of a subject, and mean their subject only when nothing else qualifies them. `WEAK_BN` in `understand.js` now makes such a cue step behind any other named subject exactly as a locative does, so দেরি wins where present while "কে কে আসেনি" alone is still attendance. **A green suite proves the code was right on the day it ran, not that it is right today** — anything keyed to the clock (weekday, month end, quarter) needs re-running near the date that matters | done — **242/242** again, and the demo script now carries both the weekday and the weekend answer |
+| **`EonBrain` was asserted and never existed.** The live check demanded 14 globals and had been recorded as 14/14; it is 13. `eon-brain.js` assigns `window.EonBrain` only *after* `waitForFirebase()` succeeds, and EON-on-the-ERP has no Firebase — it reads the ERP through `erp-adapter.js`. Every consumer guards it, so nothing is broken and nothing needed building; the test was wrong about the product. It now asserts the thirteen the panel really defines and reports `EonBrain` as optional — observed false in one run and true in another, 34/34 either way. **A test that fails for a year teaches you to read past it** | done — **34/34**, twice |
+
+| **The narrowing half of a question, and the second period (2026-08-24)** — the two holes EON published against itself, closed and measured. `Scope` reads a narrowing phrase and resolves it against the dimensions the dataset really carries; `a_compare` answers two periods instead of one. **Seven defects were found in the fix itself, six of them the same shape as the ones already in this file: a confident answer to the wrong thing.** The marker word "office" was a cue for the *Office Management* department, so "expenses in the Dhaka office" filtered by a department nobody named; the head noun "expenses" was a cue for *Utility Expenses*, so the word saying what the question was **about** became the slice it was about; "marketing" is both a department and an expense category and the category won on cue length, so the dimension now ranks before length; "employees in the **IT** department" bound to EPAL **IT** SOLUTIONS until the word *department* in the sentence was allowed to decide the dimension; the ERP has a project called **TICKET DEPARTMENT** which ate "who is in the ticketing department", and another called **MARKETING TEAM** whose every aspect resolved a Marketing scope — a cue lifted out of a record's own name is not a filter; and the cross-script matcher, meant to let টিকিটিং reach *Ticketing & Tours*, was reading Latin words too and bound "OPERATIONS MANAGEMENT" to IT & AI **Operations** on the one word the two names share. **Only the বাংলা tokens of a sentence may bridge scripts** — Latin to Latin is what the cue list is for. Also: `চেয়ে` ("than") lives inside `সবচেয়ে` ("most"), so "সবচেয়ে বেশি খরচ কোনটা" read as a period comparison — the byte-boundary trap again, and the reason the guard is now a lookbehind. And `মিলছে না` sat in `matrix-run.php`'s fallback list while being how EON says a trial balance does not reconcile, so four correct anomaly answers were scored as failures | done — **41/41** on `tools/scope-run.php`, **1191/1191** bank, **435/435** verb×subject (was 431 — the runner was wrong, not the product), **2999/3000** instance×aspect (baseline) |
+
+## What works and what does not — the honest list (2026-08-20, revised 2026-08-24)
+
+Measured, not assumed. Every number below is from a run whose output is in this
+file's history; anything not measured says so.
+
+### Works, and is measured
+
+| | evidence |
+| --- | --- |
+| Asking about the business in English, বাংলা or Banglish — 45 subjects, any phrasing | 242/242 sweep · 1191/1191 PHP corpus · 435/435 verb×subject · 1500/1500 instance×aspect |
+| Answering about **the right subject**, never a neighbouring one | the sweep asserts a keyword per case; 0 wrong-subject in 242 |
+| Answering in the language asked, all the way through the sentence | 0 of 30 Bangla questions answered in English; 6 carry an English fragment, all of them names the ERP stores in English |
+| One person, one party, one record — any of 16 aspects, name said in any order or script | 22/22 name resolution · person cases in the sweep |
+| Follow-ups: "his attendance", "take me to his profile" | in the sweep and `t-var.mjs` |
+| A named month — June's question gets June's figures | 20/20 `t-month2.mjs` |
+| Knowing the ERP itself: 971 routes, 205 menu entries, 203 tables | live check |
+| Doing the work through the ERP's own forms, with a confirmation gate | 23/23 write path · 87/87 money path, both headless against a mock built from the real map |
+| The panel signed out: no console errors, no failed requests, answers in both languages | live check, 34/34 |
+| The split workspace keeping EON alive while the ERP frame navigates | live check — both frames marked, ERP's mark gone, EON's survives |
+| The companion riding on every ERP page, and the ERP's CSS bundle resolving | live check |
+
+### Does not work — say so before a judge asks
+
+1. ~~**No comparison across periods.**~~ **Fixed 2026-08-24** — `a_compare` in
+   `Answer`. Two periods in one sentence route to it whatever the cues scored, so
+   "this month vs last month profit" no longer lands on `profit_loss` and answers
+   about one month. It says both figures, the delta, the percentage, which of
+   income/direct cost/overhead actually moved, and carries the unjournalised-sales
+   caveat. Cash and headcount are **positions, not flows**, so a comparison of
+   them is declined out loud rather than subtracted — the ERP keeps today's
+   balance, not last month's closing, and the older figure would be invented.
+2. ~~**No filter by place or segment.**~~ **Fixed 2026-08-24** — `Scope`. A
+   narrowing phrase is read and then resolved against the dimensions the data
+   really carries (company, department, the free-text department the expense rows
+   use, expense category). Resolved → the answer is that slice and says so;
+   unresolved → the answer stays wide and **says it could not narrow, and what it
+   can narrow by**, before the boss can act on it. There is no city, district or
+   branch column anywhere in the ERP, which is why "in Chittagong" is refused
+   rather than absorbed. বাংলা reaches Latin-spelled units the same way names do
+   (টিকিটিং → Ticketing & Tours).
+3. ~~**No forecast in words.**~~ **Already worked, the note was stale** —
+   "forecast next quarter revenue" and "আগামী মাসে আয় কত হবে" both answer with the
+   trend, the slope per month and the months carried forward. Re-measured
+   2026-08-24.
+4. **No file out.** "export the payroll to excel" answers with the payroll
+   figures and no file. Python is not reachable on the host (`python:false`), so
+   `export_report` has no route.
+5. **No free-form drafting.** "draft an email to the auditor" produces a generic
+   notice with an invented subject. Notices, reminders and warnings from the
+   decision layer are real; anything else is a template.
+6. **Rules are a calendar, not a rate card.** "what is the VAT rate" answers with
+   the VAT *calendar* — when Mushak 9.1 is due — not the percentage.
+7. **A statement the ERP does not have.** "show me the cash flow statement" opens
+   Party Statement. There is no cash-flow statement in the ERP to open.
+8. **The write path needs an ERP session.** Signed out, "assign … a task" says so
+   plainly and posts nothing. Sign in to the ERP in the same browser first.
+9. **Signed out, the figures are a generated demo dataset** and it regenerates on
+   every page load — the same question gives different numbers two minutes apart.
+   Signed in, EON reads the real ERP. `health.php` reports which (`auth`,
+   `source`), and the panel's status pill keys off the data in hand.
+10. **No language model.** Nothing is generated; everything is computed. That is
+    a feature to say out loud, but it means a question outside the 45 subjects
+    and the grammar gets an honest "I do not know", not a plausible paragraph.
+11. **No Bangla speech voice on this workstation.** `Tts` renders Bangla audio
+    server-side so any machine can speak it; add the Azure key before the day
+    (`GET /server/api/tts.php?status=1` says which provider is live).
+12. **`public/uploads/` was never copied** from the old server, so user-uploaded
+    files 404 inside the ERP.
+
+### Not ours — do not chase, but know the answer
+
+- Every ERP page throws `You must pass your app key when you instantiate Pusher`
+  into the console. The ERP's `.env` has no Pusher credentials. It comes from the
+  ERP's own bundle, not from any EON file, and nothing EON does is affected.
+- A cold, cookie-less browser gets one 403 on `/eon/` followed by
+  `/hcdn-cgi/jschallenge` and an immediate 200 — Hostinger's CDN browser check.
+  `curl` gets a plain 200 and the second page view is clean.
+
 ## Signed out is a first-class state (2026-08-19)
 
 Most visitors hit `/eon/` with no ERP session. Three things were wrong there, and
@@ -169,11 +260,13 @@ task sat waiting for exactly that word. Bangla alternatives need a
 actually said "নামগুলো দেখাও".
 
 ## Next steps (in order)
-1. Owner: log in to the ERP on eon.gulfrabit.com and click through screens; report anything that differs from the original (uploads folder is the known gap).
-2. `Answer.php` is now the first offline layer and `Answers.php` the second. If `Answer` holds at 1131/1131 for a while, delete `Answers.php` and its `bootstrap.php` line — until then it costs nothing and catches anything `Answer` throws on.
-3. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`.
-4. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
-
+1. **Owner, before the summit: sign in to the ERP on eon.gulfrabit.com in the demo browser.** Signed out the panel shows a generated demo dataset that changes on every page load, and no order can be written. Signed in, the figures are the real ERP's and "assign X a task" reaches the real form.
+2. Owner: add the Azure key (`tts.azure.key` + `region`) so Bangla speech does not depend on the keyless endpoint on the day.
+3. Owner: click through the ERP screens and report anything that differs from the original (the `public/uploads/` folder is the known gap).
+4. ~~The three real holes in the offline brain~~ — **done 2026-08-24.** Comparison across periods and the segment filter are built and measured (`tools/scope-run.php`, 41/41); the forecast already worked and the note was stale. What is left of the published list is **file out** (item 4) and **the rate card** (item 6). Export needs no Python: a CSV with a UTF-8 BOM opens in Excel and an XLSX is a zip of XML that `ZipArchive` can write, so `export_report` can have a PHP route. The rate card must **not** be guessed — VAT and TDS percentages are the accountant's to supply, and a wrong rate in a system the boss acts on is worse than today's honest "the ERP does not produce the returns".
+5. `Answer.php` is now the first offline layer and `Answers.php` the second. If `Answer` holds at 1191/1191 for a while, delete `Answers.php` and its `bootstrap.php` line — until then it costs nothing and catches anything `Answer` throws on.
+6. Server halves of the abilities: `lib/tools/{health,whatif,since,delegate}.php`, `lib/decisions/{delegate,since}.php`, `py/plugins/scenario.py`, `api/boardpack.php`.
+7. Python not reachable on the host (`python:false`) — set `python.bin` in `config.local.php` if wanted.
 ## The command space (2026-08-19)
 
 EON composes rather than enumerates. `Nlu` scores the idioms people really say;

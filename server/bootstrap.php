@@ -26,6 +26,7 @@ require_once EON_ROOT . '/lib/Erp.php';
 require_once EON_ROOT . '/lib/Analytics.php';
 require_once EON_ROOT . '/lib/Memory.php';
 if (is_file(EON_ROOT . '/lib/ErpMap.php')) require_once EON_ROOT . '/lib/ErpMap.php';   // the ERP described by its own source
+if (is_file(EON_ROOT . '/lib/Scope.php')) require_once EON_ROOT . '/lib/Scope.php';    // which part of the business the question is about
 require_once EON_ROOT . '/lib/Nlu.php';
 if (is_file(EON_ROOT . '/lib/Grammar.php')) require_once EON_ROOT . '/lib/Grammar.php';  // verb x subject x qualifier — the command space      // understands English, বাংলা and Banglish
 if (is_file(EON_ROOT . '/lib/Phrase.php')) require_once EON_ROOT . '/lib/Phrase.php';    // how EON sounds in each language

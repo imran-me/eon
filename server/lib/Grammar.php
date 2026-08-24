@@ -480,6 +480,10 @@ final class Grammar
         if ($verb === 'explain') { $out[] = 'howto'; $out[] = 'deduction_rules'; $out[] = 'navigation'; }
         // where something is heading is the forecast, whatever the subject
         if ($verb === 'trend') { $out[] = 'forecast'; $out[] = 'burn_runway'; }
+        // setting a subject against another period is the comparison, whatever the subject.
+        // Before `a_compare` existed the only honest landing was the subject's own
+        // one-period answer; now that it exists it is the better one, and both count.
+        if ($verb === 'compare') { $out[] = 'compare'; }
         // where something lives is navigation
         if ($verb === 'locate') { $out[] = 'navigation'; $out[] = 'howto'; }
         // an instruction about anything is recorded
