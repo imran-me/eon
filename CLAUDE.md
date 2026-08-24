@@ -110,6 +110,8 @@ eon/
 
 | **The narrowing half of a question, and the second period (2026-08-24)** — the two holes EON published against itself, closed and measured. `Scope` reads a narrowing phrase and resolves it against the dimensions the dataset really carries; `a_compare` answers two periods instead of one. **Seven defects were found in the fix itself, six of them the same shape as the ones already in this file: a confident answer to the wrong thing.** The marker word "office" was a cue for the *Office Management* department, so "expenses in the Dhaka office" filtered by a department nobody named; the head noun "expenses" was a cue for *Utility Expenses*, so the word saying what the question was **about** became the slice it was about; "marketing" is both a department and an expense category and the category won on cue length, so the dimension now ranks before length; "employees in the **IT** department" bound to EPAL **IT** SOLUTIONS until the word *department* in the sentence was allowed to decide the dimension; the ERP has a project called **TICKET DEPARTMENT** which ate "who is in the ticketing department", and another called **MARKETING TEAM** whose every aspect resolved a Marketing scope — a cue lifted out of a record's own name is not a filter; and the cross-script matcher, meant to let টিকিটিং reach *Ticketing & Tours*, was reading Latin words too and bound "OPERATIONS MANAGEMENT" to IT & AI **Operations** on the one word the two names share. **Only the বাংলা tokens of a sentence may bridge scripts** — Latin to Latin is what the cue list is for. Also: `চেয়ে` ("than") lives inside `সবচেয়ে` ("most"), so "সবচেয়ে বেশি খরচ কোনটা" read as a period comparison — the byte-boundary trap again, and the reason the guard is now a lookbehind. And `মিলছে না` sat in `matrix-run.php`'s fallback list while being how EON says a trial balance does not reconcile, so four correct anomaly answers were scored as failures | done — **41/41** on `tools/scope-run.php`, **1191/1191** bank, **435/435** verb×subject (was 431 — the runner was wrong, not the product), **2999/3000** instance×aspect (baseline) |
 
+| **EON hands over a file, and the file opens (2026-08-24)** — `server/lib/Sheet.php`. "No file out" was published with Python named as the cause, and the cause was wrong: PHP has written zips and CSVs since before this ERP existed, so `export_report` was waiting on a dependency it never needed. Seven kinds, XLSX by hand — the five parts Excel insists on, inline strings so there is no shared-string table to keep in step, and numbers written as numbers so the sheet can be summed rather than retyped. **A file that exists is not a workbook**, so `tools/export-run.php` opens every one as a zip and parses all five parts as XML before believing it. Three defects on the way: the payroll sheet exported an empty August while July was the last closed month, which reads as a broken export rather than as an empty month; the sheet's title and note were English-only and the answer **quotes them**, so "খরচের এক্সেল ফাইল দাও" came back as বাংলা containing "Expenses 2026-08" and a whole English caveat — the oldest leak in this codebase, one layer further out than it had been caught before, and the Bengali digits went the same way; and the cue `শিট` ate the second word of ব্যালান্স শিট, so a request to *see* the balance sheet was answered with a download. The suite's own বাংলা-purity check then failed three correct answers, because `\d` under `/u` matches ২০২৬ — Latin digits have to be named `[0-9]` | done — **26/26** on `tools/export-run.php`, and 1191/1191 · 435/435 · 41/41 · 2999/3000 all held |
+
 ## What works and what does not — the honest list (2026-08-20, revised 2026-08-24)
 
 Measured, not assumed. Every number below is from a run whose output is in this
@@ -154,9 +156,14 @@ file's history; anything not measured says so.
    "forecast next quarter revenue" and "আগামী মাসে আয় কত হবে" both answer with the
    trend, the slope per month and the months carried forward. Re-measured
    2026-08-24.
-4. **No file out.** "export the payroll to excel" answers with the payroll
-   figures and no file. Python is not reachable on the host (`python:false`), so
-   `export_report` has no route.
+4. ~~**No file out.**~~ **Fixed 2026-08-24** — `Sheet`. The export was waiting on
+   a dependency it never needed: a CSV is a text file and an XLSX is a zip of
+   five small XML parts, both of which PHP writes unaided. Seven kinds
+   (payroll, receivables, payables, expenses, attendance, staff, P&L), XLSX where
+   `ZipArchive` is compiled in and a BOM'd CSV where it is not — and the answer
+   says which it gave rather than promising a workbook. Nothing leaves the
+   server to make it, which is the whole point. `export_report` now has a PHP
+   route, so **29 of 32 tools are reachable from `Answer`**, up from 28.
 5. **No free-form drafting.** "draft an email to the auditor" produces a generic
    notice with an invented subject. Notices, reminders and warnings from the
    decision layer are real; anything else is a template.
@@ -240,7 +247,10 @@ PHP, from the live ERP. That makes three things rules rather than preferences:
   from `Answer`* — 28 of 32 today. The four that are not: `explain_erp` and
   `erp_open_record` (the navigation intent and `plugins/navigator.js` answer those from
   `erp-map.json` instead), `spending_anomalies` (the `anomalies` intent uses
-  `Insight::anomalies` in PHP) and `export_report` (needs Python, absent on the host).
+  `Insight::anomalies` in PHP). `export_report` was the fourth until 2026-08-24, when
+  `Sheet` gave it a PHP route — **29 of 32 reachable now**. Its absence was the clearest
+  case of the rule: the tool had a schema, a description and no way for the boss to reach
+  it, so for a year it was a promise rather than a feature.
 - **No Python on the host either** (`python:false`). Anything that matters must have a
   PHP path — `Analytics::ranking()` exists because `evaluate_all_staff` cannot run there.
 - **Answers must be written natively in both languages.** `Phrase`/`Loc` carry the voice;

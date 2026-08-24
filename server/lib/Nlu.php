@@ -147,6 +147,21 @@ final class Nlu
                          'কোথায় গণ্ডগোল' => 7, 'গণ্ডগোল' => 6, 'কি ভুল' => 4, 'চিন্তার বিষয়' => 5, 'দুর্বলতা' => 6],
                 'bl' => ['ki miss korchi' => 5, 'somossa' => 3, 'jhuki' => 3, 'ki bhul' => 3],
             ],
+            /* Asking for a file is a different request from asking for the figures,
+               and it outranks the subject — "export the payroll" is not the payroll
+               question. The cues are deliberately narrow: "report" is far too common
+               a word in this business to mean a download. */
+            'export' => [
+                'en' => ['export' => 7, 'download' => 7, 'excel' => 7, 'spreadsheet' => 7, 'xlsx' => 7, 'csv' => 7,
+                         'as a file' => 7, 'give me the sheet' => 8, 'send me the sheet' => 8, 'in a sheet' => 7,
+                         'save as excel' => 8, 'to excel' => 8],
+                // no bare শিট: it is the second word of ব্যালান্স শিট, so "ব্যালান্স শিট
+                // দেখাও" — a request to *see* the balance sheet — was answered with a
+                // download. The same shape as every other cue that ate a longer word.
+                'bn' => ['এক্সেল' => 7, 'ডাউনলোড' => 7, 'স্প্রেডশিট' => 7, 'ফাইল করে দাও' => 8,
+                         'ফাইলে দাও' => 8, 'এক্সপোর্ট' => 7],
+                'bl' => ['export' => 7, 'download' => 7, 'excel' => 7, 'file kore dao' => 8, 'sheet dao' => 7],
+            ],
             'anomalies' => [
                 'en' => ['anomaly' => 5, 'anomalies' => 5, 'unusual' => 4, 'suspicious' => 4, 'irregular' => 4,
                          'duplicate' => 4, 'duplicates' => 4, 'strange' => 3, 'odd' => 3, 'fraud' => 4,
@@ -765,17 +780,19 @@ final class Nlu
                        that matched it is a project called TICKET DEPARTMENT which the
                        question was never about. */
                     && empty($inst['possessive'])
+                    && is_array($sc) && ($sc['resolved'] ?? false)
+                    && in_array($sc['dim'], ['department', 'expense_department'], true)
+                    && !in_array($inst['kind'], ['employee', 'party', 'passenger'], true)
                     /* A filter lifted out of the record's own name is not a filter.
                        The ERP has a project called "MARKETING TEAM", and the word
                        *team* is itself a department marker, so every aspect asked of
                        that project — its profile, its tasks — resolved a Marketing
                        department scope and got answered about the department instead
                        of the project. If the cue is inside the record's name, the
-                       record is what the question is about. */
+                       record is what the question is about. (This test reads $sc, so
+                       it has to stand after the guard that proves $sc is an array —
+                       put first, it warned on every question carrying no scope.) */
                     && mb_stripos((string) $inst['label'], (string) $sc['text']) === false
-                    && is_array($sc) && ($sc['resolved'] ?? false)
-                    && in_array($sc['dim'], ['department', 'expense_department'], true)
-                    && !in_array($inst['kind'], ['employee', 'party', 'passenger'], true)
                     && (preg_match('/(?<![a-z])(?:department|dept|team|section)(?![a-z])/u', $n) === 1
                         || mb_strpos($n, "\u{09AC}\u{09BF}\u{09AD}\u{09BE}\u{0997}") !== false);
                 if ($deptAsked) {

@@ -100,7 +100,19 @@ final class Tools
                 'forecast' => Py::run('forecast', $this->D, ['--company' => $this->company, '--months' => (int) ($in['months'] ?? 3)]),
                 'spending_anomalies' => Py::run('anomalies', $this->D, ['--company' => $this->company]),
                 'evaluate_all_staff' => Py::run('evaluate', $this->D, ['--company' => $this->company, '--all' => true]),
-                'export_report' => (function () use ($in) { $kind = (string) ($in['kind'] ?? 'receivables'); $file = EON_ROOT . '/storage/data/report-' . preg_replace('/[^a-z]/', '', $kind) . '-' . date('Ymd-His') . '.xlsx'; $r = Py::run('report', $this->D, ['--company' => $this->company, '--kind' => $kind, '--out' => $file]); if (($r['ok'] ?? false) && !empty($r['file'])) $r['download'] = 'api/file.php?name=' . rawurlencode(basename($r['file'])); return $r; })(),
+                /* Written in PHP now. This went to Python, Python is not on this host,
+                   and so the one tool that produced a deliverable produced nothing —
+                   the export was waiting on a dependency it never actually needed. */
+                'export_report' => (function () use ($in) {
+                    $kind = (string) ($in['kind'] ?? 'receivables');
+                    if (!class_exists('Sheet')) return ['ok' => false, 'error' => 'Sheet is not loaded'];
+                    $A = new Analytics($this->D, $this->company);
+                    $sheet = Sheet::build($kind, $A, (string) ($in['month'] ?? '') ?: null);
+                    if ($sheet['rows'] === []) return ['ok' => false, 'error' => 'nothing to export for that period'];
+                    $r = Sheet::write($sheet, $kind);
+                    if ($r['ok']) $r['download'] = 'api/file.php?name=' . rawurlencode($r['name']);
+                    return $r;
+                })(),
                 'sql_readonly' => Erp::safeSelect((string) ($in['sql'] ?? ''), 200),
                 default => $this->runPlugin($name, $in),
             };

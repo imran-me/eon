@@ -210,6 +210,100 @@ final class Answer
                     $label, $dims));
     }
 
+    /* ================= HANDING OVER A FILE ================= */
+
+    /**
+     * "Export the payroll to excel" — and a file actually appears.
+     *
+     * This used to answer with the payroll figures and no file, because the tool
+     * behind it went to Python and Python is not on this host. `Sheet` writes the
+     * workbook in plain PHP, so the export never needed the thing it was waiting
+     * for. Two rules hold: the answer names the kind it exported, so nobody
+     * downloads the wrong sheet believing it is the right one, and it says
+     * whether it produced xlsx or csv rather than promising a spreadsheet.
+     */
+    private function a_export(): string
+    {
+        if (!class_exists('Sheet')) return $this->exportUnavailable();
+        $this->used('export_report');
+
+        $kind = Sheet::kindOf($this->c['norm']);
+        if ($kind === null) {
+            return $this->say([
+                $this->open('warn'),
+                $this->t('I can put a file together, but not until I know which one.',
+                         'ফাইল বানিয়ে দিতে পারি, তবে কোনটা সেটা না জানলে নয়।'),
+                $this->t('Say it with the subject: the payroll, receivables, payables, expenses, attendance, the staff list, or the profit and loss.',
+                         'বিষয়টা বলে দিন: বেতন, পাওনা, দেনা, খরচ, হাজিরা, কর্মীর তালিকা, বা লাভ-লোকসান।'),
+            ]);
+        }
+
+        $mk = $this->monthKey();
+        $sheet = Sheet::build($kind, $this->A(), $mk, $this->liveScope());
+        if ($this->liveScope() !== null && in_array($kind, ['expenses', 'staff'], true)) $this->scopeDone();
+
+        if ($sheet['rows'] === []) {
+            return $this->say([
+                $this->open('ok'),
+                $this->t(sprintf('There is nothing to put in a %s sheet for %s — no rows at all.',
+                            $this->exportName($kind), Phrase::monthName($mk, 'en')),
+                         sprintf('%s মাসের %s শিটে দেওয়ার মতো কিছু নেই — একটা সারিও নেই।',
+                            Phrase::monthName($mk, 'bn'), $this->exportName($kind))),
+                $this->act('an empty file would look like a broken export, so I have not written one.',
+                           'খালি ফাইল দেখলে মনে হবে এক্সপোর্ট ভেঙেছে, তাই লিখিনি।'),
+            ]);
+        }
+
+        $w = Sheet::write($sheet, $kind);
+        if (!($w['ok'] ?? false)) return $this->exportUnavailable((string) ($w['error'] ?? ''));
+
+        $url = 'server/api/file.php?name=' . rawurlencode($w['name']);
+        $fmt = strtoupper((string) $w['format']);
+        // the sheet carries its own sentence in both languages — quoting the English
+        // one into a Bangla answer is this codebase's oldest leak, one layer further out
+        $title = $this->t((string) $sheet['title'], (string) ($sheet['title_bn'] ?? $sheet['title']));
+        $note  = $this->t((string) ($sheet['note'] ?? ''), (string) ($sheet['note_bn'] ?? $sheet['note'] ?? ''));
+
+        return $this->say([
+            $this->open('ok'),
+            $this->t(sprintf('%s is ready as %s — %s %s.', $title, $fmt, $this->num($w['rows']),
+                        Phrase::plural((int) $w['rows'], 'row', 'rows')),
+                     sprintf('%s তৈরি, %s ফরম্যাটে — %s টা সারি।', $title, $fmt, $this->num($w['rows']))),
+            $this->t('Download: ' . $url, 'ডাউনলোড: ' . $url),
+            $note,
+            $w['format'] === 'csv'
+                ? $this->t('This host has no ZipArchive, so it is a CSV rather than a workbook — it opens in Excel, and the BOM keeps বাংলা readable.',
+                           'এই হোস্টে ZipArchive নেই, তাই ওয়ার্কবুক নয় CSV — Excel-এ খোলে, আর BOM থাকায় বাংলা ঠিক দেখায়।')
+                : '',
+            $this->act('the file is written on this server and never leaves it — nothing was sent anywhere to make it.',
+                       'ফাইলটা এই সার্ভারেই লেখা, কোথাও যায়নি — বানাতে কিছুই বাইরে পাঠানো হয়নি।'),
+        ]);
+    }
+
+    private function exportName(string $kind): string
+    {
+        return match ($kind) {
+            'payroll'     => $this->t('payroll', 'বেতন'),
+            'receivables' => $this->t('receivables', 'পাওনা'),
+            'payables'    => $this->t('payables', 'দেনা'),
+            'expenses'    => $this->t('expenses', 'খরচ'),
+            'attendance'  => $this->t('attendance', 'হাজিরা'),
+            'staff'       => $this->t('staff', 'কর্মী'),
+            default       => $this->t('profit and loss', 'লাভ-লোকসান'),
+        };
+    }
+
+    private function exportUnavailable(string $why = ''): string
+    {
+        return $this->say([
+            $this->open('warn'),
+            $this->t('I cannot write a file on this server right now' . ($why !== '' ? ' — ' . $why : '') . '.',
+                     'এই মুহূর্তে সার্ভারে ফাইল লিখতে পারছি না' . ($why !== '' ? ' — ' . $why : '') . '।'),
+            $this->act('ask me for the figures instead and I will read them out in full.',
+                       'বরং হিসাবটা চাইলে পুরোটা পড়ে শোনাব।'),
+        ]);
+    }
+
     /* ================= COMPARISON ACROSS PERIODS ================= */
 
     /** intents whose figure means something when set beside another period */
