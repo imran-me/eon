@@ -125,30 +125,96 @@ TXT;
     {
         // let Nlu resolve a name in the sentence against real records
         if (class_exists('Nlu') && method_exists('Nlu', 'useDataset')) Nlu::useDataset($D);
+        /* A weak answer from `Answer` is kept, not returned. `Answer::compose`
+           always produces text — its own fallback if nothing matched — so this
+           gate used to be `text !== ''` and was therefore always true. Every
+           layer below it was dead code: `Answers`, the regex chain, and the whole
+           hundred-thousand-record corpus. The apology outranked the knowledge,
+           which is the navigator defect one floor lower down. */
+        $weak = null;
         if (class_exists('Nlu') && class_exists('Answer')) {
             try {
                 $parse = Nlu::parse($q, $lang);
                 $r = Answer::compose($q, $parse, new Analytics($D, $company), $tools);
                 if (($r['text'] ?? '') !== '') {
-                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null),
+                    $out = ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null),
                             'tools_used' => $r['tools_used'] ?? [], 'intent' => $r['intent'] ?? null,
                             'lang' => $r['lang'] ?? null, 'usage' => null];
+                    if (empty($r['weak'])) return $out;
+                    $weak = $out;
                 }
             } catch (Throwable $e) { Log::warn('Answer failed, trying Answers', ['error' => $e->getMessage()]); }
         }
+        $answers = null;
         if (class_exists('Nlu') && class_exists('Answers')) {
             try {
+                /* Held, not returned — and it now sits *below* the corpus rather
+                   than above it. `Answers` is the superseded answerer kept to
+                   catch what `Answer` throws on, and it ends in an apology of its
+                   own, carrying whatever intent the sentence scored. So
+                   "হাসপাতালে বেড দখল মানে কী" came back as its `howto` apology and
+                   the corpus underneath was never asked. A safety net belongs
+                   under the thing it is catching, not in front of it; the note in
+                   CLAUDE.md saying it "costs nothing" was true only while there
+                   was nothing beneath it to cost. */
                 $r = Answers::reply($q, $D, $company, $tools, $lang);
                 if (($r['text'] ?? '') !== '') {
-                    return ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null), 'tools_used' => $r['tools_used'], 'intent' => $r['intent'], 'lang' => $r['lang'], 'usage' => null];
+                    $answers = ['mode' => self::MODE_OFFLINE, 'text' => $r['text'], 'speak' => self::voice($r['text'], $r['lang'] ?? null), 'tools_used' => $r['tools_used'], 'intent' => $r['intent'], 'lang' => $r['lang'], 'usage' => null];
                 }
             } catch (Throwable $e) { Log::warn('offline answerer failed, falling back to regex', ['error' => $e->getMessage()]); }
         }
-        return self::askOfflineRegex($q, $D, $company, $tools);
+        /* The corpus sits at the very bottom, and deliberately.
+           `askOfflineRegex` ends in an apology that used to be the last word;
+           the navigator taught this codebase what happens when a layer that
+           can always produce *something* is reached before the layers that
+           know the business — it eats questions that had a real answer one
+           level down. So the regex chain runs first and only its fallback is
+           displaced: if it matched a report, that answer stands. */
+        $r = self::askOfflineRegex($q, $D, $company, $tools, false);
+        if (($r['text'] ?? '') !== '') return $r;
+
+        /* Reason first, quote second. `Think` builds an argument out of several
+           facts about one subject; `KbCorpus::answer` prints the single best
+           record. The second is the floor under the first, not its equal. */
+        foreach ([['Think', 'think'], ['KbCorpus', 'kb_corpus']] as [$cls, $toolName]) {
+            if (!class_exists($cls)) continue;
+            try {
+                $kb = $cls === 'Think' ? Think::about($q, $lang) : KbCorpus::answer($q, $lang);
+                if ($kb === null) continue;
+                return ['mode' => self::MODE_OFFLINE, 'text' => $kb['text'], 'speak' => self::voice($kb['text'], $kb['lang']),
+                        'tools_used' => [$toolName],
+                        'intent' => $cls === 'Think' ? 'think_' . $kb['kind'] : 'kb_' . $kb['facet'],
+                        'lang' => $kb['lang'],
+                        'kb' => $cls === 'Think'
+                            ? ['chain' => array_column($kb['chain'], 'move'), 'focus' => $kb['focus'],
+                               'score' => $kb['score'], 'gaps' => $kb['gaps']]
+                            : ['id' => $kb['id'], 'facet' => $kb['facet'], 'vertical' => $kb['vertical'],
+                               'module' => $kb['module'], 'score' => $kb['score']],
+                        'usage' => null];
+            } catch (Throwable $e) { Log::warn(strtolower($cls) . ' lookup failed', ['error' => $e->getMessage()]); }
+        }
+
+        /* Nothing below knew it either, so the nets come back — best first.
+           `Answer`'s menu names the rules it can explain and is a usable reply;
+           `Answers` ends in a bare apology. Returning the older layer first cost
+           four "how is X calculated" cases, which had been answered by that menu
+           for months and came back as "I did not catch that" instead. */
+        if ($weak !== null) return $weak;
+        if ($answers !== null) return $answers;
+
+        return self::askOfflineRegex($q, $D, $company, $tools, true);
     }
 
-    /** the original English-only matcher — kept as the last line of defence */
-    public static function askOfflineRegex(string $q, array $D, ?int $company, Tools $tools): array
+    
+    /**
+     * The original English-only matcher — kept as the last line of defence.
+     *
+     * $withFallback exists so the knowledge corpus can be tried in the gap
+     * between "this chain matched nothing" and "EON apologises". Called with
+     * false it returns an empty text instead of the apology; nothing else
+     * about it changes, and the report matchers above still get first refusal.
+     */
+    public static function askOfflineRegex(string $q, array $D, ?int $company, Tools $tools, bool $withFallback = true): array
     {
         $s = mb_strtolower($q); $A = new Analytics($D, $company); $k = fn(float $n) => Analytics::bdtk($n); $used = []; $text = null;
         $try = function (string $re, string $tool, callable $fmt) use ($s, $tools, &$used, &$text) { if ($text !== null || !preg_match($re, $s)) return; $used[] = $tool; $r = $tools->run($tool, []); $text = is_array($r) ? $fmt($r) : (string) $r; };
@@ -170,6 +236,8 @@ TXT;
         $try('/decision|priorit|attention|urgent|critical|risk|problem/', 'get_decisions', fn($r) => $r ? count($r) . ' decisions in priority order. First: ' . $r[0]['title'] . ' — ' . $r[0]['recommend'] : 'Nothing needs you right now.');
         if ($text === null && preg_match('/evaluat|who is|tell me about|performance of|salary of|profile of/', $s)) { $e = $A->findEmployee($q); if ($e) { $used[] = 'find_employee'; $ev = $A->evaluate((int) $e['id']); $text = $ev['narrative'] ?? null; } }
         if ($text === null && preg_match('/\b(\d{4})\b/', $s, $m) && preg_match('/code|account|ledger|what is|explain/', $s)) { $used[] = 'get_account_ledger'; $r = $tools->run('get_account_ledger', ['code' => $m[1]]); $text = "Account {$m[1]}: {$r['postings']} postings, closing balance " . Analytics::bdt((float) $r['closing_balance']) . '.'; }
+        /* the corpus gets the gap between "no match" and "sorry" */
+        if ($text === null && !$withFallback) return ['mode' => self::MODE_OFFLINE, 'text' => '', 'speak' => '', 'tools_used' => $used, 'usage' => null];
         if ($text === null) { $b = $A->kpis(); $text = "I did not match that to a report yet (offline mode). Right now: cash " . $k((float) $b['cash']) . ', receivables overdue ' . $k((float) $b['receivables_overdue']) . ", {$b['absent_today']} absent today, {$b['tasks_overdue']} tasks overdue. Ask me about cash, receivables, payables, profit, budget, attendance, payroll, pipeline, tasks, projects, approvals, or a person by name."; }
         return ['mode' => self::MODE_OFFLINE, 'text' => $text, 'speak' => self::voice($text), 'tools_used' => $used, 'usage' => null];
     }

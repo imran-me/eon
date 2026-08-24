@@ -152,6 +152,33 @@ export function term(vertical, key, lang = 0) {
 
 /* ---------- small helpers ---------- */
 export const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
+
+/* "a" or "an", decided by how the word is said rather than how it is spelt.
+   The templates put a variable noun straight after "A", which produced "A
+   admission test", "A enrolment" and "A invoice" in thousands of records —
+   invisible on a page of JSON and impossible to miss the moment EON reads one
+   aloud. A bare vowel test is not enough in either direction: "a university"
+   and "a user" begin with a consonant sound, "an hour" and "an honest mistake"
+   with a vowel one. */
+const A_NOT_AN = /^(uni|use|usu|uti|ubi|eu|ewe|one|once)/i;
+const AN_NOT_A = /^(hour|honest|honou?r|heir)/i;
+/* An initialism is read letter by letter, so the article follows the name of the
+   first letter, not the letter: "an NGO" (en-gee-oh), "an MPO", "an SKU", but
+   "a GRN" and "a PO". Spelling alone gets every one of these backwards. */
+const VOWEL_LETTER_NAMES = /^[AEFHILMNORSX]$/;
+export const art = (word) => {
+  const w = String(word || '').trim();
+  if (!w) return 'a';
+  if (/^[A-Z]{2,}$/.test(w.split(/[\s-]/)[0])) {
+    return VOWEL_LETTER_NAMES.test(w[0]) ? 'an' : 'a';
+  }
+  if (AN_NOT_A.test(w)) return 'an';
+  if (A_NOT_AN.test(w)) return 'a';
+  return /^[aeiou]/i.test(w) ? 'an' : 'a';
+};
+/** the article and the word, which is what every caller actually wants */
+export const an = (word) => `${art(word)} ${word}`;
+
 export const list = (arr, conj = 'and') => {
   const a = arr.filter(Boolean);
   if (a.length <= 1) return a[0] || '';

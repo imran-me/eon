@@ -52,6 +52,7 @@ final class Answer
         }
         if ($text === null || $text === '') {
             $text = $self->fallback($parse);
+            $self->c['weak'] = true;
         }
 
         /* The narrowing half of the question. If the answerer applied it, it says
@@ -63,6 +64,10 @@ final class Answer
         return ['text' => $text, 'intent' => $intent, 'lang' => $parse['lang'],
                 'scope' => $self->c['slots']['scope'] ?? null,
                 'scope_applied' => $self->c['scope_applied'] ?? false,
+                /* True when this text answers nothing — the fallback, or a menu
+                   offered because no rule matched. The caller is expected to try
+                   the layers underneath before settling for it. */
+                'weak' => (bool) ($self->c['weak'] ?? false),
                 'tools_used' => array_values(array_unique($self->c['used']))];
     }
 
@@ -3358,6 +3363,14 @@ final class Answer
         }
         $s = Kb::findScreen($this->c['norm'], $topic);
         if ($s) return $this->a_navigation();
+        /* Nothing matched. This reply names no rule and answers no question — it is
+           a menu. Left unmarked it still counts as an answer, and "how does
+           admissions work at a university" got the Epal rule list while a hundred
+           thousand records that describe university admissions sat one layer down
+           and were never asked. Same shape as the navigator apologising from
+           priority 97: a layer that can always say *something* must never outrank
+           a layer that knows more. */
+        $this->c['weak'] = true;
         return $this->say([$this->open('ok'),
             $this->t('Ask me about a specific rule — how late deduction works, how an expense posts, how payroll is calculated, how a leave balance is worked out, or what happens when a payment schedule is approved.',
                      'নির্দিষ্ট কোনো নিয়ম জিজ্ঞেস করুন — দেরির কর্তন কিভাবে হয়, খরচের এন্ট্রি কোথায় বসে, বেতন কিভাবে হিসাব হয়, ছুটির হিসাব কিভাবে হয়, বা পেমেন্ট সূচি অনুমোদন হলে কী হয়।')]);

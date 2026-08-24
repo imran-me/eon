@@ -1,0 +1,2559 @@
+{
+ "generated_by": "tools/kb/make-kb.mjs",
+ "verticals": [
+  {
+   "id": "travel",
+   "en": "travel agency",
+   "bn": "ট্রাভেল এজেন্সি",
+   "kind": "services",
+   "aliases": [
+    "travel agent",
+    "air ticketing house",
+    "tour operator",
+    "ট্রাভেল",
+    "হজ্জ ও ওমরাহ এজেন্সি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "ticketing",
+    "visa",
+    "tours"
+   ],
+   "terms": {
+    "customer": [
+     "passenger",
+     "যাত্রী"
+    ],
+    "product": [
+     "ticket",
+     "টিকিট"
+    ],
+    "revenue": [
+     "ticket sales",
+     "টিকিট বিক্রয়"
+    ],
+    "staff": [
+     "counter staff",
+     "কাউন্টার স্টাফ"
+    ],
+    "unit": [
+     "branch",
+     "শাখা"
+    ],
+    "cycle": [
+     "booking",
+     "বুকিং"
+    ]
+   }
+  },
+  {
+   "id": "university",
+   "en": "university",
+   "bn": "বিশ্ববিদ্যালয়",
+   "kind": "education",
+   "aliases": [
+    "private university",
+    "higher education institution",
+    "campus",
+    "ভার্সিটি",
+    "উচ্চশিক্ষা প্রতিষ্ঠান"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "admissions",
+    "registrar",
+    "examination",
+    "student_billing",
+    "hostel",
+    "library",
+    "transport",
+    "faculty_workload",
+    "research_grants",
+    "alumni"
+   ],
+   "terms": {
+    "customer": [
+     "student",
+     "শিক্ষার্থী"
+    ],
+    "product": [
+     "course",
+     "কোর্স"
+    ],
+    "revenue": [
+     "tuition income",
+     "টিউশন আয়"
+    ],
+    "staff": [
+     "faculty member",
+     "শিক্ষক"
+    ],
+    "unit": [
+     "department",
+     "বিভাগ"
+    ],
+    "cycle": [
+     "semester",
+     "সেমিস্টার"
+    ]
+   }
+  },
+  {
+   "id": "school",
+   "en": "school",
+   "bn": "স্কুল",
+   "kind": "education",
+   "aliases": [
+    "college",
+    "madrasah",
+    "k-12 school",
+    "coaching centre",
+    "বিদ্যালয়",
+    "কলেজ",
+    "মাদ্রাসা"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "admissions",
+    "examination",
+    "student_billing",
+    "transport",
+    "library"
+   ],
+   "terms": {
+    "customer": [
+     "student",
+     "ছাত্রছাত্রী"
+    ],
+    "product": [
+     "class",
+     "শ্রেণি"
+    ],
+    "revenue": [
+     "fee income",
+     "বেতন আয়"
+    ],
+    "staff": [
+     "teacher",
+     "শিক্ষক"
+    ],
+    "unit": [
+     "section",
+     "শাখা"
+    ],
+    "cycle": [
+     "term",
+     "টার্ম"
+    ]
+   }
+  },
+  {
+   "id": "hospital",
+   "en": "hospital",
+   "bn": "হাসপাতাল",
+   "kind": "health",
+   "aliases": [
+    "clinic",
+    "diagnostic centre",
+    "medical college hospital",
+    "ক্লিনিক",
+    "ডায়াগনস্টিক সেন্টার"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "opd",
+    "ipd",
+    "diagnostics",
+    "pharmacy_retail",
+    "insurance_claims",
+    "operation_theatre"
+   ],
+   "terms": {
+    "customer": [
+     "patient",
+     "রোগী"
+    ],
+    "product": [
+     "service",
+     "সেবা"
+    ],
+    "revenue": [
+     "patient revenue",
+     "রোগী আয়"
+    ],
+    "staff": [
+     "consultant",
+     "কনসালট্যান্ট"
+    ],
+    "unit": [
+     "ward",
+     "ওয়ার্ড"
+    ],
+    "cycle": [
+     "admission",
+     "ভর্তি"
+    ]
+   }
+  },
+  {
+   "id": "pharmacy",
+   "en": "pharmacy chain",
+   "bn": "ফার্মেসি চেইন",
+   "kind": "retail",
+   "aliases": [
+    "drug store",
+    "medicine shop",
+    "ঔষধের দোকান",
+    "ফার্মেসি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "pos",
+    "batch_expiry",
+    "pharmacy_retail"
+   ],
+   "terms": {
+    "customer": [
+     "customer",
+     "ক্রেতা"
+    ],
+    "product": [
+     "medicine",
+     "ঔষধ"
+    ],
+    "revenue": [
+     "counter sales",
+     "কাউন্টার বিক্রয়"
+    ],
+    "staff": [
+     "pharmacist",
+     "ফার্মাসিস্ট"
+    ],
+    "unit": [
+     "outlet",
+     "আউটলেট"
+    ],
+    "cycle": [
+     "shift",
+     "শিফট"
+    ]
+   }
+  },
+  {
+   "id": "manufacturing",
+   "en": "manufacturing plant",
+   "bn": "উৎপাদন কারখানা",
+   "kind": "manufacturing",
+   "aliases": [
+    "factory",
+    "production unit",
+    "engineering works",
+    "কারখানা",
+    "ফ্যাক্টরি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "bom",
+    "quality",
+    "maintenance",
+    "subcontract"
+   ],
+   "terms": {
+    "customer": [
+     "buyer",
+     "ক্রেতা"
+    ],
+    "product": [
+     "finished good",
+     "তৈরি পণ্য"
+    ],
+    "revenue": [
+     "sales",
+     "বিক্রয়"
+    ],
+    "staff": [
+     "operator",
+     "অপারেটর"
+    ],
+    "unit": [
+     "line",
+     "লাইন"
+    ],
+    "cycle": [
+     "work order",
+     "ওয়ার্ক অর্ডার"
+    ]
+   }
+  },
+  {
+   "id": "garments",
+   "en": "garments factory",
+   "bn": "গার্মেন্টস কারখানা",
+   "kind": "manufacturing",
+   "aliases": [
+    "RMG unit",
+    "apparel manufacturer",
+    "knit composite",
+    "পোশাক কারখানা",
+    "আরএমজি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "bom",
+    "quality",
+    "export_lc",
+    "subcontract",
+    "compliance_audit"
+   ],
+   "terms": {
+    "customer": [
+     "buyer",
+     "বায়ার"
+    ],
+    "product": [
+     "style",
+     "স্টাইল"
+    ],
+    "revenue": [
+     "export sales",
+     "রপ্তানি বিক্রয়"
+    ],
+    "staff": [
+     "worker",
+     "শ্রমিক"
+    ],
+    "unit": [
+     "line",
+     "লাইন"
+    ],
+    "cycle": [
+     "order",
+     "অর্ডার"
+    ]
+   }
+  },
+  {
+   "id": "textile",
+   "en": "textile mill",
+   "bn": "টেক্সটাইল মিল",
+   "kind": "manufacturing",
+   "aliases": [
+    "spinning mill",
+    "dyeing unit",
+    "weaving factory",
+    "সুতা কল",
+    "ডাইং ইউনিট"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "bom",
+    "quality",
+    "maintenance",
+    "utilities"
+   ],
+   "terms": {
+    "customer": [
+     "buyer",
+     "ক্রেতা"
+    ],
+    "product": [
+     "yarn lot",
+     "সুতার লট"
+    ],
+    "revenue": [
+     "mill sales",
+     "মিল বিক্রয়"
+    ],
+    "staff": [
+     "operator",
+     "অপারেটর"
+    ],
+    "unit": [
+     "shed",
+     "শেড"
+    ],
+    "cycle": [
+     "batch",
+     "ব্যাচ"
+    ]
+   }
+  },
+  {
+   "id": "construction",
+   "en": "construction company",
+   "bn": "নির্মাণ প্রতিষ্ঠান",
+   "kind": "construction",
+   "aliases": [
+    "contractor",
+    "civil works firm",
+    "engineering contractor",
+    "ঠিকাদার",
+    "নির্মাণ কোম্পানি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "projects",
+    "tender",
+    "site_stores",
+    "equipment",
+    "subcontract"
+   ],
+   "terms": {
+    "customer": [
+     "client",
+     "ক্লায়েন্ট"
+    ],
+    "product": [
+     "work item",
+     "কাজের আইটেম"
+    ],
+    "revenue": [
+     "certified work",
+     "সার্টিফাইড কাজ"
+    ],
+    "staff": [
+     "site engineer",
+     "সাইট ইঞ্জিনিয়ার"
+    ],
+    "unit": [
+     "site",
+     "সাইট"
+    ],
+    "cycle": [
+     "running bill",
+     "রানিং বিল"
+    ]
+   }
+  },
+  {
+   "id": "realestate",
+   "en": "real estate developer",
+   "bn": "রিয়েল এস্টেট ডেভেলপার",
+   "kind": "construction",
+   "aliases": [
+    "property developer",
+    "housing company",
+    "ডেভেলপার",
+    "হাউজিং কোম্পানি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "projects",
+    "unit_sales",
+    "installments",
+    "site_stores"
+   ],
+   "terms": {
+    "customer": [
+     "buyer",
+     "ক্রেতা"
+    ],
+    "product": [
+     "unit",
+     "ইউনিট"
+    ],
+    "revenue": [
+     "booking revenue",
+     "বুকিং আয়"
+    ],
+    "staff": [
+     "sales executive",
+     "সেলস এক্সিকিউটিভ"
+    ],
+    "unit": [
+     "project",
+     "প্রকল্প"
+    ],
+    "cycle": [
+     "installment",
+     "কিস্তি"
+    ]
+   }
+  },
+  {
+   "id": "retail",
+   "en": "retail chain",
+   "bn": "খুচরা চেইন",
+   "kind": "retail",
+   "aliases": [
+    "superstore",
+    "department store",
+    "grocery chain",
+    "সুপারশপ",
+    "ডিপার্টমেন্ট স্টোর"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "pos",
+    "batch_expiry",
+    "loyalty",
+    "merchandising"
+   ],
+   "terms": {
+    "customer": [
+     "shopper",
+     "ক্রেতা"
+    ],
+    "product": [
+     "SKU",
+     "পণ্য"
+    ],
+    "revenue": [
+     "counter sales",
+     "বিক্রয়"
+    ],
+    "staff": [
+     "cashier",
+     "ক্যাশিয়ার"
+    ],
+    "unit": [
+     "outlet",
+     "আউটলেট"
+    ],
+    "cycle": [
+     "trading day",
+     "ব্যবসায়িক দিন"
+    ]
+   }
+  },
+  {
+   "id": "ecommerce",
+   "en": "e-commerce business",
+   "bn": "ই-কমার্স ব্যবসা",
+   "kind": "retail",
+   "aliases": [
+    "online shop",
+    "marketplace seller",
+    "f-commerce page",
+    "অনলাইন শপ"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "pos",
+    "fulfilment",
+    "courier",
+    "loyalty"
+   ],
+   "terms": {
+    "customer": [
+     "customer",
+     "গ্রাহক"
+    ],
+    "product": [
+     "product",
+     "পণ্য"
+    ],
+    "revenue": [
+     "online sales",
+     "অনলাইন বিক্রয়"
+    ],
+    "staff": [
+     "support agent",
+     "সাপোর্ট এজেন্ট"
+    ],
+    "unit": [
+     "channel",
+     "চ্যানেল"
+    ],
+    "cycle": [
+     "order",
+     "অর্ডার"
+    ]
+   }
+  },
+  {
+   "id": "restaurant",
+   "en": "restaurant",
+   "bn": "রেস্তোরাঁ",
+   "kind": "hospitality",
+   "aliases": [
+    "cafe",
+    "cloud kitchen",
+    "catering business",
+    "রেস্টুরেন্ট",
+    "ক্যাফে"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "pos",
+    "recipe",
+    "kitchen_stores"
+   ],
+   "terms": {
+    "customer": [
+     "guest",
+     "অতিথি"
+    ],
+    "product": [
+     "menu item",
+     "মেনু আইটেম"
+    ],
+    "revenue": [
+     "food sales",
+     "খাবার বিক্রয়"
+    ],
+    "staff": [
+     "server",
+     "ওয়েটার"
+    ],
+    "unit": [
+     "outlet",
+     "আউটলেট"
+    ],
+    "cycle": [
+     "service period",
+     "সার্ভিস সময়"
+    ]
+   }
+  },
+  {
+   "id": "hotel",
+   "en": "hotel",
+   "bn": "হোটেল",
+   "kind": "hospitality",
+   "aliases": [
+    "resort",
+    "guest house",
+    "hospitality group",
+    "রিসোর্ট",
+    "গেস্ট হাউস"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "front_desk",
+    "housekeeping",
+    "banquet",
+    "pos"
+   ],
+   "terms": {
+    "customer": [
+     "guest",
+     "অতিথি"
+    ],
+    "product": [
+     "room night",
+     "রুম নাইট"
+    ],
+    "revenue": [
+     "room revenue",
+     "রুম আয়"
+    ],
+    "staff": [
+     "front desk agent",
+     "ফ্রন্ট ডেস্ক কর্মী"
+    ],
+    "unit": [
+     "property",
+     "প্রপার্টি"
+    ],
+    "cycle": [
+     "stay",
+     "অবস্থান"
+    ]
+   }
+  },
+  {
+   "id": "logistics",
+   "en": "logistics company",
+   "bn": "লজিস্টিকস কোম্পানি",
+   "kind": "logistics",
+   "aliases": [
+    "freight forwarder",
+    "courier company",
+    "C&F agent",
+    "transport company",
+    "কুরিয়ার",
+    "পরিবহন কোম্পানি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "shipments",
+    "fleet",
+    "courier",
+    "warehouse"
+   ],
+   "terms": {
+    "customer": [
+     "consignor",
+     "প্রেরক"
+    ],
+    "product": [
+     "consignment",
+     "চালান"
+    ],
+    "revenue": [
+     "freight revenue",
+     "ফ্রেইট আয়"
+    ],
+    "staff": [
+     "driver",
+     "চালক"
+    ],
+    "unit": [
+     "hub",
+     "হাব"
+    ],
+    "cycle": [
+     "trip",
+     "ট্রিপ"
+    ]
+   }
+  },
+  {
+   "id": "itservices",
+   "en": "IT services firm",
+   "bn": "আইটি সার্ভিস প্রতিষ্ঠান",
+   "kind": "services",
+   "aliases": [
+    "software house",
+    "digital agency",
+    "consultancy",
+    "সফটওয়্যার কোম্পানি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "projects",
+    "timesheet",
+    "subscriptions"
+   ],
+   "terms": {
+    "customer": [
+     "client",
+     "ক্লায়েন্ট"
+    ],
+    "product": [
+     "engagement",
+     "প্রজেক্ট"
+    ],
+    "revenue": [
+     "service revenue",
+     "সেবা আয়"
+    ],
+    "staff": [
+     "engineer",
+     "ইঞ্জিনিয়ার"
+    ],
+    "unit": [
+     "team",
+     "টিম"
+    ],
+    "cycle": [
+     "sprint",
+     "স্প্রিন্ট"
+    ]
+   }
+  },
+  {
+   "id": "isp",
+   "en": "internet service provider",
+   "bn": "ইন্টারনেট সেবা প্রদানকারী",
+   "kind": "services",
+   "aliases": [
+    "broadband operator",
+    "ISP",
+    "cable operator",
+    "ব্রডব্যান্ড অপারেটর"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "subscriptions",
+    "field_service",
+    "network_assets"
+   ],
+   "terms": {
+    "customer": [
+     "subscriber",
+     "গ্রাহক"
+    ],
+    "product": [
+     "package",
+     "প্যাকেজ"
+    ],
+    "revenue": [
+     "subscription revenue",
+     "সাবস্ক্রিপশন আয়"
+    ],
+    "staff": [
+     "field technician",
+     "ফিল্ড টেকনিশিয়ান"
+    ],
+    "unit": [
+     "zone",
+     "জোন"
+    ],
+    "cycle": [
+     "billing month",
+     "বিলিং মাস"
+    ]
+   }
+  },
+  {
+   "id": "ngo",
+   "en": "NGO",
+   "bn": "এনজিও",
+   "kind": "nonprofit",
+   "aliases": [
+    "non-profit",
+    "development organisation",
+    "foundation",
+    "সমাজসেবা সংস্থা",
+    "উন্নয়ন সংস্থা"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "grants",
+    "beneficiaries",
+    "field_service",
+    "donor_reporting"
+   ],
+   "terms": {
+    "customer": [
+     "beneficiary",
+     "উপকারভোগী"
+    ],
+    "product": [
+     "activity",
+     "কার্যক্রম"
+    ],
+    "revenue": [
+     "grant income",
+     "অনুদান আয়"
+    ],
+    "staff": [
+     "field officer",
+     "মাঠকর্মী"
+    ],
+    "unit": [
+     "project",
+     "প্রকল্প"
+    ],
+    "cycle": [
+     "reporting period",
+     "রিপোর্টিং সময়"
+    ]
+   }
+  },
+  {
+   "id": "microfinance",
+   "en": "microfinance institution",
+   "bn": "ক্ষুদ্রঋণ প্রতিষ্ঠান",
+   "kind": "finance",
+   "aliases": [
+    "MFI",
+    "cooperative society",
+    "samity",
+    "সমিতি",
+    "এমএফআই"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "loans",
+    "savings",
+    "beneficiaries",
+    "field_service"
+   ],
+   "terms": {
+    "customer": [
+     "member",
+     "সদস্য"
+    ],
+    "product": [
+     "loan product",
+     "ঋণ পণ্য"
+    ],
+    "revenue": [
+     "service charge income",
+     "সার্ভিস চার্জ আয়"
+    ],
+    "staff": [
+     "field officer",
+     "মাঠ কর্মকর্তা"
+    ],
+    "unit": [
+     "branch",
+     "শাখা"
+    ],
+    "cycle": [
+     "installment",
+     "কিস্তি"
+    ]
+   }
+  },
+  {
+   "id": "agro",
+   "en": "agro and poultry farm",
+   "bn": "কৃষি ও পোলট্রি খামার",
+   "kind": "agri",
+   "aliases": [
+    "dairy farm",
+    "hatchery",
+    "fishery",
+    "agri business",
+    "খামার",
+    "হ্যাচারি"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "batch_expiry",
+    "field_service",
+    "bom"
+   ],
+   "terms": {
+    "customer": [
+     "trader",
+     "ব্যবসায়ী"
+    ],
+    "product": [
+     "batch output",
+     "ব্যাচ উৎপাদন"
+    ],
+    "revenue": [
+     "farm sales",
+     "খামার বিক্রয়"
+    ],
+    "staff": [
+     "farm hand",
+     "খামার কর্মী"
+    ],
+    "unit": [
+     "shed",
+     "শেড"
+    ],
+    "cycle": [
+     "batch",
+     "ব্যাচ"
+    ]
+   }
+  },
+  {
+   "id": "printing",
+   "en": "printing press",
+   "bn": "প্রিন্টিং প্রেস",
+   "kind": "manufacturing",
+   "aliases": [
+    "packaging printer",
+    "publishing house",
+    "প্রেস",
+    "প্যাকেজিং প্রতিষ্ঠান"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "bom",
+    "quality",
+    "jobwork"
+   ],
+   "terms": {
+    "customer": [
+     "client",
+     "ক্লায়েন্ট"
+    ],
+    "product": [
+     "print job",
+     "প্রিন্ট জব"
+    ],
+    "revenue": [
+     "job revenue",
+     "জব আয়"
+    ],
+    "staff": [
+     "press operator",
+     "প্রেস অপারেটর"
+    ],
+    "unit": [
+     "machine",
+     "মেশিন"
+    ],
+    "cycle": [
+     "job order",
+     "জব অর্ডার"
+    ]
+   }
+  },
+  {
+   "id": "automotive",
+   "en": "automotive workshop",
+   "bn": "অটোমোবাইল ওয়ার্কশপ",
+   "kind": "services",
+   "aliases": [
+    "service centre",
+    "car dealership",
+    "garage",
+    "সার্ভিস সেন্টার",
+    "গ্যারেজ"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "jobcard",
+    "spare_parts",
+    "warranty",
+    "fleet"
+   ],
+   "terms": {
+    "customer": [
+     "vehicle owner",
+     "গাড়ির মালিক"
+    ],
+    "product": [
+     "repair job",
+     "মেরামত কাজ"
+    ],
+    "revenue": [
+     "service revenue",
+     "সার্ভিস আয়"
+    ],
+    "staff": [
+     "technician",
+     "টেকনিশিয়ান"
+    ],
+    "unit": [
+     "service bay",
+     "সার্ভিস বে"
+    ],
+    "cycle": [
+     "job card",
+     "জব কার্ড"
+    ]
+   }
+  },
+  {
+   "id": "trading",
+   "en": "trading and import house",
+   "bn": "ট্রেডিং ও আমদানি প্রতিষ্ঠান",
+   "kind": "retail",
+   "aliases": [
+    "importer",
+    "distributor",
+    "wholesale business",
+    "আমদানিকারক",
+    "পরিবেশক"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "import_lc",
+    "warehouse",
+    "distribution"
+   ],
+   "terms": {
+    "customer": [
+     "dealer",
+     "ডিলার"
+    ],
+    "product": [
+     "item",
+     "আইটেম"
+    ],
+    "revenue": [
+     "wholesale sales",
+     "পাইকারি বিক্রয়"
+    ],
+    "staff": [
+     "sales officer",
+     "সেলস অফিসার"
+    ],
+    "unit": [
+     "depot",
+     "ডিপো"
+    ],
+    "cycle": [
+     "consignment",
+     "চালান"
+    ]
+   }
+  },
+  {
+   "id": "woodwork",
+   "en": "furniture and interior workshop",
+   "bn": "ফার্নিচার ও ইন্টেরিয়র ওয়ার্কশপ",
+   "kind": "manufacturing",
+   "aliases": [
+    "wood art studio",
+    "joinery",
+    "interior contractor",
+    "ফার্নিচার প্রতিষ্ঠান",
+    "কাঠের কাজ"
+   ],
+   "modules": [
+    "gl",
+    "ar",
+    "ap",
+    "cash",
+    "budget",
+    "tax",
+    "assets",
+    "sales",
+    "purchase",
+    "inventory",
+    "crm",
+    "employees",
+    "payroll",
+    "attendance",
+    "leave",
+    "recruitment",
+    "approvals",
+    "access",
+    "audit",
+    "reporting",
+    "multicompany",
+    "documents",
+    "notifications",
+    "masters",
+    "production",
+    "bom",
+    "projects",
+    "jobwork"
+   ],
+   "terms": {
+    "customer": [
+     "client",
+     "ক্লায়েন্ট"
+    ],
+    "product": [
+     "piece",
+     "আইটেম"
+    ],
+    "revenue": [
+     "workshop sales",
+     "ওয়ার্কশপ বিক্রয়"
+    ],
+    "staff": [
+     "carpenter",
+     "কাঠমিস্ত্রি"
+    ],
+    "unit": [
+     "workshop",
+     "ওয়ার্কশপ"
+    ],
+    "cycle": [
+     "work order",
+     "ওয়ার্ক অর্ডার"
+    ]
+   }
+  }
+ ],
+ "modules": {
+  "gl": {
+   "en": "general ledger",
+   "bn": "সাধারণ খতিয়ান",
+   "aliases": [
+    "GL",
+    "chart of accounts",
+    "books",
+    "খতিয়ান",
+    "হিসাব খাত"
+   ]
+  },
+  "ar": {
+   "en": "accounts receivable",
+   "bn": "প্রাপ্য হিসাব",
+   "aliases": [
+    "AR",
+    "invoicing",
+    "receivables",
+    "debtors",
+    "বিল",
+    "পাওনা"
+   ]
+  },
+  "ap": {
+   "en": "accounts payable",
+   "bn": "প্রদেয় হিসাব",
+   "aliases": [
+    "AP",
+    "supplier bills",
+    "creditors",
+    "দেনা",
+    "সরবরাহকারী বিল"
+   ]
+  },
+  "cash": {
+   "en": "cash and bank",
+   "bn": "নগদ ও ব্যাংক",
+   "aliases": [
+    "treasury",
+    "petty cash",
+    "bank book",
+    "নগদান",
+    "ব্যাংক হিসাব"
+   ]
+  },
+  "budget": {
+   "en": "budgeting",
+   "bn": "বাজেট",
+   "aliases": [
+    "budget control",
+    "plan versus actual",
+    "বাজেট নিয়ন্ত্রণ"
+   ]
+  },
+  "tax": {
+   "en": "tax and compliance",
+   "bn": "কর ও সম্মতি",
+   "aliases": [
+    "VAT",
+    "withholding tax",
+    "TDS",
+    "VDS",
+    "ভ্যাট",
+    "উৎসে কর"
+   ]
+  },
+  "assets": {
+   "en": "fixed assets",
+   "bn": "স্থায়ী সম্পদ",
+   "aliases": [
+    "asset register",
+    "depreciation",
+    "সম্পদ নিবন্ধন",
+    "অবচয়"
+   ]
+  },
+  "sales": {
+   "en": "sales and orders",
+   "bn": "বিক্রয় ও অর্ডার",
+   "aliases": [
+    "order management",
+    "quotation",
+    "বিক্রয়",
+    "অর্ডার"
+   ]
+  },
+  "purchase": {
+   "en": "purchasing",
+   "bn": "ক্রয়",
+   "aliases": [
+    "procurement",
+    "purchase order",
+    "sourcing",
+    "ক্রয় আদেশ",
+    "সংগ্রহ"
+   ]
+  },
+  "inventory": {
+   "en": "inventory",
+   "bn": "মজুদ",
+   "aliases": [
+    "stock",
+    "store",
+    "warehouse stock",
+    "স্টক",
+    "গুদাম"
+   ]
+  },
+  "crm": {
+   "en": "customer relationships",
+   "bn": "গ্রাহক সম্পর্ক",
+   "aliases": [
+    "CRM",
+    "leads",
+    "pipeline",
+    "গ্রাহক ব্যবস্থাপনা",
+    "লিড"
+   ]
+  },
+  "employees": {
+   "en": "employee records",
+   "bn": "কর্মী তথ্য",
+   "aliases": [
+    "HR master",
+    "personnel file",
+    "staff records",
+    "কর্মী নথি",
+    "এইচআর"
+   ]
+  },
+  "payroll": {
+   "en": "payroll",
+   "bn": "বেতন",
+   "aliases": [
+    "salary",
+    "pay run",
+    "payslip",
+    "বেতন হিসাব",
+    "পে-স্লিপ"
+   ]
+  },
+  "attendance": {
+   "en": "attendance",
+   "bn": "উপস্থিতি",
+   "aliases": [
+    "time and attendance",
+    "shift",
+    "punch",
+    "হাজিরা",
+    "শিফট"
+   ]
+  },
+  "leave": {
+   "en": "leave management",
+   "bn": "ছুটি ব্যবস্থাপনা",
+   "aliases": [
+    "holiday",
+    "time off",
+    "leave balance",
+    "ছুটি",
+    "অবকাশ"
+   ]
+  },
+  "recruitment": {
+   "en": "recruitment",
+   "bn": "নিয়োগ",
+   "aliases": [
+    "hiring",
+    "applicant tracking",
+    "জনবল নিয়োগ",
+    "আবেদন ব্যবস্থাপনা"
+   ]
+  },
+  "approvals": {
+   "en": "approvals and workflow",
+   "bn": "অনুমোদন ও কর্মপ্রবাহ",
+   "aliases": [
+    "workflow",
+    "authorisation",
+    "sign off",
+    "অনুমোদন",
+    "সই"
+   ]
+  },
+  "access": {
+   "en": "users and permissions",
+   "bn": "ব্যবহারকারী ও অনুমতি",
+   "aliases": [
+    "roles",
+    "access control",
+    "security",
+    "অনুমতি",
+    "ভূমিকা"
+   ]
+  },
+  "audit": {
+   "en": "audit trail",
+   "bn": "নিরীক্ষা রেকর্ড",
+   "aliases": [
+    "activity log",
+    "change history",
+    "লগ",
+    "পরিবর্তনের ইতিহাস"
+   ]
+  },
+  "reporting": {
+   "en": "reporting and dashboards",
+   "bn": "রিপোর্ট ও ড্যাশবোর্ড",
+   "aliases": [
+    "MIS",
+    "analytics",
+    "business intelligence",
+    "রিপোর্ট",
+    "ড্যাশবোর্ড"
+   ]
+  },
+  "multicompany": {
+   "en": "multi-company and branches",
+   "bn": "একাধিক কোম্পানি ও শাখা",
+   "aliases": [
+    "group structure",
+    "branch",
+    "entity scope",
+    "গ্রুপ কাঠামো",
+    "শাখা"
+   ]
+  },
+  "documents": {
+   "en": "documents and attachments",
+   "bn": "দলিল ও সংযুক্তি",
+   "aliases": [
+    "file management",
+    "attachments",
+    "নথি",
+    "ফাইল"
+   ]
+  },
+  "notifications": {
+   "en": "notifications and alerts",
+   "bn": "বিজ্ঞপ্তি ও সতর্কতা",
+   "aliases": [
+    "alerts",
+    "reminders",
+    "সতর্কবার্তা",
+    "অনুস্মারক"
+   ]
+  },
+  "masters": {
+   "en": "master data and settings",
+   "bn": "মাস্টার ডেটা ও সেটিংস",
+   "aliases": [
+    "configuration",
+    "setup",
+    "reference data",
+    "কনফিগারেশন",
+    "সেটআপ"
+   ]
+  },
+  "admissions": {
+   "en": "admissions",
+   "bn": "ভর্তি",
+   "aliases": [
+    "enrolment",
+    "intake",
+    "ভর্তি প্রক্রিয়া",
+    "আবেদন"
+   ]
+  },
+  "registrar": {
+   "en": "registrar and academic records",
+   "bn": "রেজিস্ট্রার ও একাডেমিক নথি",
+   "aliases": [
+    "course registration",
+    "transcript",
+    "academic office",
+    "কোর্স নিবন্ধন",
+    "ট্রান্সক্রিপ্ট"
+   ]
+  },
+  "examination": {
+   "en": "examination and results",
+   "bn": "পরীক্ষা ও ফলাফল",
+   "aliases": [
+    "exam control",
+    "grading",
+    "result processing",
+    "পরীক্ষা নিয়ন্ত্রণ",
+    "ফল প্রকাশ"
+   ]
+  },
+  "student_billing": {
+   "en": "student billing",
+   "bn": "শিক্ষার্থীর ফি",
+   "aliases": [
+    "tuition fees",
+    "fee collection",
+    "টিউশন ফি",
+    "বেতন আদায়"
+   ]
+  },
+  "hostel": {
+   "en": "hostel and accommodation",
+   "bn": "হোস্টেল ও আবাসন",
+   "aliases": [
+    "dormitory",
+    "hall",
+    "residence",
+    "হল",
+    "ছাত্রাবাস"
+   ]
+  },
+  "library": {
+   "en": "library",
+   "bn": "গ্রন্থাগার",
+   "aliases": [
+    "book issue",
+    "catalogue",
+    "লাইব্রেরি",
+    "বই ইস্যু"
+   ]
+  },
+  "transport": {
+   "en": "student transport",
+   "bn": "শিক্ষার্থী পরিবহন",
+   "aliases": [
+    "bus service",
+    "route management",
+    "বাস সার্ভিস",
+    "রুট"
+   ]
+  },
+  "faculty_workload": {
+   "en": "faculty workload",
+   "bn": "শিক্ষকের কর্মভার",
+   "aliases": [
+    "teaching load",
+    "faculty allocation",
+    "পাঠদান ভার"
+   ]
+  },
+  "research_grants": {
+   "en": "research grants",
+   "bn": "গবেষণা অনুদান",
+   "aliases": [
+    "research funding",
+    "project grant",
+    "গবেষণা তহবিল"
+   ]
+  },
+  "alumni": {
+   "en": "alumni relations",
+   "bn": "প্রাক্তন শিক্ষার্থী সম্পর্ক",
+   "aliases": [
+    "graduate network",
+    "alumni giving",
+    "প্রাক্তন শিক্ষার্থী"
+   ]
+  },
+  "opd": {
+   "en": "outpatient department",
+   "bn": "বহির্বিভাগ",
+   "aliases": [
+    "OPD",
+    "consultation",
+    "outdoor",
+    "ওপিডি",
+    "বহির্বিভাগ"
+   ]
+  },
+  "ipd": {
+   "en": "inpatient department",
+   "bn": "অন্তর্বিভাগ",
+   "aliases": [
+    "IPD",
+    "admission",
+    "ward management",
+    "ভর্তি বিভাগ",
+    "ওয়ার্ড"
+   ]
+  },
+  "diagnostics": {
+   "en": "diagnostics and laboratory",
+   "bn": "ডায়াগনস্টিক ও ল্যাব",
+   "aliases": [
+    "lab",
+    "pathology",
+    "imaging",
+    "ল্যাব",
+    "প্যাথলজি"
+   ]
+  },
+  "pharmacy_retail": {
+   "en": "pharmacy counter",
+   "bn": "ফার্মেসি কাউন্টার",
+   "aliases": [
+    "dispensary",
+    "medicine counter",
+    "ঔষধ কাউন্টার",
+    "ডিসপেনসারি"
+   ]
+  },
+  "insurance_claims": {
+   "en": "insurance and corporate claims",
+   "bn": "বীমা ও কর্পোরেট দাবি",
+   "aliases": [
+    "third party billing",
+    "corporate panel",
+    "বীমা দাবি",
+    "প্যানেল বিলিং"
+   ]
+  },
+  "operation_theatre": {
+   "en": "operation theatre",
+   "bn": "অপারেশন থিয়েটার",
+   "aliases": [
+    "OT",
+    "surgery",
+    "procedure room",
+    "ওটি",
+    "অস্ত্রোপচার"
+   ]
+  },
+  "front_desk": {
+   "en": "front desk and reservations",
+   "bn": "ফ্রন্ট ডেস্ক ও রিজার্ভেশন",
+   "aliases": [
+    "reception",
+    "booking",
+    "reservation",
+    "রিসেপশন",
+    "বুকিং"
+   ]
+  },
+  "housekeeping": {
+   "en": "housekeeping",
+   "bn": "হাউসকিপিং",
+   "aliases": [
+    "room cleaning",
+    "linen",
+    "পরিচ্ছন্নতা",
+    "লিনেন"
+   ]
+  },
+  "banquet": {
+   "en": "banquet and events",
+   "bn": "ব্যাংকোয়েট ও অনুষ্ঠান",
+   "aliases": [
+    "function",
+    "catering event",
+    "hall booking",
+    "অনুষ্ঠান",
+    "হল বুকিং"
+   ]
+  },
+  "pos": {
+   "en": "point of sale",
+   "bn": "বিক্রয় কাউন্টার",
+   "aliases": [
+    "POS",
+    "counter",
+    "till",
+    "কাউন্টার",
+    "পিওএস"
+   ]
+  },
+  "loyalty": {
+   "en": "loyalty and promotions",
+   "bn": "লয়ালটি ও প্রচার",
+   "aliases": [
+    "membership",
+    "points",
+    "campaign",
+    "সদস্যপদ",
+    "পয়েন্ট"
+   ]
+  },
+  "merchandising": {
+   "en": "merchandising and category",
+   "bn": "মার্চেন্ডাইজিং ও ক্যাটাগরি",
+   "aliases": [
+    "category management",
+    "assortment",
+    "planogram",
+    "ক্যাটাগরি ব্যবস্থাপনা"
+   ]
+  },
+  "batch_expiry": {
+   "en": "batch and expiry control",
+   "bn": "ব্যাচ ও মেয়াদ নিয়ন্ত্রণ",
+   "aliases": [
+    "lot tracking",
+    "shelf life",
+    "traceability",
+    "ব্যাচ ট্র্যাকিং",
+    "মেয়াদ"
+   ]
+  },
+  "recipe": {
+   "en": "recipe and food costing",
+   "bn": "রেসিপি ও খাদ্য ব্যয়",
+   "aliases": [
+    "menu engineering",
+    "portion control",
+    "রেসিপি",
+    "মেনু"
+   ]
+  },
+  "kitchen_stores": {
+   "en": "kitchen stores",
+   "bn": "রান্নাঘরের স্টোর",
+   "aliases": [
+    "food store",
+    "requisition",
+    "রান্নাঘর স্টোর",
+    "খাদ্য গুদাম"
+   ]
+  },
+  "production": {
+   "en": "production",
+   "bn": "উৎপাদন",
+   "aliases": [
+    "manufacturing execution",
+    "work order",
+    "shop floor",
+    "উৎপাদন আদেশ",
+    "শপ ফ্লোর"
+   ]
+  },
+  "bom": {
+   "en": "bill of material and costing",
+   "bn": "উপকরণ তালিকা ও ব্যয়",
+   "aliases": [
+    "BOM",
+    "recipe",
+    "standard cost",
+    "উপকরণ তালিকা",
+    "স্ট্যান্ডার্ড কস্ট"
+   ]
+  },
+  "quality": {
+   "en": "quality control",
+   "bn": "মান নিয়ন্ত্রণ",
+   "aliases": [
+    "QC",
+    "inspection",
+    "non-conformance",
+    "কিউসি",
+    "পরিদর্শন"
+   ]
+  },
+  "maintenance": {
+   "en": "maintenance",
+   "bn": "রক্ষণাবেক্ষণ",
+   "aliases": [
+    "preventive maintenance",
+    "breakdown",
+    "engineering",
+    "মেইনটেন্যান্স",
+    "ব্রেকডাউন"
+   ]
+  },
+  "subcontract": {
+   "en": "subcontracting",
+   "bn": "সাব-কন্ট্রাক্ট",
+   "aliases": [
+    "job work out",
+    "outsourced process",
+    "বাইরে কাজ করানো"
+   ]
+  },
+  "utilities": {
+   "en": "utilities and energy",
+   "bn": "ইউটিলিটি ও জ্বালানি",
+   "aliases": [
+    "power",
+    "gas",
+    "steam",
+    "বিদ্যুৎ",
+    "গ্যাস"
+   ]
+  },
+  "jobwork": {
+   "en": "job work and estimating",
+   "bn": "জব ওয়ার্ক ও প্রাক্কলন",
+   "aliases": [
+    "job costing",
+    "quotation estimating",
+    "জব কস্টিং",
+    "এস্টিমেট"
+   ]
+  },
+  "compliance_audit": {
+   "en": "social and buyer compliance",
+   "bn": "সামাজিক ও বায়ার কমপ্লায়েন্স",
+   "aliases": [
+    "audit readiness",
+    "buyer audit",
+    "factory compliance",
+    "কমপ্লায়েন্স অডিট"
+   ]
+  },
+  "projects": {
+   "en": "project management",
+   "bn": "প্রকল্প ব্যবস্থাপনা",
+   "aliases": [
+    "project accounting",
+    "work breakdown",
+    "প্রকল্প হিসাব",
+    "কাজের বিভাজন"
+   ]
+  },
+  "tender": {
+   "en": "tender and bidding",
+   "bn": "দরপত্র",
+   "aliases": [
+    "bid management",
+    "prequalification",
+    "টেন্ডার",
+    "দরপত্র জমা"
+   ]
+  },
+  "site_stores": {
+   "en": "site stores",
+   "bn": "সাইট স্টোর",
+   "aliases": [
+    "site material",
+    "site inventory",
+    "সাইটের মাল"
+   ]
+  },
+  "equipment": {
+   "en": "construction equipment",
+   "bn": "নির্মাণ সরঞ্জাম",
+   "aliases": [
+    "plant and machinery",
+    "equipment hire",
+    "সরঞ্জাম ভাড়া"
+   ]
+  },
+  "unit_sales": {
+   "en": "property unit sales",
+   "bn": "ইউনিট বিক্রয়",
+   "aliases": [
+    "flat booking",
+    "plot sales",
+    "ফ্ল্যাট বুকিং",
+    "প্লট বিক্রয়"
+   ]
+  },
+  "installments": {
+   "en": "installment collection",
+   "bn": "কিস্তি আদায়",
+   "aliases": [
+    "payment plan",
+    "schedule of payments",
+    "কিস্তি সূচি"
+   ]
+  },
+  "warehouse": {
+   "en": "warehouse operations",
+   "bn": "গুদাম পরিচালনা",
+   "aliases": [
+    "distribution centre",
+    "put away",
+    "picking",
+    "গুদাম",
+    "পিকিং"
+   ]
+  },
+  "fulfilment": {
+   "en": "order fulfilment",
+   "bn": "অর্ডার সরবরাহ",
+   "aliases": [
+    "order processing",
+    "dispatch",
+    "অর্ডার প্রক্রিয়া"
+   ]
+  },
+  "courier": {
+   "en": "courier and last mile",
+   "bn": "কুরিয়ার ও শেষ ধাপ",
+   "aliases": [
+    "delivery",
+    "last mile",
+    "parcel",
+    "ডেলিভারি",
+    "পার্সেল"
+   ]
+  },
+  "shipments": {
+   "en": "freight and shipments",
+   "bn": "ফ্রেইট ও চালান",
+   "aliases": [
+    "freight forwarding",
+    "clearing and forwarding",
+    "consignment",
+    "সিঅ্যান্ডএফ",
+    "চালান"
+   ]
+  },
+  "fleet": {
+   "en": "fleet management",
+   "bn": "যানবাহন ব্যবস্থাপনা",
+   "aliases": [
+    "vehicle management",
+    "trip management",
+    "গাড়ি ব্যবস্থাপনা",
+    "ট্রিপ"
+   ]
+  },
+  "distribution": {
+   "en": "distribution and dealers",
+   "bn": "পরিবেশন ও ডিলার",
+   "aliases": [
+    "channel sales",
+    "dealer network",
+    "secondary sales",
+    "ডিলার নেটওয়ার্ক"
+   ]
+  },
+  "timesheet": {
+   "en": "timesheets and utilisation",
+   "bn": "টাইমশিট ও ব্যবহার",
+   "aliases": [
+    "time tracking",
+    "billable hours",
+    "কর্মঘণ্টা",
+    "বিলযোগ্য ঘণ্টা"
+   ]
+  },
+  "subscriptions": {
+   "en": "subscriptions and recurring billing",
+   "bn": "সাবস্ক্রিপশন ও নিয়মিত বিলিং",
+   "aliases": [
+    "recurring revenue",
+    "plan billing",
+    "নিয়মিত আয়",
+    "প্যাকেজ বিলিং"
+   ]
+  },
+  "field_service": {
+   "en": "field service",
+   "bn": "ফিল্ড সার্ভিস",
+   "aliases": [
+    "field visits",
+    "service call",
+    "মাঠ পরিদর্শন",
+    "সার্ভিস কল"
+   ]
+  },
+  "network_assets": {
+   "en": "network assets",
+   "bn": "নেটওয়ার্ক সম্পদ",
+   "aliases": [
+    "network inventory",
+    "bandwidth",
+    "POP",
+    "নেটওয়ার্ক সরঞ্জাম"
+   ]
+  },
+  "grants": {
+   "en": "grants and donor funds",
+   "bn": "অনুদান ও দাতা তহবিল",
+   "aliases": [
+    "project funding",
+    "donor grant",
+    "তহবিল",
+    "দাতা অনুদান"
+   ]
+  },
+  "beneficiaries": {
+   "en": "beneficiaries and members",
+   "bn": "উপকারভোগী ও সদস্য",
+   "aliases": [
+    "participant register",
+    "member register",
+    "উপকারভোগী তালিকা",
+    "সদস্য তালিকা"
+   ]
+  },
+  "donor_reporting": {
+   "en": "donor reporting",
+   "bn": "দাতা রিপোর্টিং",
+   "aliases": [
+    "narrative report",
+    "financial report",
+    "M&E reporting",
+    "প্রতিবেদন"
+   ]
+  },
+  "loans": {
+   "en": "loan portfolio",
+   "bn": "ঋণ পোর্টফোলিও",
+   "aliases": [
+    "credit",
+    "lending",
+    "disbursement",
+    "ঋণ",
+    "বিতরণ"
+   ]
+  },
+  "savings": {
+   "en": "member savings",
+   "bn": "সদস্য সঞ্চয়",
+   "aliases": [
+    "deposit",
+    "compulsory savings",
+    "সঞ্চয়",
+    "আমানত"
+   ]
+  },
+  "jobcard": {
+   "en": "job cards and workshop",
+   "bn": "জব কার্ড ও ওয়ার্কশপ",
+   "aliases": [
+    "repair order",
+    "service job",
+    "জব কার্ড",
+    "মেরামত আদেশ"
+   ]
+  },
+  "spare_parts": {
+   "en": "spare parts",
+   "bn": "যন্ত্রাংশ",
+   "aliases": [
+    "parts inventory",
+    "spares",
+    "পার্টস",
+    "খুচরা যন্ত্রাংশ"
+   ]
+  },
+  "warranty": {
+   "en": "warranty and claims",
+   "bn": "ওয়ারেন্টি ও দাবি",
+   "aliases": [
+    "warranty claim",
+    "guarantee",
+    "ওয়ারেন্টি দাবি"
+   ]
+  },
+  "ticketing": {
+   "en": "air ticketing",
+   "bn": "এয়ার টিকেটিং",
+   "aliases": [
+    "reservation",
+    "PNR",
+    "airline booking",
+    "টিকেট বুকিং"
+   ]
+  },
+  "visa": {
+   "en": "visa processing",
+   "bn": "ভিসা প্রক্রিয়াকরণ",
+   "aliases": [
+    "visa service",
+    "documentation",
+    "ভিসা সেবা"
+   ]
+  },
+  "tours": {
+   "en": "tours and packages",
+   "bn": "ট্যুর ও প্যাকেজ",
+   "aliases": [
+    "holiday package",
+    "group tour",
+    "umrah package",
+    "ট্যুর প্যাকেজ",
+    "ওমরাহ প্যাকেজ"
+   ]
+  },
+  "export_lc": {
+   "en": "export and letter of credit",
+   "bn": "রপ্তানি ও ঋণপত্র",
+   "aliases": [
+    "export documentation",
+    "back to back LC",
+    "রপ্তানি দলিল",
+    "এলসি"
+   ]
+  },
+  "import_lc": {
+   "en": "import and landed cost",
+   "bn": "আমদানি ও ল্যান্ডেড কস্ট",
+   "aliases": [
+    "import documentation",
+    "customs clearance",
+    "আমদানি",
+    "শুল্ক ছাড়"
+   ]
+  }
+ }
+}
