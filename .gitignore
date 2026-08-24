@@ -50,3 +50,8 @@ deploy/.webhook.last
 /erp/public/hot
 # erp/public/build IS versioned: the host has no Node, so the compiled Tailwind/JS bundle ships with the source
 tools/.qa-dataset.json
+
+# The generated ERP knowledge corpus — 127 MB of JSONL, ~360 MB once in MySQL.
+# The generators in tools/kb/ ARE versioned; their output is not. Rebuild with
+#   node tools/kb/make-kb.mjs && node tools/kb/make-questions.mjs
+tools/corpus/
