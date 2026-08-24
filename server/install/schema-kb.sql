@@ -8,20 +8,20 @@
 -- Sizing, MEASURED on MariaDB 10.4 with the corpus as generated 2026-08-24
 -- (101,483 knowledge records, 188,885 questions), not estimated:
 --
---   eon_kb             243 MB data + 41 MB index = 284 MB
---   eon_kb_questions    31 MB data + 44 MB index =  75 MB
+--   eon_kb             159 MB data + 39 MB index = 198 MB
+--   eon_kb_questions    35 MB data + 44 MB index =  78 MB
 --   ----------------------------------------------------------
---   total                                          ~360 MB
+--   total                                          ~276 MB
 --
--- The JSONL on disk is 127 MB; the table is larger because utf8mb4 stores
--- Bangla at three bytes a character and the FULLTEXT index keeps its own
--- copy of every token. Check the hosting plan's database quota before
--- loading — a half-loaded table is worse than an empty one.
+-- The JSONL on disk is 127 MB; the tables are larger because utf8mb4 stores
+-- Bangla at three bytes a character and every index keeps its own copy of
+-- what it covers. Check the hosting plan's database quota before loading —
+-- a half-loaded table is worse than an empty one.
 --
--- If 360 MB is too much, load a subset rather than nothing:
---   php tools/kb-import.php --lang en                 English only  (~180 MB)
+-- If 276 MB is too much, load a subset rather than nothing:
+--   php tools/kb-import.php --lang en                 English only  (~140 MB)
 --   php tools/kb-import.php --vertical travel,hospital,university   the trades you sell to
---   php tools/kb-import.php --only q                  the question bank alone (75 MB)
+--   php tools/kb-import.php --only q                  the question bank alone (78 MB)
 -- The corpus regenerates from tools/kb/ in seconds, so nothing is lost by
 -- loading narrow first and widening later.
 
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS eon_kb (
   KEY idx_scope    (vertical, module, lang),
   KEY idx_facet    (facet, lang),
   KEY idx_subject  (subject(100)),
-  FULLTEXT KEY ft_body (title, body)
+  KEY idx_title    (title(120))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS eon_kb_questions (
@@ -56,10 +56,26 @@ CREATE TABLE IF NOT EXISTS eon_kb_questions (
   KEY idx_scope   (vertical, module, lang),
   KEY idx_intent  (intent, lang),
   KEY idx_answer  (answer_facet, vertical, module),
+  KEY idx_q       (q(120)),
   FULLTEXT KEY ft_q (q)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Bangla and the fulltext index: MySQL's default parser splits on whitespace
+-- NO FULLTEXT INDEX ON eon_kb, and that is deliberate.
+--
+-- It was the obvious design and it is measurably wrong at this size. On
+-- MariaDB 10.4 against this corpus, MATCH … AGAINST with ORDER BY relevance:
+--     1 term    0.69s
+--     3 terms   3.00s
+--    12 terms  15.23s
+-- because relevance ordering scores every matching row, and a word like
+-- "invoice" matches tens of thousands of them. Retrieval routes through
+-- eon_kb_questions instead (a 400-character column, a different proposition
+-- entirely: 10-25ms) and falls back to a title LIKE inside an already-narrow
+-- slice. Dropping ft_body took eon_kb from 284 MB to 198 MB — measured after
+-- OPTIMIZE TABLE, which InnoDB needs to actually give the space back; before
+-- it the table read 325 MB and looked like the change had made things worse.
+--
+-- Bangla and the fulltext index on the QUESTION bank: MySQL's default parser splits on whitespace
 -- and punctuation, which is right for বাংলা (unlike Chinese or Japanese, where
 -- the ngram parser is needed). But the default minimum word length is 4 for
 -- InnoDB, and plenty of Bangla and English ERP words are shorter — "কত", "VAT",

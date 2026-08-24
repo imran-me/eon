@@ -365,8 +365,21 @@ final class KbCorpus
         /* the bank first: it knows what kind of answer is wanted */
         $r = self::route($q, $lang);
         if ($r !== null) {
-            $vertical = array_key_exists('vertical', $opts) && $opts['vertical'] !== null ? $opts['vertical'] : $r['vertical'];
+            /* Whose trade this is, in order: what the caller said, then what
+               the question named, then what this installation is. NOT the
+               bank row's own vertical — the same question exists under all 24,
+               so taking the matched row's trade meant an Epal director asking
+               "how does three-way matching work" was answered, correctly but
+               absurdly, for a university. */
+            $vertical = array_key_exists('vertical', $opts) && $opts['vertical'] !== null
+                ? $opts['vertical']
+                : (self::detectVertical($q) ?? self::defaultVertical());
+
             $hit = self::byTags($vertical, $r['module'], $r['facet'], $r['subject'], $r['lang'], $q);
+            /* only if this trade has nothing to say, fall back to the bank's */
+            if ($hit === null && $r['vertical'] !== null && $r['vertical'] !== $vertical) {
+                $hit = self::byTags($r['vertical'], $r['module'], $r['facet'], $r['subject'], $r['lang'], $q);
+            }
             if ($hit !== null) {
                 return [
                     'text' => self::render($hit, $r['lang']), 'lang' => $hit['lang'], 'id' => $hit['id'],
