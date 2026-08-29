@@ -632,7 +632,7 @@ export const VERTICAL_MODULES_A = {
         steps: ['record the transfer with a timestamp', 'split the day rate at the transfer point', 'move the charge sheet with the patient', 'update bed states on both sides'] },
     ],
     kpis: [
-      { id: 'occupancy', en: 'bed occupancy', bn: 'বেড দখল', formula: 'occupied bed days ÷ available bed days', reads: 'the hospital single most watched operational number' },
+      { id: 'occupancy', en: 'bed occupancy', bn: 'বেড দখল', formula: 'occupied bed days ÷ available bed days', reads: "the hospital's single most watched operational number" },
       { id: 'alos', en: 'average length of stay', bn: 'গড় অবস্থানকাল', formula: 'total bed days ÷ discharges', reads: 'shorter is better clinically and worse for daily revenue — read it with case mix' },
       { id: 'revenue_per_bed_day', en: 'revenue per bed day', bn: 'বেড দিনপ্রতি আয়', formula: 'inpatient revenue ÷ occupied bed days', reads: 'the fair way to compare wards of different sizes' },
       { id: 'discharge_delay', en: 'discharge delay', bn: 'ছাড়পত্রে বিলম্ব', formula: 'bill settled time − clinical clearance time', reads: 'almost always a billing problem, not a clinical one' },

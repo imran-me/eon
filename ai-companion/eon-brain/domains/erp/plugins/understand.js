@@ -50,6 +50,40 @@ const bMoney = (n) => BNG.money(n);
 const bNum = (n) => BNG.digits(Math.round(Number(n) || 0));
 const BN_MONTH = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
 const bMonthKey = (mk) => `${BN_MONTH[+String(mk).slice(5) - 1]} ${BNG.digits(String(mk).slice(0, 4))}`;
+
+/* The words the ERP stores in English but that are OURS, not the boss's data:
+   an account type, a lead stage, an approval kind. A person, a party, a
+   project, an account name and a task title stay as the ERP spells them —
+   that is how a Bangla speaker says them out loud. These are not.
+   A Bangla answer whose headline is Bangla and whose detail lines are English
+   is the same defect one layer down, and it is where it hid longest: the sweep
+   reads speak and detail as one string, so Bengali in the headline covered it. */
+const ACC_TYPE_BN = { asset: 'সম্পদ', liability: 'দায়', equity: 'মূলধন', income: 'আয়', expense: 'ব্যয়', other: 'অন্যান্য' };
+const STAGE_BN = {
+  new: 'নতুন', contacted: 'যোগাযোগ হয়েছে', qualified: 'যাচাই হয়েছে', 'proposal sent': 'প্রস্তাব পাঠানো',
+  proposal: 'প্রস্তাব', negotiation: 'দরকষাকষি', won: 'জেতা', lost: 'হারানো', open: 'খোলা', closed: 'বন্ধ',
+};
+const stageBn = (k) => STAGE_BN[String(k || '').toLowerCase()] || k;
+const RISK_BN = { critical: 'সংকটাপন্ন', overdue: 'সময় পার', 'over budget': 'বাজেট ছাড়িয়েছে', behind: 'পিছিয়ে আছে', 'at risk': 'ঝুঁকিতে', 'on track': 'ঠিক পথে', ok: 'ঠিক আছে' };
+const riskBn = (k) => RISK_BN[String(k || '').toLowerCase()] || k;
+
+/* A dossier's strengths and concerns are composed as English phrases inside
+   people.js ("attendance 100%", "late on 4 of 22 days"). Translating those
+   strings is the trap CLAUDE.md names, so these are written here from the same
+   numbers the English side reads — the same claim, said in Bangla. */
+function evalLinesBn(ev) {
+  const good = [], bad = [];
+  if (!ev) return { good, bad };
+  if (ev.attendancePct >= 95) good.push(`উপস্থিতি ${bNum(ev.attendancePct)} শতাংশ`);
+  else if (ev.attendancePct < 85) bad.push(`উপস্থিতি মাত্র ${bNum(ev.attendancePct)} শতাংশ (${bNum(Math.max(0, (ev.workdays || 0) - (ev.presentDays || 0)))} দিন অনুপস্থিত)`);
+  if (ev.punctuality >= 90) good.push('সময়মতো আসেন');
+  else if (ev.punctuality < 70) bad.push(`${bNum(ev.presentDays)} দিনের মধ্যে ${bNum(ev.lateDays)} দিন দেরি`);
+  if (ev.salesRate != null) (ev.salesRate >= 50 ? good : bad).push(`মীমাংসিত লিডের ${bNum(ev.salesRate)} শতাংশ জিতেছেন (${bNum(ev.leadsWon)} জয় / ${bNum(ev.leadsLost)} পরাজয়)`);
+  if (ev.tasksDone) (ev.tasksOnTime / ev.tasksDone >= 0.75 ? good : bad).push(`${bNum(ev.tasksDone)}টি কাজের ${bNum(ev.tasksOnTime)}টি সময়মতো`);
+  if (ev.tasksOverdue) bad.push(`${bNum(ev.tasksOverdue)}টি কাজের সময় পার হয়ে গেছে`);
+  if (ev.overtimeHours >= 10) good.push(`${bNum(ev.overtimeHours)} ঘণ্টা ওভারটাইম`);
+  return { good, bad };
+}
 const T = (D) => (D && D.meta && D.meta.today) || iso(new Date());
 
 /* ---------- 1. the verb: what does he want done ---------- */
@@ -232,7 +266,9 @@ const SUBJECTS = [
     en: /\b(vendors?|suppliers?|sellers?)\b/, bn: /(সরবরাহকারী|ভেন্ডর|সাপ্লায়ার)/ },
   { id: 'task', rank: 1, ask: 'task board', askBn: 'টাস্ক',
     en: /\b(tasks?|to-?do items?|assignments?|task board|backlog|work items?|working on|kaj|kajgulo)\b/,
-    bn: /(টাস্ক|কাজ (বাকি|জমে|দেরি|কী|কি)|কাজের অবস্থা|অসমাপ্ত কাজ|কাজগুলো|কী কাজ)/ },
+    /* bare কাজ is left out on purpose — it is the word for "work" in a dozen
+       idioms — but "কাজ কয়টা / কত / আছে" is counting tasks and nothing else. */
+    bn: /(টাস্ক|কাজ (বাকি|জমে|দেরি|কী|কি|কয়টা|কতটা|কত আছে|আছে)|কয়টা কাজ|কাজের অবস্থা|অসমাপ্ত কাজ|কাজগুলো|কী কাজ)/ },
   { id: 'project', rank: 1, ask: 'projects', askBn: 'প্রকল্প',
     en: /\b(projects?|deliver(y|ies)|milestones?|at risk|behind schedule)\b/,
     bn: /(প্রজেক্ট|প্রকল্প|ডেলিভারি|ঝুঁকিতে|ঝুঁকি)/ },
@@ -699,6 +735,7 @@ const NATIVE = {
         ? `আজ ${bNum(today.length)}টি বিক্রি, ${bMoney(S(today))}; এ মাসে ${bNum(month.length)}টি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`
         : `${bMonthKey(mk)} মাসে ${bNum(month.length)}টি বিক্রি, মোট ${bMoney(S(month))} — তার ${bMoney(due(month))} এখনো অপরিশোধিত।`,
       detail: month.slice(-6).reverse().map((r) => `${r.date} · ${r.invoice_no || r.invoice || r.id} — ${fmtBDT(+r.total || 0)}`),
+      detail_bn: month.slice(-6).reverse().map((r) => `${r.date} · ${r.invoice_no || r.invoice || r.id} — ${bMoney(+r.total || 0)}`),
       screen: 'sales', view: 'crm',
     };
   },
@@ -736,6 +773,7 @@ const NATIVE = {
       en: `Spending ${s.month ? 'in ' + when : when} is ${fmtBDT(e.totalSpent)} against a budget of ${fmtBDT(e.totalBudget)}${e.over.length ? `; ${e.over.length} categor${e.over.length === 1 ? 'y is' : 'ies are'} over` : ', nothing over budget'}.`,
       bn: `${bMonthKey(e.month)} মাসে খরচ ${bMoney(e.totalSpent)}, বাজেট ${bMoney(e.totalBudget)}${e.over.length ? `; ${bNum(e.over.length)}টি খাত বাজেট ছাড়িয়েছে` : '; কোনো খাত বাজেট ছাড়ায়নি'}।`,
       detail: e.rows.slice(0, 6).map((r) => `${r.category}: ${fmtBDT(r.spent)}${r.budget ? ` / ${fmtBDT(r.budget)}` : ''}`),
+      detail_bn: e.rows.slice(0, 6).map((r) => `${r.category}: ${bMoney(r.spent)}${r.budget ? ` / বাজেট ${bMoney(r.budget)}` : ''}`),
       screen: 'expenses', view: 'finance',
     };
   },
@@ -745,6 +783,7 @@ const NATIVE = {
       en: `${l.pending.length} leave request${l.pending.length === 1 ? '' : 's'} waiting, ${l.onLeaveToday.length} on leave today, ${l.upcoming.length} starting within a fortnight.`,
       bn: `${bNum(l.pending.length)}টি ছুটির আবেদন অপেক্ষমাণ, আজ ছুটিতে ${bNum(l.onLeaveToday.length)} জন, দুই সপ্তাহের মধ্যে ছুটি নেবেন ${bNum(l.upcoming.length)} জন।`,
       detail: l.pending.slice(0, 6).map((x) => `${x.name} — ${x.leave_type} ${x.days}d (${x.start_date})`),
+      detail_bn: l.pending.slice(0, 6).map((x) => `${x.name} — ${x.leave_type} ${bNum(x.days)} দিন (${x.start_date})`),
       screen: 'leave', view: 'people',
     };
   },
@@ -754,6 +793,7 @@ const NATIVE = {
       en: `${ln.running.length} staff loan${ln.running.length === 1 ? '' : 's'} running, ${fmtBDT(ln.outstanding)} outstanding, recovering ${fmtBDT(ln.monthlyRecovery)} a month; ${ln.advancesPending.length} advance request${ln.advancesPending.length === 1 ? '' : 's'} pending.`,
       bn: `${bNum(ln.running.length)}টি কর্মী ঋণ চলমান, বাকি ${bMoney(ln.outstanding)}, মাসে আদায় ${bMoney(ln.monthlyRecovery)}; ${bNum(ln.advancesPending.length)}টি অগ্রিমের আবেদন অপেক্ষমাণ।`,
       detail: ln.running.slice(0, 6).map((l) => `${l.name} — ${fmtBDT(+l.remaining_amount || 0)} left of ${fmtBDT(+l.amount || 0)}`),
+      detail_bn: ln.running.slice(0, 6).map((l) => `${l.name} — ${bMoney(+l.amount || 0)}-এর মধ্যে বাকি ${bMoney(+l.remaining_amount || 0)}`),
       screen: 'loan', view: 'people',
     };
   },
@@ -768,6 +808,7 @@ const NATIVE = {
       en: `${rows.length} journal entries on file. The last posting was ${e.date} — ${e.description || e.reference || e.source} for ${fmtBDT(amt)}.`,
       bn: `খতিয়ানে ${bNum(rows.length)}টি দাখিলা আছে। সর্বশেষ পোস্টিং ${e.date} — ${e.description || e.reference || e.source}, ${bMoney(amt)}।`,
       detail: (e.items || []).slice(0, 6).map((i) => `${i.account_code || ''} ${i.account_name || ''} — ${(+i.debit || 0) ? 'Dr ' + fmtBDT(+i.debit) : 'Cr ' + fmtBDT(+i.credit)}`),
+      detail_bn: (e.items || []).slice(0, 6).map((i) => `${i.account_code || ''} ${i.account_name || ''} — ${(+i.debit || 0) ? 'ডেবিট ' + bMoney(+i.debit) : 'ক্রেডিট ' + bMoney(+i.credit)}`),
       screen: 'journals', view: 'finance',
     };
   },
@@ -781,7 +822,27 @@ const NATIVE = {
       en: `The chart of accounts holds ${acc.length} heads (${Object.keys(by).map((k) => `${by[k]} ${k}`).join(', ')}). The trial balance ${tb.balanced ? 'balances' : 'does NOT balance'} at ${fmtBDT(tb.totalDebit)}.`,
       bn: `হিসাবের চার্টে ${bNum(acc.length)}টি খাত আছে। রেওয়ামিল ${tb.balanced ? 'মিলেছে' : 'মেলেনি'} — ${bMoney(tb.totalDebit)}।`,
       detail: Object.keys(by).map((k) => `${k}: ${by[k]}`),
+      detail_bn: Object.keys(by).map((k) => `${ACC_TYPE_BN[k] || k}: ${bNum(by[k])}টি`),
       screen: 'chart of accounts', view: 'finance',
+    };
+  },
+  /* Asked in Bangla, an anomaly question used to fall through to qa.js, whose
+     sentence is English and whose detail says "vs normal" with Western digits.
+     EON's own sentence is written here, from the same F.expenseAnomalies rows. */
+  anomaly(D, s) {
+    const an = F.expenseAnomalies(D, { company: s.company }) || [];
+    if (!an.length) return {
+      en: 'No spending anomalies — every category is inside its normal band.',
+      bn: 'অস্বাভাবিক কোনো খরচ পাওয়া যায়নি — প্রতিটি খাত তার স্বাভাবিক সীমার মধ্যেই আছে।',
+      detail: [], detail_bn: [], screen: 'expenses', view: 'finance',
+    };
+    const a = an[0];
+    return {
+      en: `${an.length} spending anomal${an.length > 1 ? 'ies' : 'y'}. Biggest: ${a.category} at ${a.company} — ${fmtBDT(a.amount)} in ${MONTHS[+String(a.month).slice(5) - 1]}, ${a.ratio}× its usual ${fmtBDT(a.mean)}.`,
+      bn: `${bNum(an.length)}টি অস্বাভাবিক খরচ চোখে পড়ছে। সবচেয়ে বড়টি ${a.company}-এর ${a.category} — ${bMonthKey(a.month)} মাসে ${bMoney(a.amount)}, স্বাভাবিক ${bMoney(a.mean)}-এর ${BNG.digits(a.ratio)} গুণ।`,
+      detail: an.slice(0, 6).map((x) => `${x.company} · ${x.category} · ${MONTHS[+String(x.month).slice(5) - 1]}: ${fmtBDT(x.amount)} vs normal ${fmtBDT(x.mean)} (${x.ratio}×)`),
+      detail_bn: an.slice(0, 6).map((x) => `${x.company} · ${x.category} · ${bMonthKey(x.month)}: ${bMoney(x.amount)}, স্বাভাবিক ${bMoney(x.mean)} — ${BNG.digits(x.ratio)} গুণ`),
+      screen: 'expenses', view: 'finance',
     };
   },
   error(D, s) {
@@ -815,6 +876,7 @@ const NATIVE = {
       en: `${(D.customers || []).length} customers on file; over the last ${tp.window} days the biggest is ${c[0] ? `${c[0].name} at ${fmtBDT(c[0].total)}` : 'none'}. ${fmtBDT(ar.total)} is receivable from customers.`,
       bn: `খাতায় ${bNum((D.customers || []).length)} জন ক্রেতা; গত ${bNum(tp.window)} দিনে সবচেয়ে বড় ${c[0] ? `${c[0].name} — ${bMoney(c[0].total)}` : 'কেউ নেই'}। ক্রেতাদের কাছে পাওনা ${bMoney(ar.total)}।`,
       detail: c.slice(0, 6).map((x, i) => `${i + 1}. ${x.name} — ${fmtBDT(x.total)}${x.due ? ` (due ${fmtBDT(x.due)})` : ''}`),
+      detail_bn: c.slice(0, 6).map((x, i) => `${bNum(i + 1)}. ${x.name} — ${bMoney(x.total)}${x.due ? ` (বকেয়া ${bMoney(x.due)})` : ''}`),
       screen: 'customers', view: 'finance',
     };
   },
@@ -824,6 +886,7 @@ const NATIVE = {
       en: `${(D.suppliers || []).length} suppliers on file; over the last ${tp.window} days the biggest is ${v[0] ? `${v[0].name} at ${fmtBDT(v[0].total)}` : 'none'}. ${fmtBDT(ap.total)} is payable to suppliers.`,
       bn: `খাতায় ${bNum((D.suppliers || []).length)} জন সরবরাহকারী; গত ${bNum(tp.window)} দিনে সবচেয়ে বড় ${v[0] ? `${v[0].name} — ${bMoney(v[0].total)}` : 'কেউ নেই'}। সরবরাহকারীদের দেনা ${bMoney(ap.total)}।`,
       detail: v.slice(0, 6).map((x, i) => `${i + 1}. ${x.name} — ${fmtBDT(x.total)}${x.due ? ` (due ${fmtBDT(x.due)})` : ''}`),
+      detail_bn: v.slice(0, 6).map((x, i) => `${bNum(i + 1)}. ${x.name} — ${bMoney(x.total)}${x.due ? ` (বকেয়া ${bMoney(x.due)})` : ''}`),
       screen: 'suppliers', view: 'finance',
     };
   },
@@ -840,6 +903,7 @@ const NATIVE = {
       en: `${rows.length} meeting${rows.length === 1 ? '' : 's'} on the books${today.length ? `, ${today.length} today` : ''}. Next: ${rows[0].what}${rows[0].when ? ` on ${rows[0].when}` : ''}.`,
       bn: `খাতায় ${bNum(rows.length)}টি মিটিং আছে${today.length ? `, আজ ${bNum(today.length)}টি` : ''}। পরেরটি: ${rows[0].what}${rows[0].when ? ` — ${rows[0].when}` : ''}।`,
       detail: rows.slice(0, 6).map((r) => `${r.when || 'no date'} — ${r.what}`),
+      detail_bn: rows.slice(0, 6).map((r) => `${r.when || 'তারিখ নেই'} — ${r.what}`),
       screen: 'todo', view: 'ops',
     };
   },
@@ -852,6 +916,7 @@ const NATIVE = {
       en: `${live.length} notice${live.length === 1 ? '' : 's'} still live out of ${all.length}. Latest: ${all[all.length - 1].title}.`,
       bn: `${bNum(all.length)}টি নোটিশের মধ্যে ${bNum(live.length)}টি এখনো কার্যকর। সর্বশেষ: ${all[all.length - 1].title}।`,
       detail: live.slice(0, 6).map((x) => `${x.published_at} — ${x.title}`),
+      detail_bn: live.slice(0, 6).map((x) => `${x.published_at} — ${x.title}`),
       screen: 'notice', view: 'ops',
     };
   },
@@ -861,6 +926,7 @@ const NATIVE = {
       en: `${fmtBDT(ar.overdueTotal)} is overdue from customers across ${ar.overdue.length} items, and ${fmtBDT(ap.overdueTotal)} is overdue to suppliers.`,
       bn: `ক্রেতাদের কাছ থেকে ${bMoney(ar.overdueTotal)} সময় পার হয়ে গেছে (${bNum(ar.overdue.length)}টি), আর সরবরাহকারীদের ${bMoney(ap.overdueTotal)} দেরিতে পড়ে আছে।`,
       detail: ar.byParty.filter((x) => x.overdue > 0).slice(0, 6).map((x, i) => `${i + 1}. ${x.party_name} — ${fmtBDT(x.overdue)} · ${x.oldest}d`),
+      detail_bn: ar.byParty.filter((x) => x.overdue > 0).slice(0, 6).map((x, i) => `${bNum(i + 1)}. ${x.party_name} — ${bMoney(x.overdue)} · ${bNum(x.oldest)} দিন পার`),
       screen: 'payment schedule', view: 'finance',
     };
   },
@@ -870,6 +936,7 @@ const NATIVE = {
       en: `Receivables by age: ${ar.buckets.map((b) => `${b.bucket} ${fmtBDT(b.amount)}`).join(', ')}.`,
       bn: `পাওনার বয়স অনুযায়ী: ${ar.buckets.map((b) => `${b.bucket} — ${bMoney(b.amount)}`).join(', ')}।`,
       detail: ar.buckets.map((b) => `${b.bucket}: ${b.count} items, ${fmtBDT(b.amount)}`),
+      detail_bn: ar.buckets.map((b) => `${b.bucket}: ${bNum(b.count)}টি, ${bMoney(b.amount)}`),
       screen: 'payment schedule', view: 'finance',
     };
   },
@@ -888,6 +955,7 @@ const NATIVE = {
       en: `${on.length} ${on.length === 1 ? 'person is' : 'people are'} active in the ERP right now.`,
       bn: `এই মুহূর্তে ইআরপিতে সক্রিয় আছেন ${bNum(on.length)} জন।`,
       detail: on.slice(0, 8).map((e) => `${e.name} — ${e.department || ''}`),
+      detail_bn: on.slice(0, 8).map((e) => `${e.name} — ${e.department || ''}`),
       screen: 'user', view: 'people',
     };
   },
@@ -905,6 +973,7 @@ const NATIVE = {
       en: `Best over the last 30 days: ${top.map((x) => `${nameOf(x)} ${x.score}/100 (${x.grade})`).join(', ')}. Weakest: ${low.map((x) => `${nameOf(x)} ${x.score}`).join(', ')}.`,
       bn: `গত ৩০ দিনে সবচেয়ে এগিয়ে: ${top.map((x) => `${nameOf(x)} ${bNum(x.score)}/১০০ (গ্রেড ${x.grade})`).join(', ')}। সবচেয়ে পিছিয়ে: ${low.map((x) => `${nameOf(x)} ${bNum(x.score)}`).join(', ')}।`,
       detail: r.top.slice(0, 8).map((x, i) => `${i + 1}. ${nameOf(x)} — ${x.score}/100 (${x.grade}), attendance ${x.attendancePct}%, ${x.tasksDone} tasks done`),
+      detail_bn: r.top.slice(0, 8).map((x, i) => `${bNum(i + 1)}. ${nameOf(x)} — ${bNum(x.score)}/১০০ (গ্রেড ${x.grade}), উপস্থিতি ${bNum(x.attendancePct)} শতাংশ, সম্পন্ন কাজ ${bNum(x.tasksDone)}টি`),
       screen: 'user', view: 'people',
     };
   },
@@ -914,6 +983,7 @@ const NATIVE = {
       en: `${t.open.length} open tasks across ${t.load.length} people; ${t.overloaded.length} carry six or more, and ${t.idle.length} skilled staff have nothing assigned.`,
       bn: `${bNum(t.load.length)} জনের হাতে ${bNum(t.open.length)}টি খোলা কাজ; ${bNum(t.overloaded.length)} জনের চাপ বেশি, আর ${bNum(t.idle.length)} জন দক্ষ কর্মীর হাতে কোনো কাজ নেই।`,
       detail: t.load.slice(0, 6).map((r) => `${r.name} — ${r.open} open, ${r.overdue} overdue`),
+      detail_bn: t.load.slice(0, 6).map((r) => `${r.name} — ${bNum(r.open)}টি খোলা, ${bNum(r.overdue)}টির সময় পার`),
       screen: 'tasks', view: 'ops',
     };
   },
@@ -923,6 +993,7 @@ const NATIVE = {
       en: `${td.open.length} office to-dos are open, ${td.overdue.length} of them overdue${td.high.length ? `, ${td.high.length} marked high` : ''}.`,
       bn: `অফিসের ${bNum(td.open.length)}টি কাজ খোলা আছে, তার ${bNum(td.overdue.length)}টির সময় পার${td.high.length ? `, ${bNum(td.high.length)}টি জরুরি` : ''}।`,
       detail: td.overdue.slice(0, 6).map((x) => `${x.due_date} — ${x.title}`),
+      detail_bn: td.overdue.slice(0, 6).map((x) => `${x.due_date} — ${x.title}`),
       screen: 'todo', view: 'ops',
     };
   },
@@ -941,6 +1012,7 @@ const NATIVE = {
       en: `${fmtBDT(ar.total)} is due to us and ${fmtBDT(ap.total)} is due from us; ${fmtBDT(ar.overdueTotal)} of the receivable is already overdue.`,
       bn: `আমাদের পাওনা ${bMoney(ar.total)}, দেনা ${bMoney(ap.total)}; পাওনার মধ্যে ${bMoney(ar.overdueTotal)} সময় পার হয়ে গেছে।`,
       detail: ar.byParty.slice(0, 6).map((x, i) => `${i + 1}. ${x.party_name} — ${fmtBDT(x.due)}`),
+      detail_bn: ar.byParty.slice(0, 6).map((x, i) => `${bNum(i + 1)}. ${x.party_name} — ${bMoney(x.due)}`),
       screen: 'payment schedule', view: 'finance',
     };
   },
@@ -974,7 +1046,7 @@ function subjectAnswer(D, s, subj, q, bn) {
     const nat = NATIVE[subj.id];
     try {
       const n = nat && nat(D, s);
-      if (n) return { speak: bn ? n.bn : n.en, detail: n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
+      if (n) return { speak: bn ? n.bn : n.en, detail: (bn && n.detail_bn) || n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
     } catch (e) { /* fall through and say so */ }
   }
   /* 1. the answerer that owns THIS subject — never the raw sentence.
@@ -991,7 +1063,7 @@ function subjectAnswer(D, s, subj, q, bn) {
   if (nat) {
     try {
       const n = nat(D, s);
-      if (n) return { speak: bn ? n.bn : n.en, detail: n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
+      if (n) return { speak: bn ? n.bn : n.en, detail: (bn && n.detail_bn) || n.detail || [], actions: n.screen ? openA(bn, n.screen) : [], view: n.view };
     } catch (e) { /* fall on */ }
   }
   // 3. asked in Bangla, but only the English answerer computes this one
@@ -1050,7 +1122,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name} has ${open.length} active task${open.length === 1 ? '' : 's'}${late.length ? `, ${late.length} overdue` : ''}${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}.`,
           `${who.name}-এর ${bNum(open.length)}টি চলমান কাজ আছে${late.length ? `, ${bNum(late.length)}টির সময় পার` : ''}${open.length ? `: ${open.slice(0, 3).map((t) => t.title).join('; ')}` : ''}।`),
-        detail: open.slice(0, 6).map((t) => `${t.title} — ${t.status}${t.due_date ? `, ${t.due_date}` : ''}`),
+        detail: bn
+          ? open.slice(0, 6).map((t) => `${t.title} — ${stageBn(t.status)}${t.due_date ? `, ${t.due_date}` : ''}`)
+          : open.slice(0, 6).map((t) => `${t.title} — ${t.status}${t.due_date ? `, ${t.due_date}` : ''}`),
         actions: openA(bn, 'tasks'), view: 'ops',
       };
     }
@@ -1091,7 +1165,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       };
       return {
         speak: say(q, `${who.name}: ${en.join(', ')}.`, `${who.name}: ${bnp.join(', ')}।`),
-        detail: loans.slice(0, 4).map((l) => `Loan ${fmtBDT(+l.amount || 0)} — ${fmtBDT(+l.remaining_amount || 0)} left, ${fmtBDT(+l.monthly_deduction || 0)}/month`),
+        detail: bn
+          ? loans.slice(0, 4).map((l) => `ঋণ ${bMoney(+l.amount || 0)} — বাকি ${bMoney(+l.remaining_amount || 0)}, মাসে কর্তন ${bMoney(+l.monthly_deduction || 0)}`)
+          : loans.slice(0, 4).map((l) => `Loan ${fmtBDT(+l.amount || 0)} — ${fmtBDT(+l.remaining_amount || 0)} left, ${fmtBDT(+l.monthly_deduction || 0)}/month`),
         actions: openA(bn, 'employee salaries'), view: 'people',
       };
     }
@@ -1101,7 +1177,7 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name}: attendance ${ev.attendancePct}% over ${ev.days} days, late on ${ev.lateDays}${ev.absent ? `, absent ${ev.absent}` : ''}.`,
           `${who.name}: ${bNum(ev.days)} দিনে উপস্থিতি ${bNum(ev.attendancePct)} শতাংশ, দেরি ${bNum(ev.lateDays)} দিন${ev.absent ? `, অনুপস্থিত ${bNum(ev.absent)} দিন` : ''}।`),
-        detail: (ev.concerns || []).slice(0, 4), actions: openA(bn, 'attendances'), view: 'people',
+        detail: (bn ? evalLinesBn(ev).bad : (ev.concerns || [])).slice(0, 4), actions: openA(bn, 'attendances'), view: 'people',
       };
     }
     case 'leave': {
@@ -1111,7 +1187,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name} has ${left} leave days left${mine.length ? `, and ${mine.length} request${mine.length === 1 ? '' : 's'} waiting for approval` : ''}.`,
           `${who.name}-এর ছুটি বাকি ${bNum(left)} দিন${mine.length ? `, আর ${bNum(mine.length)}টি আবেদন অনুমোদনের অপেক্ষায়` : ''}।`),
-        detail: bal.map((b) => `${b.type}: ${b.used}/${b.entitlement} used, ${b.remaining} left`),
+        detail: bn
+          ? bal.map((b) => `${b.type}: ${bNum(b.entitlement)} দিনের মধ্যে ${bNum(b.used)} দিন নেওয়া, বাকি ${bNum(b.remaining)} দিন`)
+          : bal.map((b) => `${b.type}: ${b.used}/${b.entitlement} used, ${b.remaining} left`),
         actions: openA(bn, 'leave'), view: 'people',
       };
     }
@@ -1121,7 +1199,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name} — ${e.designation || ''}${e.department ? `, ${e.department}` : ''}. Score ${ev.score}, grade ${ev.grade}: attendance ${ev.attendancePct}%, ${ev.lateDays} late days, ${ev.tasksDone} tasks done.`,
           `${who.name} — ${e.designation || ''}${e.department ? `, ${e.department}` : ''}। স্কোর ${bNum(ev.score)}, গ্রেড ${ev.grade}: উপস্থিতি ${bNum(ev.attendancePct)} শতাংশ, দেরি ${bNum(ev.lateDays)} দিন, সম্পন্ন কাজ ${bNum(ev.tasksDone)}টি।`),
-        detail: [].concat((ev.strengths || []).map((x) => `+ ${x}`), (ev.concerns || []).map((x) => `− ${x}`)).slice(0, 5),
+        detail: (bn
+          ? [].concat(evalLinesBn(ev).good.map((x) => `+ ${x}`), evalLinesBn(ev).bad.map((x) => `− ${x}`))
+          : [].concat((ev.strengths || []).map((x) => `+ ${x}`), (ev.concerns || []).map((x) => `− ${x}`))).slice(0, 5),
         actions: openA(bn, 'user'), view: 'people',
       };
     }
@@ -1134,7 +1214,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name} is on ${pj.length} project${pj.length === 1 ? '' : 's'}: ${pj.slice(0, 3).map((p) => p.project_name).join('; ')}.`,
           `${who.name} ${bNum(pj.length)}টি প্রকল্পে আছেন: ${pj.slice(0, 3).map((p) => p.project_name).join('; ')}।`),
-        detail: pj.slice(0, 6).map((p) => `${p.project_name} — ${p.riskLabel}, ${p.progress}%`),
+        detail: bn
+          ? pj.slice(0, 6).map((p) => `${p.project_name} — ${riskBn(p.riskLabel)}, অগ্রগতি ${bNum(p.progress)} শতাংশ`)
+          : pj.slice(0, 6).map((p) => `${p.project_name} — ${p.riskLabel}, ${p.progress}%`),
         actions: openA(bn, 'projects'), view: 'ops',
       };
     }
@@ -1145,7 +1227,9 @@ function personAnswer(D, s, subj, who, q, bn) {
       return {
         speak: say(q, `${who.name} has claimed ${mine.length} expense${mine.length === 1 ? '' : 's'} totalling ${fmtBDT(tot)}.`,
           `${who.name} ${bNum(mine.length)}টি খরচ দাখিল করেছেন, মোট ${bMoney(tot)}।`),
-        detail: mine.slice(0, 6).map((x) => `${x.expense_date} — ${x.title} ${fmtBDT(+x.amount || 0)} (${x.approval_status})`),
+        detail: bn
+          ? mine.slice(0, 6).map((x) => `${x.expense_date} — ${x.title} ${bMoney(+x.amount || 0)} (${BNG.word(x.approval_status)})`)
+          : mine.slice(0, 6).map((x) => `${x.expense_date} — ${x.title} ${fmtBDT(+x.amount || 0)} (${x.approval_status})`),
         actions: openA(bn, 'expenses'), view: 'finance',
       };
     }
@@ -1203,8 +1287,14 @@ async function understand(q, ctx) {
 
   // "where is X" / "open X" — the navigator owns the ERP's geography
   if ((verb === 'where' || verb === 'open') && N()) {
-    const key = subj ? (subj.ask || subj.id) : q;
-    const hit = (N().find(key, 1) || [])[0];
+    /* `ask` is the phrase the ANSWERER wants, not a screen name — lead's is
+       "pipeline", which no ERP menu is called, so "লিড কোথায় পাব" found nothing
+       and fell through to the pipeline figures: an answer about the right
+       subject to the wrong question. Try the subject's own name too, then the
+       sentence, before giving the geography up. */
+    const keys = subj ? [subj.id, subj.id + 's', subj.ask, q] : [q];
+    let key = null, hit = null;
+    for (const k of keys) { if (!k) continue; const h = (N().find(k, 1) || [])[0]; if (h) { key = k; hit = h; break; } }
     if (hit) {
       const url = N().url(hit.uri);
       const path = url.replace(location.origin, '');

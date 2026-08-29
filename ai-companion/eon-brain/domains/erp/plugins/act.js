@@ -728,6 +728,14 @@ async function answer(q, ctx) {
 
   if (pending && YES.test(s)) return await confirm();
   if (pending && NO.test(s)) { pending = null; return { speak: bn ? 'থাক, কিছু সেভ করিনি।' : 'Left it alone — nothing was saved.', detail: [] }; }
+  /* A bare "yes" with nothing pending used to fall through every domain and
+     come back as silence — and it is exactly what the boss says right after an
+     order EON could not carry out, so the one word he is most likely to say
+     next got no reply at all. Say plainly that nothing is waiting. */
+  if (YES.test(s) || NO.test(s)) return {
+    speak: bn ? 'এই মুহূর্তে হ্যাঁ-এর অপেক্ষায় কিছু নেই। কী করতে হবে বলুন।' : 'Nothing is waiting for a yes right now — tell me what to do.',
+    detail: [],
+  };
 
   let m;
   try {
@@ -772,7 +780,9 @@ async function answer(q, ctx) {
 
 const named = (re, q) => { const m = String(q || '').match(re); return !!m && !NOT_A_PERSON.test(m[1]); };
 const CLAIM = (q) => named(ASSIGN, q) || named(MESSAGE, q) || NOTICE.test(q) || (BN.test(q) && BN_ASSIGN.test(q))
-  || (pending && (YES.test(q) || NO.test(q)));
+  /* claimed with or without a pending plan: both regexes are whole-string, so
+     only a bare yes/no reaches here, and a bare yes is never a question. */
+  || YES.test(q) || NO.test(q);
 
 if (typeof window !== 'undefined') {
   window.EonAct = { discover, submit, propose, confirm, pending: pendingPlan, planTask, planMessage, planNotice, planPayment };

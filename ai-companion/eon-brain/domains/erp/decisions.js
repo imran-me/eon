@@ -40,16 +40,27 @@ export function kpis(D, { company = null } = {}) {
   };
 }
 
+/* An approval's title is EON's own sentence, not something the ERP stored, so
+   it has to exist in both languages — a Bangla list of approvals that reads
+   "Payroll run July — 19 payslips — Accounts" is the English-clause defect one
+   layer below the headline, where the sweep does not look. What stays English
+   is what the ERP itself spells that way: a person, a party, an expense title,
+   a leave type, a GL account. */
+const BN_D = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+const bnD = (n) => String(Math.round(Number(n) || 0)).replace(/\d/g, (d) => BN_D[+d]);
+const BN_MONTH_D = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+const PARTY_BN = { customer: 'ক্রেতা', supplier: 'সরবরাহকারী', employee: 'কর্মী', vendor: 'সরবরাহকারী', party: 'পার্টি' };
+
 export function approvals(D, { company = null } = {}) {
   const t = T(D);
-  const exp = F.pendingExpenses(D, { company }).rows.map((e) => ({ kind: 'expense', id: e.id, title: `${e.title} — ${e.category}`, who: e.user_name, company_id: e.company_id, amount: e.amount, date: e.expense_date, note: `${e.payment_mode.replace('_', ' ')} · GL ${e.account_code}`, priority: e.amount > 100000 ? 'high' : 'normal' }));
-  const lv = P.leaves(D, { company }).pending.map((l) => ({ kind: 'leave', id: l.id, title: `${l.leave_type} leave · ${l.days} day${l.days > 1 ? 's' : ''} from ${l.start_date}`, who: l.name, company_id: l.company_id, amount: null, date: l.applied_at, note: `${l.reason} · balance ${(l.balance.find((b) => b.type === l.leave_type) || {}).remaining ?? '?'} left`, priority: daysBetween(t, l.start_date) <= 2 ? 'high' : 'normal', flag: (l.balance.find((b) => b.type === l.leave_type) || {}).remaining < l.days ? 'exceeds balance' : null }));
+  const exp = F.pendingExpenses(D, { company }).rows.map((e) => ({ kind: 'expense', id: e.id, title: `${e.title} — ${e.category}`, title_bn: `${e.title} — ${e.category}`, who: e.user_name, who_bn: e.user_name, company_id: e.company_id, amount: e.amount, date: e.expense_date, note: `${e.payment_mode.replace('_', ' ')} · GL ${e.account_code}`, priority: e.amount > 100000 ? 'high' : 'normal' }));
+  const lv = P.leaves(D, { company }).pending.map((l) => ({ kind: 'leave', id: l.id, title: `${l.leave_type} leave · ${l.days} day${l.days > 1 ? 's' : ''} from ${l.start_date}`, title_bn: `${l.leave_type} ছুটি · ${bnD(l.days)} দিন, ${l.start_date} থেকে`, who: l.name, who_bn: l.name, company_id: l.company_id, amount: null, date: l.applied_at, note: `${l.reason} · balance ${(l.balance.find((b) => b.type === l.leave_type) || {}).remaining ?? '?'} left`, priority: daysBetween(t, l.start_date) <= 2 ? 'high' : 'normal', flag: (l.balance.find((b) => b.type === l.leave_type) || {}).remaining < l.days ? 'exceeds balance' : null }));
   const ln = P.loans(D, { company });
-  const adv = ln.advancesPending.map((a) => ({ kind: 'advance', id: a.id, title: `Salary advance for ${a.month}`, who: a.name, company_id: a.company_id, amount: a.amount, date: null, note: 'deducted from next payslip', priority: 'normal' }));
-  const req = ln.requestsPending.map((r) => ({ kind: 'request', id: r.id, title: `${r.request_type} (${r.category})`, who: r.name, company_id: r.company_id, amount: r.amount, date: r.created_at, note: `status ${r.status} · deadline ${r.deadline}`, priority: r.deadline < t ? 'high' : 'normal' }));
+  const adv = ln.advancesPending.map((a) => ({ kind: 'advance', id: a.id, title: `Salary advance for ${a.month}`, title_bn: `${a.month} মাসের বেতন অগ্রিম`, who: a.name, who_bn: a.name, company_id: a.company_id, amount: a.amount, date: null, note: 'deducted from next payslip', priority: 'normal' }));
+  const req = ln.requestsPending.map((r) => ({ kind: 'request', id: r.id, title: `${r.request_type} (${r.category})`, title_bn: `${r.request_type} (${r.category})`, who: r.name, who_bn: r.name, company_id: r.company_id, amount: r.amount, date: r.created_at, note: `status ${r.status} · deadline ${r.deadline}`, priority: r.deadline < t ? 'high' : 'normal' }));
   const pr = P.payroll(D, { company });
-  const pay = pr.pending.length ? [{ kind: 'payroll', id: pr.month, title: `Payroll run ${MONTHS[+pr.month.slice(5) - 1]} — ${pr.pending.length} payslips`, who: 'Accounts', company_id: null, amount: sum(pr.pending, 'net_salary'), date: null, note: `gross ${fmtBDTk(pr.gross)} · deductions ${fmtBDTk(pr.deductions)}`, priority: new Date(t).getDate() >= 5 ? 'high' : 'normal' }] : [];
-  const ps = (D.payment_schedules || []).filter((p) => p.status === 'pending' && (company == null || p.company_id === company) && p.type === 'pay' && p.priority === 'high' && daysBetween(t, p.scheduled_date) <= 3).map((p) => ({ kind: 'payment', id: p.id, title: `Pay ${p.party_name} — ${p.source_label}`, who: p.party_type, company_id: p.company_id, amount: +p.amount - (+p.paid_amount || 0), date: p.scheduled_date, note: `due ${p.scheduled_date}${p.reschedule_count ? ` · rescheduled ${p.reschedule_count}×` : ''}`, priority: 'high' }));
+  const pay = pr.pending.length ? [{ kind: 'payroll', id: pr.month, title: `Payroll run ${MONTHS[+pr.month.slice(5) - 1]} — ${pr.pending.length} payslips`, title_bn: `${BN_MONTH_D[+pr.month.slice(5) - 1]} মাসের বেতন — ${bnD(pr.pending.length)}টি পে-স্লিপ`, who: 'Accounts', who_bn: 'হিসাব বিভাগ', company_id: null, amount: sum(pr.pending, 'net_salary'), date: null, note: `gross ${fmtBDTk(pr.gross)} · deductions ${fmtBDTk(pr.deductions)}`, priority: new Date(t).getDate() >= 5 ? 'high' : 'normal' }] : [];
+  const ps = (D.payment_schedules || []).filter((p) => p.status === 'pending' && (company == null || p.company_id === company) && p.type === 'pay' && p.priority === 'high' && daysBetween(t, p.scheduled_date) <= 3).map((p) => ({ kind: 'payment', id: p.id, title: `Pay ${p.party_name} — ${p.source_label}`, title_bn: `${p.party_name}-কে পরিশোধ — ${p.source_label}`, who: p.party_type, who_bn: PARTY_BN[String(p.party_type || '').toLowerCase()] || p.party_type, company_id: p.company_id, amount: +p.amount - (+p.paid_amount || 0), date: p.scheduled_date, note: `due ${p.scheduled_date}${p.reschedule_count ? ` · rescheduled ${p.reschedule_count}×` : ''}`, priority: 'high' }));
   const all = [].concat(pay, exp, lv, adv, req, ps).map((a) => Object.assign(a, { company: (D.companies.find((c) => c.id === a.company_id) || {}).short_name || '' }));
   const order = { high: 0, normal: 1 };
   all.sort((a, b) => order[a.priority] - order[b.priority] || (b.amount || 0) - (a.amount || 0));

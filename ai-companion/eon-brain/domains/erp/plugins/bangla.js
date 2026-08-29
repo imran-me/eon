@@ -52,6 +52,14 @@ const WORD = {
 };
 export const word = (en) => WORD[String(en || '').toLowerCase()] || en;
 
+/* A lead's stage is a status the CRM layer labels in English. It is EON's
+   vocabulary, not the boss's data, so it belongs in this file. */
+const STAGE_BN = {
+  new: 'নতুন', contacted: 'যোগাযোগ হয়েছে', qualified: 'যাচাই হয়েছে',
+  proposal: 'প্রস্তাব', proposal_sent: 'প্রস্তাব পাঠানো', 'proposal sent': 'প্রস্তাব পাঠানো',
+  negotiation: 'দরকষাকষি', won: 'জেতা', lost: 'হারানো',
+};
+
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const scope = (ctx) => ({ company: (ctx && ctx.company != null) ? +ctx.company : (typeof window !== 'undefined' && window.EonErp && window.EonErp.company ? window.EonErp.company() : null) });
 const T = (D) => (D && D.meta && D.meta.today) || iso(new Date());
@@ -479,7 +487,7 @@ const INTENTS = [
     const p = C.pipeline(D, s);
     return {
       speak: `পাইপলাইনে ${num(p.open.length)}টি সক্রিয় লিড, সম্ভাব্য মূল্য ${money(p.openValue)}। রূপান্তরের হার ${p.conversion == null ? 'এখনও হিসাব হয়নি' : percent(p.conversion)}।`,
-      detail: (p.stages || []).filter((x) => x.count).map((x) => `${x.label}: ${num(x.count)}টি — ${money(x.value)}`),
+      detail: (p.stages || []).filter((x) => x.count).map((x) => `${STAGE_BN[String(x.stage || x.label || '').toLowerCase()] || x.label}: ${num(x.count)}টি — ${money(x.value)}`),
       view: 'crm',
     };
   } },
@@ -505,7 +513,7 @@ const INTENTS = [
     if (!ap.count) return { speak: 'আপনার অনুমোদনের অপেক্ষায় কিছু নেই।', detail: [], view: 'approvals' };
     return {
       speak: `${num(ap.count)}টি অনুমোদন আপনার অপেক্ষায়, মোট ${money(ap.amount)}।`,
-      detail: ap.items.slice(0, 6).map((x) => `${x.title} — ${x.who}${x.amount ? ` · ${money(x.amount)}` : ''}`),
+      detail: ap.items.slice(0, 6).map((x) => `${x.title_bn || x.title} — ${x.who_bn || x.who}${x.amount ? ` · ${money(x.amount)}` : ''}`),
       view: 'approvals',
     };
   } },
