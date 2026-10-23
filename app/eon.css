@@ -154,7 +154,7 @@ tr:hover td { background: #f6f8fc; }
 
 /* the conversation fills the panel: the composer is always in reach */
 .dock #content .card:has(#chat) { display: flex; flex-direction: column; height: calc(100dvh - 150px); }
-.dock .chat { flex: 3 1 0; max-height: none; min-height: 0; }
+.dock .chat { flex: 0 0 75%; height: 75%; max-height: none; min-height: 0; }
 .dock .msg { max-width: 94%; }
 .dock .askbar { position: sticky; bottom: 0; background: #fff; padding-top: 8px; }
 .dock .chips { flex: 1 1 0; min-height: 0; overflow-y: auto; align-content: flex-start; gap: 5px; }
