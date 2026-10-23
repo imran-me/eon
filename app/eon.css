@@ -197,5 +197,15 @@ tr:hover td { background: #f6f8fc; }
 .dock .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dock .tile .val { font-size: 19px; }
 
+/* Compact two-row dock header: toolbar and section tabs share one short band. */
+.dock .top { height: 32px; min-height: 32px; padding: 0 8px; gap: 5px; }
+.dock .top h1 { font-size: 13px; line-height: 1; }
+.dock .top .pill { height: 22px; padding: 2px 6px; font-size: 10px; }
+.dock .top select.company { height: 24px; padding: 1px 6px; font-size: 11px; }
+.dock .top .btn, .dock .top .btn.mic { height: 24px; min-height: 24px; padding-top: 0; padding-bottom: 0; font-size: 11px; }
+.dock .top .btn.mic { width: 24px; min-width: 24px; padding-left: 0; padding-right: 0; font-size: 13px; }
+.dock #dockNav { height: 28px; min-height: 28px; padding: 0 8px; gap: 5px; top: 32px; align-items: center; }
+.dock #dockNav a { height: 22px; padding: 1px 9px; font-size: 11px; line-height: 18px; }
+
 
 /* answer-language toggle, sitting with the mic in the ask bar */
