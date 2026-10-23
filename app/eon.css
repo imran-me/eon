@@ -115,13 +115,21 @@ tr:hover td { background: #f6f8fc; }
 .dock .main { padding: 0; max-width: none; height: 100dvh; display: flex; flex-direction: column; }
 
 /* one compact header: scope + the section chips, horizontally scrollable */
-.dock .top { position: sticky; top: 0; z-index: 20; margin: 0; padding: 8px 10px; gap: 8px;
+.dock .top { position: sticky; top: 0; z-index: 20; margin: 0; padding: 6px 8px; gap: 5px; flex-wrap: nowrap; overflow: hidden;
              background: rgba(255,255,255,.94); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-.dock .top h1 { font-size: 15px; }
-.dock .top .pill { font-size: 11px; padding: 3px 8px; }
-.dock select.company { max-width: 140px; font-size: 12.5px; padding: 5px 8px; }
-.dock .top .btn { height: 30px; padding: 0 10px; font-size: 12.5px; }
+.dock .top h1 { flex: 0 0 auto; white-space: nowrap; font-size: 15px; }
+.dock .top .pill { flex: 1 1 120px; min-width: 0; max-width: none; overflow: hidden; white-space: nowrap; font-size: 11px; padding: 3px 6px; }
+.dock .top .pill .dot { flex: 0 0 8px; }
+.dock .top #envText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dock select.company { flex: 0 1 132px; width: 132px; min-width: 68px; max-width: none; font-size: 12px; padding: 5px 6px; }
+.dock .top .btn { flex: 0 0 auto; height: 30px; padding: 0 7px; font-size: 12px; white-space: nowrap; }
 .dock .btn.mic { width: 34px; height: 34px; font-size: 15px; }
+@media (max-width: 700px) {
+  .dock .top #btnSpeakBrief { width: 34px; min-width: 34px; padding: 0; justify-content: center; font-size: 0; }
+  .dock .top #btnSpeakBrief::before { content: '🔊'; font-size: 13px; }
+  .dock .top select.company { flex-basis: 100px; width: 100px; }
+  .dock .top .pill { flex-basis: 70px; }
+}
 
 /* the sections become a chip row under the header */
 .dock #dockNav { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px; border-bottom: 1px solid var(--line);
@@ -165,7 +173,7 @@ tr:hover td { background: #f6f8fc; }
 .dock body { overflow-x: hidden; }
 .dock .shell, .dock .main, .dock #content, .dock .card, .dock .grid, .dock .item, .dock .chat, .dock .askbar { min-width: 0; max-width: 100%; }
 .dock #content { overflow-x: hidden; }
-.dock .top { flex-wrap: wrap; row-gap: 6px; }
+.dock .top { flex-wrap: nowrap; row-gap: 0; }
 .dock .top .spacer { display: none; }
 .dock select.company { flex: 1 1 130px; min-width: 0; }
 .dock .askbar { flex-wrap: nowrap; }
