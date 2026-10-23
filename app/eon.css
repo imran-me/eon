@@ -158,7 +158,11 @@ tr:hover td { background: #f6f8fc; }
 .dock .msg { max-width: 94%; }
 .dock .askbar { position: sticky; bottom: 0; background: #fff; padding-top: 8px; }
 .dock .chips { flex: 1 1 0; min-height: 0; overflow-y: auto; align-content: flex-start; gap: 5px; }
-.dock .ask-options { flex: 0 0 auto; min-height: 0; overflow: visible; }
+.dock .ask-options { display: flex; flex: 0 0 auto; flex-wrap: wrap; min-height: 0; overflow: visible; }
+.dock .mode-buttons { display: flex; flex: 0 0 100%; flex-wrap: nowrap; gap: 5px; min-width: 0; }
+.dock .mode-button { display: inline-flex; flex: 1 1 0; justify-content: center; align-items: center; gap: 5px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.dock .mode-button .mode-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dock .mode-button[aria-pressed="true"], .dock .mode-button.is-on { color: var(--primary); border-color: rgba(79,70,229,.35); background: rgba(79,70,229,.08); }
 .dock .quick-asks { flex: 0 0 100%; min-width: 0; }
 .dock .quick-asks summary { width: fit-content; cursor: pointer; color: var(--muted); font-size: 12px; padding: 3px 2px; }
 .dock .quick-asks[open] .chips { flex: none; max-height: 18vh; overflow-y: auto; align-content: flex-start; padding: 4px 1px; }
