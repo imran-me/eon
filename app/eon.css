@@ -198,14 +198,20 @@ tr:hover td { background: #f6f8fc; }
 .dock .tile .val { font-size: 19px; }
 
 /* Compact two-row dock header: toolbar and section tabs share one short band. */
-.dock .top { height: 32px; min-height: 32px; padding: 0 8px; gap: 5px; }
+.dock .top { height: 32px; min-height: 32px; padding: 0 8px; gap: 5px; border: 1px solid #e8eaf5; border-bottom: 0; border-radius: 12px 12px 0 0; background: linear-gradient(100deg, #f7f8ff, #fff 70%); }
 .dock .top h1 { font-size: 13px; line-height: 1; }
 .dock .top .pill { height: 22px; padding: 2px 6px; font-size: 10px; }
 .dock .top select.company { height: 24px; padding: 1px 6px; font-size: 11px; }
 .dock .top .btn, .dock .top .btn.mic { height: 24px; min-height: 24px; padding-top: 0; padding-bottom: 0; font-size: 11px; }
 .dock .top .btn.mic { width: 24px; min-width: 24px; padding-left: 0; padding-right: 0; font-size: 13px; }
-.dock #dockNav { height: 28px; min-height: 28px; padding: 0 8px; gap: 5px; top: 32px; align-items: center; }
-.dock #dockNav a { height: 22px; padding: 1px 9px; font-size: 11px; line-height: 18px; }
+.dock #dockNav { height: 28px; min-height: 28px; padding: 0 8px; gap: 5px; top: 32px; align-items: center; border: 1px solid #e8eaf5; border-top: 0; border-radius: 0 0 12px 12px; margin-bottom: 4px; }
+.dock #dockNav a { height: 22px; padding: 1px 9px; font-size: 11px; line-height: 18px; transition: background .15s, color .15s, border-color .15s; }
+.dock #dockNav a:hover { background: #f1f3ff; color: var(--primary); border-color: #d9dcff; }
+.dock #dockNav a.active { background: var(--primary); color: #fff; border-color: var(--primary); box-shadow: 0 2px 6px rgba(79,70,229,.2); }
+.dock #dockNav { scroll-padding-inline: 8px; overscroll-behavior-x: contain; }
+.dock #content .card:has(#chat) { border-color: #e8eaf3; border-radius: 14px; box-shadow: 0 4px 18px rgba(30,41,59,.045); }
+.dock .chat { padding: 8px; scrollbar-gutter: stable; }
+.dock .askbar input { min-height: 42px; }
 
 
 /* answer-language toggle, sitting with the mic in the ask bar */
