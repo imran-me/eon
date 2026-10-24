@@ -311,8 +311,9 @@ button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
   border-radius: 0; margin-bottom: 0; background: rgba(255,255,255,.98);
 }
 .dock #dockNav a { height: 23px; padding: 1px 9px; font-size: 11px; line-height: 19px; }
+.dock #heard { display: none; }
 .dock #content { min-height: 0; }
-.dock #content:has(#chat) { display: flex; flex-direction: column; overflow: hidden; padding: 8px; }
+.dock #content:has(#chat) { display: flex; flex-direction: column; overflow: hidden; padding: 2px 8px 8px; }
 .dock #content .card:has(#chat) { flex: 1 1 auto; width: 100%; height: auto; min-height: 0; padding: 10px; gap: 8px; }
 .dock #content .card:has(#chat) > h3 { flex: 0 0 auto; min-height: 18px; margin: 0; font-size: 11px; }
 .dock .chat { flex: 1 1 0; width: 100%; height: auto; min-height: 0; max-height: none; }
