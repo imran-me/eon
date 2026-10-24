@@ -43,7 +43,7 @@ select.company { background: var(--bg-2); color: var(--text); border: 1px solid 
 .btn.mic.on { background: radial-gradient(circle, rgba(220,38,38,.95), rgba(220,38,38,.65)); border-color: transparent; color: #fff; animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,.45); } 50% { box-shadow: 0 0 0 12px rgba(220,38,38,0); } }
 .grid { display: grid; gap: 14px; }
-.g4 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); }
 .g2 { grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); }
 .g3 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
@@ -243,6 +243,99 @@ tr:hover td { background: #f6f8fc; }
 .dock .chat::-webkit-scrollbar-thumb, .dock #content::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: #c9d0df; background-clip: padding-box; }
 .dock .chat::-webkit-scrollbar-thumb:hover, .dock #content::-webkit-scrollbar-thumb:hover { background: #aab5c9; background-clip: padding-box; }
 @media (prefers-reduced-motion: reduce) { .dock *, .dock *::before, .dock *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* A final layout layer keeps the two dock bars to their promised height and
+   lets the conversation take the rest of the iframe instead of guessing it. */
+:where(button, a, select, input, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgba(79,70,229,.8);
+  outline-offset: 2px;
+}
+#heard:empty { display: none; }
+.side nav a, .btn, .chip, .card, .item { transition: background-color .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease, transform .16s ease; }
+.side nav a:hover { transform: translateX(2px); }
+.card { box-shadow: 0 2px 10px rgba(19,26,46,.035); }
+.tile { border-color: #e8ecf4; }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(19,26,46,.08); }
+.tile .val { letter-spacing: -.035em; font-variant-numeric: tabular-nums; }
+.item { background: linear-gradient(120deg, #fbfcff, #f7f9fd); }
+.item:hover { border-color: #d5dcf0; background: #f7f8ff; }
+table thead th { background: #f7f8fc; }
+table tbody tr:last-child td { border-bottom-color: transparent; }
+button:disabled, .btn:disabled { opacity: .55; cursor: not-allowed; }
+.shell, .main, #content, .grid, .card { min-width: 0; }
+@media (max-width: 900px) {
+  .side { padding: 8px 10px; }
+  .side nav { gap: 3px; }
+  .side nav a { padding: 8px 11px; }
+  .main { padding: 16px 14px 32px; }
+  .top { gap: 8px; }
+  .top h1 { font-size: 18px; }
+  .g2, .g3, .g4 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+}
+@media (max-width: 600px) {
+  .main { padding: 12px 10px 24px; }
+  .top { position: sticky; top: 0; z-index: 4; padding: 8px 0; background: rgba(255,255,255,.96); backdrop-filter: blur(8px); }
+  .top .spacer { display: none; }
+  .top .pill { order: 4; flex: 1 0 100%; }
+  .top select.company { flex: 1 1 130px; min-width: 0; }
+  .card { padding: 14px; }
+  .hero .greet { font-size: 19px; }
+  .hero p { font-size: 15px; }
+  .item { grid-template-columns: auto minmax(0,1fr); gap: 9px; padding: 10px; }
+  .item .meta { grid-column: 2; text-align: left; white-space: normal; }
+  table { display: block; max-width: 100%; overflow-x: auto; }
+  .chat { min-height: 45vh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+/* Precisely two compact rows: toolbar (34px) and section tabs (30px). */
+.dock .main { height: 100dvh; min-height: 0; overflow: hidden; gap: 0; }
+.dock .top, .dock #dockNav { width: 100%; margin: 0; flex: 0 0 auto; }
+.dock .top {
+  height: 34px; min-height: 34px; max-height: 34px; padding: 0 8px; gap: 5px;
+  border: 0; border-bottom: 1px solid #e9ecf4; border-radius: 0;
+  overflow: hidden; flex-wrap: nowrap; align-items: center;
+}
+.dock .top h1 { flex: 0 0 auto; min-width: 0; max-width: 72px; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.dock .top .pill { order: 0; flex: 1 1 90px; min-width: 0; max-width: none; height: 23px; padding: 2px 6px; }
+.dock .top #envText { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.dock .top select.company { flex: 0 1 124px; width: 124px; min-width: 70px; height: 24px; }
+.dock .top #btnSpeakBrief { flex: 0 0 28px; width: 28px; min-width: 28px; padding: 0; overflow: hidden; font-size: 0; justify-content: center; }
+.dock .top #btnSpeakBrief::before { content: '🔊'; font-size: 13px; }
+.dock .top .btn.mic { flex: 0 0 26px; width: 26px; min-width: 26px; height: 24px; font-size: 13px; }
+.dock #dockNav {
+  height: 30px; min-height: 30px; max-height: 30px; top: 34px; padding: 0 7px; gap: 5px;
+  align-items: center; overflow-x: auto; overflow-y: hidden; border: 0; border-bottom: 1px solid #e5e9f2;
+  border-radius: 0; margin-bottom: 0; background: rgba(255,255,255,.98);
+}
+.dock #dockNav a { height: 23px; padding: 1px 9px; font-size: 11px; line-height: 19px; }
+.dock #content { min-height: 0; }
+.dock #content:has(#chat) { display: flex; flex-direction: column; overflow: hidden; padding: 8px; }
+.dock #content .card:has(#chat) { flex: 1 1 auto; width: 100%; height: auto; min-height: 0; padding: 10px; gap: 8px; }
+.dock #content .card:has(#chat) > h3 { flex: 0 0 auto; min-height: 18px; margin: 0; font-size: 11px; }
+.dock .chat { flex: 1 1 0; width: 100%; height: auto; min-height: 0; max-height: none; }
+.dock .askbar { flex: 0 0 auto; margin-top: 0; padding-top: 2px; }
+.dock .ask-options { flex: 0 0 auto; margin-top: 0 !important; }
+.dock .mode-buttons { gap: 6px; }
+.dock .mode-button { min-height: 32px; padding: 5px 7px; font-size: 11px; }
+.dock .quick-asks summary { min-height: 24px; display: flex; align-items: center; }
+.dock #content:not(:has(#chat)) { overscroll-behavior: contain; }
+.dock #content:not(:has(#chat)) .card { box-shadow: 0 2px 10px rgba(30,41,59,.035); }
+.dock #content:not(:has(#chat)) .g4 { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.dock .tile .sub { overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  .dock .top h1 { max-width: 48px; font-size: 12px; }
+  .dock .top select.company { flex-basis: 92px; width: 92px; }
+  .dock .top .pill { flex-basis: 52px; }
+  .dock .mode-button .mode-label { font-size: 10px; }
+}
+@media (max-width: 360px) {
+  .dock .top h1 { display: none; }
+  .dock .top select.company { flex-basis: 82px; width: 82px; }
+  .dock .mode-button { gap: 3px; padding-inline: 4px; }
+}
 
 
 /* answer-language toggle, sitting with the mic in the ask bar */

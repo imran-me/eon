@@ -37,6 +37,7 @@
     .btn:hover { background: #f5f7fc; }
     .btn:active { transform: translateY(1px); }
     .btn.on { background: rgba(79,70,229,.1); border-color: rgba(79,70,229,.35); color: var(--primary); font-weight: 600; }
+    .btn:focus-visible, .reopen:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     .where { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; background: #f5f7fc; border: 1px solid var(--line);
              border-radius: 9px; height: 30px; padding: 0 10px; color: var(--muted); font-size: 12.5px; }
     .where b { color: var(--text); font-weight: 600; }
@@ -49,9 +50,10 @@
     .split.collapsed { grid-template-columns: 1fr 0 0; }
     .pane { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; position: relative; box-shadow: 0 1px 2px rgba(19,26,46,.04); }
     .pane iframe { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
-    .grip { cursor: col-resize; display: grid; place-items: center; }
+    .grip { cursor: col-resize; display: grid; place-items: center; touch-action: none; border-radius: 6px; }
     .grip::after { content: ""; width: 3px; height: 44px; border-radius: 3px; background: #cfd6e4; transition: background .15s; }
     .grip:hover::after, .grip.dragging::after { background: var(--primary); }
+    .grip:focus-visible { outline: 2px solid var(--primary); outline-offset: -1px; }
     .split.collapsed .grip { display: none; }
 
     /* while dragging, the frames must not swallow the mouse */
@@ -72,6 +74,13 @@
       .split .pane.eon { position: fixed; inset: calc(var(--bar) + 8px) 8px 8px 8px; z-index: 70; }
       .split.collapsed .pane.eon { display: none; }
     }
+    @media (max-width: 560px) {
+      .bar { gap: 5px; padding: 0 7px; }
+      .brand { gap: 6px; white-space: nowrap; }
+      .brand .hint, .bar .sep, #back, #fwd, #reload, #full, .bar > .hint { display: none; }
+      .where { padding: 0 7px; font-size: 11px; }
+      #toggle { flex: 0 0 auto; padding: 0 7px; font-size: 11px; }
+    }
     @media print { .bar, .pane.eon, .grip { display: none !important; } }
   </style>
 </head>
@@ -86,14 +95,14 @@
       <div class="where"><b>ERP</b><span id="where">loading…</span></div>
       <button class="btn" id="full" title="Open this ERP page in a full tab">Full tab ↗</button>
       <span class="sep"></span>
-      <button class="btn on" id="toggle" title="Show or hide EON (Ctrl+\)">EON panel</button>
+      <button class="btn on" id="toggle" aria-controls="eonPane" aria-expanded="true" title="Show or hide EON (Ctrl+\)">EON panel</button>
       <span class="hint">Ctrl+<kbd>\</kbd></span>
     </div>
 
     <div class="split" id="split">
       <div class="pane erp"><iframe id="erp" title="Epal ERP" src="about:blank" allow="microphone; clipboard-write"></iframe></div>
-      <div class="grip" id="grip" title="Drag to resize · double-click to reset"></div>
-      <div class="pane eon"><iframe id="eon" title="EON" src="./?dock=1#ask" allow="microphone; clipboard-write"></iframe></div>
+      <div class="grip" id="grip" role="separator" aria-orientation="vertical" aria-label="Resize ERP and EON panels" aria-valuemin="320" aria-valuemax="1440" aria-valuenow="420" tabindex="0" title="Drag or use arrow keys to resize · double-click to reset"></div>
+      <div class="pane eon" id="eonPane"><iframe id="eon" title="EON" src="./?dock=1#ask" allow="microphone; clipboard-write"></iframe></div>
     </div>
     <button class="reopen" id="reopen">EON ▸</button>
     <div class="dragging-overlay" id="overlay"></div>
@@ -121,23 +130,43 @@
 
     /* ---------- the divider ---------- */
     const W_KEY = 'eon_ws_width_v2';
-    const setW = (px) => {
+    const grip = $('grip');
+    const setW = (px, persist = true) => {
       const w = Math.max(320, Math.min(Math.round(window.innerWidth * 0.75), px));
       split.style.setProperty('--panel-w', w + 'px');
-      try { localStorage.setItem(W_KEY, String(w)); } catch {}
+      grip.setAttribute('aria-valuemax', String(Math.round(window.innerWidth * 0.75)));
+      grip.setAttribute('aria-valuenow', String(w));
+      grip.setAttribute('aria-valuetext', `EON panel ${w} pixels wide`);
+      if (persist) { try { localStorage.setItem(W_KEY, String(w)); } catch {} }
     };
     setW(parseInt(localStorage.getItem(W_KEY) || '', 10) || Math.round(window.innerWidth * 0.72));
 
     let dragging = false;
-    $('grip').addEventListener('mousedown', (e) => { dragging = true; document.body.classList.add('dragging'); $('grip').classList.add('dragging'); e.preventDefault(); });
-    window.addEventListener('mousemove', (e) => { if (dragging) setW(window.innerWidth - e.clientX - 8); });
-    window.addEventListener('mouseup', () => { dragging = false; document.body.classList.remove('dragging'); $('grip').classList.remove('dragging'); });
-    $('grip').addEventListener('dblclick', () => setW(Math.round(window.innerWidth * 0.72)));
+    const stopDragging = () => { dragging = false; document.body.classList.remove('dragging'); grip.classList.remove('dragging'); };
+    grip.addEventListener('pointerdown', (e) => { if (e.button !== 0) return; dragging = true; document.body.classList.add('dragging'); grip.classList.add('dragging'); grip.setPointerCapture(e.pointerId); e.preventDefault(); });
+    grip.addEventListener('pointermove', (e) => { if (dragging) setW(window.innerWidth - e.clientX - 8); });
+    grip.addEventListener('pointerup', stopDragging);
+    grip.addEventListener('pointercancel', stopDragging);
+    grip.addEventListener('keydown', (e) => {
+      const current = parseInt(split.style.getPropertyValue('--panel-w'), 10) || 420;
+      if (e.key === 'ArrowLeft') { e.preventDefault(); setW(current + (e.shiftKey ? 48 : 16)); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); setW(current - (e.shiftKey ? 48 : 16)); }
+      else if (e.key === 'Home') { e.preventDefault(); setW(320); }
+      else if (e.key === 'End') { e.preventDefault(); setW(window.innerWidth * 0.75); }
+    });
+    grip.addEventListener('dblclick', () => setW(Math.round(window.innerWidth * 0.72)));
+    window.addEventListener('resize', () => {
+      const current = parseInt(split.style.getPropertyValue('--panel-w'), 10) || 420;
+      setW(current, false);
+    });
 
     /* ---------- show / hide EON ---------- */
     const setOpen = (open) => {
       split.classList.toggle('collapsed', !open);
       $('toggle').classList.toggle('on', open);
+      $('toggle').setAttribute('aria-expanded', String(open));
+      $('eonPane').setAttribute('aria-hidden', String(!open));
+      $('eonPane').inert = !open;
       try { localStorage.setItem('eon_ws_open', open ? '1' : '0'); } catch {}
     };
     setOpen((localStorage.getItem('eon_ws_open') || '1') === '1');
