@@ -1,0 +1,138 @@
+<!doctype html>
+<!-- EON side wing — 2 ft x 8.3 ft, the return panel seen down the aisle.
+     Printed to exact size by print-side.mjs. Page = trim + 1in bleed.
+
+     Same white ground and same promise as the back wall, but this panel is
+     read side-on from a distance while someone is still walking, so it carries
+     fewer words in larger type. The waving figure and the speech bubble do the
+     stopping; the detail lives on the back wall. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EON side panel</title>
+<style>
+  :root{
+    --ink:#0B1222; --slate:#46536F; --blue:#2F62D9; --teal:#0E86A6;
+    --soft:#F2F6FC; --line:#D7E1F1;
+    --bleed:1in;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{margin:0;}
+  html,body{background:#fff;}
+  body{
+    font-family:Inter,"Segoe UI",system-ui,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .wall{position:relative; overflow:hidden; background:#fff;}
+  .wash{position:absolute; left:0; right:0; bottom:0; height:34in;
+        background:linear-gradient(to bottom, rgba(242,246,252,0), #F2F6FC 70%, #E9F0FA 100%);}
+  .ghost{position:absolute; right:-9in; bottom:-11in; width:40in; height:40in; opacity:.6;}
+
+  .safe{position:absolute; inset:var(--bleed); padding:2.4in 1.5in 2.2in;
+        display:flex; flex-direction:column; align-items:center;
+        justify-content:space-between;}
+  .band{width:100%; display:flex; flex-direction:column; align-items:center;}
+
+  .word{font-weight:900; letter-spacing:-.055em; line-height:.86; font-size:3.4in;}
+  .chip img{height:2.6in; width:auto; display:block;}
+  .pill{display:inline-block; border:3px solid var(--line); border-radius:999px;
+        padding:.30in .85in; font-size:.62in; font-weight:800;
+        letter-spacing:.05em; color:var(--teal); white-space:nowrap; background:#fff;}
+  .rule{height:2px; background:var(--line); width:100%;}
+
+  .hero{font-weight:900; letter-spacing:-.03em; line-height:1.08;
+        font-size:1.46in; text-align:center;}
+  .hero .t{color:var(--blue);}
+  .sub{color:var(--slate); font-weight:500; line-height:1.4;
+       font-size:.70in; text-align:center;}
+  .bn{font-family:"Noto Sans Bengali","Nirmala UI",sans-serif;}
+
+  .bubble{position:relative; background:#fff; border:3px solid var(--line);
+          border-radius:.6in; padding:.70in .80in; width:100%;
+          font-size:.78in; font-weight:700; line-height:1.34; text-align:center;
+          box-shadow:0 .14in .42in rgba(14,26,51,.10);}
+  .bubble .sm{display:block; font-size:.70in; font-weight:600;
+              color:var(--slate); margin-top:.28in;}
+  .bubble::after,.bubble::before{content:""; position:absolute; left:50%;
+    transform:translateX(-50%); bottom:-.52in;
+    border:.52in solid transparent; border-top-color:var(--line); border-bottom:0;}
+  .bubble::before{bottom:-.44in; border-top-color:#fff; z-index:1;}
+
+  .stage{position:relative; width:100%; display:flex; justify-content:center;}
+  .avatar{display:block; width:100%; height:auto;}
+
+  .pillars{display:flex; flex-direction:column; gap:.48in; width:100%;}
+  .pillars span{border:2.5px solid #C3D4EA; border-radius:999px; text-align:center;
+    padding:.34in .5in; font-size:.68in; font-weight:800; color:var(--slate);}
+
+  .qr{display:block; width:6.4in; height:6.4in; border:3px solid var(--line);
+      border-radius:.3in; padding:.22in; background:#fff; margin:0 auto;}
+  .foot{color:var(--slate); text-align:center; font-size:.62in; line-height:1.5;}
+  .foot b{color:var(--ink);}
+</style>
+</head>
+<body>
+<div class="wall" id="wall">
+  <div class="wash"></div>
+  <svg class="ghost" viewBox="-50 -50 100 100" aria-hidden="true">
+    <circle r="46" fill="none" stroke="#2F62D9" stroke-width="1.5" opacity=".16"/>
+    <circle r="33" fill="none" stroke="#2F62D9" stroke-width="1.5" opacity=".12"/>
+    <circle r="20" fill="none" stroke="#2F62D9" stroke-width="1.5" opacity=".09"/>
+  </svg>
+
+  <div class="safe">
+    <div class="band">
+      <div class="word">EON</div>
+      <span class="chip" style="margin-top:.9in"><img src="../assets/diu-logo.png"
+            alt="Daffodil International University"></span>
+      <span class="pill" style="margin-top:1.1in">STALL U-13</span>
+    </div>
+
+    <div class="band">
+      <div class="bubble">&ldquo;Dr Salary 50,000, Cr Bank.&rdquo;
+        <span class="sm bn">&#2480;&#2494;&#2476;&#2509;&#2476;&#2495;&#2480; &#2454;&#2494;&#2468;&#2494;
+          &#2478;&#2495;&#2482;&#2495;&#2479;&#2492;&#2503; &#2470;&#2494;&#2451;&#2404;</span></div>
+      <div class="stage" style="margin-top:.8in">
+        <img class="avatar" src="../assets/eon-wave-full.png" alt="">
+      </div>
+    </div>
+
+    <div class="band">
+      <div class="rule" style="margin-bottom:1.1in"></div>
+      <div class="hero">It keeps<br>the books.<br><span class="t">It acts on<br>your voice.</span></div>
+      <div class="sub" style="margin-top:.9in">Bookkeeping and a chartered<br>
+        accountant&rsquo;s rules, reading<br>every company you own.</div>
+    </div>
+
+    <div class="band">
+      <img class="qr" src="../assets/qr.png" alt="">
+      <div class="foot" style="margin-top:.6in">
+        <b style="font-size:.76in">eon.gulfrabit.com</b></div>
+    </div>
+
+    <div class="band">
+      <div class="pillars">
+        <span>Posts the entry</span>
+        <span>Finds the error</span>
+        <span>Reconciles the ledger</span>
+      </div>
+    </div>
+
+    <div class="band">
+      <div class="foot">Daffodil International University<br>
+        Bangladesh AI Business Summit 2026</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TRIM = [24, 99.6];
+const BLEED = 1;
+const wall = document.getElementById('wall');
+wall.style.width  = (TRIM[0] + 2 * BLEED) + 'in';
+wall.style.height = (TRIM[1] + 2 * BLEED) + 'in';
+document.title = 'PANEL-READY';
+</script>
+</body>
+</html>
