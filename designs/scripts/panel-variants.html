@@ -1,0 +1,324 @@
+<!doctype html>
+<!-- EON back wall — five arrangements of the SAME elements, 5.9ft x 8.33ft.
+     ?v=1..5 picks the layout, ?guide=1 overlays the TV reserve.
+
+     Every variant obeys one hard rule: the 43" TV block (x 28.5..70.8,
+     y 1.0..28.5, reserved around a real 38 x 21.5in screen at 30.5,4) stays
+     empty. Everything else is free to move.
+
+     Each block is placed at an absolute x/y in inches and may carry a scale
+     `s`. Scaling uses CSS zoom rather than transform, because zoom reflows the
+     text — transform would just magnify a block laid out at the wrong width. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EON back wall — variants</title>
+<style>
+  :root{
+    --ink:#0B1222; --slate:#46536F; --blue:#2F62D9; --teal:#0E86A6;
+    --soft:#F2F6FC; --line:#D7E1F1; --bleed:1in;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{margin:0;}
+  html,body{background:#fff;}
+  body{font-family:Inter,"Segoe UI",system-ui,Helvetica,Arial,sans-serif;
+       color:var(--ink); -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .wall{position:relative; overflow:hidden; background:#fff;}
+  .safe{position:absolute; inset:var(--bleed);}
+  .abs{position:absolute;}
+
+  /* ---------- tech grounds, all white ---------- */
+  .bg{position:absolute; inset:0; pointer-events:none;}
+  .bg-circuit{
+    background-image:
+      linear-gradient(to right, rgba(47,98,217,.085) 1.5px, transparent 1.5px),
+      linear-gradient(to bottom, rgba(47,98,217,.085) 1.5px, transparent 1.5px);
+    background-size:1.15in 1.15in;
+    -webkit-mask-image:linear-gradient(160deg,#000 10%,rgba(0,0,0,.25) 60%,transparent 92%);
+            mask-image:linear-gradient(160deg,#000 10%,rgba(0,0,0,.25) 60%,transparent 92%);}
+  .bg-dots{
+    background-image:radial-gradient(rgba(47,98,217,.16) 2.2px, transparent 2.2px);
+    background-size:.72in .72in;
+    -webkit-mask-image:radial-gradient(90% 70% at 70% 28%,#000 12%,transparent 82%);
+            mask-image:radial-gradient(90% 70% at 70% 28%,#000 12%,transparent 82%);}
+  .bg-radar{
+    background-image:
+      repeating-radial-gradient(circle at 76% 22%, rgba(47,98,217,.11) 0 2px, transparent 2px 3.6in);
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.3) 70%,transparent 100%);
+            mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.3) 70%,transparent 100%);}
+  .bg-signal{
+    background-image:repeating-linear-gradient(64deg,
+      rgba(47,98,217,.10) 0 2px, transparent 2px 1.5in);
+    -webkit-mask-image:linear-gradient(200deg,#000 5%,rgba(0,0,0,.2) 65%,transparent 95%);
+            mask-image:linear-gradient(200deg,#000 5%,rgba(0,0,0,.2) 65%,transparent 95%);}
+  .bg-hex{
+    background-image:
+      repeating-linear-gradient(0deg, rgba(47,98,217,.09) 0 1.6px, transparent 1.6px 1.25in),
+      repeating-linear-gradient(60deg, rgba(47,98,217,.09) 0 1.6px, transparent 1.6px 1.25in),
+      repeating-linear-gradient(120deg, rgba(47,98,217,.09) 0 1.6px, transparent 1.6px 1.25in);
+    -webkit-mask-image:radial-gradient(85% 60% at 25% 70%,#000 10%,transparent 85%);
+            mask-image:radial-gradient(85% 60% at 25% 70%,#000 10%,transparent 85%);}
+  .wash{position:absolute; left:0; right:0; bottom:0; height:26in;
+        background:linear-gradient(to bottom, rgba(242,246,252,0), #F2F6FC 72%, #E9F0FA 100%);}
+
+  /* ---------- shared pieces ---------- */
+  .word{font-weight:900; letter-spacing:-.055em; line-height:.86;}
+  .desc{font-weight:700; color:var(--slate); letter-spacing:.01em; white-space:nowrap;}
+  .chip img{width:100%; display:block;}
+  .pitch{font-weight:600; line-height:1.3; color:var(--slate);}
+  .hero{font-weight:900; letter-spacing:-.03em; line-height:1.04;}
+  .hero .t{color:var(--blue);}
+  .sub{color:var(--slate); font-weight:500; line-height:1.36;}
+  .bn{font-family:"Noto Sans Bengali","Nirmala UI",sans-serif;}
+  h2.sec{font-size:1.05in; font-weight:900; letter-spacing:.045em;
+         text-transform:uppercase; color:var(--teal); margin-bottom:.6in;}
+
+  .cmd{display:flex; flex-direction:column; gap:.42in;}
+  .cmdrow{display:flex; align-items:flex-start; gap:.7in; background:#fff;
+          border:2.5px solid var(--line); border-radius:.4in; padding:.6in .75in;
+          box-shadow:0 .09in .26in rgba(14,26,51,.07);}
+  .mic{flex:none; width:1.7in; height:1.7in; border-radius:50%; background:var(--blue);
+       display:flex; align-items:center; justify-content:center;}
+  .said{font-weight:800; font-size:.92in; line-height:1.26;}
+  .did{font-size:.78in; line-height:1.26; color:var(--teal); font-weight:800; margin-top:.2in;}
+
+  ul.feat2{list-style:none; columns:2; column-gap:1.1in;}
+  ul.feat2 li{position:relative; padding-left:1.25in; font-size:.86in; font-weight:600;
+              line-height:1.24; margin-bottom:.5in; break-inside:avoid;}
+  ul.feat2 li::before{content:""; position:absolute; left:0; top:.24in;
+              width:.62in; height:.62in; border-radius:50%; background:var(--blue);}
+  ul.feat1{list-style:none;}
+  ul.feat1 li{position:relative; padding-left:1.25in; font-size:.86in; font-weight:600;
+              line-height:1.24; margin-bottom:.46in;}
+  ul.feat1 li::before{content:""; position:absolute; left:0; top:.24in;
+              width:.62in; height:.62in; border-radius:50%; background:var(--blue);}
+
+  .bubble{position:relative; background:#fff; border:3px solid var(--line);
+          border-radius:.55in; padding:.6in .72in; font-weight:700;
+          font-size:.92in; line-height:1.3; box-shadow:0 .12in .36in rgba(14,26,51,.10);}
+  .bubble .sm{display:block; font-size:.78in; font-weight:600;
+              color:var(--slate); margin-top:.24in;}
+  .bubble.tail::after,.bubble.tail::before{content:""; position:absolute; left:3.0in;
+    bottom:-.48in; border:.48in solid transparent; border-top-color:var(--line); border-bottom:0;}
+  .bubble.tail::before{bottom:-.40in; border-top-color:#fff; z-index:1;}
+  .eyebrow{font-size:.66in; font-weight:900; letter-spacing:.13em;
+           text-transform:uppercase; color:var(--teal);}
+
+  .shot img{width:100%; display:block; border:2.5px solid var(--line);
+            border-radius:.36in; box-shadow:0 .11in .32in rgba(14,26,51,.10);}
+  .shot .cap{font-size:.62in; font-weight:700; color:var(--teal); margin-top:.34in;}
+
+  .stats{display:flex; gap:.5in;}
+  .stat{flex:1;}
+  .stat b{display:block; color:var(--blue); font-weight:900; font-size:2.0in;
+          line-height:.9; letter-spacing:-.045em;}
+  .stat span{display:block; font-size:.72in; font-weight:600; line-height:1.22;
+             color:var(--slate); margin-top:.24in;}
+  .statcol{display:flex; flex-direction:column; gap:.9in;}
+
+  .note{background:var(--soft); border-left:.3in solid var(--blue); border-radius:.28in;
+        padding:.9in 1.0in; font-size:.90in; line-height:1.34; font-weight:500; color:#2A3651;}
+  .note b{color:var(--ink); font-weight:800;}
+  .qrbox{display:flex; align-items:center; gap:.9in;}
+  .qr{display:block; border:3px solid var(--line); border-radius:.26in;
+      padding:.2in; background:#fff;}
+  .foot{color:var(--slate); font-size:.78in; line-height:1.45;}
+  .foot b{color:var(--ink);}
+  .avatar{width:100%; display:block;}
+  .guide{position:absolute; border:6px dashed #FF3B3B; background:rgba(255,59,59,.10);}
+  .screen{position:absolute; border:8px solid #FF3B3B; background:rgba(255,59,59,.26);
+          border-radius:.3in; display:flex; flex-direction:column; align-items:center;
+          justify-content:center; color:#fff; font-weight:900; text-align:center;}
+</style>
+</head>
+<body>
+<div class="wall" id="wall">
+  <div class="bg" id="bg"></div>
+  <div class="wash"></div>
+  <div class="safe" id="safe"></div>
+</div>
+<script>
+const Q = new URLSearchParams(location.search);
+const V = Math.min(5, Math.max(1, +(Q.get('v') || 1)));
+const GUIDE = Q.get('guide') === '1';
+const TRIM = [70.8, 99.96], BLEED = 1;
+const TV = { x: 28.5, y: 1.0, w: 42.3, h: 27.5 };
+
+const BANGLA = '&#2476;&#2494;&#2434;&#2482;&#2494;';
+const Q_BN = '&#2480;&#2494;&#2476;&#2509;&#2476;&#2495;&#2480; &#2454;&#2494;&#2468;&#2494; '
+           + '&#2478;&#2495;&#2482;&#2495;&#2479;&#2492;&#2503; &#2470;&#2494;&#2451;&#2404;';
+const ASK_BN = '&#2438;&#2478;&#2494;&#2453;&#2503; &#2476;&#2494;&#2434;&#2482;&#2494;&#2479;&#2492; '
+             + '&#2460;&#2495;&#2460;&#2509;&#2462;&#2503;&#2488; &#2453;&#2480;&#2497;&#2472;&#2404;';
+const MIC = `<svg width="1.0in" height="1.0in" viewBox="0 0 24 24" fill="none" stroke="#fff"
+  stroke-width="2.2" stroke-linecap="round"><rect x="9" y="2" width="6" height="11" rx="3"
+  fill="#fff" stroke="none"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>`;
+const CMD = (s, d) => `<div class="cmdrow"><div class="mic">${MIC}</div>
+  <div><div class="said">${s}</div><div class="did">&rarr; ${d}</div></div></div>`;
+
+/* ---- the elements. Identical in every variant; only placement changes. ---- */
+const E = {
+  WORD: (fs) => `<div class="word" style="font-size:${fs}in">EON</div>
+    <div class="desc" style="font-size:${(fs*0.185).toFixed(2)}in;margin-top:.45in">
+      One Brain &middot; Multi Decision Layer for your ERP</div>`,
+  DIU: `<span class="chip"><img src="../assets/diu-logo.png"
+         alt="Daffodil International University"></span>`,
+  AV_UP: `<img class="avatar" src="../assets/eon-celebrate-full.png" alt="">`,
+  AV_WAVE: `<img class="avatar" src="../assets/eon-wave-full.png" alt="">`,
+  AV_CURIOUS: `<img class="avatar" src="../assets/eon-curious-full.png" alt="">`,
+  PITCH: (fs) => `<div class="pitch" style="font-size:${fs}in">An intelligence that truly
+    knows accounting &mdash; ERP, payroll, ledger, journal and advanced bookkeeping, to a
+    CA&rsquo;s standard. Just speak: it catches every error, posts the entry, and chases
+    the follow-ups by itself. Errorless &mdash; and it never forgets.</div>`,
+  HERO: (fs) => `<div class="hero" style="font-size:${fs}in">It keeps the books.<br>
+    It knows the standards.<br><span class="t">It acts on your voice.</span></div>`,
+  SUB: (fs) => `<div class="sub" style="font-size:${fs}in">EON reads <b>every company in the
+    group</b> &mdash; ledgers, payroll, people and cash &mdash; with a chartered
+    accountant&rsquo;s rules built in. Speak in English or <span class="bn">${BANGLA}</span>:
+    it posts the entry, finds the error, reconciles the ledger and tells you what is coming.</div>`,
+  CMDS: `<div class="cmd">
+    ${CMD('&ldquo;Dr Salary 50,000, Cr Bank.&rdquo;', 'Journal posted. Ledger updated.')}
+    ${CMD('<span class="bn">' + Q_BN + '</span>', 'Reconciled &mdash; &#2547;1.4 L paid in advance.')}
+    ${CMD('&ldquo;Who is idle this week?&rdquo;', '7 staff flagged. Evaluations ready.')}</div>`,
+  ALSO: (cols) => `<h2 class="sec">And it also</h2><ul class="feat${cols}">
+    <li>Closes the books</li><li>Audits its own entries</li>
+    <li>Reconciles banks &amp; parties</li><li>Projects cash and revenue</li>
+    <li>Rates every employee</li><li>Updates vendors &amp; agents</li></ul>`,
+  BUBBLE: (tail) => `<div class="eyebrow" style="margin-bottom:.4in">Just say it out loud</div>
+    <div class="bubble ${tail ? 'tail' : ''}">&ldquo;Close the month and show me what is wrong.&rdquo;
+    <span class="sm bn">&#2447;&#2439; &#2478;&#2494;&#2488;&#2503;&#2480;
+    &#2482;&#2494;&#2477;-&#2453;&#2509;&#2487;&#2468;&#2495; &#2470;&#2503;&#2454;&#2494;&#2451;&#2404;</span></div>`,
+  BN_BUBBLE: `<div class="bubble" style="font-size:.84in"><span class="bn">${ASK_BN}</span></div>`,
+  SHOT: `<div class="shot"><img src="../assets/screens/eon-ask-conversation.png" alt="">
+    <div class="cap">EON answering in the Command Center</div></div>`,
+  QR: (px, stacked) => stacked
+    ? `<img class="qr" src="../assets/qr.png" style="width:${px}in;height:${px}in">
+       <div style="font-size:1.0in;font-weight:900;line-height:1.14;margin-top:.45in">Ask it yourself</div>
+       <div style="font-size:.76in;color:var(--teal);font-weight:800;margin-top:.2in">eon.gulfrabit.com</div>`
+    : `<div class="qrbox"><img class="qr" src="../assets/qr.png" style="width:${px}in;height:${px}in">
+       <div><div style="font-size:1.05in;font-weight:900;line-height:1.14">Ask it<br>yourself</div>
+       <div style="font-size:.78in;color:var(--teal);font-weight:800;margin-top:.22in">eon.gulfrabit.com</div>
+       </div></div>`,
+  STATS: (vert) => {
+    const rows = [['500K','context<br>memory'],['1,200','accounting<br>books known'],
+                  ['1M','files<br>read'],['$3.6B','of errors<br>found']];
+    const cell = (b,s,c) => `<div class="stat"><b${c?' style="color:#0E86A6"':''}>${b}</b>
+      <span>${s}</span></div>`;
+    return vert
+      ? `<div class="statcol">${rows.map((r,i)=>cell(r[0],r[1],i===3)).join('')}</div>`
+      : `<div class="stats">${rows.map((r,i)=>cell(r[0],r[1],i===3)).join('')}</div>`;
+  },
+  NOTE: `<h2 class="sec">Why you can act on it</h2><div class="note">A <b>working prototype</b>,
+    already running on a live 12-company ERP. There is <b>no language model</b> inventing a
+    plausible paragraph &mdash; EON reads your ledger, applies your own rule and shows the
+    working, so a figure here is one you can take to your board.</div>`,
+  FOOT: `<div class="foot"><b>Daffodil International University</b> &nbsp;&middot;&nbsp;
+    Bangladesh AI Business Summit 2026 &nbsp;&middot;&nbsp; Stall U-13</div>`,
+};
+
+/* ---- five arrangements. x/y/w in inches; s scales the block (zoom). ---- */
+const L = {
+  // 1 — Tight two-column: the current reading order, spaces squeezed out.
+  1: { bg: 'bg-circuit', blocks: [
+    ['AV_UP', 0.6, 1.8, 8.6], ['WORD', 9.8, 3.2, null, 1, E.WORD(3.9)],
+    ['DIU', 9.8, 10.2, 9.8], ['PITCH', 0.6, 17.4, 27.2, 1, E.PITCH(1.18)],
+    ['HERO', 0.6, 31.0, 34, 1, E.HERO(2.6)], ['SUB', 0.6, 41.6, 33, 1, E.SUB(.92)],
+    ['CMDS', 0.6, 50.0, 34], ['ALSO', 0.6, 68.0, 34, 1, E.ALSO(2)],
+    ['BUBBLE', 37.0, 30.0, 32, 1, E.BUBBLE(true)],
+    ['AV_WAVE', 38.0, 37.2, 11.2], ['QR', 52.5, 38.0, 15, 1, E.QR(6.4, true)],
+    ['SHOT', 37.0, 53.6, 32], ['STATS', 37.0, 76.5, 32, 1, E.STATS(false)],
+    ['NOTE', 37.0, 83.0, 32], ['AV_CURIOUS', 0.6, 83.0, 7.0],
+    ['BN_BUBBLE', 8.6, 86.0, 24], ['FOOT', 37.0, 96.2, 32] ] },
+
+  // 2 — Banded: full-width horizontal bands below the TV, nothing columnar.
+  2: { bg: 'bg-dots', blocks: [
+    ['AV_UP', 0.6, 1.4, 9.4], ['WORD', 10.8, 2.6, null, 1, E.WORD(4.4)],
+    ['DIU', 10.8, 11.6, 10.6], ['PITCH', 0.6, 19.4, 27.4, 1, E.PITCH(1.12)],
+    ['HERO', 0.6, 30.6, 44, 1, E.HERO(3.1)], ['AV_WAVE', 56.5, 29.6, 13.2],
+    ['SUB', 0.6, 43.4, 44, 1, E.SUB(.98)],
+    ['CMDS', 0.6, 53.0, 33.5], ['SHOT', 36.5, 52.4, 33.5],
+    ['STATS', 0.6, 76.0, 69.6, 1, E.STATS(false)],
+    ['ALSO', 0.6, 82.0, 33.5, 1, E.ALSO(2)], ['NOTE', 36.5, 81.4, 33.5],
+    ['QR', 36.5, 92.4, 33.5, 1, E.QR(5.4, false)],
+    ['AV_CURIOUS', 0.6, 92.0, 6.2], ['FOOT', 8.0, 96.4, 27] ] },
+
+  // 3 — Zoomed: far bigger type, the screenshot carried large, less text.
+  3: { bg: 'bg-radar', blocks: [
+    ['AV_UP', 0.6, 1.2, 10.4], ['WORD', 12.0, 3.0, null, 1, E.WORD(4.9)],
+    ['DIU', 12.0, 13.0, 11.4], ['PITCH', 0.6, 21.0, 27.4, 1, E.PITCH(1.02)],
+    ['HERO', 0.6, 30.4, 48, 1, E.HERO(3.6)],
+    ['BUBBLE', 0.6, 46.2, 40, 1, E.BUBBLE(false)],
+    ['AV_WAVE', 42.0, 44.0, 14.5],
+    ['SHOT', 0.6, 57.0, 44], ['STATS', 46.5, 68.0, 23.8, 1, E.STATS(true)],
+    ['CMDS', 0.6, 88.0, 0, 0.0001],
+    ['ALSO', 0.6, 88.4, 44, 1, E.ALSO(2)], ['NOTE', 46.5, 86.0, 23.8],
+    ['QR', 0.6, 96.0, 0, 0.0001], ['FOOT', 0.6, 97.4, 44] ] },
+
+  // 4 — Rail: a narrow left rail of identity and numbers, wide content right.
+  4: { bg: 'bg-signal', blocks: [
+    ['AV_UP', 0.6, 1.4, 8.2], ['WORD', 9.4, 2.8, null, 1, E.WORD(3.7)],
+    ['DIU', 9.4, 9.6, 9.2], ['PITCH', 0.6, 16.6, 27.4, 1, E.PITCH(1.10)],
+    ['STATS', 0.6, 31.0, 17.5, 1, E.STATS(true)],
+    ['AV_CURIOUS', 1.2, 64.0, 7.4], ['QR', 0.6, 78.0, 17.5, 1, E.QR(6.0, true)],
+    ['HERO', 21.0, 30.4, 49, 1, E.HERO(2.9)],
+    ['SUB', 21.0, 42.6, 48, 1, E.SUB(.96)],
+    ['CMDS', 21.0, 51.8, 32.5], ['BUBBLE', 55.5, 51.4, 14.6, 1, E.BUBBLE(false)],
+    ['AV_WAVE', 57.5, 64.0, 11.0],
+    ['SHOT', 21.0, 63.5, 32.5], ['NOTE', 55.0, 81.0, 15.0],
+    ['ALSO', 21.0, 87.5, 32.5, 1, E.ALSO(2)], ['FOOT', 55.0, 95.0, 15.2] ] },
+
+  // 5 — Showcase: the screenshot is the hero, everything else frames it.
+  5: { bg: 'bg-hex', blocks: [
+    ['AV_UP', 0.6, 1.6, 8.8], ['WORD', 10.0, 3.0, null, 1, E.WORD(4.0)],
+    ['DIU', 10.0, 10.6, 10.0], ['PITCH', 0.6, 18.2, 27.4, 1, E.PITCH(1.14)],
+    ['HERO', 0.6, 30.2, 33, 1, E.HERO(2.5)],
+    ['BUBBLE', 36.0, 30.0, 34, 1, E.BUBBLE(true)],
+    ['AV_WAVE', 59.0, 37.0, 11.0],
+    ['SUB', 0.6, 40.6, 33, 1, E.SUB(.92)],
+    ['SHOT', 36.0, 48.0, 34],
+    ['CMDS', 0.6, 49.6, 33.5],
+    ['STATS', 36.0, 73.5, 34, 1, E.STATS(false)],
+    ['ALSO', 0.6, 68.6, 33.5, 1, E.ALSO(2)],
+    ['NOTE', 36.0, 80.0, 34],
+    ['QR', 0.6, 82.0, 33, 1, E.QR(6.0, false)],
+    ['AV_CURIOUS', 27.5, 90.5, 5.6],
+    ['FOOT', 36.0, 95.6, 34] ] },
+};
+
+const layout = L[V];
+document.getElementById('bg').className = 'bg ' + layout.bg;
+const safe = document.getElementById('safe');
+for (const b of layout.blocks) {
+  const [key, x, y, w, s0, override] = b;
+  const s = s0 || 1;
+  if (s < 0.01) continue;                       // a variant may drop an element
+  const html = override !== undefined ? override
+             : (typeof E[key] === 'function' ? E[key]() : E[key]);
+  const d = document.createElement('div');
+  d.className = 'abs';
+  d.style.left = x + 'in'; d.style.top = y + 'in';
+  if (w) d.style.width = (w / s) + 'in';
+  if (s !== 1) d.style.zoom = s;
+  d.innerHTML = html;
+  safe.appendChild(d);
+}
+
+if (GUIDE) {
+  const g = document.createElement('div');
+  g.className = 'guide';
+  g.style.cssText += `left:${TV.x}in;top:${TV.y}in;width:${TV.w}in;height:${TV.h}in;`;
+  safe.appendChild(g);
+  const scr = document.createElement('div');
+  scr.className = 'screen';
+  scr.style.cssText += `left:30.5in;top:4in;width:38in;height:21.5in;`;
+  scr.innerHTML = `<div style="font-size:2.4in;line-height:1">43&quot; TV</div>
+    <div style="font-size:1.1in;margin-top:.3in">38 &times; 21.5 in</div>`;
+  safe.appendChild(scr);
+}
+
+const wall = document.getElementById('wall');
+wall.style.width = (TRIM[0] + 2 * BLEED) + 'in';
+wall.style.height = (TRIM[1] + 2 * BLEED) + 'in';
+document.title = 'PANEL-READY';
+</script>
+</body>
+</html>
