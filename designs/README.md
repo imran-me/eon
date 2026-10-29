@@ -36,6 +36,55 @@ Both come from the **Exhibitor Manual** (`reference/Exhibitor_Manual.pdf`):
 **That is tomorrow.** Miss it and the backdrop has to be printed and fixed
 privately, at our cost and with no guarantee of access to fix it.
 
+## THE BACK WALL — one design, 5.9 x 8.33 ft (current deliverable)
+
+`print/EON-backwall-5.9x8.33ft.pdf` + `-150dpi.png` (10921 x 15296 px).
+Trim 70.8 x 99.96 in, 1 in bleed on every side. **White ground.**
+
+### Where the TV sits, and how it was derived
+
+Read off the organiser's dimensioned render, not guessed:
+
+| | |
+| --- | --- |
+| Printable blue wall | 70.8 x 99.96 in (5.9 x 8.33 ft) |
+| 43" TV screen | **38 x 21.5 in** — which is exactly 16:9, so those are the screen dimensions, not the bezel |
+| Horizontal | branding strip 30 in + TV 38 in = 68 in of 70.8, leaving 1.4 in each side, so the TV sits **x = 30.5 .. 68.5 in** |
+| Vertical | the render puts the TV top about 4 in below the wall top, so **y = 4 .. 25.5 in**; TV centre lands ~7.1 ft off the floor |
+| **Reserved in the artwork** | **x 28.5 .. 70.8, y 1.0 .. 28.5** — slack on every side, so a mount a few inches out still covers nothing |
+
+The reserve sits inside a **dark header band**, so the screen bezel reads as part
+of the design rather than a hole in it. `EON-backwall-TV-GUIDE.pdf` is the same
+artwork with that zone outlined in red — **check against it, never print it.**
+
+The 1 ft organiser fascia and the 8 in "Company Name & Logo" band sit *above*
+the blue wall and are DCCI's to print. They are not part of this file.
+
+### What is on it, and why
+
+Built to the owner's markup:
+
+- **EON appears three times, and speaks.** The header figure, a waving figure
+  asking a real question in English *and* বাংলা, and a third low on the panel
+  inviting the visitor in Bangla. A mascot that asks a question stops someone in
+  an aisle; a logo does not.
+- **The headline is ~30% smaller than the first draft**, with real body copy
+  under it instead of a bare slogan.
+- **Two business sections** rather than feature-speak: *What it does for the
+  business* (accounts, payroll, HR, sales, CRM; the rule, not just a number;
+  what needs approval; drafts) and *Why you can act on it* (no language model,
+  it shows the working).
+- **The numbers** — 45 / 3 / 203 / 0 — glanceable from the aisle.
+- **DIU logo** in the header, on a white chip so it keeps its own colours
+  against the dark band.
+
+### Vertical policy
+
+Everything that carries meaning lives between the top and the middle, because
+**staff stand at this wall.** The **QR is at ~3.2 ft off the floor**, where a
+standing visitor can actually point a phone — not at the foot of the panel. Below
+~85 in there is only a greeting and a credit line, over a quiet wash.
+
 ## The real shell — what actually gets printed (updated from the organiser's 3D render)
 
 The render the owner supplied settles what the written documents never did. The
