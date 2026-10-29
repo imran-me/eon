@@ -1,0 +1,235 @@
+<!doctype html>
+<!-- The two green-marked panels of the EON shell, laid out by the browser and
+     printed to exact size by Chrome (see print-panels.mjs).
+     ?panel=branding  2.5ft x 8.33ft  back wall, left of the 43" TV
+     ?panel=side        2ft x 8.30ft  the return wing, seen down the aisle
+     Page size = trim + 1in bleed on every side; content stays inside .safe.
+
+     Vertical rhythm: the panel is over eight feet tall, so the content is
+     grouped into bands and distributed with space-between. A single flexible
+     spacer would pool every spare inch in one place and drop the QR to knee
+     height, where nobody can scan it. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EON stall panel</title>
+<style>
+  :root{
+    --ink:#0B1222; --ink2:#16213B; --blue:#3B6FE0; --teal:#2BB8DC;
+    --lime:#AAE545; --violet:#7E6BD9; --white:#fff; --muted:#AEBBD4;
+    --line:rgba(255,255,255,.16);
+    --bleed:1in;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{margin:0;}
+  html,body{background:var(--ink);}
+  body{
+    font-family:Inter,"Segoe UI",system-ui,Helvetica,Arial,sans-serif;
+    color:var(--white);
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .panel{
+    position:relative; overflow:hidden;
+    background:
+      radial-gradient(52% 22% at 78% 8%, rgba(43,184,220,.36), rgba(59,111,224,.10) 55%, transparent 76%),
+      radial-gradient(50% 20% at 16% 52%, rgba(59,111,224,.32), transparent 72%),
+      linear-gradient(168deg, var(--ink2) 0%, var(--ink) 58%);
+  }
+  /* faint grid so a large dark field is never flat on press */
+  .panel::before{
+    content:""; position:absolute; inset:0; opacity:.55;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:1.2in 1.2in;
+    -webkit-mask-image:radial-gradient(74% 46% at 50% 38%, #000 18%, transparent 80%);
+            mask-image:radial-gradient(74% 46% at 50% 38%, #000 18%, transparent 80%);
+  }
+  .safe{
+    position:absolute; inset:var(--bleed);
+    padding:2.2in 1.5in 2.0in;
+    display:flex; flex-direction:column; align-items:center;
+    justify-content:space-between;
+  }
+  .band{width:100%; display:flex; flex-direction:column; align-items:center;}
+
+  .pill{
+    border:2px solid var(--line); border-radius:999px;
+    padding:.30in .85in; font-weight:800; letter-spacing:.055em;
+    color:var(--teal); white-space:nowrap;
+  }
+  .mark{display:flex; align-items:center; gap:.42in;}
+  .mark svg{display:block;}
+  .word{font-weight:900; letter-spacing:-.055em; line-height:.9;}
+  .rule{height:2px; background:var(--line); width:100%;}
+
+  .hero{font-weight:900; letter-spacing:-.03em; line-height:1.04; text-align:center;}
+  .hero .t{color:var(--teal);}
+  .sub{color:var(--muted); font-weight:500; text-align:center; line-height:1.42;}
+
+  .avatar{display:block; width:100%; height:auto;}
+  .stage{position:relative; width:100%; display:flex; justify-content:center;}
+  .stage::after{  /* a pool of light so the figure stands on the panel */
+    content:""; position:absolute; left:6%; right:6%; bottom:.35in; height:2.2in;
+    background:radial-gradient(50% 50% at 50% 50%, rgba(43,184,220,.42), transparent 70%);
+  }
+
+  .bubble{
+    position:relative; background:var(--white); color:#0B1222;
+    border-radius:.6in; padding:.62in .70in; font-weight:700; width:100%;
+    box-shadow:0 .18in .5in rgba(0,0,0,.40);
+  }
+  .bubble .q{display:block; line-height:1.3;}
+  .bubble .q + .q{margin-top:.30in; padding-top:.30in; border-top:2px solid #E3E9F3;}
+  .bn{font-family:"Noto Sans Bengali","Nirmala UI",sans-serif;}
+  .bubble::after{
+    content:""; position:absolute; left:50%; transform:translateX(-50%);
+    bottom:-.36in; border:.37in solid transparent; border-top-color:var(--white);
+    border-bottom:0;
+  }
+  .says{color:var(--teal); font-weight:800; letter-spacing:.07em; text-transform:uppercase;}
+
+  .facts{width:100%; display:flex; flex-direction:column; gap:.70in;}
+  .fact{display:flex; align-items:baseline; gap:.55in;}
+  .fact b{
+    color:var(--teal); font-weight:900; line-height:.92;
+    min-width:2.9in; text-align:right; letter-spacing:-.045em;
+  }
+  .fact span{color:var(--white); font-weight:600; line-height:1.28;}
+
+  .qr{background:var(--white); border-radius:.18in; padding:.22in; display:block;}
+  .qrwrap{display:flex; align-items:center; gap:.80in; width:100%;}
+  .qrtext{display:flex; flex-direction:column; gap:.16in;}
+
+  .foot{color:var(--muted); text-align:center; line-height:1.48;}
+  .foot b{color:var(--white);}
+</style>
+</head>
+<body>
+<div class="panel"><div class="safe" id="root"></div></div>
+
+<script>
+const P = new URLSearchParams(location.search).get('panel') || 'branding';
+
+/* The EON mark as vector: one decision core inside three layers. */
+const MARK = (d) => `
+<svg width="${d}" height="${d}" viewBox="-50 -50 100 100" aria-hidden="true">
+  <circle r="46" fill="none" stroke="#2BB8DC" stroke-width="2.6" opacity=".34"/>
+  <circle r="33" fill="none" stroke="#2BB8DC" stroke-width="2.6" opacity=".52"/>
+  <circle r="20" fill="none" stroke="#2BB8DC" stroke-width="2.6" opacity=".74"/>
+  <circle r="8.4" fill="#3B6FE0"/>
+  <circle cx="26.4" cy="-37.6" r="4.4" fill="#2BB8DC"/>
+  <circle cx="29.1" cy="15.5"  r="4.4" fill="#2BB8DC"/>
+  <circle cx="-18.8" cy="6.8"  r="4.4" fill="#2BB8DC"/>
+  <circle cx="-11.9" cy="-44.4" r="4.4" fill="#2BB8DC"/>
+</svg>`;
+
+const BN = (s) => `<span class="bn">${s}</span>`;
+const BANGLA = '&#2476;&#2494;&#2434;&#2482;&#2494;';
+
+const BRANDING = `
+  <div class="band">
+    <div class="mark" style="margin-bottom:.7in">
+      ${MARK('2.1in')}<div class="word" style="font-size:2.8in">EON</div>
+    </div>
+    <div class="pill" style="font-size:.52in">STALL U-13 &middot; UNIVERSITY ZONE</div>
+  </div>
+
+  <div class="band">
+    <div class="rule" style="margin-bottom:1.3in"></div>
+    <div class="hero" style="font-size:1.80in">
+      One Brain.<br><span class="t">Multi Decision Layer</span><br>for your ERP.
+    </div>
+    <div class="sub" style="font-size:.64in; margin-top:1.0in">
+      Ask in English or ${BN(BANGLA)}. Get the number,<br>
+      the rule behind it, and the action to take.
+    </div>
+  </div>
+
+  <div class="band stage">
+    <img class="avatar" src="../assets/eon-happy-full.png" alt="">
+  </div>
+
+  <!-- QR sits a little above mid-panel: roughly 3.5 ft off the floor, which is
+       where a standing visitor can actually point a phone. -->
+  <div class="band">
+    <div class="qrwrap">
+      <img class="qr" src="../assets/qr.png" style="width:3.5in; height:3.5in" alt="">
+      <div class="qrtext">
+        <div style="font-size:.72in; font-weight:800">Ask EON yourself</div>
+        <div style="font-size:.52in; color:var(--muted); font-weight:500">Scan &mdash; it answers from the live ERP</div>
+        <div style="font-size:.52in; color:var(--teal); font-weight:800">eon.gulfrabit.com</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="facts" style="font-size:.60in">
+      <div class="fact"><b style="font-size:1.75in">45</b><span>business subjects,<br>asked any way you like</span></div>
+      <div class="fact"><b style="font-size:1.75in">3</b><span>languages &mdash; English,<br>${BN(BANGLA)} and Banglish</span></div>
+      <div class="fact"><b style="font-size:1.75in">203</b><span>live ERP tables<br>read directly</span></div>
+      <div class="fact"><b style="font-size:1.75in">0</b><span>language models &mdash;<br>every figure is computed</span></div>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="rule" style="margin-bottom:.8in"></div>
+    <div class="foot" style="font-size:.50in">
+      <b>Daffodil International University</b><br>
+      Bangladesh AI Business Summit 2026
+    </div>
+  </div>`;
+
+const SIDE = `
+  <div class="band">
+    <div class="says" style="font-size:.56in; margin-bottom:.7in">Ask me anything</div>
+    <div class="bubble" style="font-size:.62in">
+      <span class="q">&ldquo;What did we spend on marketing in June?&rdquo;</span>
+      <span class="q bn">&#2458;&#2482;&#2468;&#2495; &#2478;&#2494;&#2488;&#2503; &#2482;&#2494;&#2477; &#2453;&#2468;?</span>
+      <span class="q">&ldquo;Who has not come in today?&rdquo;</span>
+    </div>
+  </div>
+
+  <div class="band stage" style="margin-top:.5in">
+    <img class="avatar" src="../assets/eon-wave-full.png" alt="">
+  </div>
+
+  <div class="band">
+    <div class="rule" style="margin-bottom:1.1in"></div>
+    <div class="hero" style="font-size:1.42in">
+      One Brain.<br><span class="t">Multi Decision<br>Layer</span><br>for your ERP.
+    </div>
+    <div class="sub" style="font-size:.58in; margin-top:.9in">
+      It reads the live ERP,<br>applies the rule,<br>and says what to do.
+    </div>
+  </div>
+
+  <div class="band">
+    <div style="font-size:.66in; font-weight:800; text-align:center; line-height:1.42">
+      No language model.<br>
+      <span style="color:var(--teal)">Every figure computed.</span>
+    </div>
+  </div>
+
+  <div class="band">
+    <div class="rule" style="margin-bottom:1.0in"></div>
+    <div class="mark" style="margin-bottom:.55in">
+      ${MARK('1.5in')}<div class="word" style="font-size:2.0in">EON</div>
+    </div>
+    <div class="pill" style="font-size:.44in">STALL U-13</div>
+    <div class="foot" style="font-size:.44in; margin-top:.8in">
+      <b>eon.gulfrabit.com</b><br>Daffodil International University
+    </div>
+  </div>`;
+
+document.getElementById('root').innerHTML = (P === 'side') ? SIDE : BRANDING;
+
+const TRIM = (P === 'side') ? [24, 99.6] : [30, 99.96];
+const BLEED = 1;
+const panel = document.querySelector('.panel');
+panel.style.width  = (TRIM[0] + 2 * BLEED) + 'in';
+panel.style.height = (TRIM[1] + 2 * BLEED) + 'in';
+document.title = 'PANEL-READY';
+</script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<!-- Offscreen hero render of the real three.js EON avatar, on a transparent
+     background, for use inside the printed stall panels. Served from the repo
+     root and screenshotted by headless Chrome (see render-avatar.mjs). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EON avatar render</title>
+<style>
+  html, body { margin: 0; height: 100%; background: transparent; }
+  canvas { display: block; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "/ai-companion/vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { EonModel } from '/ai-companion/js/eon-model.js';
+
+const q = new URLSearchParams(location.search);
+const W = +(q.get('w') || 1400);
+const H = +(q.get('h') || 2000);
+const POSE = q.get('pose') || 'happy';
+const FRAME = q.get('frame') || 'full';   // full | bust
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true,
+                                           preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+
+const model = new EonModel(renderer);
+scene.add(model.eon);
+if (model.env) scene.environment = model.env;
+
+// Lighting: a key from camera-left, a cool rim from behind to lift the figure
+// off a dark panel, and a soft fill so the navy hood keeps its form.
+scene.add(new THREE.HemisphereLight(0xdceaff, 0x16233c, 1.05));
+const key = new THREE.DirectionalLight(0xffffff, 2.3);
+key.position.set(-2.6, 4.2, 4.4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x4fd8f5, 2.6);
+rim.position.set(3.4, 2.2, -3.2); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xbcd4ff, 0.85);
+fill.position.set(3.0, 0.6, 3.0); scene.add(fill);
+
+model.setState(POSE);
+// Drive the clock forward so the idle animation settles into a lively pose
+// instead of the T-stance the constructor leaves behind.
+let t = 0;
+for (let i = 0; i < 260; i++) {
+  t += 1 / 60;
+  model.update(1 / 60, t, { lookX: -0.16, lookY: 0.08, facing: 0.22, particles: null });
+}
+
+// Frame the figure from its real bounds, so the crop never depends on guesswork.
+const box = new THREE.Box3().setFromObject(model.eon);
+const size = box.getSize(new THREE.Vector3());
+const mid = box.getCenter(new THREE.Vector3());
+const camera = new THREE.PerspectiveCamera(26, W / H, 0.1, 100);
+
+let target, span;
+if (FRAME === 'bust') {
+  target = new THREE.Vector3(mid.x, box.max.y - size.y * 0.30, mid.z);
+  span = size.y * 0.62;
+} else {
+  target = new THREE.Vector3(mid.x, mid.y, mid.z);
+  span = size.y * 1.10;
+}
+const dist = (span / 2) / Math.tan((camera.fov * Math.PI / 180) / 2);
+camera.position.set(target.x + dist * 0.26, target.y + span * 0.06, target.z + dist * 0.97);
+camera.lookAt(target);
+camera.updateProjectionMatrix();
+
+renderer.render(scene, camera);
+document.title = 'EON-AVATAR-READY';
+</script>
+</body>
+</html>

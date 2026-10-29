@@ -36,7 +36,75 @@ Both come from the **Exhibitor Manual** (`reference/Exhibitor_Manual.pdf`):
 **That is tomorrow.** Miss it and the backdrop has to be printed and fixed
 privately, at our cost and with no guarantee of access to fix it.
 
-## Files
+## The real shell — what actually gets printed (updated from the organiser's 3D render)
+
+The render the owner supplied settles what the written documents never did. The
+back wall is **5.9 ft x 8.33 ft**, but it is not all ours to print:
+
+- a **43" TV (38 x 21.5 in)** is mounted on the right of the back wall;
+- the usable graphic beside it is the **Branding Area, 2.5 ft wide x 8.33 ft**;
+- the stall also has a **side wing, 2 ft wide x 8.3 ft**, which is what people
+  see first as they walk down the aisle;
+- above both runs a **1 ft organiser fascia** (Ministry / Summit / DCCI logos)
+  and an **8 in "Company Name & Logo"** band — DCCI's to print, not ours;
+- the counter is **3 ft x 1 ft x 2.5 ft tall**, with two chairs.
+
+**These two panels are the deliverable.** The full-wall 5.9 x 8.33 artwork from
+the first pass is in `superseded/`: it was drawn before the TV was known about,
+so printing it would put content behind the screen. Do not send it.
+
+| File | Trim | Bleed | Output |
+| --- | --- | --- | --- |
+| `EON-branding-area-2.5x8.33ft` | 30 x 99.96 in | 1 in | PDF + 4800 x 15296 px PNG @150dpi |
+| `EON-side-panel-2x8.3ft` | 24 x 99.6 in | 1 in | PDF + 3900 x 15242 px PNG @150dpi |
+
+### The avatar is the real one, not an illustration
+
+The figure on both panels is the actual **three.js EON avatar** from
+`ai-companion/js/eon-model.js`, rendered headlessly through
+`designs/scripts/avatar-render.html` at 4200 x 6000 with a transparent
+background, then cropped to its own alpha bounds. The source of truth for the
+mascot is the running product, so the panel can never drift from what visitors
+see on screen. Figures print ~3870 px tall, about **120 dpi at final size** —
+correct for large-format viewed from a foot or more away.
+
+Two poses, each doing a different job:
+
+- **Side wing — waving.** It faces the aisle, so it greets people approaching.
+  A **speech bubble** carries three real questions, one of them in বাংলা, so a
+  passer-by learns what EON does without reading a word of body copy.
+- **Branding area — standing, open.** Seen up close beside the TV, next to the
+  numbers and the QR.
+
+### Layout decisions that are load-bearing
+
+- **The QR sits a little above mid-panel, roughly 3.5 ft off the floor.** In the
+  first draft a single flexible spacer pooled every spare inch at the bottom and
+  pushed the QR to knee height, where nobody can scan it. Content is now grouped
+  into bands distributed with `space-between`.
+- **Panels are laid out by the browser, not by hand-computed coordinates.** The
+  first SVG pass positioned text by guessing glyph widths and several lines
+  overlapped. The browser measures text; that class of bug is now impossible.
+- **Nothing essential is below 2 ft**, where the counter and chairs sit.
+
+### Regenerating
+
+Serve the repo root, then:
+
+    node designs/scripts/print-panels.mjs "<chrome.exe>" http://127.0.0.1:8777 <outdir>
+
+`print-panels.mjs` passes `paperWidth`/`paperHeight` explicitly rather than
+relying on `preferCSSPageSize` — `--print-to-pdf` silently falls back to Letter,
+and that failure reads as a design bug rather than a flag bug. It also waits for
+every image to decode before printing, because a PDF printed early shows an
+empty box where the avatar should be.
+
+To re-render the avatar (poses include `happy`, `wave`, `excited`, `celebrate`,
+`point`, `thinking`):
+
+    designs/scripts/avatar-render.html?w=4200&h=6000&frame=full&pose=wave
+
+## Files (first pass — see above)
 
 `print/` — artwork, ready to send. Each piece is supplied as **SVG** (opens
 directly in Adobe Illustrator, fully editable, all live vector) and **PDF**.
