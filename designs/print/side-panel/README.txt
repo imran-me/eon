@@ -1,5 +1,6 @@
 EON — SIDE PANEL (stall wing)
 Bangladesh AI Business Summit 2026 · Stall U-13 · Milky Way Hall, BCFCC
+(the stall number is not printed on this panel)
 
 SIZE
   Trim (finished panel)   2 ft x 8.3 ft   =  24 x 99.6 in
