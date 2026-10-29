@@ -53,7 +53,8 @@ for (const n of [1, 2, 3, 4, 5]) {
   const { targetId } = await browser.send('Target.createTarget', { url: 'about:blank' });
   const { sessionId } = await browser.send('Target.attachToTarget', { targetId, flatten: true });
   await browser.send('Page.enable', {}, sessionId);
-  const url = `${BASE}/designs/scripts/panel-variants.html?v=${n}${GUIDE ? '&guide=1' : ''}`;
+  const cacheBust = `_=${Date.now()}`;
+  const url = `${BASE}/designs/scripts/panel-variants.html?v=${n}${GUIDE ? '&guide=1' : ''}&${cacheBust}`;
   await browser.send('Page.navigate', { url }, sessionId);
 
   let ready = false;

@@ -75,7 +75,8 @@ for (const p of PANELS) {
   const { sessionId } = await browser.send('Target.attachToTarget', { targetId, flatten: true });
 
   await browser.send('Page.enable', {}, sessionId);
-  const url = `${BASE}/designs/scripts/${p.page || 'panel.html'}?panel=${p.id}${p.q || ''}`;
+  const cacheBust = `_=${Date.now()}`;
+  const url = `${BASE}/designs/scripts/${p.page || 'panel.html'}?panel=${p.id}${p.q || ''}${(p.q||'').includes('?')?'&':(p.page?'&':'&')}${cacheBust}`;
   await browser.send('Page.navigate', { url }, sessionId);
 
   // Wait for the script to finish laying the panel out and for the avatar

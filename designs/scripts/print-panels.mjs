@@ -75,6 +75,7 @@ for (const p of PANELS) {
   const { sessionId } = await browser.send('Target.attachToTarget', { targetId, flatten: true });
 
   await browser.send('Page.enable', {}, sessionId);
+  const cacheBust = `_=${Date.now()}`;
   const url = `${BASE}/designs/scripts/panel.html?panel=${p.id}`;
   await browser.send('Page.navigate', { url }, sessionId);
 
