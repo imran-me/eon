@@ -186,21 +186,21 @@ const BLOCKS = [
   { x: 2.0, y: 31, w: 34, html:
     `<div class="hero">One Brain.<br><span class="t">Multi Decision Layer</span><br>for your ERP.</div>` },
 
-  { x: 2.0, y: 42.5, w: 33, html:
+  { x: 2, y: 41, w: 33, html:
     `<div class="sub">EON answers a business question from your <b>live ERP</b> &mdash;
      in English, <span class="bn">${BANGLA}</span> or Banglish. Not a chatbot reading a
      document: every figure is computed from the ledger, with the rule that
      produced it and the action to take next.</div>` },
 
   // EON, speaking, top right of the white area
-  { x: 38.5, y: 29.5, w: 30, html:
+  { x: 38.5, y: 30, w: 30, html:
     `<div class="bubble">&ldquo;What did we spend on marketing in June?&rdquo;
        <span class="sm bn">${Q_BN}</span></div>` },
-  { x: 45.0, y: 35, w: 13.5, html:
+  { x: 46, y: 35.5, w: 12, html:
     `<img src="../assets/eon-wave-full.png" style="width:100%;display:block" alt="">` },
 
   /* ---------------- band 2: what it does, and why to trust it --------- */
-  { x: 2.0, y: 54, w: 33, html:
+  { x: 2, y: 49, w: 33, html:
     `<h2 class="sec">What it does for the business</h2>
      <ul class="feat">
        <li>Accounts, payroll, HR, sales and CRM &mdash; answered together</li>
@@ -210,7 +210,7 @@ const BLOCKS = [
        <li>Speaks <span class="bn">${BANGLA}</span> as naturally as English</li>
      </ul>` },
 
-  { x: 38.5, y: 56, w: 30.3, html:
+  { x: 38.5, y: 53.5, w: 30.3, html:
     `<h2 class="sec">Why you can act on it</h2>
      <div class="note">There is <b>no language model</b> inventing a plausible
        paragraph. EON reads your ledger, applies your company&rsquo;s own rule and
@@ -218,7 +218,7 @@ const BLOCKS = [
        take to your board.</div>` },
 
   // the way in, kept at ~3.2 ft off the floor where a phone can reach it
-  { x: 38.5, y: 70.5, w: 30, html:
+  { x: 38.5, y: 64, w: 30, html:
     `<div class="qrbox">
        <img class="qr" src="../assets/qr.png" alt="">
        <div>
@@ -228,7 +228,7 @@ const BLOCKS = [
      </div>` },
 
   /* ---------------- band 3: the numbers, glanceable from the aisle ----- */
-  { x: 2.0, y: 68, w: 34, html:
+  { x: 2, y: 64, w: 34, html:
     `<div class="stats">
        <div class="stat"><b>45</b><span>business<br>subjects</span></div>
        <div class="stat"><b>3</b><span>languages,<br>written natively</span></div>
@@ -237,12 +237,12 @@ const BLOCKS = [
      </div>` },
 
   /* EON again, in Bangla, low and friendly rather than informative */
-  { x: 2.0, y: 77.5, w: 7.5, html:
+  { x: 2, y: 71, w: 7.5, html:
     `<img src="../assets/eon-curious-full.png" style="width:100%;display:block" alt="">` },
-  { x: 10.5, y: 80.5, w: 23, html:
+  { x: 10.5, y: 74, w: 23, html:
     `<div class="bubble notail" style="font-size:.90in"><span class="bn">${ASK_BN}</span></div>` },
 
-  { x: 38.5, y: 88, w: 31, html:
+  { x: 38.5, y: 76, w: 31, html:
     `<div class="foot"><b>Daffodil International University</b> &nbsp;&middot;&nbsp;
       Bangladesh AI Business Summit 2026 &nbsp;&middot;&nbsp; Stall U-13</div>` },
 ];
@@ -259,11 +259,25 @@ for (const b of BLOCKS) {
 }
 
 if (GUIDE) {
+  const SC = { x: 30.5, y: 4.0, w: 38.0, h: 21.5 };   // the real screen, to scale
   const g = document.createElement('div');
   g.className = 'guide';
   g.style.cssText += `left:${TV.x}in;top:${TV.y}in;width:${TV.w}in;height:${TV.h}in;`;
-  g.textContent = '43" TV — KEEP CLEAR';
+  g.innerHTML = `<div style="position:absolute;top:.7in;left:1.0in;font-size:.95in">
+      RESERVED ${TV.w} &times; ${TV.h} in &mdash; keep clear</div>`;
   safe.appendChild(g);
+
+  const scr = document.createElement('div');
+  scr.style.cssText = `position:absolute;left:${SC.x}in;top:${SC.y}in;`
+    + `width:${SC.w}in;height:${SC.h}in;border:8px solid #FF3B3B;`
+    + `background:rgba(255,59,59,.28);display:flex;flex-direction:column;`
+    + `align-items:center;justify-content:center;color:#fff;text-align:center;`
+    + `font-weight:900;border-radius:.3in;`;
+  scr.innerHTML = `<div style="font-size:2.6in;line-height:1">43&quot; TV</div>
+    <div style="font-size:1.25in;margin-top:.3in">38 &times; 21.5 in (16:9)</div>
+    <div style="font-size:.95in;font-weight:700;margin-top:.45in">
+      ${SC.x} in from left &middot; ${SC.y} in from top</div>`;
+  safe.appendChild(scr);
 }
 
 const wall = document.getElementById('wall');
