@@ -40,9 +40,8 @@
   /* dark header band, full bleed, carrying the branding and the TV */
   .header{
     position:absolute; left:0; right:0; top:0; height:29in;
-    background:
-      radial-gradient(42% 70% at 78% 40%, rgba(43,184,220,.26), transparent 70%),
-      linear-gradient(135deg, var(--band2) 0%, var(--band) 70%);
+    background:linear-gradient(170deg, #FFFFFF 0%, #F6F9FE 100%);
+    border-bottom:2px solid var(--line);
   }
   /* quiet wash low down: fills the standing zone, carries no information */
   .wash{
@@ -54,17 +53,14 @@
   .safe{position:absolute; inset:var(--bleed);}
   .abs{position:absolute;}
 
-  .word{font-weight:900; letter-spacing:-.055em; line-height:.86; color:#fff;}
+  .word{font-weight:900; letter-spacing:-.055em; line-height:.86; color:var(--ink);}
   .mark{display:flex; align-items:center; gap:.95in;}
   .pill{
-    display:inline-block; border:3px solid rgba(255,255,255,.3); border-radius:999px;
+    display:inline-block; border:3px solid var(--line); border-radius:999px;
     padding:.34in 1.0in; font-size:.78in; font-weight:800;
-    letter-spacing:.05em; color:#5FD3EE; white-space:nowrap;
+    letter-spacing:.05em; color:var(--teal); white-space:nowrap; background:#fff;
   }
-  .chip{
-    display:inline-block; background:#fff; border-radius:.34in;
-    padding:.46in .70in; line-height:0;
-  }
+  .chip{display:inline-block; line-height:0;}
   .chip img{height:1.9in; width:auto; display:block;}
 
   .hero{font-weight:900; letter-spacing:-.03em; line-height:1.06; font-size:2.70in;}
@@ -142,8 +138,8 @@
   ul.feat2 li::before{content:""; position:absolute; left:0; top:.26in;
               width:.66in; height:.66in; border-radius:50%; background:var(--blue);}
   .pillars{display:flex; flex-wrap:wrap; gap:.55in;}
-  .pillars span{border:2.5px solid rgba(95,211,238,.45); border-radius:999px;
-    padding:.34in .80in; font-size:.62in; font-weight:800; color:#CFE6F5;
+  .pillars span{border:2.5px solid #C3D4EA; border-radius:999px;
+    padding:.34in .80in; font-size:.62in; font-weight:800; color:var(--slate);
     letter-spacing:.03em; white-space:nowrap;}
   .eyebrow{font-size:.70in; font-weight:900; letter-spacing:.14em;
            text-transform:uppercase; color:var(--teal);}
@@ -171,14 +167,14 @@ const TV = { x: 28.5, y: 1.0, w: 42.3, h: 27.5 };
 
 const MARK = (d) => `
 <svg width="${d}" height="${d}" viewBox="-50 -50 100 100" aria-hidden="true" style="display:block">
-  <circle r="46" fill="none" stroke="#5FD3EE" stroke-width="3.2" opacity=".34"/>
-  <circle r="33" fill="none" stroke="#5FD3EE" stroke-width="3.2" opacity=".56"/>
-  <circle r="20" fill="none" stroke="#5FD3EE" stroke-width="3.2" opacity=".80"/>
-  <circle r="8.4" fill="#4C8DFF"/>
-  <circle cx="26.4" cy="-37.6" r="4.6" fill="#5FD3EE"/>
-  <circle cx="29.1" cy="15.5"  r="4.6" fill="#5FD3EE"/>
-  <circle cx="-18.8" cy="6.8"  r="4.6" fill="#5FD3EE"/>
-  <circle cx="-11.9" cy="-44.4" r="4.6" fill="#5FD3EE"/>
+  <circle r="46" fill="none" stroke="#118AA8" stroke-width="3.2" opacity=".34"/>
+  <circle r="33" fill="none" stroke="#118AA8" stroke-width="3.2" opacity=".56"/>
+  <circle r="20" fill="none" stroke="#118AA8" stroke-width="3.2" opacity=".80"/>
+  <circle r="8.4" fill="#2F62D9"/>
+  <circle cx="26.4" cy="-37.6" r="4.6" fill="#118AA8"/>
+  <circle cx="29.1" cy="15.5"  r="4.6" fill="#118AA8"/>
+  <circle cx="-18.8" cy="6.8"  r="4.6" fill="#118AA8"/>
+  <circle cx="-11.9" cy="-44.4" r="4.6" fill="#118AA8"/>
 </svg>`;
 
 const BANGLA = '&#2476;&#2494;&#2434;&#2482;&#2494;';
