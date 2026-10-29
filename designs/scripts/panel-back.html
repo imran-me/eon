@@ -76,9 +76,9 @@
     font-size:1.12in; font-weight:900; letter-spacing:.04em; text-transform:uppercase;
     color:var(--teal); margin-bottom:.85in;
   }
-  ul.feat{list-style:none; display:flex; flex-direction:column; gap:.62in;}
+  ul.feat{list-style:none; display:flex; flex-direction:column; gap:.50in;}
   ul.feat li{
-    position:relative; padding-left:1.65in; font-size:1.06in;
+    position:relative; padding-left:1.55in; font-size:.98in;
     font-weight:600; line-height:1.3;
   }
   ul.feat li::before{
@@ -126,6 +126,27 @@
   .guide{position:absolute; border:6px dashed #FF3B3B; background:rgba(255,59,59,.12);
          color:#FF6B6B; font-size:1.5in; font-weight:800; display:flex;
          align-items:center; justify-content:center;}
+
+  /* the command strip: what was said, and what EON did about it */
+  .cmd{display:flex; flex-direction:column; gap:.55in;}
+  .cmdrow{display:flex; align-items:flex-start; gap:.85in; background:#fff;
+          border:2.5px solid var(--line); border-radius:.45in; padding:.75in .9in;
+          box-shadow:0 .10in .30in rgba(14,26,51,.07);}
+  .mic{flex:none; width:1.9in; height:1.9in; border-radius:50%;
+       background:var(--blue); display:flex; align-items:center; justify-content:center;}
+  .said{font-weight:800; font-size:.96in; line-height:1.3; color:var(--ink);}
+  .did{font-size:.82in; line-height:1.3; color:var(--teal); font-weight:800; margin-top:.26in;}
+  ul.feat2{list-style:none; columns:2; column-gap:1.3in;}
+  ul.feat2 li{position:relative; padding-left:1.35in; font-size:.90in; font-weight:600;
+              line-height:1.28; margin-bottom:.62in; break-inside:avoid;}
+  ul.feat2 li::before{content:""; position:absolute; left:0; top:.26in;
+              width:.66in; height:.66in; border-radius:50%; background:var(--blue);}
+  .pillars{display:flex; flex-wrap:wrap; gap:.55in;}
+  .pillars span{border:2.5px solid rgba(95,211,238,.45); border-radius:999px;
+    padding:.34in .80in; font-size:.62in; font-weight:800; color:#CFE6F5;
+    letter-spacing:.03em; white-space:nowrap;}
+  .eyebrow{font-size:.70in; font-weight:900; letter-spacing:.14em;
+           text-transform:uppercase; color:var(--teal);}
 </style>
 </head>
 <body>
@@ -165,84 +186,101 @@ const Q_BN = '&#2458;&#2482;&#2468;&#2495; &#2478;&#2494;&#2488;&#2503; &#2482;&
 const ASK_BN = '&#2438;&#2478;&#2494;&#2453;&#2503; &#2476;&#2494;&#2434;&#2482;&#2494;&#2479;&#2492; '
              + '&#2460;&#2495;&#2460;&#2509;&#2462;&#2503;&#2488; &#2453;&#2480;&#2497;&#2472;&#2404;';
 
+const MIC = () => `
+<svg width="1.05in" height="1.05in" viewBox="0 0 24 24" fill="none"
+     stroke="#fff" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+  <rect x="9" y="2" width="6" height="11" rx="3" fill="#fff" stroke="none"/>
+  <path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/>
+</svg>`;
+
+const CMD = (said, did) => `
+  <div class="cmdrow"><div class="mic">${MIC()}</div>
+    <div><div class="said">${said}</div><div class="did">&rarr; ${did}</div></div></div>`;
+
 const BLOCKS = [
   /* ---------------- header band: EON, DIU, and the TV ---------------- */
-  { x: 0.8, y: 2.5, w: 9.0, html:
+  { x: 0.8, y: 2.0, w: 8.5, html:
     `<img src="../assets/eon-celebrate-full.png" style="width:100%;display:block" alt="">` },
 
-  { x: 10.4, y: 5.0, html:
+  { x: 10.0, y: 3.5, html:
     `<div class="mark" style="gap:.8in">${MARK('2.4in')}<div class="word" style="font-size:2.9in">EON</div></div>` },
 
-  { x: 10.4, y: 12.2, html: `<span class="pill" style="font-size:.62in">STALL U-13 &middot; UNIVERSITY ZONE</span>` },
+  { x: 10.0, y: 17.2, html: `<span class="pill" style="font-size:.62in">STALL U-13 &middot; UNIVERSITY ZONE</span>` },
 
-  { x: 20.7, y: 5.6, html:
+  { x: 10.0, y: 11.0, html:
     `<span class="chip"><img src="../assets/diu-logo.png" alt="Daffodil International University"></span>` },
 
-  { x: 10.4, y: 18.4, w: 16, html:
-    `<div style="color:#9FB4D6;font-size:.80in;font-weight:600;line-height:1.4">
-       Bangladesh AI Business<br>Summit 2026</div>` },
+  { x: 0.8, y: 22.4, w: 27, html:
+    `<div class="pillars"><span>Bookkeeping</span><span>CA knowledge</span><span>Reads every company</span><span>Acts on your voice</span></div>` },
 
-  /* ---------------- band 1: the promise, and EON asking ---------------- */
-  { x: 2.0, y: 31, w: 34, html:
-    `<div class="hero">One Brain.<br><span class="t">Multi Decision Layer</span><br>for your ERP.</div>` },
+  /* ---------------- band 1: the claim ---------------- */
+  { x: 2.0, y: 31.0, html: `<div class="eyebrow">An independent business intelligence</div>` },
 
-  { x: 2, y: 41, w: 33, html:
-    `<div class="sub">EON answers a business question from your <b>live ERP</b> &mdash;
-     in English, <span class="bn">${BANGLA}</span> or Banglish. Not a chatbot reading a
-     document: every figure is computed from the ledger, with the rule that
-     produced it and the action to take next.</div>` },
+  { x: 2.0, y: 33.0, w: 35, html:
+    `<div class="hero">It keeps the books.<br>It knows the standards.<br><span class="t">It acts on your voice.</span></div>` },
 
-  // EON, speaking, top right of the white area
-  { x: 38.5, y: 30, w: 30, html:
-    `<div class="bubble">&ldquo;What did we spend on marketing in June?&rdquo;
-       <span class="sm bn">${Q_BN}</span></div>` },
-  { x: 46, y: 35.5, w: 12, html:
-    `<img src="../assets/eon-wave-full.png" style="width:100%;display:block" alt="">` },
+  { x: 2.0, y: 44.0, w: 34, html:
+    `<div class="sub">EON reads <b>every company in the group</b> &mdash; ledgers, payroll, people and cash &mdash; with a chartered accountant&rsquo;s rules built in. Speak in English or <span class="bn">${BANGLA}</span>: it posts the entry, finds the error, reconciles the ledger and tells you what is coming.</div>` },
 
-  /* ---------------- band 2: what it does, and why to trust it --------- */
-  { x: 2, y: 49, w: 33, html:
-    `<h2 class="sec">What it does for the business</h2>
-     <ul class="feat">
-       <li>Accounts, payroll, HR, sales and CRM &mdash; answered together</li>
-       <li>Says the rule it applied, not just a number</li>
-       <li>Flags what is waiting on your approval today</li>
-       <li>Drafts the reminder, notice or warning for you</li>
-       <li>Speaks <span class="bn">${BANGLA}</span> as naturally as English</li>
+  /* ---------------- the command strip, the whole argument in three rows --- */
+  { x: 2.0, y: 52.5, w: 34, html:
+    `<div class="cmd">
+      ${CMD('&ldquo;Dr Salary 50,000, Cr Bank.&rdquo;', 'Journal posted. Ledger updated.')}
+      ${CMD('<span class="bn">&#2480;&#2494;&#2476;&#2509;&#2476;&#2495;&#2480; &#2454;&#2494;&#2468;&#2494; &#2478;&#2495;&#2482;&#2495;&#2479;&#2492;&#2503; &#2470;&#2494;&#2451;&#2404;</span>',
+            'Reconciled &mdash; &#2547;1.4 L already paid in advance.')}
+      ${CMD('&ldquo;Who is idle this week?&rdquo;', '7 staff flagged. Evaluations ready.')}
+     </div>` },
+
+  /* ---------------- what else it carries ---------------- */
+  { x: 2.0, y: 70.5, w: 34, html:
+    `<h2 class="sec" style="margin-bottom:.7in">And it also</h2>
+     <ul class="feat2">
+       <li>Closes the books</li>
+       <li>Audits its own entries</li>
+       <li>Reconciles banks &amp; parties</li>
+       <li>Projects cash and revenue</li>
+       <li>Rates every employee</li>
+       <li>Updates vendors &amp; agents</li>
      </ul>` },
 
-  { x: 38.5, y: 53.5, w: 30.3, html:
-    `<h2 class="sec">Why you can act on it</h2>
-     <div class="note">There is <b>no language model</b> inventing a plausible
-       paragraph. EON reads your ledger, applies your company&rsquo;s own rule and
-       shows the working &mdash; so a figure on this wall is a figure you can
-       take to your board.</div>` },
+  /* ---------------- right column: EON speaking, the way in, the proof ---- */
+  { x: 38.5, y: 30.0, w: 30, html:
+    `<div class="eyebrow" style="margin-bottom:.45in">Just say it out loud</div>
+     <div class="bubble">&ldquo;Close the month and show me what is wrong.&rdquo;<span class="sm bn">&#2447;&#2439; &#2478;&#2494;&#2488;&#2503;&#2480; &#2482;&#2494;&#2477;-&#2453;&#2509;&#2487;&#2468;&#2495; &#2470;&#2503;&#2454;&#2494;&#2451;&#2404;</span></div>` },
 
-  // the way in, kept at ~3.2 ft off the floor where a phone can reach it
-  { x: 38.5, y: 64, w: 30, html:
+  { x: 47.0, y: 38.0, w: 11.5, html:
+    `<img src="../assets/eon-wave-full.png" style="width:100%;display:block" alt="">` },
+
+  { x: 38.5, y: 55.5, w: 30, html:
     `<div class="qrbox">
        <img class="qr" src="../assets/qr.png" alt="">
        <div>
-         <div style="font-size:1.20in;font-weight:900;line-height:1.14">Ask EON<br>yourself</div>
+         <div style="font-size:1.20in;font-weight:900;line-height:1.14">Ask it<br>yourself</div>
          <div style="font-size:.86in;color:var(--teal);font-weight:800;margin-top:.26in">eon.gulfrabit.com</div>
        </div>
      </div>` },
 
-  /* ---------------- band 3: the numbers, glanceable from the aisle ----- */
-  { x: 2, y: 64, w: 34, html:
+  { x: 38.5, y: 64.5, w: 30.3, html:
+    `<h2 class="sec">Why you can act on it</h2>
+     <div class="note">A <b>working prototype</b>, already running on a live
+       12-company ERP. There is <b>no language model</b> inventing a plausible
+       paragraph &mdash; EON reads your ledger, applies your own rule and shows the
+       working, so a figure here is one you can take to your board.</div>` },
+
+  { x: 38.5, y: 78.0, w: 31, html:
     `<div class="stats">
-       <div class="stat"><b>45</b><span>business<br>subjects</span></div>
-       <div class="stat"><b>3</b><span>languages,<br>written natively</span></div>
-       <div class="stat"><b>203</b><span>ERP tables<br>read directly</span></div>
-       <div class="stat"><b>0</b><span>language<br>models</span></div>
+       <div class="stat"><b style="font-size:2.6in">45</b><span>business<br>subjects</span></div>
+       <div class="stat"><b style="font-size:2.6in">3</b><span>languages,<br>natively</span></div>
+       <div class="stat"><b style="font-size:2.6in">203</b><span>ERP tables<br>read live</span></div>
      </div>` },
 
-  /* EON again, in Bangla, low and friendly rather than informative */
-  { x: 2, y: 71, w: 7.5, html:
+  /* EON again, low and friendly rather than informative */
+  { x: 2.0, y: 84.5, w: 7.0, html:
     `<img src="../assets/eon-curious-full.png" style="width:100%;display:block" alt="">` },
-  { x: 10.5, y: 74, w: 23, html:
-    `<div class="bubble notail" style="font-size:.90in"><span class="bn">${ASK_BN}</span></div>` },
+  { x: 10.0, y: 87.5, w: 24, html:
+    `<div class="bubble notail" style="font-size:.86in"><span class="bn">${ASK_BN}</span></div>` },
 
-  { x: 38.5, y: 76, w: 31, html:
+  { x: 38.5, y: 90.0, w: 31, html:
     `<div class="foot"><b>Daffodil International University</b> &nbsp;&middot;&nbsp;
       Bangladesh AI Business Summit 2026 &nbsp;&middot;&nbsp; Stall U-13</div>` },
 ];
