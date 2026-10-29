@@ -51,7 +51,18 @@ rim.position.set(3.4, 2.2, -3.2); scene.add(rim);
 const fill = new THREE.DirectionalLight(0xbcd4ff, 0.85);
 fill.position.set(3.0, 0.6, 3.0); scene.add(fill);
 
+/* The funny poses (excited, celebrate) ship with eL/eR:'happy', which is the
+   CLOSED smiling arc eye. The owner wants open eyes, so the pose's arms are
+   kept and only the face is overridden. */
+const cfg = model.CFG[POSE];
+if (cfg) {
+  if (q.get('eyes') === 'open') { cfg.eL = 'open'; cfg.eR = 'open'; }
+  if (q.get('mouth')) cfg.mouth = q.get('mouth');
+  // confetti sprays to the frame edges and wrecks a tight crop for print
+  if (q.get('confetti') === '0') cfg.confetti = false;
+}
 model.setState(POSE);
+model.nextBlink = 1e9;   // never schedule a blink while we settle the pose
 // Drive the clock forward so the idle animation settles into a lively pose
 // instead of the T-stance the constructor leaves behind.
 let t = 0;
@@ -78,6 +89,14 @@ const dist = (span / 2) / Math.tan((camera.fov * Math.PI / 180) / 2);
 camera.position.set(target.x + dist * 0.26, target.y + span * 0.06, target.z + dist * 0.97);
 camera.lookAt(target);
 camera.updateProjectionMatrix();
+
+/* Land the final frame with the eyes open: clear any blink in flight, then
+   take one more step with Math.random pinned high so the emote path cannot
+   start a new one. A blink is 0.15s — a render that catches one is ruined. */
+model.blinking = false; model.blinkPh = 0; model.dbl = 0; model.nextBlink = 1e9;
+const _rand = Math.random; Math.random = () => 1;
+model.update(1 / 60, t + 1 / 60, { lookX: -0.16, lookY: 0.08, facing: 0.22, particles: null });
+Math.random = _rand;
 
 renderer.render(scene, camera);
 document.title = 'EON-AVATAR-READY';

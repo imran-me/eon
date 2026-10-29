@@ -39,7 +39,7 @@
 
   /* dark header band, full bleed, carrying the branding and the TV */
   .header{
-    position:absolute; left:0; right:0; top:0; height:33in;
+    position:absolute; left:0; right:0; top:0; height:29in;
     background:
       radial-gradient(42% 70% at 78% 40%, rgba(43,184,220,.26), transparent 70%),
       linear-gradient(135deg, var(--band2) 0%, var(--band) 70%);
@@ -65,7 +65,7 @@
     display:inline-block; background:#fff; border-radius:.34in;
     padding:.46in .70in; line-height:0;
   }
-  .chip img{height:4.0in; width:auto; display:block;}
+  .chip img{height:1.9in; width:auto; display:block;}
 
   .hero{font-weight:900; letter-spacing:-.03em; line-height:1.06; font-size:2.70in;}
   .hero .t{color:var(--blue);}
@@ -167,40 +167,40 @@ const ASK_BN = '&#2438;&#2478;&#2494;&#2453;&#2503; &#2476;&#2494;&#2434;&#2482;
 
 const BLOCKS = [
   /* ---------------- header band: EON, DIU, and the TV ---------------- */
-  { x: 0.8, y: 2.0, w: 12.0, html:
-    `<img src="../assets/eon-happy-full.png" style="width:100%;display:block" alt="">` },
+  { x: 0.8, y: 2.5, w: 9.0, html:
+    `<img src="../assets/eon-celebrate-full.png" style="width:100%;display:block" alt="">` },
 
-  { x: 13.6, y: 4.2, html:
-    `<div class="mark">${MARK('3.5in')}<div class="word" style="font-size:4.3in">EON</div></div>` },
+  { x: 10.4, y: 5.0, html:
+    `<div class="mark" style="gap:.8in">${MARK('2.4in')}<div class="word" style="font-size:2.9in">EON</div></div>` },
 
-  { x: 13.8, y: 11.4, html: `<span class="pill">STALL U-13 &middot; UNIVERSITY ZONE</span>` },
+  { x: 10.4, y: 12.2, html: `<span class="pill" style="font-size:.62in">STALL U-13 &middot; UNIVERSITY ZONE</span>` },
 
-  { x: 13.8, y: 16.6, html:
+  { x: 20.7, y: 5.6, html:
     `<span class="chip"><img src="../assets/diu-logo.png" alt="Daffodil International University"></span>` },
 
-  { x: 13.8, y: 25.4, w: 14, html:
+  { x: 10.4, y: 18.4, w: 16, html:
     `<div style="color:#9FB4D6;font-size:.80in;font-weight:600;line-height:1.4">
        Bangladesh AI Business<br>Summit 2026</div>` },
 
   /* ---------------- band 1: the promise, and EON asking ---------------- */
-  { x: 2.0, y: 37.0, w: 34, html:
+  { x: 2.0, y: 31, w: 34, html:
     `<div class="hero">One Brain.<br><span class="t">Multi Decision Layer</span><br>for your ERP.</div>` },
 
-  { x: 2.0, y: 48.5, w: 33, html:
+  { x: 2.0, y: 42.5, w: 33, html:
     `<div class="sub">EON answers a business question from your <b>live ERP</b> &mdash;
      in English, <span class="bn">${BANGLA}</span> or Banglish. Not a chatbot reading a
      document: every figure is computed from the ledger, with the rule that
      produced it and the action to take next.</div>` },
 
   // EON, speaking, top right of the white area
-  { x: 38.5, y: 35.0, w: 30, html:
+  { x: 38.5, y: 29.5, w: 30, html:
     `<div class="bubble">&ldquo;What did we spend on marketing in June?&rdquo;
        <span class="sm bn">${Q_BN}</span></div>` },
-  { x: 45.0, y: 41.0, w: 13.5, html:
+  { x: 45.0, y: 35, w: 13.5, html:
     `<img src="../assets/eon-wave-full.png" style="width:100%;display:block" alt="">` },
 
   /* ---------------- band 2: what it does, and why to trust it --------- */
-  { x: 2.0, y: 60.0, w: 33, html:
+  { x: 2.0, y: 54, w: 33, html:
     `<h2 class="sec">What it does for the business</h2>
      <ul class="feat">
        <li>Accounts, payroll, HR, sales and CRM &mdash; answered together</li>
@@ -210,7 +210,7 @@ const BLOCKS = [
        <li>Speaks <span class="bn">${BANGLA}</span> as naturally as English</li>
      </ul>` },
 
-  { x: 38.5, y: 62.0, w: 30.3, html:
+  { x: 38.5, y: 56, w: 30.3, html:
     `<h2 class="sec">Why you can act on it</h2>
      <div class="note">There is <b>no language model</b> inventing a plausible
        paragraph. EON reads your ledger, applies your company&rsquo;s own rule and
@@ -218,7 +218,7 @@ const BLOCKS = [
        take to your board.</div>` },
 
   // the way in, kept at ~3.2 ft off the floor where a phone can reach it
-  { x: 38.5, y: 76.5, w: 30, html:
+  { x: 38.5, y: 70.5, w: 30, html:
     `<div class="qrbox">
        <img class="qr" src="../assets/qr.png" alt="">
        <div>
@@ -228,7 +228,7 @@ const BLOCKS = [
      </div>` },
 
   /* ---------------- band 3: the numbers, glanceable from the aisle ----- */
-  { x: 2.0, y: 74.0, w: 34, html:
+  { x: 2.0, y: 68, w: 34, html:
     `<div class="stats">
        <div class="stat"><b>45</b><span>business<br>subjects</span></div>
        <div class="stat"><b>3</b><span>languages,<br>written natively</span></div>
@@ -237,12 +237,12 @@ const BLOCKS = [
      </div>` },
 
   /* EON again, in Bangla, low and friendly rather than informative */
-  { x: 2.0, y: 83.5, w: 7.5, html:
-    `<img src="../assets/eon-wave-full.png" style="width:100%;display:block;transform:scaleX(-1)" alt="">` },
-  { x: 10.5, y: 86.5, w: 23, html:
+  { x: 2.0, y: 77.5, w: 7.5, html:
+    `<img src="../assets/eon-curious-full.png" style="width:100%;display:block" alt="">` },
+  { x: 10.5, y: 80.5, w: 23, html:
     `<div class="bubble notail" style="font-size:.90in"><span class="bn">${ASK_BN}</span></div>` },
 
-  { x: 38.5, y: 94.0, w: 31, html:
+  { x: 38.5, y: 88, w: 31, html:
     `<div class="foot"><b>Daffodil International University</b> &nbsp;&middot;&nbsp;
       Bangladesh AI Business Summit 2026 &nbsp;&middot;&nbsp; Stall U-13</div>` },
 ];
