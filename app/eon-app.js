@@ -15,7 +15,7 @@ const k = (n) => fmtBDTk(+n || 0), money = (n) => fmtBDT(+n || 0);
 const env = () => window.EON_ENV || { mode: 'static', serverOk: false };
 const server = () => (window.EonErpAdapter && window.EonErpAdapter.server) || './server/api';
 const token = () => localStorage.getItem('eon_token') || '';
-const state = { section: 'brief', company: null, conv: null, messages: [], approved: JSON.parse(localStorage.getItem('eon_decided') || '{}'), voiceMode: false, lang: localStorage.getItem('eon_lang') || 'en-US' };
+const state = { section: 'brief', company: null, conv: null, messages: [], approved: JSON.parse(localStorage.getItem('eon_decided') || '{}'), voiceMode: false, lang: localStorage.getItem('eon_lang') || 'auto', lastLang: 'bn-BD' };
 
 async function api(path, opts = {}) {
   const r = await fetch(server() + '/' + path, Object.assign({ headers: Object.assign({ 'Content-Type': 'application/json' }, token() ? { Authorization: 'Bearer ' + token() } : {}) }, opts));
@@ -93,7 +93,7 @@ function decisionItem(d) {
   return `<div class="item"><span class="sev ${sevClass(d.severity)}"></span><div><div class="t"><span class="tag ${d.layer}">${esc(d.layerLabel || d.layer)}</span>${esc(d.title)}</div>${(d.why || []).length ? `<div class="why">${d.why.slice(0, 3).map(esc).join(' · ')}</div>` : ''}<div class="rec">${esc(d.recommend || '')}</div>${(d.actions || []).length ? `<div class="chips">${d.actions.map((a) => `<span class="chip" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</span>`).join('')}</div>` : ''}</div><div class="meta">${esc(d.severityLabel || '')}${d.amount ? '<br>' + k(d.amount) : ''}</div></div>`;
 }
 function rBrief() {
-  const b0 = EonErp.brief(); const b = (state.lang === 'bn-BD' && window.EonBangla && window.EonBangla.brief) ? Object.assign({}, b0, window.EonBangla.brief(b0)) : b0; const K = b.kpis;
+  const b0 = EonErp.brief(); const b = (curLang() === 'bn-BD' && window.EonBangla && window.EonBangla.brief) ? Object.assign({}, b0, window.EonBangla.brief(b0)) : b0; const K = b.kpis;
   const top = b.decisions.slice(0, 6);
   return `<div class="card hero"><div class="greet">${esc(b.lines[0].split('.')[0])}.</div><p id="briefText">${esc(b.lines[0].split('. ').slice(1).join('. ') + ' ' + b.lines.slice(1).join(' '))}</p><div class="chips"><span class="chip" data-q="What should I focus on today?">What should I focus on?</span><span class="chip" data-q="Who owes us money?">Who owes us?</span><span class="chip" data-q="Who is absent today?">Who is absent?</span><span class="chip" data-q="Forecast the next quarter">Forecast</span><span class="chip" data-q="Any spending anomalies?">Anomalies</span></div></div>
   <div class="grid g4" style="margin-top:14px">${['cash', 'receivables', 'payables', 'revenue', 'profit', 'headcount', 'attendance', 'payroll', 'pipeline', 'tasks', 'projects', 'expenses'].map((key) => tile(K[key], key)).join('')}</div>
@@ -188,17 +188,22 @@ function rAsk() {
   return `<div class="card"><h3>${title} <span class="spacer"></span><span class="hint">${hint}</span></h3>
     <div class="chat" id="chat" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with EON">${state.messages.map(msgHtml).join('') || '<div class="msg eon">Ask me anything about the business — by voice or by typing. Try “brief”, “who owes us money”, “who is absent today”, “payroll”, “evaluate Afiqur Rahman”, “forecast the next quarter”, “draft a payment reminder”, “what is 2210”.</div>'}</div>
     <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk" aria-label="Ask by voice"><span aria-hidden="true">🎙</span></button><input id="askInput" placeholder="Ask EON… (Enter to send)" aria-label="Ask EON a question" autocomplete="off" enterkeyhint="send"><button class="btn primary" id="btnAsk">Ask</button></div>
-    <div class="ask-options" style="margin-top:10px"><div class="mode-buttons"><button class="chip mode-button" id="convMode" type="button" aria-pressed="${state.voiceMode}" title="Toggle continuous microphone listening">🎙 <span class="mode-label">Conversation ${state.voiceMode ? 'On' : 'Off'}</span></button><button class="chip mode-button" id="langChip" type="button" title="Switch answer language">🌐 <span class="mode-label">${state.lang === 'bn-BD' ? 'বাংলা' : 'English'}</span></button><button class="chip mode-button" id="muteChip" type="button" aria-pressed="${localStorage.getItem('eon_mute') !== '1'}" title="Voice on reads EON replies aloud. Select to mute or unmute."><span aria-hidden="true">${localStorage.getItem('eon_mute') === '1' ? '🔇' : '🔊'}</span><span class="mode-label">${localStorage.getItem('eon_mute') === '1' ? 'Muted' : 'Voice on'}</span></button></div><details class="quick-asks" ${window.EON_DOCK ? '' : 'open'}><summary>Suggested questions</summary><div class="chips">${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></details></div></div>`;
+    <div class="ask-options" style="margin-top:10px"><div class="mode-buttons"><button class="chip mode-button" id="convMode" type="button" aria-pressed="${state.voiceMode}" title="Toggle continuous microphone listening">🎙 <span class="mode-label">Conversation ${state.voiceMode ? 'On' : 'Off'}</span></button><button class="chip mode-button" id="langChip" type="button" title="Switch answer language">🌐 <span class="mode-label">${state.lang === 'auto' ? 'Auto · বাংলা + English' : state.lang === 'bn-BD' ? 'বাংলা' : 'English'}</span></button><button class="chip mode-button" id="muteChip" type="button" aria-pressed="${localStorage.getItem('eon_mute') !== '1'}" title="Voice on reads EON replies aloud. Select to mute or unmute."><span aria-hidden="true">${localStorage.getItem('eon_mute') === '1' ? '🔇' : '🔊'}</span><span class="mode-label">${localStorage.getItem('eon_mute') === '1' ? 'Muted' : 'Voice on'}</span></button></div><details class="quick-asks" ${window.EON_DOCK ? '' : 'open'}><summary>Suggested questions</summary><div class="chips">${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></details></div></div>`;
 }
 /** which language is this text in? assistive tech needs to be told, per message */
 const langOf = (t) => (/[\u0980-\u09FF]/.test(String(t || '')) ? 'bn' : 'en');
+/* Auto (the default): the microphone listens in bn-BD, whose recogniser also writes the English
+   words of a mixed sentence, and EON answers in the language the last question was asked in.
+   The switch still pins বাংলা or English when wanted. */
+function curLang() { return state.lang === 'auto' ? state.lastLang : state.lang; }
+const micLang = () => (state.lang === 'auto' ? 'bn-BD' : state.lang);
 
 function speakAnswer(text, { voice = false } = {}) {
   // Continuous listening and spoken replies are separate controls.
   if (!voice && !state.voiceMode && localStorage.getItem('eon_mute') === '1') return;
   const V = window.EonVoice;
   if (!V || !V.say) return;
-  const lang = langOf(text) === 'bn' ? 'bn-BD' : state.lang;
+  const lang = langOf(text) === 'bn' ? 'bn-BD' : curLang();
   try { V.say(text, { lang }); } catch (e) { console.warn('[EON] reply speech failed', e); }
 }
 
@@ -212,12 +217,13 @@ function msgHtml(m) {
 /* ---------------- ask ---------------- */
 async function ask(q, { voice = false } = {}) {
   q = String(q || '').trim(); if (!q) return;
+  if (state.lang === 'auto') state.lastLang = langOf(q) === 'bn' ? 'bn-BD' : 'en-US';
   // "yes, take me there" presses the button EON just offered — it must work hands-free
   if (state.lastOffer && isAffirmative(q)) {
-    const label = state.lastOffer.label || (state.lang === 'bn-BD' ? 'ওটা' : 'that');
+    const label = state.lastOffer.label || (curLang() === 'bn-BD' ? 'ওটা' : 'that');
     state.messages.push({ role: 'me', text: q });
     if (runOfferedAction()) {
-      const done = state.lang === 'bn-BD' ? 'নিয়ে যাচ্ছি — ' + label + '।' : 'Taking you there — ' + label + '.';
+      const done = curLang() === 'bn-BD' ? 'নিয়ে যাচ্ছি — ' + label + '।' : 'Taking you there — ' + label + '.';
       state.messages.push({ role: 'eon', text: done, speak: done });
       paintChat();
       speakAnswer(done, { voice });
@@ -254,7 +260,7 @@ async function ask(q, { voice = false } = {}) {
   // waited for it before the local brain replied. health.php has already said whether
   // this browser is authenticated — believe it and go straight to the brain.
   if (!out && e.serverOk && e.authed) {
-    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: state.lang, facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
+    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
   }
   /* No server answer coming (signed out, or the server refused): the thirteen registered
@@ -310,7 +316,7 @@ function wire() {
   const inp = $('#askInput'); if (inp) { inp.onkeydown = (e) => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { const q = inp.value; inp.value = ''; ask(q); } }; $('#btnAsk').onclick = () => { const q = inp.value; inp.value = ''; ask(q); }; }
   const m2 = $('#btnMic2'); if (m2) m2.onclick = () => toggleMic();
   const cm = $('#convMode'); if (cm) cm.onclick = () => { state.voiceMode = !state.voiceMode; cm.setAttribute('aria-pressed', String(state.voiceMode)); cm.classList.toggle('is-on', state.voiceMode); const label = cm.querySelector('.mode-label'); if (label) label.textContent = `Conversation ${state.voiceMode ? 'On' : 'Off'}`; if (state.voiceMode) { window.EonVoice.wakeWord(true); window.EonVoice.listen({ continuous: true }); toast('Conversation mode on — say “EON, …”'); } else { window.EonVoice.stop(); toast('Conversation mode off.'); } };
-  const lc = $('#langChip'); if (lc) lc.onclick = () => { setLang(state.lang === 'bn-BD' ? 'en-US' : 'bn-BD'); };
+  const lc = $('#langChip'); if (lc) lc.onclick = () => { setLang(state.lang === 'auto' ? 'bn-BD' : state.lang === 'bn-BD' ? 'en-US' : 'auto'); };
   const mc = $('#muteChip'); if (mc) mc.onclick = () => { const on = localStorage.getItem('eon_mute') !== '1'; localStorage.setItem('eon_mute', on ? '1' : '0'); window.EonVoice.mute(on); render(); };
 }
 function toggleMic() {
@@ -323,9 +329,9 @@ function toggleMic() {
 function setLang(lang) {
   state.lang = lang;
   localStorage.setItem('eon_lang', lang);
-  if (window.EonVoice && window.EonVoice.setLang) window.EonVoice.setLang(lang);
+  if (window.EonVoice && window.EonVoice.setLang) window.EonVoice.setLang(micLang());
   render();
-  toast(lang === 'bn-BD' ? 'এখন থেকে বাংলায় উত্তর দেব।' : 'Answering in English from now on.');
+  toast(lang === 'auto' ? 'Auto — বাংলা, English, Banglish সব বুঝব; যে ভাষায় বলবে সেই ভাষায় উত্তর দেব।' : lang === 'bn-BD' ? 'এখন থেকে বাংলায় উত্তর দেব।' : 'Answering in English from now on.');
 }
 
 /* "yes, take me there" is the same as pressing the button EON just offered.
@@ -368,7 +374,7 @@ function boot() {
   const V = window.EonVoice;
   if (V) {
     try { V.setTts(server() + '/tts.php'); } catch (e) {}
-    V.setLang(state.lang); if (localStorage.getItem('eon_mute') === '1') V.mute(true);
+    V.setLang(micLang()); if (localStorage.getItem('eon_mute') === '1') V.mute(true);
     V.onState((s, detail) => { setMic(s === 'listening'); const h = $('#heard'); if (h) h.textContent = s === 'listening' ? '🎙 listening…' : s === 'speaking' ? '🔊 speaking…' : s === 'error' ? '⚠ ' + detail : ''; if (s === 'error') toast(detail, 5000); });
     /* the first hello: once per visit, in Bangla, a little brighter than an answer. A browser
        will not speak before the visitor has touched the page, so until then it waits for the
@@ -386,7 +392,7 @@ function boot() {
     V.onTranscript((text, meta) => { const h = $('#heard'); if (h) h.textContent = meta.final ? '' : '🎙 ' + text; if (meta.final && text) ask(text, { voice: true }); });
   }
   $('#btnMic').onclick = toggleMic;
-  $('#btnSpeakBrief').onclick = () => { let b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (state.lang === 'bn-BD' && window.EonBangla && window.EonBangla.brief) b = Object.assign({}, b, window.EonBangla.brief(b)); if (V) V.say(b.speak, { lang: state.lang }); if (state.section !== 'brief') location.hash = '#brief'; };
+  $('#btnSpeakBrief').onclick = () => { let b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (curLang() === 'bn-BD' && window.EonBangla && window.EonBangla.brief) b = Object.assign({}, b, window.EonBangla.brief(b)); if (V) V.say(b.speak, { lang: curLang() }); if (state.section !== 'brief') location.hash = '#brief'; };
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
