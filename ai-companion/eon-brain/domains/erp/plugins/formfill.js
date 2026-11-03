@@ -385,7 +385,7 @@ async function answer(q) {
     const isCreate = (h) => h && /create|add|new/i.test((h.route || '') + ' ' + (h.label || ''));
     const hit = (N().find('add ' + subj, 3) || []).find(isCreate) || (N().find(raw, 3) || []).find(isCreate);
     if (hit) { href = N().url(hit.uri); label = hit.label; }
-    if (!href) return null;
+    // the special screens below (advance, sale, visa, flight, file) decide for themselves
   }
 
   if (/অ্যাডভান্স|এডভান্স|advance/i.test(s) && /দাও|দিন|দিছি|দিয়েছি|give|entry|এন্ট্রি|নতুন|add/i.test(s) && !/রিকোয়েস্ট|request|অ্যাপ্রুভ|approve/i.test(s)) { href = N().url('/{role}/advance-salaries'); label = T(bn, 'Advance salary', 'অ্যাডভান্স বেতন'); }
@@ -393,6 +393,7 @@ async function answer(q) {
   else if (wantCreate && /কন্ট্রাক্ট ফাইল|contract file|ফাইল খোলো|নতুন ফাইল|new file/i.test(s)) { href = N().url('/{role}/contract-files'); label = T(bn, 'New contract file', 'নতুন কন্ট্রাক্ট ফাইল'); }
   else if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
+  if (!href) return null;
   const w = await openAndWait(href);
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
   if (k0 && k0.open) await k0.open(w);
