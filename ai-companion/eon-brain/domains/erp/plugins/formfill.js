@@ -287,7 +287,7 @@ async function answer(q) {
     if (!href) return null;
   }
 
-  if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
+  if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   const w = await openAndWait(href);
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
