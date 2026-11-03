@@ -146,6 +146,9 @@ function expand(query) {
 
 /** words that mean "the list of" vs "make a new one" */
 const WANT_CREATE = /\b(add|create|new|make|register|enter)\b/;
+const WANT_PRINT = /\bprint\b/;
+const WANT_EXPORT = /\b(export|excel|download|xlsx|csv)\b/;
+const WANT_REPORT = /\breport\b/;
 const WANT_LIST = /\b(list|all|manage|show|see|view|open|go to|take me|where)\b/;
 
 /* a route name reads like role.advance-salaries.index → "advance salaries index" */
@@ -154,7 +157,8 @@ const routeWords = (name) => norm(String(name || '').replace(/^role\./, '').repl
 function score(query, item) {
   const q = words(query);
   if (!q.length) return 0;
-  const hayLabel = norm(item.label || '');
+  // a screen with no menu caption is named by its route (contract-files.index → contract files), so it competes fairly
+  const hayLabel = norm(item.label || routeWords(item.route || item.name || '').replace(/\b(index|show|data)\b/g, ' '));
   const hayRoute = routeWords(item.route || item.name || '');
   const hayUri = norm((item.uri || '').replace('{role}', ' ').replace(/[/{}]/g, ' '));
   const hay = `${hayLabel} ${hayRoute} ${hayUri}`;
@@ -170,8 +174,12 @@ function score(query, item) {
   if (hayLabel && (hayLabel === nq || hayLabel.includes(nq))) s += 4;
   // prefer the index screen unless the boss asked to create
   if (/\.index$/.test(item.route || item.name || '')) s += WANT_CREATE.test(query) ? -1 : 1.2;
-  if (/\.create$/.test(item.route || item.name || '')) s += WANT_CREATE.test(query) ? 2.5 : -1;
+  if (/\.create$/.test(item.route || item.name || '')) s += WANT_CREATE.test(query) ? 4.5 : -1;
   if (/\.(edit|show|destroy|update|store)$/.test(item.route || item.name || '')) s -= 1.5;
+  const rn = item.route || item.name || '';
+  if (WANT_PRINT.test(query)) s += /\.print$|print/.test(rn) ? 3 : -0.5;
+  if (WANT_EXPORT.test(query)) s += /export|excel|download/.test(rn) ? 3 : -0.5;
+  if (WANT_REPORT.test(query) && /report/.test(rn)) s += 1.5;
   return s;
 }
 
@@ -191,6 +199,7 @@ const BN_SCREEN = [
   ['পার্টি', 'party'], ['ভেন্ডর', 'vendor'], ['ভেন্ডার', 'vendor'], ['ক্লায়েন্ট', 'client'], ['এজেন্ট', 'agent'], ['কাস্টমার', 'customer'], ['গ্রাহক', 'customer'],
   ['ইনভয়েস', 'invoice'], ['ইনভয়েজ', 'invoice'], ['পেমেন্ট', 'payment'], ['সেটিং', 'settings'], ['ইউজার', 'user'], ['কোম্পানি', 'company'],
   ['এয়ারলাইন', 'airline'], ['এয়ারপোর্ট', 'airport'], ['কমিশন', 'commission'], ['অ্যাডভান্স', 'advance'], ['এডভান্স', 'advance'], ['জেনারেল', 'general'], ['ম্যানেজমেন্ট', 'management'], ['মাসিক', 'monthly'],
+  ['প্রিন্ট', 'print'], ['এক্সপোর্ট', 'export'], ['এক্সেল', 'excel'], ['ডাউনলোড', 'download'], ['যোগ', 'add'], ['তৈরি', 'create'], ['নিউ', 'new'],
   ['তালিকা', 'list'], ['লিস্ট', 'list'], ['নতুন', 'create'], ['অ্যাড', 'add'], ['অনুমোদন', 'approval'], ['বাজেট', 'budget'], ['পেটি', 'petty'],
 ];
 /* Said in English, written in Bangla: in Auto the microphone listens in bn-BD and writes
@@ -237,7 +246,7 @@ function near1(a, b) {
 }
 const BN_END = /^(?:ের|এর|ে|এ|র|কে|য়|য়ের|টা|টি|টার|গুলো|গুলি|তে|দের|স|্স|িং|ি)$/;
 const BN_CASE = /(কেই|কেও|কে|রে|দের|য়ের|এর|ের|টা|টি|তে|ে)$/;
-const BN_VERB = /^(দেখাও|দেখান|দেখা|খোলো|খুলো|খোল|খুলুন|খুলে|যাও|যান|চলো|নিয়ে|নাও|দাও|দিন|করো|করুন|কর|চাই|আমাকে|আমার|একটু|তো|এ|এর|এটা|ওটা|কোথায়|কই|প্লিজ|ঠিক|আছে|জন্য|মধ্যে|পেজ|পেইজ|স্ক্রিন|সেকশন|অপশন|মেনু)$/;
+const BN_VERB = /^(সব|সবগুলো|দেখতে|দেখব|চাই|করব|করবো|কিভাবে|কীভাবে|পাব|পাবো|যাব|এখনই|এখন|হুম|আচ্ছা|ওকে|কি|কী|টা|গুলো|লাগবে|দরকার|দেখাও|দেখান|দেখা|খোলো|খুলো|খোল|খুলুন|খুলে|যাও|যান|চলো|নিয়ে|নাও|দাও|দিন|করো|করুন|কর|চাই|আমাকে|আমার|একটু|তো|এ|এর|এটা|ওটা|কোথায়|কই|প্লিজ|ঠিক|আছে|জন্য|মধ্যে|পেজ|পেইজ|স্ক্রিন|সেকশন|অপশন|মেনু)$/;
 export function toEn(query) {
   if (!/[\u0980-\u09FF]/.test(query)) return query;
   const idx = soundIndex();
@@ -288,6 +297,22 @@ export function find(query, limit = 5) {
   const pin = pinned(query);
   if (pin && limit === 1) return [pin];
   const expanded = expand(query);
+  const candidates = allCandidates();
+  const scored = candidates.map((c) => ({ c, direct: score(query, c) }));
+  // an alias is a hint, not evidence: if the boss's own words matched something
+  // properly anywhere, aliases are ignored altogether
+  const anyDirect = scored.some((y) => y.direct >= 3);
+  return scored
+    .map((x) => ({ ...x.c, _s: anyDirect ? x.direct : Math.max(x.direct, score(expanded, x.c) * 0.7) }))
+    .filter((c) => c._s > 1.5 && c.uri && (!pin || c.route !== pin.route))
+    .sort((a, b) => b._s - a._s)
+    .slice(0, pin ? limit - 1 : limit)
+    .reduce((out, c) => (out.push(c), out), pin ? [pin] : []);
+}
+
+let CANDS = null, CANDS_OF = null;
+function allCandidates() {
+  if (CANDS && CANDS_OF === MAP) return CANDS;
   const routeByName = new Map();
   for (const p of MAP.pages) routeByName.set(p.name, p);
 
@@ -324,23 +349,13 @@ export function find(query, limit = 5) {
       || MAP.pages.find((p) => p.uri.split('/').includes(slug));
     if (guess) { c.uri = guess.uri; c.route = guess.name; c.controller = guess.controller; c.action = guess.action; }
   }
+  const have = new Set(candidates.map((c) => c.route));
   for (const p of MAP.pages) {
-    if (candidates.some((c) => c.route === p.name)) continue;
+    if (have.has(p.name)) continue;
     candidates.push({ label: null, section: null, route: p.name, uri: p.uri, controller: p.controller, action: p.action, from: 'route' });
   }
-  return candidates
-    .map((c) => ({ c, direct: score(query, c) }))
-    .map((x, _i, all) => {
-      // an alias is a hint, not evidence: if the boss's own words matched something
-      // properly anywhere, aliases are ignored altogether
-      const anyDirect = all.some((y) => y.direct >= 3);
-      const s = anyDirect ? x.direct : Math.max(x.direct, score(expanded, x.c) * 0.7);
-      return { ...x.c, _s: s };
-    })
-    .filter((c) => c._s > 1.5 && c.uri && (!pin || c.route !== pin.route))
-    .sort((a, b) => b._s - a._s)
-    .slice(0, pin ? limit - 1 : limit)
-    .reduce((out, c) => (out.push(c), out), pin ? [pin] : []);
+  CANDS_OF = MAP;
+  return (CANDS = candidates);
 }
 
 /* ---------- what a screen can do ---------- */
