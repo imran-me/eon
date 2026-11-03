@@ -27,6 +27,7 @@ import { url } from './navigator.js';
 import { propose, latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 import { csrf } from './ticket.js';
 import { normalize, speaksBangla } from './voicefix.js';
+import { remember, recall, POINTS_BACK } from './context.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const BN = /[ঀ-৿]/;
@@ -96,7 +97,9 @@ async function answer(q) {
   if (ev && /\b(how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
 
   const D = D0();
-  const p = D ? findPassenger(D, s) : null;
+  let p = D ? findPassenger(D, s) : null;
+  if (!p && POINTS_BACK.test(s) && recall('passenger')) p = recall('passenger');
+  if (p && !p.ambiguous) remember({ passenger: p, order: { part: 'contract-flight' } });
   if (!p) {
     if (opening) return null;   // "open the flight board" — the navigator knows that screen
     return {

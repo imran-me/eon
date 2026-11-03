@@ -28,6 +28,7 @@ import { url } from './navigator.js';
 import { propose } from './act.js';
 import { normalize, speaksBangla } from './voicefix.js';
 import { matchName } from './statement.js';
+import { remember, recall, POINTS_BACK, SAME } from './context.js';
 
 const BN = /[ঀ-৿]/;
 const NB = '(?![ঀ-৿])';
@@ -242,6 +243,7 @@ async function fromSale(c, ref) {
 
 async function startSlots(c, p) {
   Object.assign(c, { stage: 'slots', p, at: Date.now() });
+  remember({ ticket: p, order: { part: 'ticket', kind: c.kind, values: c.values } });
   const href = url(`/{role}/ticket-purchase/${p.purchase_id}`);
   const r = await next(c);
   const opened = T(c.bn, `Opened ${p.passenger}'s ticket ${p.pnr} (${p.route}) for the ${c.kind.en}.`, `${p.passenger}-এর টিকিট ${p.pnr} (${p.route}) ${c.kind.bn}-এর জন্য খুলেছি।`);
@@ -252,6 +254,11 @@ async function startSlots(c, p) {
 function next(c) {
   c.at = Date.now();
   const v = c.values;
+  const today = new Date(); const ymdToday = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  if (v.new_travel_at && String(v.new_travel_at).slice(0, 10) < ymdToday) {
+    const was = v.new_travel_at; delete v.new_travel_at; c.asking = 'new_travel_at';
+    return { speak: T(c.bn, `${was} has already passed — nobody can fly on it. What is the new travel date?`, `${bnNum(was, true)} তো পার হয়ে গেছে — ওই তারিখে যাত্রা সম্ভব নয়। নতুন যাত্রার তারিখ কবে?`), detail: said(c), actions: [] };
+  }
   const todo = (SLOTS[c.kind.kind] || []).filter((k) => v[k] == null)
     .filter((k) => !c.detailed || k === 'bearer' || (REQUIRED[c.kind.kind] || []).includes(k))
     // who bears nothing is not a question
@@ -281,12 +288,19 @@ async function finish(c) {
   const fields = Object.keys(LABELS).map((name) => ({ name, label: LABELS[name][bn ? 1 : 0] }));
   const what = `${c.kind.en} ${p.passenger}'s ticket ${p.pnr} (${p.route}, sold for ${money(p.sale_price)})`;
   const whatBn = `${p.passenger}-এর টিকিট ${p.pnr} (${p.route}, বিক্রি ${money(p.sale_price, true)}) ${c.kind.bn}`;
+  /* reasoning before acting: figures that cannot be right are said out loud on the
+     card, so the yes is an informed one — EON does not quietly pass them through */
+  const warn = [];
+  const sold = +p.sale_price || 0;
+  if (sold > 0 && +v.refund > sold) warn.push(T(bn, `Check this: the refund ${money(v.refund)} is more than the ticket sold for (${money(sold)}).`, `দেখে নিন: ফেরত ${money(v.refund, true)} টিকিটের বিক্রয়মূল্য ${money(sold, true)}-এর চেয়ে বেশি।`));
+  if (sold > 0 && +v.penalty > sold) warn.push(T(bn, `Check this: the penalty ${money(v.penalty)} is more than the fare itself (${money(sold)}).`, `দেখে নিন: পেনাল্টি ${money(v.penalty, true)} পুরো ভাড়ার (${money(sold, true)}) চেয়ে বেশি।`));
+  if (c.kind.kind === 'refund' && +v.refund > 0 && +v.penalty > 0 && sold > 0 && +v.refund + +v.penalty > sold * 1.05) warn.push(T(bn, `Refund plus penalty (${money(+v.refund + +v.penalty)}) comes to more than the sale.`, `ফেরত আর পেনাল্টি মিলে (${money(+v.refund + +v.penalty, true)}) বিক্রির চেয়ে বেশি।`));
   return propose({
     what: 'ticket_change', lang: bn ? 'bn' : 'en', money: true, missing: [],
     summary: what.charAt(0).toUpperCase() + what.slice(1), summary_bn: whatBn,
     form: { action: url(`/{role}/ticket-changes/${p.purchase_id}`), token, method: 'POST', fields, from: `/{role}/ticket-purchase/${p.purchase_id}` },
     values: v,
-    notes: [T(bn, "The ERP posts the journal and the agent's ledger by its own rules; a second yes is recognised and not posted twice.", 'জার্নাল আর এজেন্টের লেজার ইআরপি নিজের নিয়মে পোস্ট করবে; দুবার হ্যাঁ বললেও একবারই পোস্ট হবে।')],
+    notes: [...warn, T(bn, "The ERP posts the journal and the agent's ledger by its own rules; a second yes is recognised and not posted twice.", 'জার্নাল আর এজেন্টের লেজার ইআরপি নিজের নিয়মে পোস্ট করবে; দুবার হ্যাঁ বললেও একবারই পোস্ট হবে।')],
   });
 }
 
@@ -330,7 +344,12 @@ async function answer(q) {
   const s = normalize(raw);
   if (!s) return null;
   if (convo && Date.now() - convo.at > FRESH) convo = null;
-  const o = readOrder(s);
+  let o = readOrder(s);
+  const lastOrder = recall('order');
+  if (!o && SAME.test(s) && lastOrder && lastOrder.part === 'ticket') {
+    o = readOrder(`${lastOrder.kind.en} ${s}`);
+    if (o) for (const [k, v] of Object.entries(lastOrder.values || {})) if (o.values[k] == null && !['token', 'note', 'kind'].includes(k)) o.values[k] = v;
+  }
 
   // inside a conversation, anything that is not a new order is an answer to it
   if (convo && !o) return reply(s, raw);
@@ -363,6 +382,7 @@ async function answer(q) {
       names.push({ id: k, name: String(name).trim(), role });
     }
     const who = matchName(names, s);
+    if (!who && POINTS_BACK.test(s) && recall('ticket')) return startSlots(c, recall('ticket'));
     if (!who) {
       convo = null;
       if (!TICKETISH.test(s)) return null;

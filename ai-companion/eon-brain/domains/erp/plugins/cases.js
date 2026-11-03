@@ -23,6 +23,7 @@ import { propose } from './act.js';
 import { normalize, speaksBangla } from './voicefix.js';
 import { matchName } from './statement.js';
 import { csrf } from './ticket.js';
+import { remember, recall, POINTS_BACK } from './context.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const BN = /[ঀ-৿]/;
@@ -111,6 +112,11 @@ async function change(c, st, bn) {
   let token; try { token = await csrf(); } catch (e) { return { speak: T(bn, 'I have changed nothing — the ERP wants you signed in first.', 'কিছুই বদলাইনি — ইআরপি আগে সাইন ইন চায়।'), detail: [] }; }
   const file = c.kind === 'file';
   const from = labelOf(c, bn);
+  const order = (file ? FILE_STAGES : VISA_STATUS).map((x) => x[0]);
+  const notes = [];
+  if (file && order.indexOf(st[0]) < order.indexOf(c.status)) notes.push(T(bn, `This moves the file backwards, from ${labelOf(c, false)} to ${st[1]}.`, `এতে ফাইলটা পিছিয়ে যাবে — ${from} থেকে ${st[2]}-এ।`));
+  if (!file && ['approved', 'delivered'].includes(c.status) && st[0] === 'rejected') notes.push(T(bn, `This visa is recorded as ${labelOf(c, false)} — marking it rejected reverses that.`, `ভিসাটা ${from} হিসেবে আছে — রিজেক্ট করলে সেটা উল্টে যাবে।`));
+  if (!file && c.status === 'rejected' && ['approved', 'delivered'].includes(st[0])) notes.push(T(bn, 'This visa is recorded as rejected — check that the decision really changed.', 'ভিসাটা রিজেক্ট হিসেবে আছে — সিদ্ধান্ত সত্যিই বদলেছে কিনা দেখে নিন।'));
   return propose({
     what: file ? 'file_stage' : 'visa_status', lang: bn ? 'bn' : 'en', money: false, missing: [],
     summary: `Move ${caseName(c, false)} from ${labelOf(c, false)} to ${st[1]}`,
@@ -121,7 +127,7 @@ async function change(c, st, bn) {
       from: file ? `/{role}/contract-files/${c.id}/details` : `/{role}/visa/${c.id}/details`,
     },
     values: file ? { stage: st[0], note: T(bn, "Moved by EON on the boss's order", 'বসের নির্দেশে EON সরিয়েছে') } : { status: st[0] },
-    notes: [],
+    notes,
   });
 }
 
@@ -136,6 +142,7 @@ function askStage(c, bn) {
 }
 
 async function act(c, intent, s, bn) {
+  remember({ case: c, order: { part: 'cases' } });
   if (intent === 'where') {
     convo = null;
     return { speak: T(bn, `${caseName(c, false)} is at ${labelOf(c, false)}.`, `${caseName(c, true)} এখন ${labelOf(c, true)} অবস্থায়।`), detail: [], actions: [{ label: T(bn, 'Open the case', 'কেস খুলুন'), kind: 'erp-open', href: detailsUrl(c) }] };
@@ -170,7 +177,10 @@ async function answer(q) {
     }
   }
 
-  const file = IS_FILE.test(s), visa = IS_VISA.test(s);
+  let file = IS_FILE.test(s), visa = IS_VISA.test(s);
+  // "which stage is it at" right after a case: the case is the one we were on
+  const lastCase = recall('case');
+  if (!file && !visa && lastCase && POINTS_BACK.test(s) && (WHERE.test(s) || CHANGE.test(s))) { file = lastCase.kind === 'file'; visa = lastCase.kind === 'visa'; }
   if (!file && !visa) return null;
   if (COUNT.test(s)) return null;   // "how many visas are pending" is a figure question
   const intent = WHERE.test(s) ? 'where' : OPEN.test(s) && !stageOf(FILE_STAGES.concat(VISA_STATUS), s) ? 'open' : CHANGE.test(s) || stageOf(FILE_STAGES.concat(VISA_STATUS), s) ? 'change' : null;
@@ -178,7 +188,9 @@ async function answer(q) {
   const D = D0(); if (!D) return null;
   const want = file && !visa ? 'file' : visa && !file ? 'visa' : null;
   const bn = speaksBangla(raw);
-  const found = findCases(D, s, want);
+  let found = findCases(D, s, want);
+  // "তার ফাইল কোন অবস্থায়" — the case we were just on
+  if (!found && POINTS_BACK.test(s) && recall('case') && (!want || recall('case').kind === want)) found = { rows: [recall('case')] };
   if (!found) return null;   // nobody named — the navigator opens the screens themselves
   if (found.ambiguous) return { speak: T(bn, `Whose? These match: ${found.ambiguous.map((x) => x.name).join(', ')}. Say the full name.`, `কার? মিলছে: ${found.ambiguous.map((x) => x.name).join(', ')}। পুরো নামটা বলুন।`), detail: [] };
   const rows = found.rows;

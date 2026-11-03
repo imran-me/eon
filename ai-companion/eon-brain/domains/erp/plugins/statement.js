@@ -27,6 +27,7 @@
 import { url } from './navigator.js';
 import { normalize, speaksBangla } from './voicefix.js';
 import { latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
+import { remember, recall, POINTS_BACK, bareFollowUp } from './context.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const BN = /[ঀ-৿]/;
@@ -104,6 +105,18 @@ export function parties(D) {
   }
   return [...by.values()];
 }
+/* edit distance, for the near miss: "Rabi" for RABBI, "Sirajul" for SHIRAJUL */
+function distance(a, b) {
+  if (Math.abs(a.length - b.length) > 2) return 9;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
 export function findParty(D, text) { return matchName(parties(D), text); }
 
 /** the one record of `list` ({id, name}) a spoken sentence names — or {ambiguous} */
@@ -125,7 +138,8 @@ export function matchName(list, text) {
   const spoken = words.map((w) => w.toLowerCase()).filter((w) => /^[a-z]{3,}$/.test(w) && !STOP.test(w));
   const scored = list.map((p) => {
     const parts = p.name.replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((x) => !/^(mr|mrs|md|mst|miss|ms)\.?$/i.test(x)).map(latinSkeleton).filter((x) => x.length >= 2);
-    const exact = low.includes(p.name.toLowerCase()) ? 10 : 0;
+    // the full name said exactly — and the longer of two such names, since "MD KHIRUL ISLAM" sits inside "MR MD KHIRUL ISLAM"
+    const exact = low.includes(p.name.toLowerCase()) ? 10 + p.name.length / 100 : 0;
     /* Mohammad and Mahmud share a skeleton (m-h-m-d); the word spelled exactly as
        the record spells it breaks the tie — and lets a short word ("Nur") count */
     const nameWords = p.name.toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^a-z]+/).filter((x) => x.length >= 3);
@@ -133,9 +147,30 @@ export function matchName(list, text) {
     // whole name words only — a skeleton never matches a fragment of one
     return { p, hits: exact + spelled + wanted.filter((sk) => parts.includes(sk)).length };
   }).filter((x) => x.hits > 0).sort((a, b) => b.hits - a.hits);
-  if (!scored.length) return null;
+  if (!scored.length) return nearMiss(list, words);
   if (scored.length > 1 && scored[1].hits === scored[0].hits) return { ambiguous: scored.filter((x) => x.hits === scored[0].hits).slice(0, 5).map((x) => x.p) };
   return scored[0].p;
+}
+
+/* Nothing matched exactly. A spoken or typed name is often one letter off —
+   "Rabi", "Amitt", "Sirajul" — so compare the words themselves, allowing one
+   slip in a short name and two in a long one. Only a single clear winner is
+   taken, and every caller says the full name it chose, so a wrong guess is
+   heard before anything is done with it. */
+function nearMiss(list, words) {
+  const spoken = words.map((w) => w.toLowerCase().replace(/[^a-z]/g, '')).filter((w) => w.length >= 4 && !STOP.test(w));
+  if (!spoken.length) return null;
+  const scored = [];
+  for (const p of list) {
+    const parts = p.name.toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^a-z]+/).filter((x) => x.length >= 4 && !/^(mr|mrs|md|mst)$/.test(x));
+    let best = 9;
+    for (const w of spoken) for (const n of parts) best = Math.min(best, distance(w, n) - (w.length >= 6 && n.length >= 6 ? 1 : 0));
+    if (best <= 1) scored.push({ p, best });
+  }
+  if (!scored.length) return null;
+  scored.sort((a, b) => a.best - b.best);
+  const top = scored.filter((x) => x.best === scored[0].best);
+  return top.length === 1 ? top[0].p : { ambiguous: top.slice(0, 5).map((x) => x.p) };
 }
 
 /* ---------- building the answer ---------- */
@@ -189,7 +224,10 @@ function answer(q) {
     return reply(bn, `${printing ? 'Opening the Company Ledger print sheet' : 'Opening the Company Ledger'}${printing ? perEn : ''}.`,
       `${printing ? 'কোম্পানি লেজারের প্রিন্ট শিট খুলছি' : 'কোম্পানি লেজার খুলছি'}${printing ? perBn : ''}।`, href, 'Company Ledger', 'কোম্পানি লেজার', extra);
   }
-  if (!LEDGERISH.test(s) && !ALL_PARTIES.test(s)) return null;
+  const last = recall('order');
+  const followUp = last && last.part === 'statement' && recall('party') && !COMPANY_LEDGER.test(s)
+    && (POINTS_BACK.test(s) || bareFollowUp(s)) && (fmt !== 'open' || per || POINTS_BACK.test(s));
+  if (!LEDGERISH.test(s) && !ALL_PARTIES.test(s) && !followUp) return null;
 
   if (ALL_PARTIES.test(s)) {
     const href = addr('party-statement/parties/print');
@@ -197,7 +235,9 @@ function answer(q) {
   }
 
   const D = D0();
-  const party = D ? findParty(D, s) : null;
+  let party = D ? findParty(D, s) : null;
+  // nobody named, but the sentence points back at the party we just showed
+  if (!party && (followUp || (POINTS_BACK.test(s) && recall('party')))) party = recall('party');
   if (party && party.ambiguous) {
     const names = party.ambiguous.map((p) => p.name).join(', ');
     return {
@@ -209,6 +249,7 @@ function answer(q) {
 
   if (verbless && !party) return null;
   if (party) {
+    remember({ party, order: { part: 'statement' } });
     const name = party.name;
     if (fmt === 'excel') {
       const href = addr('party-statement/export/excel', { party_id: party.id, ...range });
