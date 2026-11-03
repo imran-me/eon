@@ -303,12 +303,15 @@ export function find(query, limit = 5) {
   // properly anywhere, aliases are ignored altogether
   const anyDirect = scored.some((y) => y.direct >= 3);
   return scored
-    .map((x) => ({ ...x.c, _s: anyDirect ? x.direct : Math.max(x.direct, score(expanded, x.c) * 0.7) }))
+    .map((x) => ({ ...x.c, label: x.c.label || prettyRoute(x.c.route), _s: anyDirect ? x.direct : Math.max(x.direct, score(expanded, x.c) * 0.7) }))
     .filter((c) => c._s > 1.5 && c.uri && (!pin || c.route !== pin.route))
     .sort((a, b) => b._s - a._s)
     .slice(0, pin ? limit - 1 : limit)
     .reduce((out, c) => (out.push(c), out), pin ? [pin] : []);
 }
+
+/* a screen with no menu caption is said by its route: contract-flights.dashboard → "Contract Flights Dashboard" */
+const prettyRoute = (r) => routeWords(r || '').replace(/\b(index)\b/g, '').trim().replace(/\b\w/g, (c) => c.toUpperCase()) || null;
 
 let CANDS = null, CANDS_OF = null;
 function allCandidates() {

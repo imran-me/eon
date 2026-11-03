@@ -339,6 +339,53 @@ function choose(s, list, keys) {
   return list.find((x) => keys(x).some((k) => k && low.includes(String(k).toLowerCase()))) || matchName(list.map((x, i) => ({ id: i, name: keys(x)[0] })), s) && list[(matchName(list.map((x, i) => ({ id: i, name: keys(x)[0] })), s) || {}).id] || null;
 }
 
+/* No change ordered — but a ticket may still be what was asked about:
+     "সিফাতুল ইসলাম ইমন এই টিকেট টা ওপেন করো" / "open Rabbi's ticket" / a passenger's bare name
+     "কয়টা টিকেট ক্যানসেল হয়েছে" / "how many tickets were voided"
+   A name is only taken when the sentence is about a ticket or IS the name, so a question
+   that merely contains a person's name stays with whoever answers that person. */
+const OPEN_RX = /\b(open|show|see|kholo|dekhao)\b|ওপেন|খোলো|খুলুন|খোল|দেখাও|দেখান/i;
+const COUNT_RX = /\b(how many|koyta|koita|count|number of)\b|কয়টা|কয়টা|কয়টি|কতগুলো|কতটা/i;
+const CANCEL_RX = /\b(cancel+ed|cancel|cancell?ation|void|voided)\b|ক্যানসেল|ক্যান্সেল|বাতিল|ভয়েড|ভয়েড/i;
+function askedAbout(s, raw) {
+  const D = D0(); const idx = (D && D.ticket_index) || [];
+  if (!idx.length) return null;
+  const bn = speaksBangla(raw);
+  if (COUNT_RX.test(s) && CANCEL_RX.test(s) && (TICKETISH.test(s) || /টিকেট|টিকিট|ticket/i.test(s))) {
+    const ym = new Date().toISOString().slice(0, 7);
+    const can = idx.filter((r) => /cancel/i.test(r.status || '')), vo = idx.filter((r) => /void/i.test(r.status || ''));
+    const m = (xs) => xs.filter((r) => String(r.date || '').startsWith(ym)).length;
+    return { speak: T(bn,
+      `${can.length} tickets are cancelled and ${vo.length} voided in all — ${m(can)} cancelled and ${m(vo)} voided this month.`,
+      `মোট ${bnNum(can.length, true)}টা টিকিট cancel আর ${bnNum(vo.length, true)}টা void হয়েছে — এই মাসে ${bnNum(m(can), true)}টা cancel, ${bnNum(m(vo), true)}টা void।`),
+      detail: [], actions: [{ label: T(bn, 'Tickets', 'টিকিট'), kind: 'erp-open', href: url('/{role}/ticket-purchase') }] };
+  }
+  const words = raw.trim().split(/\s+/);
+  const aboutTicket = /টিকেট|টিকিট|ticket|pnr/i.test(s) && OPEN_RX.test(s);
+  // a bare name is ONLY a name — "Imran Hossain salary" is about his salary, not his ticket
+  const SUBJECT = /\b(salary|salaries|payslip|attendance|leave|task|tasks|ledger|statement|due|profile|loan|advance|payroll|visa|invoice|balance|beton|hajira|chuti)\b|বেতন|স্যালারি|হাজিরা|ছুটি|টাস্ক|লেজার|বাকি|প্রোফাইল|লোন|অ্যাডভান্স|ভিসা|ইনভয়েস|ব্যালেন্স|কাজ/i;
+  const bare = words.length >= 2 && words.length <= 4 && !COUNT_RX.test(s) && !SUBJECT.test(s) && !/[?？]|কত|কী|কি |how|what|who/i.test(s);
+  if (!aboutTicket && !bare) return null;
+  const names = []; const seen = new Set();
+  for (const r of idx) if (r.passenger && !seen.has(r.passenger)) { seen.add(r.passenger); names.push({ id: r.passenger, name: String(r.passenger).trim(), role: 'passenger' }); }
+  const who = matchName(names, s);
+  if (!who) return null;
+  if (who.ambiguous) return { speak: T(bn, `Which passenger — ${who.ambiguous.map((x) => x.name).join(', ')}?`, `কোন যাত্রী — ${who.ambiguous.map((x) => x.name).join(', নাকি ')}?`), detail: [] };
+  const rows = idx.filter((r) => String(r.passenger || '').trim() === who.name);
+  if (!rows.length) return null;
+  const top = rows[0];
+  const go = url('/{role}/ticket-purchase/' + top.purchase_id);
+  remember('ticket', { purchase_id: top.purchase_id, pnr: top.pnr, passenger: who.name });
+  const one = (r) => `${r.pnr || '—'} · ${r.route || ''} · ${r.status || ''}`;
+  return {
+    speak: rows.length === 1
+      ? T(bn, `Opening ${who.name}'s ticket — ${one(top)}.`, `${who.name}-এর টিকিট খুলছি — ${one(top)}।`)
+      : T(bn, `${who.name} has ${rows.length} tickets; opening the latest — ${one(top)}.`, `${who.name}-এর ${bnNum(rows.length, true)}টা টিকিট আছে; সর্বশেষটা খুলছি — ${one(top)}।`),
+    detail: rows.slice(0, 6).map(one), navigate: go,
+    actions: [{ label: T(bn, 'Open ticket', 'টিকিট খুলুন'), kind: 'erp-open', href: go }],
+  };
+}
+
 async function answer(q) {
   const raw = String(q || '').trim();
   const s = normalize(raw);
@@ -353,7 +400,7 @@ async function answer(q) {
 
   // inside a conversation, anything that is not a new order is an answer to it
   if (convo && !o) return reply(s, raw);
-  if (!o) return null;
+  if (!o) return askedAbout(s, raw);
   // an offload or deportation carries its own refund — that is contract flight's order, not a ticket change
   if (/\b(offload|offloaded|deport|deported)\b|অফলোড|ডিপোর্ট/i.test(s)) return null;
   if (!o.pnr && !o.invoice && /\b(how much|how many|total|did we|have we|koto|kotojon|hoise|hoyeche)\b|কত|কতো|কয়টা|কয়টা|হয়েছে|হয়েছে|হলো/i.test(s)) return null;
