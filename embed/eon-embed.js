@@ -41,6 +41,9 @@
     position: 'bottom-left',
   }, window.EON_EMBED || {});
   O.panel = d('panel', O.panel); O.server = d('server', O.server); O.position = d('position', O.position);
+  /* /eon/ on its own now lands on the workspace (the printed QR code opens it), so a
+     link meant for the panel by itself says so */
+  const PANEL_TAB = O.panel + (O.panel.includes('?') ? '&' : '?') + 'panel=1';
   if (d('button', null) === 'false') O.button = false;
   if (d('avatar', null) === 'false') O.avatar = false;
   if (d('company', null) != null) O.company = +d('company', null);
@@ -85,7 +88,7 @@
       e.preventDefault();
       location.href = workspace;
     });
-    const alt = el('a', { id: 'eon-panel-alt', href: O.panel, target: '_blank', rel: 'noopener', title: 'Open EON in a separate tab' });
+    const alt = el('a', { id: 'eon-panel-alt', href: PANEL_TAB, target: '_blank', rel: 'noopener', title: 'Open EON in a separate tab' });
     alt.textContent = '↗';
     (document.body || document.documentElement).appendChild(a);
     (document.body || document.documentElement).appendChild(alt);
@@ -132,5 +135,5 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go, { once: true });
   else go();
 
-  window.EonEmbed = { options: O, base: BASE, openPanel: () => window.open(O.panel, '_blank', 'noopener') };
+  window.EonEmbed = { options: O, base: BASE, openPanel: () => window.open(PANEL_TAB, '_blank', 'noopener') };
 })();

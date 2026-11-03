@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- eon-qr-landing: the printed QR code at the summit stall opens /eon/ and cannot be
+       reprinted, so /eon/ opened on its own lands on the workspace — the ERP dashboard
+       with EON's panel docked beside it. The workspace embeds this same page as its panel
+       (?dock=1, framed), which must never redirect; ?panel=1 opens the panel on its own. -->
+  <script>
+    (function () {
+      var q = location.search;
+      var framed = false; try { framed = window.top !== window.self; } catch (e) { framed = true; }
+      if (framed || /[?&](dock|panel|embed)=/.test(q)) return;
+      location.replace('workspace.html?to=' + encodeURIComponent('/super-admin/dashboard') + (location.hash || ''));
+    })();
+  </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light">
   <meta name="theme-color" content="#ffffff">
