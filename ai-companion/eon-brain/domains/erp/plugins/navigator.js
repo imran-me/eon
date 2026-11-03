@@ -190,17 +190,80 @@ const BN_SCREEN = [
   ['টাস্ক', 'task'], ['কাজ', 'task'], ['প্রজেক্ট', 'project'], ['প্রকল্প', 'project'], ['খরচ', 'expense'], ['এক্সপেন্স', 'expense'],
   ['পার্টি', 'party'], ['ভেন্ডর', 'vendor'], ['ভেন্ডার', 'vendor'], ['ক্লায়েন্ট', 'client'], ['এজেন্ট', 'agent'], ['কাস্টমার', 'customer'], ['গ্রাহক', 'customer'],
   ['ইনভয়েস', 'invoice'], ['ইনভয়েজ', 'invoice'], ['পেমেন্ট', 'payment'], ['সেটিং', 'settings'], ['ইউজার', 'user'], ['কোম্পানি', 'company'],
+  ['এয়ারলাইন', 'airline'], ['এয়ারপোর্ট', 'airport'], ['কমিশন', 'commission'], ['অ্যাডভান্স', 'advance'], ['এডভান্স', 'advance'], ['জেনারেল', 'general'], ['ম্যানেজমেন্ট', 'management'], ['মাসিক', 'monthly'],
   ['তালিকা', 'list'], ['লিস্ট', 'list'], ['নতুন', 'create'], ['অ্যাড', 'add'], ['অনুমোদন', 'approval'], ['বাজেট', 'budget'], ['পেটি', 'petty'],
 ];
+/* Said in English, written in Bangla: in Auto the microphone listens in bn-BD and writes
+   "manage bank" as "ম্যানেজ ব্যাংক". No list can hold every screen, so the rest go by SOUND —
+   both scripts reduced to one consonant skeleton ("manage" and "ম্যানেজ" are both m-n-j)
+   and looked up among the words the ERP's own menu and routes use. */
+const BN_CONS = {
+  'ক': 'k', 'খ': 'k', 'গ': 'g', 'ঘ': 'g', 'ঙ': 'n', 'চ': 'c', 'ছ': 'c', 'জ': 'j', 'ঝ': 'j', 'ঞ': 'n',
+  'ট': 't', 'ঠ': 't', 'ড': 'd', 'ঢ': 'd', 'ণ': 'n', 'ত': 't', 'থ': 't', 'দ': 'd', 'ধ': 'd', 'ন': 'n',
+  'প': 'p', 'ফ': 'f', 'ব': 'b', 'ভ': 'b', 'ম': 'm', 'য': 'j', 'র': 'r', 'ল': 'l',
+  'শ': 's', 'ষ': 's', 'স': 's', 'হ': 'h', 'ৎ': 't', 'ং': 'n', 'ড়': 'r', 'ঢ়': 'r',
+};
+const dedupe = (x) => x.replace(/(.)\1+/g, '$1');
+const skelBn = (w) => dedupe(String(w).normalize('NFC').replace(/[\u200c\u200d]/g, '')
+  .replace(/\u09cd\u09af/g, '')                   // য-ফলা (ম্যা) is a vowel sound, not a j
+  .replace(/(কেই|কেও|কে|রে|দের|য়ের|এর|ের|টা|টি|তে|ে)$/, '')
+  .split('').map((ch) => BN_CONS[ch] || '').join(''));
+const skelEn = (w) => dedupe(String(w).toLowerCase().replace(/[^a-z]/g, '')
+  .replace(/tion/g, 'sn').replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/x/g, 'ks').replace(/q/g, 'k')
+  .replace(/v/g, 'b').replace(/z/g, 'j').replace(/w/g, '').replace(/c(?=[eiy])/g, 's').replace(/g(?=[eiy])/g, 'j')
+  .replace(/([kgcjtdpbs])h/g, '$1').replace(/[aeiouy]/g, ''));
+let SOUND = null;
+function soundIndex() {
+  if (SOUND || !MAP) return SOUND;
+  SOUND = new Map();
+  const add = (w) => { if (w.length < 3) return; const k = skelEn(w); if (k.length >= 2 && !SOUND.has(k)) SOUND.set(k, w); };
+  for (const m of MAP.menu) norm(m.label || '').split(' ').forEach(add);
+  for (const p of MAP.pages) routeWords(p.name).split(' ').forEach(add);
+  return SOUND;
+}
 function toEn(query) {
   if (!/[\u0980-\u09FF]/.test(query)) return query;
-  return String(query).split(/\s+/).map((w) => { const hit = BN_SCREEN.find(([b]) => w.startsWith(b)); return hit ? hit[1] : w; }).join(' ');
+  const idx = soundIndex();
+  return String(query).split(/\s+/).map((w) => {
+    const hit = BN_SCREEN.find(([b]) => w.startsWith(b));
+    if (hit) return hit[1];
+    const k = skelBn(w);
+    return (idx && k.length >= 2 && idx.get(k)) || w;
+  }).join(' ');
+}
+
+/* The screens a boss names most, pinned: word scoring alone sent "attendance report" to
+   Attendance *Settings* (the ERP spells that route "attendence", so the real report lost a
+   point) and "cash flow" to the bank list (the cash-flow report has no menu entry). Checked
+   on the English the sentence became; first match wins. */
+const PINNED = [
+  [/\battendances?\b.*\b(report|monthly)\b|\b(report|monthly)\b.*\battendances?\b/, 'role.report.monthly-attendances'],
+  [/\battendances?\b(?!.*setting)/, 'role.attendances.index'],
+  [/\bgeneral ledger\b|\bgl\b/, 'role.report.general-ledger'],
+  [/\bcash ?flow\b/, 'role.report.cash-flow'],
+  [/\badvance salar/, 'role.advance-salaries.index'],
+  [/\bairlines?\b/, 'role.airlines.index'],
+  [/\bairports?\b/, 'role.airport.index'],
+  [/\bcommissions?\b/, 'role.commissions.index'],
+  [/\b(users?|employees?)\b.*\b(list|management|manage|all)\b|\b(manage|all)\b.*\b(users?|employees?)\b|^\s*(users?|employees?)\s*$/, 'role.user.index'],
+];
+function pinned(query) {
+  const q = ' ' + norm(query) + ' ';
+  for (const [rx, name] of PINNED) {
+    if (!rx.test(q)) continue;
+    const p = MAP.pages.find((x) => x.name === name);
+    const m = MAP.menu.find((x) => x.route === name);
+    if (p) return { label: (m && m.label) || routeWords(name).replace(/\b\w/g, (c) => c.toUpperCase()), section: m ? m.section : null, route: name, uri: p.uri, controller: p.controller, action: p.action, from: 'pinned', _s: 99 };
+  }
+  return null;
 }
 
 /** the best screens for a question, menu first then every route */
 export function find(query, limit = 5) {
   if (!MAP) return [];
   query = toEn(query);
+  const pin = pinned(query);
+  if (pin && limit === 1) return [pin];
   const expanded = expand(query);
   const routeByName = new Map();
   for (const p of MAP.pages) routeByName.set(p.name, p);
@@ -251,9 +314,10 @@ export function find(query, limit = 5) {
       const s = anyDirect ? x.direct : Math.max(x.direct, score(expanded, x.c) * 0.7);
       return { ...x.c, _s: s };
     })
-    .filter((c) => c._s > 1.5 && c.uri)
+    .filter((c) => c._s > 1.5 && c.uri && (!pin || c.route !== pin.route))
     .sort((a, b) => b._s - a._s)
-    .slice(0, limit);
+    .slice(0, pin ? limit - 1 : limit)
+    .reduce((out, c) => (out.push(c), out), pin ? [pin] : []);
 }
 
 /* ---------- what a screen can do ---------- */
