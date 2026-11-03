@@ -79,7 +79,7 @@ function slotsOf(raw) {
   if (out.amount2 != null && out.cost == null) out.cost = out.amount2;
   // a person's name: "X-এর জন্য", "for X", "passenger X"
   // vowel signs are letters too (\p{M}); an English name stops at a city, a keyword or a number
-  const nm = s.match(/(?:যাত্রী|passenger|নাম|name)\s*[:\-]?\s*([\p{L}\p{M}.\s]{3,40}?)(?=,|।|$|\s+(?:এর|জন্য|PNR|পিএনআর))/u) || s.match(/([\p{L}\p{M}.]+(?:\s+[\p{L}\p{M}.]+){0,3}?)(?:এর|য়ের|ের)\s+জন্য/u) || s.match(/\bfor\s+((?:(?!dhaka|from|to\b|on\b|pnr|price|passport|phone|at\b)[A-Za-z.]+\s*){1,4})/i);
+  const nm = s.match(/(?:যাত্রী|passenger|নাম|name)\s*[:\-]?\s*([\p{L}\p{M}.\s]{3,40}?)(?=,|।|$|\s+(?:এর|জন্য|PNR|পিএনআর))/u) || s.match(/([\p{L}\p{M}.]+(?:\s+[\p{L}\p{M}.]+){0,4}?)\s*-?\s*(?:এর|য়ের|ের)\s+জন্য/u) || s.match(/\bfor\s+((?:(?!dhaka|from|to\b|on\b|pnr|price|passport|phone|at\b)[A-Za-z.]+\s*){1,4})/i);
   if (nm) out.name = nm[1].replace(/(এর|ের|য়ের)$/u, '').trim();
   return out;
 }
@@ -118,7 +118,12 @@ const KNOWN = [{
     if (slots.name) sel($('#passport_holder_id'), (t) => slots.name.toLowerCase().split(/\s+/).every((p) => t.includes(p)) || t.includes(slots.name.toLowerCase()), 'Passport Holder');
     if (slots.pnr && $('[name=ticket_no]')) { setValue(w, $('[name=ticket_no]'), slots.pnr); done.push(`Ticket No (PNR): ${slots.pnr}`); }
     if (slots.ticket_no && $('#name_ticket_no')) { setValue(w, $('#name_ticket_no'), slots.ticket_no); done.push(`Name Ticket No.: ${slots.ticket_no}`); }
-    if (slots.from && slots.to) sel($('#isProductSelected'), (t) => t.includes(slots.from.toLowerCase()) && t.includes(slots.to.toLowerCase()), 'Ticket (route)');
+    if (slots.from && slots.to && $('#isProductSelected')) {
+      const el = $('#isProductSelected'), a = slots.from.toLowerCase(), b = slots.to.toLowerCase();
+      const fit = [...el.options].filter((o) => o.value && o.textContent.toLowerCase().includes(a) && o.textContent.toLowerCase().includes(b))
+        .sort((x, y) => (x.textContent.toLowerCase().indexOf(a) === 0 ? 0 : 1) - (y.textContent.toLowerCase().indexOf(a) === 0 ? 0 : 1) || x.textContent.length - y.textContent.length);
+      if (fit[0]) { setValue(w, el, fit[0].value); try { w.selectProduct && w.selectProduct(el); } catch (e) {} done.push('Ticket (route): ' + fit[0].textContent.trim()); }
+    }
     const price = slots.cost ?? slots.sale ?? slots.amount;   // on a purchase the price is what we pay
     if (price != null && $('#selectsubtotal')) { setValue(w, $('#selectsubtotal'), String(price)); try { w.applyGrandTotal && w.applyGrandTotal($('#selectsubtotal')); } catch (e) {} done.push(`Price: ${price}`); }
     for (const [k, nm] of [['vendor', 'isVendorSelected'], ['portal', 'isPortalSelected']]) {
