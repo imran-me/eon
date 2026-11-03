@@ -149,6 +149,11 @@ TXT;
                 if ($sc === '') return null;
                 $t = $bn ? "{$sc} খুলছি।" : "Opening {$sc}.";
                 return ['mode' => self::MODE_OFFLINE, 'text' => $t, 'speak' => self::voice($t, $lg), 'tools_used' => [], 'intent' => 'navigate', 'lang' => $lg, 'navigate_query' => $sc, 'usage' => null];
+            case 'analyze':
+                if (!class_exists('Facts')) return null;
+                $aq = trim((string) ($p['question'] ?? '')) ?: (string) ($p['said'] ?? '');
+                $a = Gemini::analyze($aq . (isset($p['said']) ? ' (the boss said: ' . $p['said'] . ')' : ''), $lg, Facts::sheet($D));
+                return $a === null ? null : ['mode' => self::MODE_OFFLINE, 'text' => $a, 'speak' => self::voice($a, $lg), 'tools_used' => ['facts'], 'intent' => 'analyze', 'lang' => $lg, 'planned' => $aq, 'usage' => null];
             case 'do':
                 $cmd = trim((string) ($p['command'] ?? ''));
                 if ($cmd === '') return null;

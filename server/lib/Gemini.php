@@ -111,11 +111,13 @@ Reply with JSON only, one of:
 {"route":"ask","question":"<a short English question in the style of the examples above, keeping every name, number, month and filter the boss gave>"}
 {"route":"navigate","screen":"<the ERP screen to open, in English, e.g. 'contract flight board', 'ticket orders', 'bank transfers', 'vendor ledger'>"}
 {"route":"do","command":"<an English command for EON's action layer, naming the exact record: e.g. 'print the ledger of BSP IATA', 'open the statement of SALMAN TOURS & TRAVELS for October', 'export the agent ledger of MR RABBI to excel', 'reissue the ticket of MD SIFATUL ISLAM EMON', 'open the ticket of MD SIFATUL ISLAM EMON', 'refund the ticket PNR VPLX4H', 'offload passenger MR AMIT BAIDYA', 'move contract file 12 to visa stage', 'assign Imran a task: check ledger', 'pay Imran October salary'>"}
+{"route":"analyze","question":"<the question in English>"}  (a breakdown by agent/vendor/client/section/company/category, a comparison, ranking, trend, "why", or anything the examples above do not cover exactly)
 {"route":"clarify","question":"<one short question back to the boss, in {LANG}>"}
 {"route":"none"}  (not about the business at all)
 
 For navigate, keep the boss's own words for the screen, translated to English if needed ('flight dashboard' stays 'flight dashboard', 'টিকেট সেলস' becomes 'ticket sales').
 Use "do" for any action on a record or report: open/print/download/export/share a ledger or statement, open/reissue/refund/void/reschedule a ticket, offload/deport, move a file or visa stage, assign a task, record a payment, an expense or an entry. Resolve "this/that/ওটা/এইটা/এই লেজার/তার" from the conversation so far and put the real name in the command.
+Use "ask" ONLY when the question matches one of the examples above in meaning AND in the breakdown asked ("profit by agent" is NOT "profit" — that is analyze).
 Prefer "ask" when the boss wants information, "navigate" when they want to go/open/see a screen with no specific figure, "clarify" only when you truly cannot tell which of two things is meant.
 TXT;
         $system = str_replace(['{CATALOG}', '{LANG}'], [self::catalog(), $lang === 'bn' ? 'Bangla' : 'English'], $system);
