@@ -38,7 +38,7 @@
   }
 
   /* ---------- paint the class before first paint, so it never flashes ---------- */
-  if (stored() === 'collapsed') root.classList.add('eon-sb-collapsed');
+  if (stored() !== 'expanded') root.classList.add('eon-sb-collapsed');   // collapsed unless the user opened it
 
   /* ---------- styles ---------- */
   function styles() {
