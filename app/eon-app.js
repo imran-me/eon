@@ -18,7 +18,9 @@ const token = () => localStorage.getItem('eon_token') || '';
 const state = { section: 'brief', company: null, conv: null, messages: [], approved: JSON.parse(localStorage.getItem('eon_decided') || '{}'), voiceMode: false, lang: localStorage.getItem('eon_lang') || 'auto', lastLang: 'bn-BD' };
 
 async function api(path, opts = {}) {
-  const r = await fetch(server() + '/' + path, Object.assign({ headers: Object.assign({ 'Content-Type': 'application/json' }, token() ? { Authorization: 'Bearer ' + token() } : {}) }, opts));
+  const ctl = new AbortController(); const stop = setTimeout(() => ctl.abort(), 20000);
+  const r = await fetch(server() + '/' + path, Object.assign({ signal: ctl.signal, headers: Object.assign({ 'Content-Type': 'application/json' }, token() ? { Authorization: 'Bearer ' + token() } : {}) }, opts));
+  clearTimeout(stop);
   if (!r.ok) throw new Error(path + ' → ' + r.status);
   return r.json();
 }
@@ -265,13 +267,13 @@ async function ask(q, { voice = false } = {}) {
   // waited for it before the local brain replied. health.php has already said whether
   // this browser is authenticated — believe it and go straight to the brain.
   if (!out && e.serverOk && e.authed) {
-    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { weak: !!r.weak, nav: r.navigate_query || null, planned: r.planned || null, text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
+    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { weak: !!r.weak, nav: r.navigate_query || null, navPath: r.navigate_path || null, planned: r.planned || null, text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
-    if (out && out.weak) out = (await askByMeaning(q, voice)) || out;
     // Gemini understood a screen: the navigator finds it in the ERP's own map and moves the ERP frame
     if (out && out.nav && window.EonNavigator) {
       try { const N = window.EonNavigator; await N.ready(); const h = (N.find(out.nav, 1) || [])[0]; if (h && h.uri) { const u = N.url(h.uri); N.go(u); out.text = out.speak = (curLang() === 'bn-BD' || langOf(q) === 'bn' ? (h.label || out.nav) + ' খুলছি।' : 'Opening ' + (h.label || out.nav) + '.'); out.actions = [{ label: h.label || out.nav, kind: 'erp-open', href: u }]; } } catch (e) { console.warn('[EON] nav', e); }
     }
+    if (out && out.navPath && window.EonNavigator) { try { const u = window.EonNavigator.url(out.navPath); window.EonNavigator.go(u); out.actions = [{ label: curLang() === 'bn-BD' ? 'খুলুন' : 'Open', kind: 'erp-open', href: u }]; } catch (e) { console.warn('[EON] nav', e); } }
     if (out && out.planned) out.trace = 'Gemini understood: “' + out.planned + '” · ' + (out.trace || '');
   }
   /* No server answer coming (signed out, or the server refused): the thirteen registered

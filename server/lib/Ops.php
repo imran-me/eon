@@ -25,11 +25,55 @@ final class Ops
         $l = mb_strtolower(trim($q));
         // 'bn'/'en' exactly is an instruction (the Gemini planner re-asks in English for a Bangla speaker)
         $bn = $lang === 'bn' ? true : ($lang === 'en' ? false : ((bool) preg_match('/\p{Bengali}/u', $q) || preg_match_all(self::BANGLISH, $l) >= 2));
-        foreach (['bank', 'personSalary', 'payrollDue', 'flightsDue', 'flightsPending'] as $h) {
+        self::$nav = null;
+        foreach (['bank', 'personSalary', 'payrollDue', 'flightsOn', 'flightsDue', 'flightsPending'] as $h) {
             $r = self::$h($l, $D, $bn);
-            if ($r !== null) return ['text' => $r, 'lang' => $bn ? 'bn' : 'en', 'intent' => 'ops_' . $h];
+            if ($r !== null) return ['text' => $r, 'lang' => $bn ? 'bn' : 'en', 'intent' => 'ops_' . $h] + (self::$nav ? ['navigate_path' => self::$nav] : []);
         }
         return null;
+    }
+    /** a screen the browser should open with the answer ('/{role}/…'); set by a handler */
+    private static ?string $nav = null;
+
+    /* ---------- a date said the way people say it: "5 নভেম্বর", "৫ ডিসেম্বরের", "Dec 5", "today", "আগামীকাল" ---------- */
+    private const MONTHS = ['jan' => 1, 'feb' => 2, 'mar' => 3, 'apr' => 4, 'may' => 5, 'jun' => 6, 'jul' => 7, 'aug' => 8, 'sep' => 9, 'oct' => 10, 'nov' => 11, 'dec' => 12,
+        'জানুয়ারি' => 1, 'ফেব্রুয়ারি' => 2, 'মার্চ' => 3, 'এপ্রিল' => 4, 'মে' => 5, 'জুন' => 6, 'জুলাই' => 7, 'আগস্ট' => 8, 'অগাস্ট' => 8, 'সেপ্টেম্বর' => 9, 'অক্টোবর' => 10, 'নভেম্বর' => 11, 'ডিসেম্বর' => 12];
+    public static function dateIn(string $l): ?string
+    {
+        $l = strtr($l, ['০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4', '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9']);
+        $today = new DateTimeImmutable('today');
+        if (preg_match('/\b(today|ajke|aj)\b|আজকে|আজ(?![\p{Bengali}])/u', $l)) return $today->format('Y-m-d');
+        if (preg_match('/\b(tomorrow|agamikal)\b|আগামীকাল/u', $l)) return $today->modify('+1 day')->format('Y-m-d');
+        if (preg_match('/\b(yesterday|gotokal)\b|গতকাল/u', $l)) return $today->modify('-1 day')->format('Y-m-d');
+        foreach (self::MONTHS as $name => $m) {
+            $rx = preg_match('/^[a-z]/', $name) ? '\b' . $name . '[a-z]*' : $name . '\p{Bengali}*';
+            if (preg_match('/(\d{1,2})\s*(?:st|nd|rd|th|ই|শে|তারিখ)?\s*' . $rx . '/u', $l, $x) || preg_match('/' . $rx . '\s*(\d{1,2})\b/u', $l, $x)) {
+                $d = (int) $x[1]; if ($d < 1 || $d > 31) continue;
+                $y = (int) $today->format('Y');
+                $dt = DateTimeImmutable::createFromFormat('Y-n-j', "$y-$m-$d");
+                if ($dt && $dt < $today->modify('-120 days')) $dt = $dt->modify('+1 year');   // "5 January" said in November is next January
+                return $dt ? $dt->format('Y-m-d') : null;
+            }
+        }
+        return null;
+    }
+
+    /* ---------- the flights of one day: count, list, or open ---------- */
+    private static function flightsOn(string $l, array $D, bool $bn): ?string
+    {
+        if (!preg_match('/\b(flights?)\b|ফ্লাইট/u', $l)) return null;
+        $day = self::dateIn($l); if ($day === null) return null;
+        $F = array_values(array_filter(self::flights($D), fn($f) => substr((string) ($f['departure_at'] ?? ''), 0, 10) === $day));
+        $d = Phrase::day($day, $bn ? 'bn' : 'en');
+        if (!$F) return $bn ? "{$d} তারিখে কোনো contract flight নেই।" : "There is no contract flight on {$d}.";
+        $one = fn($f) => $f['flight_number'] . ' · ' . substr((string) $f['departure_at'], 11, 5) . ' · ' . (int) $f['seats_sold'] . '/' . (int) $f['total_seats'] . ($bn ? ' seat' : ' seats');
+        $list = implode('; ', array_map($one, $F));
+        if (preg_match('/\b(open|show|kholo|dekhao)\b|ওপেন|খোলো|খুলুন|দেখাও|নিয়ে যাও/u', $l)) {
+            self::$nav = '/{role}/contract-flights?search=' . rawurlencode((string) $F[0]['flight_number']);
+            return $bn ? "{$d}-এর flight খুলছি — {$list}।" : "Opening the {$d} flight — {$list}.";
+        }
+        return $bn ? sprintf('%s তারিখে %sটা contract flight: %s।', $d, self::n(count($F), true), $list)
+                   : sprintf('%d contract flight%s on %s: %s.', count($F), count($F) > 1 ? 's' : '', $d, $list);
     }
 
     private static function m(float $v, bool $bn): string { return Phrase::money($v, $bn ? 'bn' : 'en'); }

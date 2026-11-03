@@ -186,7 +186,7 @@ TXT;
         if (class_exists('Ops')) {
             try {
                 $o = Ops::answer($q, $D, $lang);
-                if ($o !== null) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null];
+                if ($o !== null) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null] + (isset($o['navigate_path']) ? ['navigate_path' => $o['navigate_path']] : []);
             } catch (Throwable $e) { Log::warn('ops failed', ['error' => $e->getMessage()]); }
         }
         if (class_exists('Nlu') && class_exists('Answer')) {
