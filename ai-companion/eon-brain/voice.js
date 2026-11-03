@@ -163,20 +163,22 @@ let kokoro = null, kokoroLoading = null;
 function loadKokoro() {
   if (kokoro || kokoroLoading || typeof window === 'undefined') return kokoroLoading;
   try { if (localStorage.getItem('eon_kokoro') === 'off') return null; } catch (e) {}
-  kokoroLoading = import(/* @vite-ignore */ KOKORO.lib)
-    .then(({ KokoroTTS }) => KokoroTTS.from_pretrained(KOKORO.model, { dtype: 'q8', device: 'wasm' }))
-    .then((t) => { kokoro = t; console.info('[EON voice] Kokoro neural voice ready'); return t; })
-    .catch((e) => { console.warn('[EON voice] Kokoro unavailable, using the browser voice', e); return null; });
+  const ML = window.EonML;
+  if (!ML) { setTimeout(loadKokoro, 2000); return null; }   // the worker's page side loads with the panel
+  kokoroLoading = ML('load', { kind: 'tts' })
+    .then((t) => { kokoro = true; console.info('[EON voice] Kokoro neural voice ready'); return t; })
+    .catch((e) => { console.warn('[EON voice] Kokoro unavailable, using the browser voice', e); kokoroLoading = null; return null; });
   return kokoroLoading;
 }
 async function sayViaKokoro(chunks, myId) {
   // generate the next phrase while the current one plays, so the pauses stay short
-  let pending = kokoro.generate(chunks[0], { voice: KOKORO.voice, speed: KOKORO.speed });
+  const gen = (t) => window.EonML('tts', { text: t, voice: KOKORO.voice, speed: KOKORO.speed });
+  let pending = gen(chunks[0]);
   for (let i = 0; i < chunks.length; i++) {
     let audio; try { audio = await pending; } catch (e) { return false; }
     if (state.sayId !== myId) return false;
-    if (i + 1 < chunks.length) pending = kokoro.generate(chunks[i + 1], { voice: KOKORO.voice, speed: KOKORO.speed });
-    const url = URL.createObjectURL(audio.toBlob());
+    if (i + 1 < chunks.length) pending = gen(chunks[i + 1]);
+    const url = URL.createObjectURL(audio);
     const ok = await new Promise((res) => {
       const a = new SPK.Audio(url); state.audio = a;
       a.onended = () => res(true); a.onerror = () => res(false);

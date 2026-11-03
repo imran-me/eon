@@ -1,23 +1,21 @@
 /* ============================================================
-   EON · whisper — hearing with OpenAI's open-source Whisper, in the
-   browser. One model for বাংলা, English and a sentence that mixes
-   them: the language is detected per recording, not chosen first.
+   EON · whisper — hearing with OpenAI's open-source Whisper. One model
+   for বাংলা, English and a sentence that mixes them: the language is
+   detected per recording, not chosen first.
 
    Opt-in (the 🎧 chip): the model is ~250 MB, fetched once and kept by
-   the browser's cache, and it transcribes after you stop speaking
-   rather than while you speak. Off, the microphone is Chrome's own
-   recogniser exactly as before.
+   the browser's cache, and runs in app/ml-worker.js so the page never
+   freezes. It transcribes after you stop speaking. Off, the microphone
+   is Chrome's own recogniser exactly as before.
    ============================================================ */
-const LIB = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1/+esm';
-const MODEL = 'Xenova/whisper-small';
+import { ml } from './ml.js';
 
-let asr = null, loading = null, rec = null, chunks = [], stream = null;
+let isReady = false, loading = null, rec = null, chunks = [], stream = null;
 
-function load(onProgress) {
+function load() {
   if (loading) return loading;
-  loading = import(/* @vite-ignore */ LIB)
-    .then((T) => T.pipeline('automatic-speech-recognition', MODEL, { dtype: 'q8', progress_callback: onProgress }))
-    .then((p) => { asr = p; console.info('[EON whisper] ready'); return true; })
+  loading = ml('load', { kind: 'asr' })
+    .then(() => { isReady = true; console.info('[EON whisper] ready'); return true; })
     .catch((e) => { console.warn('[EON whisper] unavailable', e); loading = null; return false; });
   return loading;
 }
@@ -39,16 +37,14 @@ async function stop() {
   rec = null;
   const buf = await new Blob(chunks).arrayBuffer();
   const ctx = new AudioContext({ sampleRate: 16000 });
-  const audio = (await ctx.decodeAudioData(buf)).getChannelData(0);
+  const audio = (await ctx.decodeAudioData(buf)).getChannelData(0).slice();
   ctx.close();
-  if (!asr) await load();
-  const out = await asr(audio, { task: 'transcribe', chunk_length_s: 30 });
-  return String((out && out.text) || '').trim();
+  return ml('asr', { audio }, [audio.buffer]);
 }
 
 const EonWhisper = {
   load, start, stop,
-  ready: () => !!asr,
+  ready: () => isReady,
   recording: () => !!rec,
   on: () => { try { return localStorage.getItem('eon_whisper') === '1'; } catch (e) { return false; } },
   set(on) { try { localStorage.setItem('eon_whisper', on ? '1' : '0'); } catch (e) {} if (on) load(); },
