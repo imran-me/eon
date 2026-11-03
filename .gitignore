@@ -59,4 +59,5 @@ tools/corpus/
 # headless-Chrome profiles left by the print scripts, and generated exports
 **/.chrome-profile*/
 server/storage/data/report-*.csv
+server/storage/data/report-*.xlsx
 scratchpad_grid.png
