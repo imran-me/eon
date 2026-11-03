@@ -34,6 +34,14 @@ class StateController extends Controller
             $query->where('states.name', 'like', '%' . $request->state_name . '%');
         }
 
+        // The list bar's date range: the day the state was added.
+        if ($request->filled('from_date')) {
+            $query->whereDate('states.created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('states.created_at', '<=', $request->to_date);
+        }
+
         $states = $query->paginate(30);
 
         $totalStates = State::count();

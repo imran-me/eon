@@ -177,6 +177,7 @@ class ExpenseController extends Controller
                 if (!$bank || !$bank->account_id) {
                     throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover((int) $bank->account_id, (float) $data->amount, $bank->name);
 
                 $journal = \App\Models\JournalEntry::create([
                     'company_id'  => auth()->user()->company_id ?? 2,
@@ -317,6 +318,8 @@ class ExpenseController extends Controller
                         'description' => 'Expense (edited) — ' . $data->title,
                     ]);
                 }
+
+                Bank::assertCanCover((int) $bank->account_id, (float) $data->amount, $bank->name);
 
                 // Debit: Expense account — money spent
                 \App\Models\JournalItem::create([

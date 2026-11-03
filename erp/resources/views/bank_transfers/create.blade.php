@@ -9,6 +9,10 @@
 @endsection
 
 @section('main-content')
+@php
+    $defaultChargeAccount = $accounts->firstWhere('code', '8510');
+@endphp
+
 <div class="px-4 py-6 max-w-screen-2xl mx-auto">
 
     {{-- Page Header --}}
@@ -66,14 +70,11 @@
                                 <select name="from_bank_id" id="from_bank_id" required
                                         class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-300 focus:outline-none bg-white @error('from_bank_id') border-red-400 @enderror">
                                     <option value="">— Select Source —</option>
-                                    @foreach($banks as $bank)
-                                        <option value="{{ $bank->id }}"
-                                                data-balance="{{ $bank->balance }}"
-                                                data-currency="{{ $bank->currency ?? '' }}"
-                                                @selected(old('from_bank_id') == $bank->id)>
-                                            {{ $bank->name }}
-                                        </option>
-                                    @endforeach
+                                    @include('bank_transfers.partials.bank-options', [
+                                        'banks'        => $banks,
+                                        'selected'     => old('from_bank_id'),
+                                        'withCurrency' => true,
+                                    ])
                                 </select>
                                 @error('from_bank_id')
                                     <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
@@ -99,13 +100,10 @@
                                 <select name="to_bank_id" id="to_bank_id" required
                                         class="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-300 focus:outline-none bg-white @error('to_bank_id') border-red-400 @enderror">
                                     <option value="">— Select Destination —</option>
-                                    @foreach($banks as $bank)
-                                        <option value="{{ $bank->id }}"
-                                                data-balance="{{ $bank->balance }}"
-                                                @selected(old('to_bank_id') == $bank->id)>
-                                            {{ $bank->name }}
-                                        </option>
-                                    @endforeach
+                                    @include('bank_transfers.partials.bank-options', [
+                                        'banks'    => $banks,
+                                        'selected' => old('to_bank_id'),
+                                    ])
                                 </select>
                                 @error('to_bank_id')
                                     <p class="text-xs text-red-500 mt-1">{{ $message }}</p>
@@ -156,6 +154,49 @@
                             @enderror
                         </div>
 
+                        {{-- Custom Time — defaults to the server's own clock, same
+                             hh/mm/AM-PM picker as Manage Bank's Cash In/Out, combined
+                             into name="time" (H:i) by the script below on submit. --}}
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                                Custom Time <span class="text-red-500">*</span>
+                            </label>
+                            @php
+                                $oldTime = old('time');
+                                if ($oldTime && preg_match('/^(\d{1,2}):(\d{2})$/', $oldTime, $tm)) {
+                                    $h24 = (int) $tm[1];
+                                    $defHour = $h24 % 12 ?: 12;
+                                    $defMinute = (int) $tm[2];
+                                    $defAmPm = $h24 < 12 ? 'AM' : 'PM';
+                                } else {
+                                    $defHour = (int) date('g');
+                                    $defMinute = (int) date('i');
+                                    $defAmPm = date('A');
+                                }
+                            @endphp
+                            <input type="hidden" name="time" id="transfer_time">
+                            <div class="grid grid-cols-3 gap-1.5">
+                                <select id="transfer_hour" required aria-label="Hour"
+                                        class="w-full px-2 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('time') border-red-400 @enderror">
+                                    <option value="">hh</option>
+                                    @for($h = 1; $h <= 12; $h++)<option value="{{ $h }}" @selected($defHour === $h)>{{ str_pad($h, 2, '0', STR_PAD_LEFT) }}</option>@endfor
+                                </select>
+                                <select id="transfer_minute" required aria-label="Minute"
+                                        class="w-full px-2 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('time') border-red-400 @enderror">
+                                    <option value="">mm</option>
+                                    @for($m = 0; $m < 60; $m++)<option value="{{ $m }}" @selected($defMinute === $m)>{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>@endfor
+                                </select>
+                                <select id="transfer_ampm" aria-label="AM or PM"
+                                        class="w-full px-2 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('time') border-red-400 @enderror">
+                                    <option value="AM" @selected($defAmPm === 'AM')>AM</option>
+                                    <option value="PM" @selected($defAmPm === 'PM')>PM</option>
+                                </select>
+                            </div>
+                            @error('time')
+                                <p class="text-xs text-red-500">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         {{-- Status --}}
                         <div class="space-y-1">
                             <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">
@@ -202,6 +243,72 @@
                             @enderror
                         </div>
 
+                        {{-- Bank Charge & VAT --}}
+                        <div class="sm:col-span-2 lg:col-span-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div class="mb-3">
+                                <p class="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Bank Charge & VAT
+                                    <span class="font-medium normal-case tracking-normal text-gray-400">optional — deducted from source bank</span>
+                                </p>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-semibold text-gray-600">Bank Charge</label>
+                                    <input type="number" name="charge_amount" id="charge_amount" step="0.01" min="0"
+                                           value="{{ old('charge_amount', '0.00') }}" placeholder="0.00"
+                                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('charge_amount') border-red-400 @enderror">
+                                    @error('charge_amount')
+                                        <p class="text-xs text-red-500">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-1">
+                                    <label class="text-xs font-semibold text-gray-600">Charge posts to</label>
+                                    <select name="charge_account_id"
+                                            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('charge_account_id') border-red-400 @enderror">
+                                        <option value="">— Select Account —</option>
+                                        @foreach($accounts as $account)
+                                            <option value="{{ $account->id }}"
+                                                @selected((string) old('charge_account_id', optional($defaultChargeAccount)->id) === (string) $account->id)>
+                                                {{ $account->name }}{{ $account->code ? ' ('.$account->code.')' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('charge_account_id')
+                                        <p class="text-xs text-red-500">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-1">
+                                    <label class="text-xs font-semibold text-gray-600">VAT</label>
+                                    <input type="number" name="vat_amount" id="vat_amount" step="0.01" min="0"
+                                           value="{{ old('vat_amount', '0.00') }}" placeholder="0.00"
+                                           class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('vat_amount') border-red-400 @enderror">
+                                    @error('vat_amount')
+                                        <p class="text-xs text-red-500">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-1">
+                                    <label class="text-xs font-semibold text-gray-600">VAT posts to</label>
+                                    <select name="vat_account_id"
+                                            class="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-300 focus:outline-none @error('vat_account_id') border-red-400 @enderror">
+                                        <option value="">— Select Account —</option>
+                                        @foreach($accounts as $account)
+                                            <option value="{{ $account->id }}"
+                                                @selected((string) old('vat_account_id', optional($defaultChargeAccount)->id) === (string) $account->id)>
+                                                {{ $account->name }}{{ $account->code ? ' ('.$account->code.')' : '' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('vat_account_id')
+                                        <p class="text-xs text-red-500">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
                         {{-- Remarks --}}
                         <div class="space-y-1 sm:col-span-2 lg:col-span-3">
                             <label class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Remarks</label>
@@ -240,6 +347,14 @@
                             <span class="text-2xl font-bold text-blue-600" id="summaryAmount">0.00</span>
                         </div>
                         <div class="flex justify-between">
+                            <span class="text-gray-500">Charge / VAT</span>
+                            <span class="font-semibold text-amber-600" id="summaryCharges">0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Total source deduction</span>
+                            <span id="summaryOutflow">0.00</span>
+                        </div>
+                        <div class="flex justify-between">
                             <span class="text-gray-500">Remaining</span>
                             <span class="font-semibold" id="summaryRemaining">—</span>
                         </div>
@@ -276,6 +391,8 @@
     const fromSelect        = document.getElementById('from_bank_id');
     const toSelect          = document.getElementById('to_bank_id');
     const amountInput       = document.getElementById('amount');
+    const chargeInput       = document.getElementById('charge_amount');
+    const vatInput          = document.getElementById('vat_amount');
     const fromBankInfo      = document.getElementById('fromBankInfo');
     const toBankInfo        = document.getElementById('toBankInfo');
     const fromBalanceEl     = document.getElementById('fromBalance');
@@ -284,6 +401,8 @@
     const summaryTo         = document.getElementById('summaryTo');
     const summaryBalance    = document.getElementById('summaryBalance');
     const summaryAmount     = document.getElementById('summaryAmount');
+    const summaryCharges    = document.getElementById('summaryCharges');
+    const summaryOutflow    = document.getElementById('summaryOutflow');
     const summaryRemaining  = document.getElementById('summaryRemaining');
     const insufficientAlert = document.getElementById('insufficientAlert');
 
@@ -295,17 +414,21 @@
         const fromOpt  = fromSelect.options[fromSelect.selectedIndex];
         const toOpt    = toSelect.options[toSelect.selectedIndex];
         const amount   = parseFloat(amountInput.value) || 0;
+        const charges  = (parseFloat(chargeInput.value) || 0) + (parseFloat(vatInput.value) || 0);
+        const outflow  = amount + charges;
         const balance  = parseFloat(fromOpt?.dataset?.balance) || 0;
-        const remaining = balance - amount;
+        const remaining = balance - outflow;
 
         summaryFrom.textContent   = fromOpt?.value ? fromOpt.text : '—';
         summaryTo.textContent     = toOpt?.value   ? toOpt.text   : '—';
         summaryBalance.textContent = fromOpt?.value ? fmt(balance) : '—';
         summaryAmount.textContent  = fmt(amount);
+        summaryCharges.textContent = fmt(charges);
+        summaryOutflow.textContent = fmt(outflow);
         summaryRemaining.textContent = fromOpt?.value ? fmt(remaining) : '—';
         summaryRemaining.className = 'font-semibold ' + (remaining < 0 ? 'text-red-600' : 'text-emerald-600');
 
-        const showAlert = fromOpt?.value && amount > 0 && remaining < 0;
+        const showAlert = fromOpt?.value && outflow > 0 && remaining < 0;
         insufficientAlert.classList.toggle('hidden', !showAlert);
         if (showAlert) {
             insufficientAlert.classList.remove('bt-shake');
@@ -333,6 +456,21 @@
     fromSelect.addEventListener('change', updateSummary);
     toSelect.addEventListener('change', updateSummary);
     amountInput.addEventListener('input', updateSummary);
+    chargeInput.addEventListener('input', updateSummary);
+    vatInput.addEventListener('input', updateSummary);
     updateSummary();
+
+    // "hh · mm · AM/PM" -> "H:i" for the server's date_format:H:i rule, same
+    // conversion Manage Bank's Cash In/Out does for its own time picker.
+    document.getElementById('transferForm').addEventListener('submit', function () {
+        const h = document.getElementById('transfer_hour').value;
+        const m = document.getElementById('transfer_minute').value || '0';
+        const ampm = document.getElementById('transfer_ampm').value;
+        if (!h) return;
+        let hour = Number(h) % 12;
+        if (ampm === 'PM') hour += 12;
+        document.getElementById('transfer_time').value =
+            String(hour).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    });
 </script>
 @endsection

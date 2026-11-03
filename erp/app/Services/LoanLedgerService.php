@@ -10,6 +10,7 @@ use App\Models\Loan;
 use App\Models\LoanTransaction;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Traits\PostsEmployeeLedger;
 
 /**
  * Records movements on staff loans — the money side and the ledger side together.
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\DB;
  */
 class LoanLedgerService
 {
+    use PostsEmployeeLedger;
     /**
      * The money going out — one row per loan, written the moment it is disbursed.
      *
@@ -58,14 +60,25 @@ class LoanLedgerService
 
             $existing->update($attributes);
 
-            return $existing;
+            $transaction = $existing;
+        } else {
+            $transaction = LoanTransaction::create($attributes + [
+                'loan_id'    => $loan->id,
+                'type'       => 'disburse',
+                'created_by' => Auth::id(),
+            ]);
         }
 
-        return LoanTransaction::create($attributes + [
-            'loan_id'    => $loan->id,
-            'type'       => 'disburse',
-            'created_by' => Auth::id(),
+        $journal = $journalEntryId ? JournalEntry::find($journalEntryId) : null;
+        $this->syncEmployeeLedgerRow($loan, 'loan_disbursed', (int) $loan->user_id, [
+            'entry_date' => $loan->start_date,
+            'reference'  => $journal?->reference ?: 'LOAN-' . str_pad((string) $loan->id, 5, '0', STR_PAD_LEFT),
+            'debit'      => 0,
+            'credit'     => 0,
+            'note'       => 'Staff loan disbursed' . ($loan->bank?->name ? ' from ' . $loan->bank->name : ''),
         ]);
+
+        return $transaction;
     }
 
     /**
@@ -107,7 +120,9 @@ class LoanLedgerService
         $date = $date ?: now()->toDateString();
 
         return DB::transaction(function () use ($loan, $amount, $method, $date, $bankId, $note, $employeeSalaryId) {
-            [$journal, $accountId] = $this->postRepaymentJournal($loan, $amount, $method, $date, $bankId, $note);
+            [$journal, $accountId] = $this->postRepaymentJournal(
+                $loan, $amount, $method, $date, $bankId, $note, $employeeSalaryId
+            );
 
             $transaction = LoanTransaction::create([
                 'loan_id'            => $loan->id,
@@ -260,9 +275,9 @@ class LoanLedgerService
      * Dr cash/bank (or salary payable) · Cr loan receivable — the employee owes
      * us less than they did.
      *
-     * A salary-deducted EMI is posted by the payroll flow itself against the same
-     * payslip, so recording it twice here would double-count; that method returns
-     * without a journal and the row is kept purely as loan history.
+     * Salary journals book net salary only. A salary-deducted EMI therefore gets
+     * its own Dr Salary Expense / Cr Loan Receivable entry, completing gross
+     * salary expense while reducing the loan asset exactly once.
      */
     private function postRepaymentJournal(
         Loan $loan,
@@ -270,7 +285,8 @@ class LoanLedgerService
         string $method,
         string $date,
         ?int $bankId,
-        ?string $note
+        ?string $note,
+        ?int $employeeSalaryId = null
     ): array {
         $loanReceivable = Account::where('code', config('accounts.loan_receivable'))->first();
 
@@ -279,7 +295,38 @@ class LoanLedgerService
         }
 
         if ($method === 'salary') {
-            return [null, null];
+            $salaryExpense = Account::where('code', config('accounts.salary_expense'))->firstOrFail();
+            $loan->loadMissing('user');
+            $journal = JournalEntry::create([
+                'company_id'  => $loan->user?->company_id ?? Auth::user()?->company_id,
+                'created_by'  => Auth::id(),
+                'date'        => $date,
+                'reference'   => 'LOANREC-' . ($employeeSalaryId ?: $loan->id),
+                'source'      => 'loan_recovery',
+                'source_id'   => $employeeSalaryId ?: $loan->id,
+                'description' => $note ?: ('Loan EMI recovered from salary — ' . ($loan->user?->name ?: 'Employee')),
+            ]);
+
+            JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id'       => $salaryExpense->id,
+                'debit'            => $amount,
+                'credit'           => 0,
+                'note'             => 'Salary settled by loan EMI',
+                'party_type'       => 'employee',
+                'party_id'         => $loan->user_id,
+            ]);
+            JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id'       => $loanReceivable->id,
+                'debit'            => 0,
+                'credit'           => $amount,
+                'note'             => 'Employee loan recovered from salary',
+                'party_type'       => 'employee',
+                'party_id'         => $loan->user_id,
+            ]);
+
+            return [$journal, null];
         }
 
         $debitAccountId = null;

@@ -62,7 +62,7 @@
       @foreach(['Invoice #','Client','Files','Country','Date','Total','Paid','Due','Status'] as $h)
       <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">{{ $h }}</th>
       @endforeach
-      <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Action</th>
+      <th class="px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500" style="width:1%;white-space:nowrap">Action</th>
      </tr>
     </thead>
     <tbody class="divide-y divide-slate-100">
@@ -81,12 +81,12 @@
       <td class="px-4 py-3 text-xs text-slate-600">{{ number_format($sale->paid_amount, 0) }}</td>
       <td class="px-4 py-3 text-xs text-slate-600">{{ number_format($sale->due_amount, 0) }}</td>
       <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-semibold {{ $payColors[$sale->payment_status] ?? 'bg-slate-100 text-slate-600' }}">{{ ucfirst($sale->payment_status) }}</span></td>
-      <td class="px-4 py-3">
-       <div class="flex justify-end gap-1.5">
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" onclick="viewSale({{ $sale->id }})" title="View"><i class="fas fa-eye text-xs"></i></button>
-        <button class="edit-btn flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" onclick="editSale({{ $sale->id }})" title="Edit"><i class="fas fa-pen text-xs"></i></button>
-        <a class="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100" href="{{ route('role.contract-file-sales.voucher',['role'=>$role,'contractFileSale'=>$sale->id]) }}" target="_blank" title="Invoice"><i class="fas fa-file-invoice text-xs"></i></a>
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete({{ $sale->id }},'{{ addslashes($sale->invoice_number) }}')" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+      <td class="px-2 py-3">
+       <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" onclick="viewSale({{ $sale->id }})" title="View" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-eye text-xs" style="font-size:11px;margin:0"></i></button>
+        <button class="edit-btn flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" onclick="editSale({{ $sale->id }})" title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-pen text-xs" style="font-size:11px;margin:0"></i></button>
+        <a class="flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100" href="{{ route('role.contract-file-sales.voucher',['role'=>$role,'contractFileSale'=>$sale->id]) }}" target="_blank" title="Invoice" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-file-invoice text-xs" style="font-size:11px;margin:0"></i></a>
+        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete({{ $sale->id }},'{{ addslashes($sale->invoice_number) }}')" title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i></button>
        </div>
       </td>
      </tr>

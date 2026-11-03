@@ -80,10 +80,19 @@ class AccountController extends Controller
         ]);
     }
 
+    public function show(Account $account)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Account retrieved successfully.',
+            'data' => $account->load('parent', 'children'),
+        ]);
+    }
+
     /**
      * Update the specified account.
      */
-    public function update(Request $request, $role, Account $account)
+    public function update(Request $request, Account $account)
     {
         // ── SYSTEM ACCOUNT GUARD ─────────────────────────────
         // if ($account->isSystemAccount()) {
@@ -143,7 +152,7 @@ class AccountController extends Controller
     /**
      * Soft-delete the specified account.
      */
-    public function destroy($role, Account $account)
+    public function destroy(Account $account)
     {
         // ── SYSTEM ACCOUNT GUARD ─────────────────────────────
         if ($account->isSystemAccount()) {

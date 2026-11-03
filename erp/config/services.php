@@ -40,6 +40,12 @@ return [
         'endpoint' => env('BREVO_API_ENDPOINT', 'https://api.brevo.com'),
     ],
 
+    // Kill switch for the email/SMS a party gets after each ledger entry
+    // (TransactionObserver -> NotifyPartyLedgerActivity).
+    'party_ledger' => [
+        'notify' => (bool) env('PARTY_LEDGER_NOTIFY', true),
+    ],
+
     'mram' => [
         'api_key'  => env('MRAM_SMS_API_KEY'),
         'endpoint' => env('MRAM_SMS_ENDPOINT', 'https://msg.mram.com.bd/smsapi'),

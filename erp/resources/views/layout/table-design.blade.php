@@ -565,7 +565,13 @@
             color: #e4e0e7;
         }
 
-        .header {
+        /* Scoped 2026-08-22. This was a bare `.header`, and `.header` is also the
+           class on the app's own top bar (layout/header.blade.php), so every page
+           loading this stylesheet had 25px of report padding and a 2px dark rule
+           added to the shell header — which is why the header stood taller here
+           than on pages that do not load it. It only ever meant the printed
+           report's heading. */
+        .attendance-report-container .header {
             text-align: center;
             margin-bottom: 30px;
             padding-top: 15px;
@@ -573,7 +579,7 @@
             padding-bottom: 10px;
         }
 
-        .user-info {
+        .attendance-report-container .user-info {
             margin-bottom: 20px;
         }
 

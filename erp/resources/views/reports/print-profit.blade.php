@@ -22,7 +22,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Monthly Profit Sheet — {{ $year }} — {{ optional($company)->name }}</title>
+<title>Service Profitability — {{ $year }} — {{ optional($company)->name }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -185,7 +185,7 @@
     </div>
 
     {{-- Label bar ── --}}
-    <div class="label-bar">Monthly Profit Sheet &mdash; {{ $year }} &mdash; {{ $moduleTitle }}</div>
+    <div class="label-bar">Service Profitability &mdash; {{ $year }} &mdash; {{ $moduleTitle }}</div>
 
     {{-- Meta ── --}}
     <div class="meta-row">
@@ -303,7 +303,7 @@
             </div>
             <div class="sh2">Note:</div>
             <div class="nb">
-                This profit sheet covers <strong>{{ $moduleTitle }}</strong> transactions for <strong>{{ $year }}</strong>.
+                This operational margin report covers <strong>{{ $moduleTitle }}</strong> transactions for <strong>{{ $year }}</strong>. It is not the formal accounting Profit &amp; Loss statement.
                 Profit = Revenue &minus; Cost. Generated {{ now()->format('d M Y \a\t H:i') }}.
             </div>
         </div>
@@ -324,6 +324,7 @@
     {{-- Signature ── --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:9px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

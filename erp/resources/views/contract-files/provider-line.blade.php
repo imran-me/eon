@@ -1,0 +1,1 @@
+<div class="mfp-ln mfp-seller" title="Vendor"><i class="fas fa-store mfp-ico"></i><a class="mfp-seller-name" href="{{ $fileStatementUrl }}?party_id={{ $provider->id }}" title="Open {{ $provider->name }}'s ledger">{{ $provider->name }}</a><span class="mfp-seller-code">EP-VN-{{ str_pad($provider->id,3,'0',STR_PAD_LEFT) }}</span></div>

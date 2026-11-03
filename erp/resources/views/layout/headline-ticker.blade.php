@@ -11,7 +11,10 @@ $headlineRole = \Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->firs
         display: flex;
         align-items: center;
         height: 42px;
-        margin: 0 16px 12px;
+        /* No bottom margin (owner, 2026-10-04): the bulletin-to-page gap is
+           now <main>'s 12px padding alone, half the old 24px. The shortcut
+           strip puts the 12px back only while it has tabs to show. */
+        margin: 0 16px 0;
         overflow: hidden;
         border: 1px solid var(--hn-border);
         border-radius: 10px;
@@ -302,7 +305,7 @@ $headlineRole = \Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->firs
 
     @media (max-width:768px) {
         .headline-ticker {
-            margin: 0 12px 10px;
+            margin: 0 12px 0;
             height: 40px;
             border-radius: 8px;
         }

@@ -5,6 +5,9 @@
 @endsection
 
 @section('main-content')
+<style>
+    .bank-ledger-table tbody tr.border-b { border-bottom-color: #b8c4d4; }
+</style>
 @include('layout.bank-tabs')
 
 <div class="bg-white rounded-lg shadow-md p-4 md:p-6">
@@ -128,7 +131,7 @@
             </div>
         @else
         <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="bank-ledger-table w-full text-sm">
                 <thead>
                     <tr class="bg-gray-50">
                         <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">#</th>
@@ -136,6 +139,7 @@
                         <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Reference</th>
                         <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Source</th>
                         <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Description / Note</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Beneficiary</th>
                         <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Debit</th>
                         <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Credit</th>
                         <th class="px-4 py-2.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 border-b border-gray-200">Balance</th>
@@ -153,7 +157,7 @@
                     @php $ledgerRows = $rows->reverse()->values(); @endphp
 
                     <tr class="bg-amber-50 font-bold text-sm">
-                        <td class="px-4 py-3" colspan="5"><i class="fas fa-flag-checkered mr-1"></i>Closing Balance</td>
+                        <td class="px-4 py-3" colspan="6"><i class="fas fa-flag-checkered mr-1"></i>Closing Balance</td>
                         <td class="px-4 py-3 text-right font-mono text-blue-700">{{ number_format($totalDebit, 2) }}</td>
                         <td class="px-4 py-3 text-right font-mono text-green-700">{{ number_format($totalCredit, 2) }}</td>
                         <td class="px-4 py-3 text-right">
@@ -178,9 +182,38 @@
                             <span class="inline-block rounded px-2 py-0.5 text-xs font-semibold capitalize bg-gray-100 text-gray-600">{{ ucfirst(str_replace('_', ' ', $row['source'])) }}</span>
                         </td>
                         <td class="px-4 py-2.5">
-                            <div class="text-sm text-gray-800">{{ Str::limit($row['description'], 40) }}</div>
-                            @if($row['note'])
+                            <div class="text-sm {{ !empty($row['description_muted']) ? 'text-gray-400' : 'text-gray-800' }}">{{ Str::limit($row['description_brief'] ?? $row['description_head'] ?? $row['description'], 40) }}</div>
+                            @if(!empty($row['txn_no']))<div class="font-mono text-gray-400" style="font-size:0.68rem;margin-top:2px;">{{ $row['txn_no'] }}</div>@endif
+                            {{-- Only when the note says something the description and
+                                 beneficiary do not already say — see noteWorthShowing()
+                                 on the dashboard. --}}
+                            @php $noteL = mb_strtolower(trim((string) $row['note'])); $benefL = mb_strtolower((string) ($row['beneficiary_name'] ?? '')); @endphp
+                            @if($noteL !== '' && ! str_contains(mb_strtolower($row['description'] . ' ' . $benefL), $noteL) && ! ($benefL !== '' && str_contains($noteL, $benefL)))
                                 <div class="text-xs text-gray-400 mt-0.5"><i class="fas fa-note-sticky mr-1"></i>{{ $row['note'] }}</div>
+                            @endif
+                        </td>
+                        {{-- The beneficiary comes off the description's tail (see
+                             BankControllerV2::beneficiaryFields()), else the
+                             party or counter-account on the entry. --}}
+                        <td class="px-4 py-2.5">
+                            @if(($row['beneficiary_name'] ?? '') !== '')
+                                @php
+                                    $m = $row['beneficiary_method'] ?? null;
+                                    $pill = ['cash' => ['Cash', '#dcfce7', '#15803d'], 'bank' => ['Bank', '#dbeafe', '#1e40af'], 'cheque' => ['Cheque', '#fef3c7', '#92400e']][$m] ?? null;
+                                    $kindLabel = match ($row['beneficiary_kind'] ?? null) {
+                                        'customer' => 'Customer', 'supplier' => 'Supplier', 'agent' => 'Agent',
+                                        'vendor' => 'Vendor', 'employee' => 'Employee', 'others' => 'Party', default => null,
+                                    };
+                                @endphp
+                                <div class="text-sm font-semibold text-gray-800">{{ $row['beneficiary_name'] }}@if($pill)<span style="display:inline-flex;align-items:center;font-size:9px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:6px;background:{{ $pill[1] }};color:{{ $pill[2] }};vertical-align:middle;">{{ $pill[0] }}</span>@endif</div>
+                                @if($pill)
+                                    @php $via = implode(': ', array_filter([$row['beneficiary_bank'] ?? null, !empty($row['beneficiary_ref']) ? ($m === 'cheque' ? 'Cheque No. ' : '') . $row['beneficiary_ref'] : null])); @endphp
+                                    @if($via !== '')<div class="text-xs text-gray-400 mt-0.5 whitespace-nowrap" title="{{ $via }}">{{ $via }}</div>@endif
+                                @elseif($kindLabel)
+                                    <div class="text-xs text-gray-400 mt-0.5">{{ $kindLabel }}</div>
+                                @endif
+                            @else
+                                <span class="text-gray-300">—</span>
                             @endif
                         </td>
                         <td class="px-4 py-2.5 text-right">
@@ -208,7 +241,7 @@
                     <tr class="bg-blue-50 text-blue-700 italic text-xs border-b border-gray-100">
                         <td class="px-4 py-2.5">—</td>
                         <td class="px-4 py-2.5">{{ request('date_from') ? \Carbon\Carbon::parse(request('date_from'))->format('d M Y') : 'B/F' }}</td>
-                        <td class="px-4 py-2.5" colspan="3"><i class="fas fa-arrow-right mr-1"></i>Opening Balance</td>
+                        <td class="px-4 py-2.5" colspan="4"><i class="fas fa-arrow-right mr-1"></i>Opening Balance</td>
                         <td class="px-4 py-2.5 text-right">—</td>
                         <td class="px-4 py-2.5 text-right">—</td>
                         <td class="px-4 py-2.5 text-right font-mono font-bold {{ $openingBalance >= 0 ? 'text-blue-700' : 'text-red-600' }}">

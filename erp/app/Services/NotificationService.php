@@ -5,26 +5,140 @@ namespace App\Services;
 use App\Models\Chat;
 use App\Models\DeviceToken;
 use App\Models\EmployeeSalary;
+use App\Models\EmployeePayment;
 use App\Models\Leave;
-use App\Models\Notification;
+use App\Models\ManualAttendanceRequest;
 use App\Models\Notice;
+use App\Models\Notification;
 use App\Models\OfficeTodo;
 use App\Models\Payslip;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Auth;
 use Google\Auth\Credentials\ServiceAccountCredentials;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class NotificationService
 {
+    /** In-app bell plus device push for one committed employee payment. */
+    public static function notifyEmployeePayment(EmployeePayment $payment): void
+    {
+        $employee = $payment->employee;
+        if (! $employee) {
+            return;
+        }
+
+        $message = 'Salary payment of ৳'.number_format((float) $payment->amount, 2)
+            .' received on '.$payment->payment_date->format('d M Y')
+            .' at '.Carbon::parse((string) $payment->transaction_time)->format('h:i A')
+            .'. Reference: '.$payment->reference.'.';
+
+        $created = self::storeNotifications([$employee->id], 'employee_payment', [
+            'employee_payment_id' => $payment->id,
+            'amount' => (float) $payment->amount,
+            'reference' => $payment->reference,
+            'payment_date' => $payment->payment_date->format('Y-m-d'),
+            'transaction_time' => substr((string) $payment->transaction_time, 0, 5),
+            'message' => $message,
+        ]);
+
+        foreach ($created as $userId => $notification) {
+            self::sendPushToUser($userId, 'Salary Payment Received', $message, [
+                'id' => (string) $notification->id,
+                'type' => 'employee_payment',
+                'title' => 'Salary Payment Received',
+                'message' => $message,
+                'entity_type' => 'employee_payment',
+                'entity_id' => (string) $payment->id,
+                'is_read' => '0',
+                'created_at' => optional($notification->created_at)->toDateTimeString(),
+            ], 'chat_notification.aiff');
+        }
+    }
+
+    public static function notifyManualAttendanceSubmitted(ManualAttendanceRequest $request): void
+    {
+        $request->loadMissing('user:id,name');
+        $employeeName = $request->user?->name ?? 'An employee';
+        $action = $request->action === 'check_out' ? 'check-out' : 'check-in';
+        $date = $request->requested_date?->format('d M Y');
+        $time = Carbon::parse($request->requested_time)->format('h:i A');
+        $receivedAt = $request->created_at?->format('d M Y, h:i A');
+        $message = "{$employeeName} requested manual {$action} for {$date} at {$time}. Server received: {$receivedAt}.";
+
+        $superAdminIds = Schema::hasTable('manual_attendance_notification_recipients')
+            ? $request->user->manualAttendanceNotificationRecipients()
+                ->where('users.status', 'active')
+                ->pluck('users.id')
+                ->all()
+            : [];
+
+        if (empty($superAdminIds)) {
+            $superAdminIds = User::query()
+                ->where('status', 'active')
+                ->where(function ($query) {
+                    $query->where('is_super_admin', true)
+                        ->orWhereHas('roles', fn ($role) => $role->where('name', 'super admin'));
+                })
+                ->pluck('id')
+                ->all();
+        }
+
+        $created = self::storeNotifications($superAdminIds, 'manual_attendance_submitted', [
+            'manual_attendance_request_id' => $request->id,
+            'employee_id' => $request->user_id,
+            'employee_name' => $employeeName,
+            'action' => $request->action,
+            'message' => $message,
+            'url' => '/super-admin/dashboard#manual-attendance-requests',
+        ]);
+
+        foreach ($created as $userId => $notification) {
+            self::sendPushToUser($userId, 'Manual Attendance Approval', $message, [
+                'id' => (string) $notification->id,
+                'type' => 'manual_attendance_submitted',
+                'entity_type' => 'manual_attendance_request',
+                'entity_id' => (string) $request->id,
+                'title' => 'Manual Attendance Approval',
+                'message' => $message,
+            ], 'chat_notification.aiff');
+        }
+    }
+
+    public static function notifyManualAttendanceDecision(ManualAttendanceRequest $request): void
+    {
+        $action = $request->action === 'check_out' ? 'check-out' : 'check-in';
+        $status = ucfirst($request->status);
+        $message = "Your manual {$action} request has been {$request->status} by Super Admin.";
+        $created = self::storeNotifications([$request->user_id], 'manual_attendance_decision', [
+            'manual_attendance_request_id' => $request->id,
+            'status' => $request->status,
+            'review_note' => $request->review_note,
+            'message' => $message,
+        ]);
+
+        foreach ($created as $userId => $notification) {
+            self::sendPushToUser($userId, "Manual Attendance {$status}", $message, [
+                'id' => (string) $notification->id,
+                'type' => 'manual_attendance_decision',
+                'entity_type' => 'manual_attendance_request',
+                'entity_id' => (string) $request->id,
+                'status' => $request->status,
+                'title' => "Manual Attendance {$status}",
+                'message' => $message,
+            ], 'chat_notification.aiff');
+        }
+    }
+
     public static function notifyPayslipGenerated(EmployeeSalary $empSalary, ?Payslip $payslip = null): void
     {
         $monthLabel = Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)->format('F Y');
-        $message = "Your payslip for {$monthLabel} has been generated. Net payable: ৳" . number_format($empSalary->net_salary, 2);
+        $message = "Your payslip for {$monthLabel} has been generated. Net payable: ৳".number_format($empSalary->net_salary, 2);
 
         $created = self::storeNotifications([$empSalary->user_id], 'payslip_generated', [
             'employee_salary_id' => $empSalary->id,
@@ -45,7 +159,7 @@ class NotificationService
                 'entity_id' => (string) $empSalary->id,
                 'is_read' => '0',
                 'created_at' => optional($notif->created_at)->toDateTimeString(),
-            ]);
+            ], 'chat_notification.aiff');
         }
     }
 
@@ -53,8 +167,8 @@ class NotificationService
     {
         $monthLabel = Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)->format('F Y');
         $message = $isPartial
-            ? "A partial payment of ৳" . number_format($paidAmount, 2) . " has been made against your {$monthLabel} salary. Remaining due: ৳" . number_format($remainingDue, 2)
-            : "Your {$monthLabel} salary of ৳" . number_format($paidAmount, 2) . " has been paid.";
+            ? 'A partial payment of ৳'.number_format($paidAmount, 2)." has been made against your {$monthLabel} salary. Remaining due: ৳".number_format($remainingDue, 2)
+            : "Your {$monthLabel} salary of ৳".number_format($paidAmount, 2).' has been paid.';
 
         $created = self::storeNotifications([$empSalary->user_id], 'salary_paid', [
             'employee_salary_id' => $empSalary->id,
@@ -77,7 +191,7 @@ class NotificationService
                 'entity_id' => (string) $empSalary->id,
                 'is_read' => '0',
                 'created_at' => optional($notif->created_at)->toDateTimeString(),
-            ]);
+            ], 'chat_notification.aiff');
         }
     }
 
@@ -99,7 +213,7 @@ class NotificationService
                 'sender_id' => $chat->sender_id,
                 'receiver_id' => $chat->receiver_id,
                 'message' => $sender?->name
-                    ? ($sender->name . ': ' . $messageText)
+                    ? ($sender->name.': '.$messageText)
                     : $messageText,
             ],
         ]);
@@ -118,11 +232,65 @@ class NotificationService
         );
     }
 
+    /**
+     * Operations Status Tracker — somebody was pulled in to look at a record.
+     *
+     * In-app bell + live toast only (the NotificationCreated event fires from
+     * Notification::booted). Deliberately no FCM push: this is desk work, and
+     * the tracker already digests everything on one screen.
+     *
+     * $url is passed in rather than built here because only the caller knows
+     * the role segment the current panel is mounted under.
+     */
+    public static function notifyOperationAssigned(array $userIds, string $reference, string $url, ?string $note = null): array
+    {
+        $actorName = optional(Auth::user())->name ?? 'Someone';
+        $message = $actorName.' asked you to look into '.$reference
+            .($note ? ' — '.Str::limit($note, 140) : '');
+
+        return self::storeNotifications(self::withoutActor($userIds), 'operation_assigned', [
+            'reference' => $reference,
+            'actor_name' => $actorName,
+            'note' => $note,
+            'url' => $url,
+            'message' => $message,
+        ]);
+    }
+
+    /** Operations Status Tracker — a note was posted; everyone on the record hears it. */
+    public static function notifyOperationNote(array $userIds, string $reference, string $url, string $body): array
+    {
+        $actorName = optional(Auth::user())->name ?? 'Someone';
+        $message = $actorName.' noted on '.$reference.': '.Str::limit($body, 160);
+
+        return self::storeNotifications(self::withoutActor($userIds), 'operation_note', [
+            'reference' => $reference,
+            'actor_name' => $actorName,
+            'note' => $body,
+            'url' => $url,
+            'message' => $message,
+        ]);
+    }
+
+    /** Nobody needs a notification about their own action. */
+    private static function withoutActor(array $userIds): array
+    {
+        $actorId = Auth::id();
+
+        return collect($userIds)
+            ->filter()
+            ->map(fn ($userId) => (int) $userId)
+            ->unique()
+            ->when($actorId, fn ($collection) => $collection->reject(fn ($userId) => $userId === (int) $actorId))
+            ->values()
+            ->all();
+    }
+
     private static function sendPushToUser(int $userId, string $title, string $body, array $data = [], ?string $sound = null): void
     {
         $projectId = config('services.fcm.project_id');
         $accessToken = self::getFcmAccessToken();
-        if (!$projectId || !$accessToken) {
+        if (! $projectId || ! $accessToken) {
             return;
         }
 
@@ -150,13 +318,18 @@ class NotificationService
             $androidNotification['sound'] = pathinfo($sound, PATHINFO_FILENAME) ?: $sound;
         }
 
-        $apnsPayload = [
-            'aps' => [],
-        ];
+        $aps = [];
 
         if ($sound) {
-            $apnsPayload['aps']['sound'] = $sound;
+            $aps['sound'] = $sound;
         }
+
+        // json_encode(array) emits `[]` for an empty array, but APNs requires
+        // `aps` to be a JSON dictionary even when it has no sound to carry.
+        // Casting to object guarantees `{}` instead.
+        $apnsPayload = [
+            'aps' => (object) $aps,
+        ];
 
         foreach ($tokens as $token) {
             $payload = [
@@ -216,14 +389,14 @@ class NotificationService
     private static function getFcmAccessToken(): ?string
     {
         $serviceAccount = config('services.fcm.service_account_json');
-        if (!$serviceAccount) {
+        if (! $serviceAccount) {
             return null;
         }
 
         $json = null;
         if (is_string($serviceAccount)) {
             $candidatePaths = [
-                storage_path('app/' . ltrim($serviceAccount, '\\\/')),
+                storage_path('app/'.ltrim($serviceAccount, '\\\/')),
             ];
 
             foreach (array_unique($candidatePaths) as $candidatePath) {
@@ -233,21 +406,22 @@ class NotificationService
                 }
             }
 
-            if (!is_array($json)) {
+            if (! is_array($json)) {
                 $json = json_decode($serviceAccount, true);
             }
         }
-        
-        if (!is_array($json)) {
+
+        if (! is_array($json)) {
             return null;
         }
-            
+
         $scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
         $credentials = new ServiceAccountCredentials($scopes, $json);
         $token = $credentials->fetchAuthToken();
 
         return $token['access_token'] ?? null;
     }
+
     public static function notifyTaskAssigned($task, $assignedUserIds)
     {
         $actorId = Auth::id();
@@ -266,7 +440,7 @@ class NotificationService
             'task_title' => $task->title,
             'actor_name' => $actorName,
             'board_id' => $task->board_id,
-            'message' => $actorName . ' assigned you to task: ' . $task->title
+            'message' => $actorName.' assigned you to task: '.$task->title,
         ]);
 
         foreach ($created as $userId => $notif) {
@@ -274,7 +448,7 @@ class NotificationService
                 'id' => (string) $notif->id,
                 'type' => 'task_assigned',
                 'title' => 'Task Assigned',
-                'message' => $notif->data['message'] ?? ($actorName . ' assigned you to task: ' . $task->title),
+                'message' => $notif->data['message'] ?? ($actorName.' assigned you to task: '.$task->title),
                 'entity_type' => 'task',
                 'entity_id' => (string) $task->id,
                 'is_read' => '0',
@@ -293,19 +467,19 @@ class NotificationService
     {
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         // Get all assigned users
         $usersToNotify = $task->users->pluck('id')->toArray();
-        
+
         // Also notify task creator if not already in the list
-        if ($task->created_by && !in_array($task->created_by, $usersToNotify)) {
+        if ($task->created_by && ! in_array($task->created_by, $usersToNotify)) {
             $usersToNotify[] = $task->created_by;
         }
-        
+
         // Remove the current user
         $usersToNotify = array_diff($usersToNotify, [$actorId]);
-        
-        $message = $actorName . ' commented on: ' . $task->title;
+
+        $message = $actorName.' commented on: '.$task->title;
 
         $created = self::storeNotifications($usersToNotify, 'comment_added', [
             'task_id' => $task->id,
@@ -314,7 +488,7 @@ class NotificationService
             'actor_id' => $actorId,
             'actor_name' => $actorName,
             'comment' => substr($comment, 0, 100),
-            'message' => $message
+            'message' => $message,
         ]);
 
         foreach ($created as $userId => $notif) {
@@ -339,21 +513,21 @@ class NotificationService
     public static function notifyPriorityChanged($task, $oldPriority, $newPriority)
     {
         $priorityLevels = ['low' => 1, 'medium' => 2, 'high' => 3];
-        
+
         $oldLevel = $priorityLevels[$oldPriority] ?? 0;
         $newLevel = $priorityLevels[$newPriority] ?? 0;
-        
+
         // Only notify if priority INCREASED
         if ($newLevel <= $oldLevel) {
             return; // Skip notification for priority decrease or no change
         }
-        
+
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         $usersToNotify = self::getTaskParticipants($task, $actorId);
         $priorityText = $newPriority ? ucfirst($newPriority) : 'None';
-        
+
         self::storeNotifications($usersToNotify, 'priority_changed', [
             'task_id' => $task->id,
             'task_title' => $task->title,
@@ -362,7 +536,7 @@ class NotificationService
             'actor_name' => $actorName,
             'new_priority' => $priorityText,
             'old_priority' => $oldPriority ? ucfirst($oldPriority) : 'None',
-            'message' => $actorName . ' increased priority to ' . $priorityText . ' on: ' . $task->title
+            'message' => $actorName.' increased priority to '.$priorityText.' on: '.$task->title,
         ]);
     }
 
@@ -373,9 +547,9 @@ class NotificationService
     {
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         $usersToNotify = self::getTaskParticipants($task, $actorId);
-        
+
         self::storeNotifications($usersToNotify, 'attachment_uploaded', [
             'task_id' => $task->id,
             'task_title' => $task->title,
@@ -383,7 +557,7 @@ class NotificationService
             'actor_id' => $actorId,
             'actor_name' => $actorName,
             'file_name' => $fileName,
-            'message' => $actorName . ' uploaded an attachment to: ' . $task->title
+            'message' => $actorName.' uploaded an attachment to: '.$task->title,
         ]);
     }
 
@@ -395,14 +569,14 @@ class NotificationService
         if (empty($assignedUserIds)) {
             return; // No one to notify
         }
-        
+
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         // Remove the creator from notifications
         $usersToNotify = array_diff($assignedUserIds, [$actorId]);
 
-        $message = $actorName . ' created a new task and assigned you: ' . $task->title;
+        $message = $actorName.' created a new task and assigned you: '.$task->title;
 
         $created = self::storeNotifications($usersToNotify, 'task_created', [
             'task_id' => $task->id,
@@ -410,7 +584,7 @@ class NotificationService
             'board_id' => $task->board_id,
             'actor_id' => $actorId,
             'actor_name' => $actorName,
-            'message' => $message
+            'message' => $message,
         ]);
 
         foreach ($created as $userId => $notif) {
@@ -438,20 +612,20 @@ class NotificationService
         if ($newDate && $oldDate && $newDate > $oldDate) {
             return; // Skip - less urgent now
         }
-        
+
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         $usersToNotify = self::getTaskParticipants($task, $actorId);
-        
+
         if (empty($usersToNotify)) {
             return;
         }
-        
-        $messageAction = $newDate 
-            ? 'changed the due date to ' . \Carbon\Carbon::parse($newDate)->format('M d, Y, g:i A')
+
+        $messageAction = $newDate
+            ? 'changed the due date to '.Carbon::parse($newDate)->format('M d, Y, g:i A')
             : 'removed the due date';
-        
+
         $created = self::storeNotifications($usersToNotify, 'due_date_changed', [
             'task_id' => $task->id,
             'task_title' => $task->title,
@@ -460,7 +634,7 @@ class NotificationService
             'actor_name' => $actorName,
             'new_due_date' => $newDate,
             'old_due_date' => $oldDate,
-            'message' => $actorName . ' ' . $messageAction . ' on: ' . $task->title
+            'message' => $actorName.' '.$messageAction.' on: '.$task->title,
         ]);
 
         foreach ($created as $userId => $notif) {
@@ -468,7 +642,7 @@ class NotificationService
                 'id' => (string) $notif->id,
                 'type' => 'due_date_changed',
                 'title' => 'Due Date Changed',
-                'message' => $notif->data['message'] ?? ($actorName . ' ' . $messageAction . ' on: ' . $task->title),
+                'message' => $notif->data['message'] ?? ($actorName.' '.$messageAction.' on: '.$task->title),
                 'entity_type' => 'task',
                 'entity_id' => (string) $task->id,
                 'is_read' => '0',
@@ -486,13 +660,13 @@ class NotificationService
     {
         $actorName = Auth::user()->name;
         $actorId = Auth::id();
-        
+
         $usersToNotify = self::getTaskParticipants($task, $actorId);
-        
+
         if (empty($usersToNotify)) {
             return;
         }
-        
+
         $created = self::storeNotifications($usersToNotify, 'state_changed', [
             'task_id' => $task->id,
             'task_title' => $task->title,
@@ -501,7 +675,7 @@ class NotificationService
             'actor_name' => $actorName,
             'new_state' => $newColumnName,
             'old_state' => $oldColumnName,
-            'message' => $actorName . ' moved "' . $task->title . '" from ' . $oldColumnName . ' to ' . $newColumnName
+            'message' => $actorName.' moved "'.$task->title.'" from '.$oldColumnName.' to '.$newColumnName,
         ]);
 
         foreach ($created as $userId => $notif) {
@@ -509,7 +683,7 @@ class NotificationService
                 'id' => (string) $notif->id,
                 'type' => 'state_changed',
                 'title' => 'Task Updated',
-                'message' => $notif->data['message'] ?? ($actorName . ' moved "' . $task->title . '" from ' . $oldColumnName . ' to ' . $newColumnName),
+                'message' => $notif->data['message'] ?? ($actorName.' moved "'.$task->title.'" from '.$oldColumnName.' to '.$newColumnName),
                 'entity_type' => 'task',
                 'entity_id' => (string) $task->id,
                 'is_read' => '0',
@@ -590,7 +764,7 @@ class NotificationService
             return;
         }
 
-        $message = $actorName . ' assigned you an office todo: ' . $todo->title;
+        $message = $actorName.' assigned you an office todo: '.$todo->title;
 
         $created = self::storeNotifications($usersToNotify, 'office_todo_assigned', [
             'todo_id' => $todo->id,
@@ -636,7 +810,7 @@ class NotificationService
             return;
         }
 
-        $message = $actorName . ' updated office todo: ' . $todo->title;
+        $message = $actorName.' updated office todo: '.$todo->title;
 
         $created = self::storeNotifications($usersToNotify, 'office_todo_updated', [
             'todo_id' => $todo->id,
@@ -751,8 +925,8 @@ class NotificationService
             'notice_title' => $notice->title,
             'company_id' => $notice->company_id,
             'department_id' => $notice->department_id,
-            'publish_date' => filled($notice->publish_date) ? \Carbon\Carbon::parse($notice->publish_date)->toDateTimeString() : null,
-            'expiry_date' => filled($notice->expiry_date) ? \Carbon\Carbon::parse($notice->expiry_date)->toDateTimeString() : null,
+            'publish_date' => filled($notice->publish_date) ? Carbon::parse($notice->publish_date)->toDateTimeString() : null,
+            'expiry_date' => filled($notice->expiry_date) ? Carbon::parse($notice->expiry_date)->toDateTimeString() : null,
             'actor_id' => $actorId,
             'actor_name' => $actorName,
             'message' => $message,
@@ -798,8 +972,8 @@ class NotificationService
             '%s applied for %s (%s to %s)',
             $applicantName,
             $leaveTypeName,
-            \Carbon\Carbon::parse($leave->start_date)->format('M d, Y'),
-            \Carbon\Carbon::parse($leave->end_date)->format('M d, Y')
+            Carbon::parse($leave->start_date)->format('M d, Y'),
+            Carbon::parse($leave->end_date)->format('M d, Y')
         );
 
         $created = self::storeNotifications($recipientUserIds, 'leave_applied', [
@@ -828,17 +1002,58 @@ class NotificationService
         }
     }
 
+    /** In-app bell plus device push when an employee's leave is decided. */
+    public static function notifyLeaveDecision(Leave $leave): void
+    {
+        $leave->loadMissing(['user:id,name', 'leave_type:id,name']);
+
+        if (! $leave->user_id) {
+            return;
+        }
+
+        $status = strtolower((string) $leave->status);
+        $statusLabel = ucfirst($status);
+        $leaveType = $leave->leave_type?->name ?? 'Leave';
+        $dateRange = Carbon::parse($leave->start_date)->isSameDay(Carbon::parse($leave->end_date))
+            ? Carbon::parse($leave->start_date)->format('d M Y')
+            : Carbon::parse($leave->start_date)->format('d M Y').' to '.Carbon::parse($leave->end_date)->format('d M Y');
+        $message = "Your {$leaveType} request for {$dateRange} has been {$status}.";
+
+        $created = self::storeNotifications([$leave->user_id], 'leave_decision', [
+            'leave_id' => $leave->id,
+            'status' => $status,
+            'leave_type' => $leaveType,
+            'start_date' => $leave->start_date,
+            'end_date' => $leave->end_date,
+            'message' => $message,
+        ]);
+
+        foreach ($created as $userId => $notification) {
+            self::sendPushToUser($userId, "Leave {$statusLabel}", $message, [
+                'id' => (string) $notification->id,
+                'type' => 'leave_decision',
+                'title' => "Leave {$statusLabel}",
+                'message' => $message,
+                'entity_type' => 'leave',
+                'entity_id' => (string) $leave->id,
+                'status' => $status,
+                'is_read' => '0',
+                'created_at' => optional($notification->created_at)->toDateTimeString(),
+            ], 'chat_notification.aiff');
+        }
+    }
+
     /**
      * Helper: Get all task participants (assignees + creator) excluding actor
      */
     private static function getTaskParticipants($task, $excludeUserId)
     {
         $users = $task->users->pluck('id')->toArray();
-        
-        if ($task->created_by && !in_array($task->created_by, $users)) {
+
+        if ($task->created_by && ! in_array($task->created_by, $users)) {
             $users[] = $task->created_by;
         }
-        
+
         return array_diff($users, [$excludeUserId]);
     }
 }

@@ -72,7 +72,7 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'user_id' => 'required',
             'employee_salary_id' => 'required',
-            'payment_date' => 'required',
+            'payment_date' => 'required|date',
             'payment_method' => 'required',
             'amount' => 'required'
         ]);
@@ -139,7 +139,7 @@ class PaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'user_id' => 'required',
             'employee_salary_id' => 'required',
-            'payment_date' => 'required',
+            'payment_date' => 'required|date',
             'payment_method' => 'required',
             'amount' => 'required'
         ]);

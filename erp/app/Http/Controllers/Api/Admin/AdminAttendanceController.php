@@ -107,6 +107,7 @@ class AdminAttendanceController extends Controller
                 ->get();
 
             $leaves = Leave::query()
+                ->with('leave_type')
                 ->where("user_id", $userId)
                 ->where("status", "approved")
                 ->where(function ($query) use ($startDate, $endDate) {
@@ -137,6 +138,13 @@ class AdminAttendanceController extends Controller
                 $dayName = strtolower($date->format("l"));
 
                 $record = $dbAttendances->get($dateString);
+                $leaveRecord = $leaves->first(function ($leave) use ($dateString) {
+                    return $dateString >= $leave->start_date &&
+                        $dateString <= $leave->end_date;
+                });
+                $approvedLateIn = $leaveRecord?->leave_type?->exempts_late_deduction
+                    ? $leaveRecord
+                    : null;
 
                 if ($record) {
                     $status = "Present";
@@ -159,7 +167,7 @@ class AdminAttendanceController extends Controller
                             $dateString . " " . $checkIn,
                         );
 
-                        if ($checkInTime->gt($lateThreshold)) {
+                        if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                             $lateMinutes = $checkInTime->diffInMinutes(
                                 $lateThreshold,
                             );
@@ -167,6 +175,10 @@ class AdminAttendanceController extends Controller
                             $summary["late"]++;
                             $summary["late_minutes"] += $lateMinutes;
                         }
+                    }
+
+                    if ($approvedLateIn) {
+                        $note = 'Approved Late In (until ' . Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                     }
 
                     if ($status === "Present") {
@@ -218,14 +230,7 @@ class AdminAttendanceController extends Controller
                     continue;
                 }
 
-                $leaveRecord = $leaves->first(function ($leave) use (
-                    $dateString,
-                ) {
-                    return $dateString >= $leave->start_date &&
-                        $dateString <= $leave->end_date;
-                });
-
-                if ($leaveRecord) {
+                if ($leaveRecord && !$approvedLateIn) {
                     $summary["leave"]++;
                     $rows->push([
                         "date" => $dateString,

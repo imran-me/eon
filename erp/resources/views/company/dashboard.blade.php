@@ -24,6 +24,24 @@
             </div>
         </div>
 
+        <div class="flex items-center gap-2 flex-wrap justify-end">
+        @canany(['create vendor','create customer'])
+        <details class="relative">
+            <summary class="list-none cursor-pointer bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-colors">
+                <i class="fas fa-user-plus mr-1"></i>Add Party <i class="fas fa-chevron-down ml-1 text-[10px]"></i>
+            </summary>
+            <div class="absolute right-0 z-30 mt-2 w-48 rounded-xl border border-gray-200 bg-white p-2 shadow-xl">
+                @can('create vendor')
+                <a class="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" href="{{ route('role.vendor.create', ['role' => request()->route('role'), 'company' => $company->id]) }}"><i class="fas fa-truck w-5 text-blue-600"></i>Add Vendor</a>
+                <a class="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" href="{{ route('role.agent.create', ['role' => request()->route('role'), 'company' => $company->id]) }}"><i class="fas fa-user-tie w-5 text-violet-600"></i>Add Agent</a>
+                @endcan
+                @can('create customer')
+                <a class="block rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50" href="{{ route('role.customer.create', ['role' => request()->route('role'), 'company' => $company->id]) }}"><i class="fas fa-user w-5 text-emerald-600"></i>Add Client</a>
+                @endcan
+            </div>
+        </details>
+        @endcanany
+
         {{-- Period filter --}}
         <form method="GET" action="{{ request()->url() }}" class="flex items-center gap-2">
             <label class="text-sm text-gray-500 font-medium">Period:</label>
@@ -34,6 +52,7 @@
                 Filter
             </button>
         </form>
+        </div>
     </div>
 
     {{-- ── Yesterday Snapshot — quick daily P&L (Sales/Purchase/Expense only) ── --}}
@@ -704,12 +723,13 @@
     @can('view payment schedule')
     @php
         $schedTodayUrl  = request()->fullUrlWithQuery(['schedule_filter' => 'today']);
+        $schedOverdueUrl = request()->fullUrlWithQuery(['schedule_filter' => 'overdue']);
         $sched7DaysUrl  = request()->fullUrlWithQuery(['schedule_filter' => '7days']);
         $schedRouteUrl  = route('role.payment-schedules.index', ['role' => request()->route('role')]);
         $totalPayable    = $companyPayable->sum('amount');
         $totalReceivable = $companyReceivable->sum('amount');
-        $overduePayable  = $companyPayable->where('status', 'overdue')->count();
-        $overdueReceivable = $companyReceivable->where('status', 'overdue')->count();
+        $overduePayable = $scheduleTabCounts['overdue_pay'];
+        $overdueReceivable = $scheduleTabCounts['overdue_receive'];
     @endphp
 
     {{-- Quick-glance summary strip — always visible above the fold --}}
@@ -750,16 +770,19 @@
             <h2 class="flex items-center gap-2 text-sm font-bold text-gray-700">
                 <i class="fas fa-calendar-alt text-indigo-600"></i> Payment Schedules
                 <span class="text-xs font-normal text-gray-400">
-                    @if($scheduleFilter === '7days')
-                        {{ \Carbon\Carbon::today()->format('d M') }} – {{ \Carbon\Carbon::today()->addDays(6)->format('d M Y') }}
+                    @if($scheduleFilter === 'overdue')
+                        Overdue before {{ \Carbon\Carbon::today()->format('d M Y') }}
+                    @elseif($scheduleFilter === '7days')
+                        {{ \Carbon\Carbon::tomorrow()->format('d M') }} – {{ \Carbon\Carbon::today()->addDays(7)->format('d M Y') }}
                     @else
                         {{ \Carbon\Carbon::today()->format('d M Y') }}
                     @endif
                 </span>
             </h2>
-            <div class="flex items-center gap-2">
-                <a href="{{ $schedTodayUrl }}" class="no-underline rounded-full border px-3 py-1 text-xs font-semibold transition-colors {{ $scheduleFilter !== '7days' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300' }}">Today</a>
-                <a href="{{ $sched7DaysUrl }}" class="no-underline rounded-full border px-3 py-1 text-xs font-semibold transition-colors {{ $scheduleFilter === '7days' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300' }}">7 Days</a>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+                <a href="{{ $schedTodayUrl }}" class="no-underline rounded-full border px-3 py-1 text-xs font-semibold transition-colors {{ $scheduleFilter === 'today' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300' }}">Today ({{ $scheduleTabCounts['today'] }})</a>
+                <a href="{{ $schedOverdueUrl }}" class="no-underline rounded-full border px-3 py-1 text-xs font-semibold transition-colors {{ $scheduleFilter === 'overdue' ? 'border-red-600 bg-red-600 text-white' : 'border-red-200 bg-white text-red-600 hover:border-red-400' }}">Overdue ({{ $scheduleTabCounts['overdue'] }})</a>
+                <a href="{{ $sched7DaysUrl }}" class="no-underline rounded-full border px-3 py-1 text-xs font-semibold transition-colors {{ $scheduleFilter === '7days' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-200 bg-white text-gray-500 hover:border-indigo-300' }}">7 Days ({{ $scheduleTabCounts['7days'] }})</a>
                 <a href="{{ $schedRouteUrl }}" class="no-underline rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600 hover:bg-indigo-100">View All</a>
             </div>
         </div>

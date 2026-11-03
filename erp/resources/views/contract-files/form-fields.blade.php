@@ -26,6 +26,9 @@
 
 <div class="cfm-section-title"><i class="fas fa-folder"></i> File Details</div>
 <div class="cfm-grid">
+    <div><label class="cfm-lbl">Received From <sup>*</sup></label><select id="{{ $prefix }}_client_type" name="client_type" class="cfm-select"><option value="agent">Agent</option><option value="direct">Direct Client</option></select></div>
+    <div><label class="cfm-lbl">Agent / Client <sup>*</sup></label><select id="{{ $prefix }}_client_id" name="client_id" class="cfm-select"><option value="">Select party</option>@foreach($clients as $client)<option value="{{ $client->id }}">{{ $client->name }}{{ $client->phone ? ' - '.$client->phone : '' }}</option>@endforeach</select></div>
+    <div><label class="cfm-lbl">Client Charge (BDT) <sup>*</sup></label><input type="number" min="0" step="0.01" id="{{ $prefix }}_client_price" name="client_price" class="cfm-input" placeholder="0"></div>
     <div><label class="cfm-lbl">Destination Country <sup>*</sup></label><select id="{{ $prefix }}_country_id" name="country_id" class="cfm-select">
             <option value="">Select country</option>@foreach($countries as $country)<option value="{{ $country->id }}">{{ $country->name }}</option>@endforeach
         </select>
@@ -36,6 +39,13 @@
         </select>
         <p id="{{ $prefix }}_contract_file_category_id_msg" class="text-red-500 text-xs mt-1 hidden error-message">Category is required</p>
     </div>
+    @if($setupMatchUrl ?? null)
+    {{-- Setup (2026-10-25): the file's visa type — picks up that visa type's requirements. --}}
+    <div><label class="cfm-lbl">Visa Type</label><select id="{{ $prefix }}_contract_file_visa_type_id" name="contract_file_visa_type_id" class="cfm-select">
+            <option value="">Select visa type</option>@foreach($fileVisaTypes as $visaType)<option value="{{ $visaType->id }}">{{ $visaType->name }}{{ $visaType->status === 'active' ? '' : ' (inactive)' }}</option>@endforeach
+        </select>
+    </div>
+    @endif
     <div><label class="cfm-lbl">Vendor / Agent <sup>*</sup></label><select id="{{ $prefix }}_vendor_id" name="vendor_id" class="cfm-select" onchange="cfOnVendorChange(this)">
             <option value="">Select vendor</option>@foreach($vendors as $vendor)<option value="{{ $vendor->id }}">{{ $vendor->name }}</option>@endforeach
         </select>
@@ -51,7 +61,7 @@
     <div><label class="cfm-lbl">Purchase Date</label><input type="date" id="{{ $prefix }}_purchase_date" name="purchase_date" class="cfm-input"></div>
     <div><label class="cfm-lbl">Cost Paid (BDT)</label><input type="number" min="0" step="0.01" id="{{ $prefix }}_cost_paid_amount" name="cost_paid_amount" class="cfm-input" placeholder="0"></div>
     <div id="{{ $prefix }}_cost_bank_wrap"><label class="cfm-lbl">Cost Bank</label><select id="{{ $prefix }}_cost_bank_id" name="cost_bank_id" class="cfm-select">
-            <option value="">— Select Bank —</option>@foreach($banks as $bank)<option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>@endforeach
+            <option value="">— Select Bank —</option>@include('partials.bank-options', ['banks' => $banks, 'selected' => null])
         </select>
     </div>
     <div id="{{ $prefix }}_cost_sched_wrap"><label class="cfm-lbl">Cost Due Date <span class="font-normal text-gray-400">(payable schedule)</span></label><input type="date" id="{{ $prefix }}_payable_date" name="payable_date" class="cfm-input"></div>
@@ -60,6 +70,7 @@
     </div>
     <div><label class="cfm-lbl">Expected Out / Release Date</label><input type="date" id="{{ $prefix }}_expected_out_date" name="expected_out_date" class="cfm-input"></div>
     <div><label class="cfm-lbl">Status</label><select id="{{ $prefix }}_status" name="status" class="cfm-select">@foreach($statuses as $key => $label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
+    <div><label class="cfm-lbl">Exception</label><select id="{{ $prefix }}_exception_flag" name="exception_flag" class="cfm-select"><option value="">— None —</option>@foreach(\App\Models\ContractFile::EXCEPTION_FLAGS as $key=>$label)<option value="{{ $key }}">{{ $label }}</option>@endforeach</select></div>
 </div>
 
 <div class="cfm-section-title"><i class="fas fa-file-lines"></i> Required Documents</div>

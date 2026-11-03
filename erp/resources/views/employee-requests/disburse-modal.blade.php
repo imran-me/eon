@@ -3,7 +3,7 @@
 #disburseModal:not(.hidden) { display:flex; }
 #disburseModal .dm-overlay { position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(3px); }
 #disburseModal .dm-card {
-    position:relative;width:100%;max-width:500px;border-radius:16px;
+    position:relative;width:100%;max-width:720px;border-radius:16px;
     background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.25);
     overflow:hidden;max-height:92vh;display:flex;flex-direction:column;
 }
@@ -124,12 +124,43 @@
                     </label>
                     <div class="dm-input-prefix">
                         <span class="dm-prefix-sym"><i class="fas fa-wallet" style="font-size:12px;"></i></span>
-                        <select name="payment_method" class="dm-prefix-input" required style="cursor:pointer;">
+                        <select name="payment_method" id="disburse_payment_method" class="dm-prefix-input" required style="cursor:pointer;">
                             @foreach (\App\Models\RequestDisbursement::PAYMENT_METHODS as $val => $label)
                                 <option value="{{ $val }}">{{ $label }}</option>
                             @endforeach
+                            <option value="mobile_banking" data-advance-only>Mobile Banking</option>
+                            <option value="card" data-advance-only>Card</option>
                         </select>
                     </div>
+                </div>
+
+                <div id="advanceDisbursementFields" class="hidden mb-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <div id="disbursePostingTitle" class="mb-2 text-xs font-bold uppercase tracking-wide text-amber-700"><i class="fas fa-sack-dollar me-1"></i> Payroll posting</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div id="disburseMonthWrap"><label class="dm-label">For Month <span class="text-danger">*</span></label><input type="month" name="month" id="disburse_month" value="{{ now()->format('Y-m') }}" class="dm-input"></div>
+                        <div id="disburseEmiWrap" class="hidden"><label class="dm-label">Monthly Salary Deduction <span class="text-danger">*</span></label><input type="number" step="0.01" min="0.01" name="monthly_deduction" id="disburse_monthly_deduction" class="dm-input" placeholder="Monthly EMI"></div>
+                        <div><label class="dm-label">Payment Date <span class="text-danger">*</span></label><input type="date" name="transaction_date" id="disburse_transaction_date" value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" class="dm-input"></div>
+                        <div><label class="dm-label">Payment Time <span class="text-danger">*</span></label><input type="time" name="transaction_time" id="disburse_transaction_time" value="{{ now()->format('H:i') }}" class="dm-input"></div>
+                        <div><label class="dm-label">Reference / TRNX ID</label><input type="text" name="reference" id="disburse_reference" maxlength="191" class="dm-input"></div>
+                        <div>
+                            <label class="dm-label">Company Account (money out from) <span class="text-danger">*</span></label>
+                            <select name="bank_id" id="disburse_bank_id" class="dm-input">
+                                <option value="">— Select —</option>
+                                @include('partials.bank-options', ['banks' => $advanceBanks, 'selected' => null])
+                            </select>
+                        </div>
+                        <div id="disburseContraWrap">
+                            <label class="dm-label">Recorded in <span class="text-danger">*</span></label>
+                            <select name="contra_account_id" id="disburse_contra_account_id" class="dm-input">
+                                @foreach($advanceAccounts as $account)<option value="{{ $account->id }}" @selected((int)$account->id === (int)$advanceDefaultId)>{{ $account->code }} · {{ $account->name }}</option>@endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div id="disburseRecipientFields" class="hidden mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label id="disburseRecipientBankLabel" class="dm-label">Employee Bank Name</label><input type="text" name="recipient_bank" id="disburse_recipient_bank" maxlength="150" class="dm-input"></div>
+                        <div><label id="disburseRecipientAccountLabel" class="dm-label">Account Number</label><input type="text" name="recipient_account" id="disburse_recipient_account" maxlength="100" class="dm-input"></div>
+                    </div>
+                    <p id="disburseJournalHelp" class="mt-2 mb-0 text-[11px] text-amber-700">Posts the approved payment to the journal and payroll recovery ledger.</p>
                 </div>
 
                 {{-- Amount --}}

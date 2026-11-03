@@ -5,391 +5,226 @@ namespace App\Http\Controllers\Api\Employee;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\AttendanceLog;
-use App\Models\AttendenceSetting;
-use App\Models\Leave;
+use App\Models\ManualAttendanceRequest;
+use App\Services\NotificationService;
 use Carbon\Carbon;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class ManualAttendanceController extends Controller
 {
-    /**
-     * Check if the authenticated employee is allowed to submit manual attendance.
-     */
     public function eligibility()
     {
         try {
             $user = Auth::user();
-            $today = Carbon::today()->toDateString();
+            $requests = $this->todayRequests($user->id);
+            $checkIn = $requests->firstWhere('action', 'check_in');
+            $checkOut = $requests->firstWhere('action', 'check_out');
 
-            $todayRecord = AttendanceLog::where('user_id', $user->id)
-                ->where('date', $today)
-                ->where('source', 'manual')
-                ->latest('id')
-                ->first();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'allowed' => (bool) $user->allow_manual_attendance,
-                    'already_checked_in' => (bool) $todayRecord,
-                    'already_checked_out' => $todayRecord ? (bool) $todayRecord->check_out : false,
-                    'today_record_id' => $todayRecord?->id,
-                ],
-                'message' => $user->allow_manual_attendance
-                    ? 'Manual attendance is enabled for your account.'
-                    : 'Manual attendance is not enabled for your account.',
-            ]);
+            return response()->json(['success' => true, 'data' => [
+                'allowed' => (bool) $user->allow_manual_attendance,
+                'already_checked_in' => (bool) $checkIn,
+                'already_checked_out' => (bool) $checkOut,
+                'check_in_status' => $checkIn?->status,
+                'check_out_status' => $checkOut?->status,
+                'today_request_id' => $checkIn?->id,
+                'today_record_id' => $checkIn?->attendance_log_id,
+            ], 'message' => $user->allow_manual_attendance
+                ? 'Manual attendance is enabled. Each submission requires Super Admin approval.'
+                : 'Manual attendance is not enabled for your account.']);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to check eligibility.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to check eligibility.', $e);
         }
     }
 
-    /**
-     * Submit manual check-in for today.
-     */
     public function checkIn(Request $request)
     {
         try {
             $user = Auth::user();
-
-            if (!$user->allow_manual_attendance) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not authorized to submit manual attendance.',
-                ], 403);
-            }
-
-            $request->validate([
+            $this->ensureAllowed($user);
+            $validated = $request->validate([
                 'check_in' => 'required|date_format:H:i,H:i:s',
                 'selfie' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             ]);
-
             $today = Carbon::today()->toDateString();
+            $exists = ManualAttendanceRequest::query()->where('user_id', $user->id)
+                ->whereDate('requested_date', $today)->where('action', 'check_in')
+                ->whereIn('status', ['pending', 'approved'])->exists();
 
-            $openLog = AttendanceLog::where('user_id', $user->id)
-                ->where('date', $today)
-                ->whereNull('check_out')
-                ->latest('id')
-                ->first();
-
-            if ($openLog) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You already have an open attendance record for today. Please check out first.',
-                    'data' => ['attendance_log_id' => $openLog->id],
-                ], 409);
+            if ($exists || AttendanceLog::query()->where('user_id', $user->id)->whereDate('date', $today)->exists()) {
+                return response()->json(['success' => false, 'message' => 'A check-in already exists or is awaiting approval for today.'], 409);
             }
 
-            $firstPunchToday = !AttendanceLog::where('user_id', $user->id)
-                ->where('date', $today)
-                ->exists();
-
-            $selfiePath = $this->storeSelfie($request);
-
-            $attendanceLog = AttendanceLog::create([
+            $manualRequest = ManualAttendanceRequest::create([
                 'user_id' => $user->id,
-                'date' => $today,
-                'check_in' => $request->check_in,
-                'check_out' => null,
-                'shift_id' => $user->shift_id ?? optional($user->shift)->id,
-                'note' => 'Manual attendance check-in',
-                'source' => 'manual',
+                'action' => 'check_in',
+                'requested_date' => $today,
+                'requested_time' => $validated['check_in'],
+                'selfie' => $this->storeSelfie($request),
             ]);
+            $this->notifySubmitted($manualRequest);
 
-            $attendance = $this->syncDailyAttendance(
-                $user,
-                $today,
-                $request->check_in,
-                null,
-                $selfiePath,
-                Carbon::now(),
-            );
-
-            if ($firstPunchToday) {
-                $this->notifyLateIfNeeded($user, $today, $request->check_in);
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Check-in submitted successfully.',
-                'data' => [
-                    'attendance_log_id' => $attendanceLog->id,
-                    'attendance_id' => $attendance->id,
-                    'date' => $attendance->date,
-                    'check_in' => $attendance->check_in,
-                    'source' => $attendanceLog->source,
-                    'selfie_url' => $selfiePath,
-                    'submitted_at' => $attendance->submitted_at,
-                ],
-            ], 201);
+            return response()->json(['success' => true,
+                'message' => 'Your manual attendance check-in has been submitted and is pending Super Admin approval.',
+                'data' => array_merge($this->requestData($manualRequest), [
+                    'manual_attendance_request_id' => $manualRequest->id,
+                    'attendance_log_id' => null,
+                    'attendance_id' => null,
+                    'check_in' => $manualRequest->requested_time,
+                    'source' => 'manual',
+                    'selfie_url' => $manualRequest->selfie,
+                ])], 202);
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to submit check-in.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to submit check-in request.', $e);
         }
     }
 
-    /**
-     * Submit manual check-out for the current open attendance record.
-     */
     public function checkOut(Request $request)
     {
         try {
             $user = Auth::user();
-
-            if (!$user->allow_manual_attendance) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'You are not authorized to submit manual attendance.',
-                ], 403);
-            }
-
-            $request->validate([
+            $this->ensureAllowed($user);
+            $validated = $request->validate([
                 'check_out' => 'required|date_format:H:i,H:i:s',
                 'selfie' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120',
             ]);
-
             $today = Carbon::today()->toDateString();
+            $checkInRequest = ManualAttendanceRequest::query()->where('user_id', $user->id)
+                ->whereDate('requested_date', $today)->where('action', 'check_in')
+                ->whereIn('status', ['pending', 'approved'])->latest('id')->first();
+            $openLog = AttendanceLog::query()->where('user_id', $user->id)
+                ->whereDate('date', $today)->whereNull('check_out')->latest('id')->first();
 
-            $openLog = AttendanceLog::where('user_id', $user->id)
-                ->where('date', $today)
-                ->whereNull('check_out')
-                ->latest('id')
-                ->first();
-
-            if (!$openLog) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Open attendance record not found for today.',
-                ], 404);
+            if (! $checkInRequest && ! $openLog) {
+                return response()->json(['success' => false, 'message' => 'Submit a check-in before requesting check-out.'], 422);
             }
 
-            $checkInTime = Carbon::parse($today . ' ' . $openLog->check_in);
-            $checkOutTime = Carbon::parse($today . ' ' . $request->check_out);
-
-            if ($checkOutTime->lte($checkInTime)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Check-out time must be after check-in time (' . $openLog->check_in . ').',
-                ], 422);
+            $checkInTime = $openLog?->check_in ?? $checkInRequest->requested_time;
+            if (Carbon::parse($today.' '.$validated['check_out'])->lte(Carbon::parse($today.' '.$checkInTime))) {
+                return response()->json(['success' => false, 'message' => 'Check-out time must be after check-in time.'], 422);
             }
 
-            $selfiePath = $this->storeSelfie($request);
+            $exists = ManualAttendanceRequest::query()->where('user_id', $user->id)
+                ->whereDate('requested_date', $today)->where('action', 'check_out')
+                ->whereIn('status', ['pending', 'approved'])->exists();
+            if ($exists) {
+                return response()->json(['success' => false, 'message' => 'A check-out already exists or is awaiting approval for today.'], 409);
+            }
 
-            $openLog->update([
-                'check_out' => $request->check_out,
+            $manualRequest = ManualAttendanceRequest::create([
+                'user_id' => $user->id,
+                'action' => 'check_out',
+                'requested_date' => $today,
+                'requested_time' => $validated['check_out'],
+                'selfie' => $this->storeSelfie($request),
             ]);
+            $this->notifySubmitted($manualRequest);
 
-            $attendance = $this->syncDailyAttendance(
-                $user,
-                $today,
-                $openLog->check_in,
-                $request->check_out,
-                $selfiePath,
-                Carbon::now(),
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Check-out submitted successfully.',
-                'data' => [
-                    'attendance_log_id' => $openLog->id,
-                    'attendance_id' => $attendance->id,
-                    'date' => $attendance->date,
-                    'check_in' => $attendance->check_in,
-                    'check_out' => $attendance->check_out,
-                    'source' => $openLog->source,
-                    'selfie_url' => $selfiePath,
-                ],
-            ]);
+            return response()->json(['success' => true,
+                'message' => 'Your manual attendance check-out has been submitted and is pending Super Admin approval.',
+                'data' => array_merge($this->requestData($manualRequest), [
+                    'manual_attendance_request_id' => $manualRequest->id,
+                    'attendance_log_id' => null,
+                    'attendance_id' => null,
+                    'check_out' => $manualRequest->requested_time,
+                    'source' => 'manual',
+                    'selfie_url' => $manualRequest->selfie,
+                ])], 202);
         } catch (ValidationException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Validation failed.',
-                'errors' => $e->errors(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+        } catch (AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to submit check-out.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to submit check-out request.', $e);
         }
     }
 
-    /**
-     * Get today's manual attendance record for the authenticated employee.
-     */
     public function today()
     {
         try {
             $user = Auth::user();
             $today = Carbon::today()->toDateString();
+            $attendance = Attendance::where('user_id', $user->id)->whereDate('date', $today)->first();
+            $attendanceLogs = AttendanceLog::where('user_id', $user->id)->whereDate('date', $today)->orderBy('id')->get();
+            $requests = $this->todayRequests($user->id)->map(fn ($item) => $this->requestData($item));
 
-            $attendance = Attendance::where('user_id', $user->id)
-                ->where('date', $today)
-                ->first();
-
-            $attendanceLogs = AttendanceLog::where('user_id', $user->id)
-                ->where('date', $today)
-                ->orderBy('id')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'attendance' => $attendance ? [
-                        'id' => $attendance->id,
-                        'date' => $attendance->date,
-                        'check_in' => $attendance->check_in,
-                        'check_out' => $attendance->check_out,
-                        'selfie_url' => $attendance->selfie,
-                        'submitted_at' => $attendance->submitted_at,
-                    ] : null,
-                    'attendance_logs' => $attendanceLogs,
-                ],
-                'message' => $attendanceLogs->isNotEmpty()
-                    ? 'Today\'s attendance logs found.'
-                    : 'No attendance logs found for today.',
-            ]);
+            return response()->json(['success' => true, 'data' => [
+                'attendance' => $attendance ? [
+                    'id' => $attendance->id,
+                    'date' => $attendance->date,
+                    'check_in' => $attendance->check_in,
+                    'check_out' => $attendance->check_out,
+                    'selfie_url' => $attendance->selfie,
+                    'submitted_at' => $attendance->submitted_at,
+                ] : null,
+                'attendance_logs' => $attendanceLogs,
+                'manual_requests' => $requests,
+            ], 'message' => $requests->isNotEmpty() ? 'Today\'s manual attendance requests found.' : 'No manual attendance request found for today.']);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to retrieve today\'s attendance.',
-                'error' => $e->getMessage(),
-            ], 500);
+            return $this->error('Failed to retrieve today\'s attendance.', $e);
+        }
+    }
+
+    private function todayRequests(int $userId)
+    {
+        return ManualAttendanceRequest::query()->where('user_id', $userId)
+            ->whereDate('requested_date', Carbon::today()->toDateString())->latest('id')->get();
+    }
+
+    private function ensureAllowed($user): void
+    {
+        if (! $user->allow_manual_attendance) {
+            throw new AuthorizationException('Manual attendance is not enabled for your account.');
+        }
+    }
+
+    private function notifySubmitted(ManualAttendanceRequest $request): void
+    {
+        try {
+            NotificationService::notifyManualAttendanceSubmitted($request);
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 
     private function storeSelfie(Request $request): ?string
     {
-        if (!$request->hasFile('selfie')) {
+        if (! $request->hasFile('selfie')) {
             return null;
         }
-
         $image = $request->file('selfie');
-        $imageName = uniqid() . '.' . strtolower($image->getClientOriginalExtension());
+        $imageName = uniqid().'.'.strtolower($image->getClientOriginalExtension());
         $uploadPath = 'uploads/attendance/selfies/';
-
-        if (!file_exists(public_path($uploadPath))) {
+        if (! file_exists(public_path($uploadPath))) {
             mkdir(public_path($uploadPath), 0777, true);
         }
-
         $image->move(public_path($uploadPath), $imageName);
 
-        return $uploadPath . $imageName;
+        return $uploadPath.$imageName;
     }
 
-    private function syncDailyAttendance(
-        $user,
-        string $date,
-        string $checkInTime,
-        ?string $checkOutTime = null,
-        ?string $selfiePath = null,
-        ?Carbon $submittedAt = null,
-    ): Attendance {
-        $attendance = Attendance::firstOrNew([
-            'user_id' => $user->id,
-            'date' => $date,
-        ]);
-
-        // Approved Early Leave check — waives the generic manual-attendance note in favor of a clear message
-        $approvedEarlyLeave = Leave::findApprovedEarlyLeaveForDate($user->id, $date);
-
-        if (!$attendance->exists) {
-            $attendance->company_id = $user->company_id ?? optional($user->company)->id ?? null;
-            $attendance->shift_id = $user->shift_id ?? optional($user->shift)->id ?? null;
-            // Same grace-period setting the device flow stamps on its rows. Every
-            // late / early-out / overtime calculation is gated on this relation,
-            // so a null here silently reports manual punches as plain "Present"
-            // no matter how late the punch was.
-            $attendance->attendence_setting_id = AttendenceSetting::find(1)?->id
-                ?? AttendenceSetting::orderBy('id')->value('id');
-            $attendance->status = 'present';
-            $attendance->note = $approvedEarlyLeave
-                ? 'Approved Early Leave (until ' . Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')'
-                : 'Manual attendance';
-        }
-
-        if (!$attendance->check_in) {
-            $attendance->check_in = $checkInTime;
-        }
-
-        if ($checkOutTime !== null) {
-            $attendance->check_out = $checkOutTime;
-
-            if ($approvedEarlyLeave) {
-                $attendance->note = 'Approved Early Leave (from ' . Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')';
-            }
-        }
-
-        if ($selfiePath !== null) {
-            $attendance->selfie = $selfiePath;
-        }
-
-        if (!$attendance->submitted_at && $submittedAt !== null) {
-            $attendance->submitted_at = $submittedAt;
-        }
-
-        $attendance->save();
-
-        return $attendance;
-    }
-
-    private function notifyLateIfNeeded($user, string $date, string $checkInTime): void
+    private function requestData(ManualAttendanceRequest $request): array
     {
-        $attendanceSetting = AttendenceSetting::find(1);
-
-        if (!$user->shift || !$attendanceSetting) {
-            return;
-        }
-
-        $graceMinutes = (int) $attendanceSetting->time_after_checkin;
-        $shiftStart = Carbon::parse($date . ' ' . $user->shift->start_time);
-        $lateThreshold = $shiftStart->copy()->addMinutes($graceMinutes);
-        $checkInAt = Carbon::parse($date . ' ' . $checkInTime);
-
-        if ($checkInAt->lte($lateThreshold)) {
-            return;
-        }
-
-        $lateMinutes = (int) $lateThreshold->diffInMinutes($checkInAt);
-
-        if (!empty($user->email) && $lateMinutes > 0) {
-            $this->sendMail($lateMinutes, $user->email, $user->name);
-        }
-
-        if (!empty($user->phone) && $lateMinutes > 0) {
-            $smsMessage = "Dear {$user->name}, today you arrived at the office {$lateMinutes} minutes late. Please try to adhere to office hours in the future.";
-            sendSms($user->phone, $smsMessage);
-        }
+        return [
+            'id' => $request->id, 'action' => $request->action,
+            'date' => $request->requested_date?->toDateString(),
+            'requested_time' => $request->requested_time, 'status' => $request->status,
+            'approved_date' => $request->approved_date?->toDateString(),
+            'approved_time' => $request->approved_time, 'review_note' => $request->review_note,
+            'submitted_at' => $request->created_at,
+        ];
     }
 
-    private function sendMail($lateMinutes, $email, $name)
+    private function error(string $message, \Throwable $e)
     {
-        $subject = 'দেরিতে অফিসে উপস্থিতির নোটিশ';
-        $htmlContent = '<p>প্রিয় ' . $name . ',</p>
-                        <p>আজ আপনি অফিসে ' . $lateMinutes . ' মিনিট দেরিতে উপস্থিত হয়েছেন। অনুগ্রহ করে ভবিষ্যতে অফিস সময় মেনে চলবেন।</p>';
+        report($e);
 
-        sendBrevoMail(
-            $email,
-            $name,
-            $subject,
-            $htmlContent
-        );
+        return response()->json(['success' => false, 'message' => $message], 500);
     }
 }

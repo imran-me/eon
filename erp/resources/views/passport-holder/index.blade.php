@@ -27,7 +27,7 @@
                         </svg>
                     </span>
                     <input type="text" name="name" value="{{ request('name') }}"
-                           placeholder="Search name..."
+                           placeholder="Search name or passport no..."
                            class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50">
                 </div>
                 {{-- Category --}}
@@ -128,7 +128,7 @@
                                     {{ $value->passport_no ?? '—' }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3.5 text-gray-600 text-sm">{{ $value->nationality ?? '—' }}</td>
+                            <td class="px-4 py-3.5 text-gray-600 text-sm">{{ $value->nationality ?: '—' }}</td>
                             <td class="px-4 py-3.5 text-gray-500 text-xs">
                                 {{ $value->date_of_birth ? \Carbon\Carbon::parse($value->date_of_birth)->format('d M Y') : '—' }}
                             </td>

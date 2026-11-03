@@ -14,6 +14,7 @@ class AdvanceSalary extends Model
 
     protected $fillable = [
         'user_id',
+        'employee_request_id',
         'amount',
         'month',
         'schedule_date',
@@ -26,9 +27,31 @@ class AdvanceSalary extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function employeeRequest()
+    {
+        return $this->belongsTo(EmployeeRequest::class, 'employee_request_id');
+    }
+
     public function schedules()
     {
         return $this->morphMany(\App\Models\PaymentSchedule::class, 'schedulable');
+    }
+
+    public function releaseJournal()
+    {
+        return $this->hasOne(JournalEntry::class, 'source_id')
+            ->where('source', \App\Services\AdvancePostingService::SOURCE_RELEASE);
+    }
+
+    public function reversalJournal()
+    {
+        return $this->hasOne(JournalEntry::class, 'source_id')
+            ->where('source', \App\Services\AdvancePostingService::SOURCE_REVERSAL);
+    }
+
+    public function getIsReversedAttribute(): bool
+    {
+        return (bool) $this->reversalJournal;
     }
 
     /**
@@ -57,6 +80,32 @@ class AdvanceSalary extends Model
     /** How much has been taken back out of salary. */
     public function getRecoveredAmountAttribute(): float
     {
+        // Payroll stores one aggregate advance deduction on the monthly salary
+        // row. When an employee took several advances in that same month, the
+        // legacy advance_salary_id can point at only one of them. Allocate the
+        // month's recovered pool FIFO across all released advances so the first
+        // advance cannot absorb the whole deduction while later ones remain due.
+        if ($this->month && preg_match('/^(\d{4})-(\d{2})$/', (string) $this->month, $period)) {
+            $recoveredPool = (float) EmployeeSalary::query()
+                ->where('user_id', $this->user_id)
+                ->where('year', (int) $period[1])
+                ->whereRaw('CAST(month AS UNSIGNED) = ?', [(int) $period[2]])
+                ->sum('advance_salary_deduction');
+
+            $earlierReleased = (float) static::query()
+                ->where('user_id', $this->user_id)
+                ->where('month', $this->month)
+                ->where('status', 'Approved')
+                ->whereRaw('LOWER(COALESCE(payment_status, "")) = ?', ['paid'])
+                ->where('id', '<', $this->id)
+                ->sum('amount');
+
+            return round(min(
+                (float) $this->amount,
+                max(0, $recoveredPool - $earlierReleased)
+            ), 2);
+        }
+
         $rows = $this->relationLoaded('recoveries')
             ? $this->recoveries
             : $this->recoveries()->get();
@@ -83,6 +132,9 @@ class AdvanceSalary extends Model
     /** Approved but not yet handed over — queued to go out. */
     public function getAwaitingReleaseAttribute(): float
     {
+        if ($this->is_reversed) {
+            return 0.0;
+        }
         return $this->is_released ? 0.0 : (float) $this->amount;
     }
 
@@ -105,6 +157,9 @@ class AdvanceSalary extends Model
     /** Where this advance stands, in one word. */
     public function getStateAttribute(): string
     {
+        if ($this->is_reversed) {
+            return 'reversed';
+        }
         if (! $this->is_released) {
             return 'awaiting';
         }

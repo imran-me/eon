@@ -459,6 +459,223 @@ class OfficeTodoController extends Controller
     }
 
     /**
+     * Add one checklist item, optionally underneath an existing one.
+     *
+     * Deliberately NOT routed through update()/syncChecklists(): that pair
+     * reconciles the whole list and deletes any row the payload leaves out, so
+     * one malformed request from the dashboard could wipe a long checklist.
+     * This only ever INSERTs a single row — there is no code path here that can
+     * remove anything, which is what makes it safe to call from an inline
+     * control on a live dashboard.
+     */
+    public function storeChecklist(Request $request, string $role, string $todo)
+    {
+        $validator = Validator::make($request->all(), [
+            'title'     => 'required|string|max:255',
+            'parent_id' => 'nullable|integer',
+            'priority'  => 'nullable|in:low,medium,high',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $user      = Auth::user();
+        $todoModel = OfficeTodo::findOrFail($todo);
+
+        if ($user->hasRole('employee')) {
+            $allowed = OfficeTodoAssignee::where('office_todo_id', $todo)
+                ->where('user_id', $user->id)
+                ->exists();
+
+            if (!$allowed && !($todoModel->is_self && $todoModel->created_by == $user->id)) {
+                return response()->json(['success' => false, 'message' => 'Not authorized.'], 403);
+            }
+        }
+
+        // A parent must belong to this same todo — otherwise an item could be
+        // grafted onto another company's checklist by guessing an id.
+        $parentId = $request->filled('parent_id') ? (int) $request->input('parent_id') : null;
+
+        if ($parentId !== null) {
+            $parent = OfficeTodoChecklist::where('office_todo_id', $todo)->find($parentId);
+
+            if (!$parent) {
+                return response()->json(['success' => false, 'message' => 'That parent item does not belong to this todo.'], 422);
+            }
+
+            // The UI renders and renumbers two levels, so keep the data that shape.
+            if ($parent->parent_id) {
+                return response()->json(['success' => false, 'message' => 'Sub-items can only be added one level deep.'], 422);
+            }
+        }
+
+        $nextOrder = (int) OfficeTodoChecklist::where('office_todo_id', $todo)
+            ->where('parent_id', $parentId)
+            ->max('sort_order');
+
+        $item = OfficeTodoChecklist::create([
+            'office_todo_id' => (int) $todo,
+            'parent_id'      => $parentId,
+            'title'          => trim($request->input('title')),
+            'priority'       => $request->input('priority', 'medium'),
+            'status'         => 'pending',
+            'is_checked'     => false,
+            'sort_order'     => $nextOrder + 1,
+        ]);
+
+        // A brand-new sub-item is pending, so a parent that was complete is not
+        // complete any more.
+        $this->recalcParentStatuses((int) $todo);
+
+        $leaves = OfficeTodoChecklist::where('office_todo_id', $todo)->leafOnly();
+
+        return response()->json([
+            'success' => true,
+            'item'    => [
+                'id'         => $item->id,
+                'parent_id'  => $item->parent_id,
+                'title'      => $item->title,
+                'priority'   => $item->priority,
+                'status'     => 'pending',
+                'is_checked' => false,
+            ],
+            'totals'  => [
+                'total'   => (clone $leaves)->count(),
+                'checked' => (clone $leaves)->where('is_checked', true)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * Rename a checklist item, or change its priority.
+     *
+     * Like storeChecklist() this stays away from update()/syncChecklists(),
+     * which reconcile the whole list and delete anything the payload omits.
+     * This touches one row and only the columns it was asked to touch — it
+     * never writes status, is_checked, parent_id or sort_order, so a rename
+     * cannot disturb a tick, a group or an arrangement.
+     */
+    public function updateChecklistItem(Request $request, string $role, string $todo, string $checklist)
+    {
+        $validator = Validator::make($request->all(), [
+            'title'    => 'sometimes|required|string|max:255',
+            'priority' => 'sometimes|required|in:low,medium,high',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        if (!$request->hasAny(['title', 'priority'])) {
+            return response()->json(['success' => false, 'message' => 'Nothing to change.'], 422);
+        }
+
+        $denied = $this->denyChecklistAccess($todo);
+        if ($denied) {
+            return $denied;
+        }
+
+        $item = OfficeTodoChecklist::where('office_todo_id', $todo)->findOrFail($checklist);
+
+        $attrs = [];
+        if ($request->has('title')) {
+            $attrs['title'] = trim($request->input('title'));
+        }
+        if ($request->has('priority')) {
+            $attrs['priority'] = $request->input('priority');
+        }
+
+        $item->update($attrs);
+
+        return response()->json([
+            'success' => true,
+            'item'    => [
+                'id'       => $item->id,
+                'title'    => $item->title,
+                'priority' => $item->priority,
+            ],
+        ]);
+    }
+
+    /**
+     * Remove a checklist item.
+     *
+     * parent_id carries cascadeOnDelete, so removing a heading takes its
+     * sub-items with it. The count is reported back so the screen can say what
+     * actually went rather than silently swallowing a group.
+     */
+    public function destroyChecklistItem(Request $request, string $role, string $todo, string $checklist)
+    {
+        $denied = $this->denyChecklistAccess($todo);
+        if ($denied) {
+            return $denied;
+        }
+
+        $item = OfficeTodoChecklist::where('office_todo_id', $todo)->findOrFail($checklist);
+
+        $childCount = OfficeTodoChecklist::where('office_todo_id', $todo)
+            ->where('parent_id', $item->id)
+            ->count();
+
+        $item->delete();
+
+        // Whatever is left has to be renumbered, or the next drag-reorder sends
+        // a list whose sort_order no longer starts at 0 and steps by one.
+        $remaining = OfficeTodoChecklist::where('office_todo_id', $todo)
+            ->orderBy('sort_order')
+            ->get();
+
+        DB::transaction(function () use ($remaining) {
+            foreach ($remaining->values() as $i => $row) {
+                if ((int) $row->sort_order !== $i) {
+                    $row->update(['sort_order' => $i]);
+                }
+            }
+        });
+
+        $this->recalcParentStatuses((int) $todo);
+
+        $leaves = OfficeTodoChecklist::where('office_todo_id', $todo)->leafOnly();
+
+        return response()->json([
+            'success'        => true,
+            'deleted'        => 1 + $childCount,
+            'deleted_children' => $childCount,
+            'totals'         => [
+                'total'   => (clone $leaves)->count(),
+                'checked' => (clone $leaves)->where('is_checked', true)->count(),
+            ],
+        ]);
+    }
+
+    /**
+     * The same gate every checklist write uses: an employee has to be assigned
+     * to the todo, or own it as a personal one. Returns a response to send back
+     * when access is refused, or null when it is allowed.
+     */
+    private function denyChecklistAccess(string $todo)
+    {
+        $user = Auth::user();
+
+        if (!$user->hasRole('employee')) {
+            return null;
+        }
+
+        $todoModel = OfficeTodo::findOrFail($todo);
+
+        $allowed = OfficeTodoAssignee::where('office_todo_id', $todo)
+            ->where('user_id', $user->id)
+            ->exists();
+
+        if ($allowed || ($todoModel->is_self && $todoModel->created_by == $user->id)) {
+            return null;
+        }
+
+        return response()->json(['success' => false, 'message' => 'Not authorized.'], 403);
+    }
+
+    /**
      * Persist a drag-reorder from the checklist modal. The ids arrive in the
      * depth-first order they're shown in — parent then its own sub-items —
      * which is the same order syncChecklists() writes, so a later edit-and-save
@@ -482,36 +699,128 @@ class OfficeTodoController extends Controller
             }
         }
 
-        $validator = Validator::make($request->all(), [
-            'order'   => 'required|array|min:1',
-            'order.*' => 'required|integer',
-        ]);
+        // Two accepted shapes, and both must keep working:
+        //   order[]  — a flat list of ids, sort_order only. The Office ToDos list
+        //              page still sends this, so it cannot be dropped.
+        //   items[]  — {id, parent_id} pairs, which also MOVE a row between
+        //              parents. Only the dashboard panel sends this.
+        $usesItems = $request->has('items');
+
+        $validator = Validator::make($request->all(), $usesItems
+            ? [
+                'items'             => 'required|array|min:1',
+                'items.*.id'        => 'required|integer',
+                'items.*.parent_id' => 'nullable|integer',
+            ]
+            : [
+                'order'   => 'required|array|min:1',
+                'order.*' => 'required|integer',
+            ]);
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
         }
 
-        $ids  = array_map('intval', $request->input('order'));
         $rows = OfficeTodoChecklist::where('office_todo_id', $todo)->get()->keyBy('id');
+
+        $items = $usesItems
+            ? collect($request->input('items'))->map(fn ($r) => [
+                'id'        => (int) $r['id'],
+                'parent_id' => isset($r['parent_id']) && $r['parent_id'] !== '' && $r['parent_id'] !== null
+                    ? (int) $r['parent_id']
+                    : null,
+            ])->values()->all()
+            : collect($request->input('order'))->map(fn ($id) => [
+                'id'        => (int) $id,
+                'parent_id' => $rows->has((int) $id) ? $rows[(int) $id]->parent_id : null,
+            ])->values()->all();
+
+        $ids = array_column($items, 'id');
 
         // Every id must belong to this todo, and the payload must cover the
         // whole list — a partial order would leave gaps in sort_order.
-        if (count($ids) !== $rows->count() || collect($ids)->contains(fn ($id) => !$rows->has($id))) {
+        if (count($ids) !== $rows->count()
+            || count(array_unique($ids)) !== count($ids)
+            || collect($ids)->contains(fn ($id) => !$rows->has($id))) {
             return response()->json([
                 'success' => false,
                 'message' => 'The submitted order does not match this todo\'s checklist.',
             ], 422);
         }
 
-        DB::transaction(function () use ($ids, $rows) {
-            foreach ($ids as $i => $id) {
-                if ((int) $rows[$id]->sort_order !== $i) {
-                    $rows[$id]->update(['sort_order' => $i]);
+        // Re-parenting is only safe once the submitted tree is checked on its own
+        // terms: a row cannot parent itself, a parent must exist in this todo, and
+        // the result has to stay two levels deep because that is what the renderer,
+        // the renumbering and storeChecklist() all assume.
+        if ($usesItems) {
+            $parentOf = array_column($items, 'parent_id', 'id');
+
+            foreach ($items as $row) {
+                $pid = $row['parent_id'];
+                if ($pid === null) {
+                    continue;
+                }
+
+                if ($pid === $row['id']) {
+                    return response()->json(['success' => false, 'message' => 'An item cannot be its own parent.'], 422);
+                }
+
+                if (!$rows->has($pid)) {
+                    return response()->json(['success' => false, 'message' => 'That parent does not belong to this todo.'], 422);
+                }
+
+                if (($parentOf[$pid] ?? null) !== null) {
+                    return response()->json(['success' => false, 'message' => 'Checklists can only be two levels deep.'], 422);
+                }
+            }
+        }
+
+        DB::transaction(function () use ($items, $rows) {
+            foreach ($items as $i => $row) {
+                $model  = $rows[$row['id']];
+                $update = [];
+
+                if ((int) $model->sort_order !== $i) {
+                    $update['sort_order'] = $i;
+                }
+
+                if ((int) $model->parent_id !== (int) $row['parent_id']) {
+                    $update['parent_id'] = $row['parent_id'];
+                }
+
+                if ($update) {
+                    $model->update($update);
                 }
             }
         });
 
-        return response()->json(['success' => true, 'message' => 'Checklist reordered.']);
+        // A row that moved in or out of a group changes what its old and new
+        // parents add up to.
+        $this->recalcParentStatuses((int) $todo);
+
+        // Returned so the client can repaint in place instead of re-fetching and
+        // re-rendering the whole panel after every drop — on a 200-row checklist
+        // that rebuild is what made dragging feel slow.
+        $leaves = OfficeTodoChecklist::where('office_todo_id', $todo)->leafOnly();
+
+        $tops = OfficeTodoChecklist::where('office_todo_id', $todo)
+            ->whereNull('parent_id')
+            ->get()
+            ->map(fn ($p) => [
+                'id'         => $p->id,
+                'status'     => $p->status,
+                'is_checked' => (bool) $p->is_checked,
+            ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Checklist reordered.',
+            'parents' => $tops,
+            'totals'  => [
+                'total'   => (clone $leaves)->count(),
+                'checked' => (clone $leaves)->where('is_checked', true)->count(),
+            ],
+        ]);
     }
 
     public function updateMyStatus(Request $request, $role, string $id)

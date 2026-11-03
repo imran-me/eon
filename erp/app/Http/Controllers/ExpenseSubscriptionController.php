@@ -110,6 +110,68 @@ class ExpenseSubscriptionController implements HasMiddleware
         ]);
     }
 
+    /**
+     * Retry a renewal DM refused or never received.
+     *
+     * Deliberately its own action rather than part of approving the expense: the
+     * expense already worked. What failed was telling another system about it,
+     * and that is worth being able to fix on its own without touching a posted
+     * journal. Most of the time the fix is off-screen anyway — a token reissued
+     * with the renew ability — and then this button is all that is needed.
+     *
+     * Safe to press repeatedly. DM skips the write when the date is already at or
+     * past the one asked for, so a double-click cannot push a term out twice.
+     */
+    public function retryDmSync(Request $request, string $role, int $payment)
+    {
+        abort_unless((bool) ($request->user()?->is_super_admin ?? false), 404);
+
+        $row = DmRenewalPayment::find($payment);
+
+        if (! $row) {
+            return back()->with('error', 'That renewal payment record no longer exists.');
+        }
+
+        if ($row->dm_synced_at) {
+            return back()->with('success', 'DM already has this renewal — nothing to retry.');
+        }
+
+        $newExpiry = $row->next_expiry?->toDateString()
+            ?: DmRenewalPayment::nextExpiryFor($row->due_date->toDateString(), $row->cycle);
+
+        if (! $newExpiry) {
+            return back()->with('error', 'No new expiry was recorded for this one and DM states no cycle, so the next term cannot be worked out here. Set it in DM by hand.');
+        }
+
+        $dm = app(DmApiService::class);
+
+        $result = $row->source_type === DmRenewalPayment::SUBSCRIPTION
+            ? $dm->renewSubscription(
+                $row->dm_id,
+                $newExpiry,
+                $row->due_date->toDateString(),
+                'Renewed from ERP' . ($row->expense_id ? ' expense #' . $row->expense_id : '') . ' (retry)'
+            )
+            : $dm->renewDocument($row->dm_id, $newExpiry, $row->due_date->toDateString());
+
+        if ($result['ok']) {
+            $row->update(['dm_synced_at' => now(), 'dm_sync_error' => null]);
+
+            // The desk reads DM through a five-minute cache, so without this the
+            // old expiry would keep showing and the retry would look like it did
+            // nothing.
+            Cache::forget(self::CACHE_KEY);
+
+            return back()->with('success', $result['changed']
+                ? 'DM updated — the term now runs to ' . $newExpiry . '.'
+                : 'DM already had that date, so nothing changed. Marked as in step.');
+        }
+
+        $row->update(['dm_sync_error' => $result['message']]);
+
+        return back()->with('error', $result['message']);
+    }
+
     /* ── DM ──────────────────────────────────────────────────────────────── */
 
     /**
@@ -220,6 +282,8 @@ class ExpenseSubscriptionController implements HasMiddleware
             // A subscription is one DM row reused each cycle, so the row IS the
             // group — unlike a document, whose next renewal is a new row.
             'dm_group_id'  => (int) $id,
+            'dm_type_id'    => null,
+            'dm_category_id' => null,
             'name'         => (string) (data_get($access, 'name') ?: 'Untitled subscription'),
             'vendor'       => '',
             'company'      => (string) (data_get($access, 'company.name') ?: data_get($access, 'company_name') ?: ''),
@@ -270,6 +334,11 @@ class ExpenseSubscriptionController implements HasMiddleware
             'dm_id'        => (int) $id,
             // document_id is what survives a renewal; see the migration note.
             'dm_group_id'  => (int) (data_get($document, 'document_id') ?: $id),
+            // document_id alone is only a FOLDER — one holds a tax token, a
+            // licence and a certificate side by side. These two narrow it to the
+            // actual paper, which is what a renewal chain follows.
+            'dm_type_id'    => data_get($document, 'document_type_id'),
+            'dm_category_id' => data_get($document, 'document_category_id'),
             'name'         => (string) (
                 data_get($document, 'documents.title') ?: data_get($document, 'title') ?: 'Untitled document'
             ),
@@ -417,10 +486,14 @@ class ExpenseSubscriptionController implements HasMiddleware
                 $payment->due_date->toDateString()
             )] = $payment;
 
+            // Keyed on the PAPER, not the folder. Keying on dm_group_id alone
+            // carried whatever unrelated document in the same folder was paid
+            // most recently onto this one — wrong money, wrong licence, and
+            // nothing on screen to show it.
             // Ordered by due_date, so the last write wins and this ends up as the
-            // most recent settled amount for the commitment.
+            // most recent settled amount for that paper.
             if ($payment->amount > 0) {
-                $lastPaid[$payment->source_type . ':' . $payment->dm_group_id] = $payment;
+                $lastPaid[$payment->paperKey()] = $payment;
             }
         }
 
@@ -429,6 +502,11 @@ class ExpenseSubscriptionController implements HasMiddleware
             $payment = $byPeriod[$key] ?? null;
 
             $row['paid']       = (bool) $payment;
+            // Only meaningful once paid. Null keeps "never pushed" and "pushed
+            // and fine" apart from "not paid at all", which is neither.
+            $row['payment_id']   = $payment?->id;
+            $row['dm_synced']    = $payment ? $payment->dm_synced_at !== null : null;
+            $row['dm_error']     = $payment?->dm_sync_error;
             $row['expense_id'] = $payment?->expense_id;
             $row['paid_from']  = '';
             $row['owner']      = '';
@@ -452,7 +530,9 @@ class ExpenseSubscriptionController implements HasMiddleware
                 // Nothing from DM and nothing paid for this period — fall back to
                 // what the same commitment cost last cycle, clearly labelled so
                 // it is never mistaken for a figure DM confirmed.
-                $carry = $lastPaid[$row['source_type'] . ':' . $row['dm_group_id']] ?? null;
+                $carry = $lastPaid[DmRenewalPayment::paperKeyFor(
+                    $row['source_type'], $row['dm_group_id'], $row['dm_type_id'], $row['dm_category_id']
+                )] ?? null;
 
                 if ($carry) {
                     $row['amount']      = (float) $carry->amount;
@@ -466,6 +546,11 @@ class ExpenseSubscriptionController implements HasMiddleware
             // invitation; removing it is what stops a personal document being
             // booked against the company by a click nobody thought about.
             $row['record_url']    = $row['scope'] === 'company' ? $this->recordUrl($row, $role) : null;
+            // Built here rather than in the view so the role segment comes from
+            // one place, the same as record_url.
+            $row['retry_url'] = $payment
+                ? route('role.expenses.subscriptions.retry-dm', ['role' => $role, 'payment' => $payment->id])
+                : null;
             $row['expense_url']   = $payment && $payment->expense
                 ? $this->expenseUrl($payment->expense->title, $role)
                 : null;
@@ -522,15 +607,52 @@ class ExpenseSubscriptionController implements HasMiddleware
             'dm_id'          => $row['dm_id'],
             'dm_group_id'    => $row['dm_group_id'],
             'dm_due_date'    => $row['next_due'],
-            'dm_title'       => $row['name'],
+            'dm_title'       => ($row['source_type'] === 'subscription') ? $row['name'] . ' — ' . $row['category'] : $row['category'] . ' — ' . $row['sub_category'],
             // Only ever a BDT figure. Pre-filling a USD 65.00 subscription into a
             // form that records taka would put 65 into the ledger for a bill of
             // roughly eight thousand, and it would look deliberate.
-            'dm_amount'      => ($row['currency'] === 'BDT' && $row['amount'] > 0)
-                ? number_format($row['amount'], 2, '.', '')
-                : null,
+            'dm_amount'      => ($row['currency'] === 'BDT' && $row['amount'] > 0) ? number_format($row['amount'], 2, '.', '') : null,
             'dm_currency'    => $row['currency'],
+            // Carried so the approval can work out the next expiry without
+            // asking DM again — and so the payment row records which kind of
+            // period it settled.
+            'dm_cycle'       => $row['cycle'] !== '—' ? $row['cycle'] : null,
+            'dm_type_id'     => $row['dm_type_id'],
+            'dm_category_id' => $row['dm_category_id'],
+            // A PROPOSED new expiry, not a decided one. DM states a cycle for a
+            // subscription so that one is reliable; for a document there is no
+            // cycle and the dates cannot be trusted to imply one, so a year is
+            // offered and the person filing confirms or corrects it before it is
+            // written back. A wrong date pushed into DM raises no error anywhere
+            // — it just stops a licence reminder arriving.
+            'dm_next_expiry' => $this->proposedExpiry($row),
         ], fn ($value) => $value !== null && $value !== ''));
+    }
+
+    /**
+     * A new expiry worth offering — always one somebody could accept.
+     *
+     * One cycle on from the current term, except when that lands in the past.
+     * It often does: this register holds terms that lapsed years ago and dates
+     * that are plainly typos (a row due in the year 0025 proposed 0026). Paying
+     * a renewal today buys a term from today, so that is what gets offered.
+     *
+     * A PROPOSAL, not a decision — the form shows it as an editable date and
+     * what the person confirms is what reaches DM.
+     */
+    private function proposedExpiry(array $row): string
+    {
+        $cycle = $row['cycle'];
+        $next  = DmRenewalPayment::nextExpiryFor($row['next_due'], $cycle);
+
+        if ($next && Carbon::parse($next)->isFuture()) {
+            return $next;
+        }
+
+        // Rebase on today, keeping the cycle when DM stated one.
+        $fromToday = DmRenewalPayment::nextExpiryFor(Carbon::today()->toDateString(), $cycle);
+
+        return $fromToday ?: Carbon::today()->addYearNoOverflow()->toDateString();
     }
 
     /** The expense list, filtered to the one that settled this renewal. */

@@ -42,6 +42,7 @@
     $payrollMenuActive = request()->routeIs(
         'role.salary-templates.*',
         'role.employee-salaries.*',
+        'role.employee-ledger.*',
         'role.loans.*',
         'role.payslips.*',
         'role.advance-salaries.*',

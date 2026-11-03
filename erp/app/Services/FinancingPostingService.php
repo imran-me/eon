@@ -137,29 +137,56 @@ class FinancingPostingService
     }
 
     /**
-     * Money moving on a loan — an instalment, an interest payment, a settlement.
+     * Post an old running-loan balance without inventing a current bank receipt.
      *
-     * A borrowing in the company's name:
-     *
-     *     Dr  liability      principal recovered this month
-     *     Dr  8520 Interest  interest for this month
-     *     Dr  8530 Fee       the lender's closure charge, if any
-     *     Cr  2280 TDS       tax withheld, if any
-     *     Cr  bank           what actually left the account
-     *
-     * The split comes from the schedule, per instalment, because it moves every
-     * month: early instalments are mostly interest and later ones mostly
-     * principal. A fixed split overstates expenses and leaves the loan never
-     * reducing.
-     *
-     * A loan in a person's own name, paid from a company account:
-     *
-     *     Dr  3210 Drawings  the WHOLE amount
-     *     Cr  bank           the whole amount
-     *
-     * Nothing is split and Interest Expense is not touched. Paid from his own
-     * pocket, nothing is posted at all — no company money moved.
+     *     Dr Opening Balance Equity
+     *         Cr Loan Payable
      */
+    public function postOpeningBalance(FinancingTransaction $txn): JournalEntry
+    {
+        $txn->loadMissing('loan');
+        $loan = $txn->loan;
+
+        if (! $loan
+            || $loan->direction !== 'borrowed'
+            || ! $loan->is_running
+            || $loan->is_personal
+            || empty($loan->company_id)) {
+            throw new \RuntimeException('Opening liability can only be posted for a company running loan.');
+        }
+
+        if (! $loan->gl_account_id) {
+            throw new \RuntimeException('This loan has no liability posting account.');
+        }
+
+        if ($existing = $this->entryFor('financing_txn', $txn->id)) {
+            return $existing;
+        }
+
+        $amount = round((float) $txn->amount, 2);
+
+        if ($amount <= 0) {
+            throw new \RuntimeException('Opening liability must be greater than zero.');
+        }
+
+        return $this->write(
+            companyId:   (int) $loan->company_id,
+            date:        $txn->date,
+            reference:   'FINOPEN-' . str_pad((string) $txn->id, 5, '0', STR_PAD_LEFT),
+            source:      'financing_txn',
+            sourceId:    $txn->id,
+            description: 'Opening loan balance - ' . $loan->counterparty_name,
+            lines:       [
+                ['account_id' => $this->accountId('opening_balance_equity'), 'debit' => $amount, 'credit' => 0,
+                 'note' => 'Historic balance brought forward'],
+                ['account_id' => (int) $loan->gl_account_id, 'debit' => 0, 'credit' => $amount,
+                 'note' => 'Opening loan liability - ' . ($loan->account_no ?: $loan->counterparty_name),
+                 'party_type' => $loan->party_type, 'party_id' => $loan->party_id],
+            ],
+        );
+    }
+
+    /** Post an actual repayment or collection, including its cash leg. */
     public function postPayment(FinancingTransaction $txn): ?JournalEntry
     {
         $loan = $txn->loan;
@@ -200,44 +227,56 @@ class FinancingPostingService
      */
     public function postCapital(FinancingCapital $capital): ?JournalEntry
     {
-        if (! $capital->bank_id) {
-            return null;   // no account named, so there is no second leg to write
-        }
+        if ($capital->method === 'adjustment') return null;
 
         if ($this->entryFor('financing_capital', $capital->id)) {
             return null;
         }
 
-        $bankAccountId = $this->bankAccountId($capital->bank_id);
+        $bankAccountId = $capital->method === 'cash' ? $this->accountId('office_cash') : $this->bankAccountId($capital->bank_id);
         $amount        = round((float) $capital->amount, 2);
         $isInvestment  = $capital->kind === 'investment';
+        $party         = ['party_type' => $capital->party_type, 'party_id' => $capital->party_id];
 
         $equityAccountId = $this->accountId($isInvestment ? 'owners_equity' : 'owner_drawings');
+
+        // An owner taking money out empties the account like any other payment;
+        // an investment puts money IN and is never refused.
+        if (! $isInvestment) {
+            \App\Models\Bank::assertCanCover($bankAccountId, $amount, $capital->method === 'cash' ? 'Office cash' : $this->bankLabel($capital->bank_id));
+        }
 
         $lines = $isInvestment
             ? [
                 ['account_id' => $bankAccountId,   'debit' => $amount, 'credit' => 0,
-                 'note' => 'Owner investment received'],
+                  'note' => 'Owner investment received'],
                 ['account_id' => $equityAccountId, 'debit' => 0, 'credit' => $amount,
-                 'note' => 'Invested by ' . $capital->person_name],
+                 'note' => 'Invested by ' . $capital->person_name] + $party,
             ]
             : [
                 ['account_id' => $equityAccountId, 'debit' => $amount, 'credit' => 0,
-                 'note' => 'Withdrawn by ' . $capital->person_name],
+                 'note' => 'Withdrawn by ' . $capital->person_name] + $party,
                 ['account_id' => $bankAccountId,   'debit' => 0, 'credit' => $amount,
-                 'note' => 'Personal withdrawal by ' . $capital->person_name],
+                  'note' => 'Personal withdrawal by ' . $capital->person_name],
             ];
 
         return $this->write(
             companyId:   (int) $capital->company_id,
             date:        $capital->date,
-            reference:   'FINCAP-' . str_pad((string) $capital->id, 5, '0', STR_PAD_LEFT),
+            reference:   trim((string) $capital->reference) !== ''
+                ? trim((string) $capital->reference)
+                : 'FINCAP-' . str_pad((string) $capital->id, 5, '0', STR_PAD_LEFT),
             source:      'financing_capital',
             sourceId:    $capital->id,
-            description: ($isInvestment ? 'Owner investment by ' : 'Personal withdrawal by ')
-                            . $capital->person_name
-                            . ($capital->reason ? ' — ' . $capital->reason : ''),
+            description: ($isInvestment ? 'Owner investment' : 'Personal withdrawal')
+                            . ' — ' . $capital->reason,
             lines:       $lines,
+            entryTime:   $capital->transaction_time ? substr((string) $capital->transaction_time, 0, 5) : null,
+            beneficiary: $capital->person_name,
+            beneficiaryPartyId: $capital->party_id,
+            beneficiaryMethod: $capital->counterparty_method,
+            beneficiaryBank: $capital->counterparty_bank,
+            beneficiaryRef: $capital->counterparty_ref,
         );
     }
 
@@ -269,6 +308,18 @@ class FinancingPostingService
             'party_id'   => $item->party_id,
         ])->all();
 
+        collect($lines)
+            ->filter(fn (array $line) => (float) $line['credit'] > 0)
+            ->groupBy('account_id')
+            ->each(function ($accountLines, $accountId) {
+                $account = Account::findOrFail($accountId);
+                Bank::assertCanCover(
+                    (int) $accountId,
+                    (float) $accountLines->sum('credit'),
+                    $account->name
+                );
+            });
+
         return $this->write(
             companyId:   (int) $entry->company_id,
             date:        now()->toDateString(),
@@ -278,6 +329,11 @@ class FinancingPostingService
             description: 'Reversal of: ' . $entry->description . ($reason ? ' — ' . $reason : ''),
             lines:       $lines,
             reversalOf:  $entry->id,
+            beneficiary: $entry->beneficiary,
+            beneficiaryPartyId: $entry->beneficiary_party_id,
+            beneficiaryMethod: $entry->beneficiary_method,
+            beneficiaryBank: $entry->beneficiary_bank,
+            beneficiaryRef: $entry->beneficiary_ref,
         );
     }
 
@@ -332,6 +388,8 @@ class FinancingPostingService
         }
 
         if ($fromBank > 0) {
+            \App\Models\Bank::assertCanCover($bankAccountId, (float) $fromBank, $this->bankLabel($txn->bank_id));
+
             $lines[] = ['account_id' => $bankAccountId, 'debit' => 0, 'credit' => $fromBank,
                         'note' => 'Paid to ' . $loan->counterparty_name];
         }
@@ -383,6 +441,10 @@ class FinancingPostingService
         ];
 
         $this->assertNoInterestOnPersonalDebt($lines);
+
+        // Company money is leaving for a private debt, so the ordinary rule
+        // applies unchanged — the account still has to hold what it pays.
+        \App\Models\Bank::assertCanCover($bankAccountId, $amount, $this->bankLabel($txn->bank_id));
 
         // The loan belongs to no company, so the entry belongs to whichever
         // company's account actually paid — that is whose money left.
@@ -462,6 +524,16 @@ class FinancingPostingService
 
         $bank = Bank::find($loan->disbursement_bank_id);
 
+        // You cannot lend out money the account does not hold. Checked here
+        // rather than in the controller because every route into this method
+        // has to obey it, and throwing inside the caller's transaction rolls
+        // the whole posting back instead of leaving half an entry.
+        \App\Models\Bank::assertCanCover(
+            $this->bankAccountId($loan->disbursement_bank_id),
+            $amount,
+            $this->bankLabel($loan->disbursement_bank_id)
+        );
+
         return $this->write(
             companyId:   $this->lentCompanyId($loan, $loan->disbursement_bank_id),
             date:        $loan->start_date,
@@ -501,7 +573,94 @@ class FinancingPostingService
             return null;
         }
 
+        // A taking on a BORROWING is the opposite movement and needs its own
+        // entry — see postBorrowedDrawdown(). Without this branch a drawn-down
+        // facility recorded here reached the desk and stopped: the cash never
+        // appeared in the bank and the debt never appeared on the balance sheet,
+        // while the row showed the money as taken.
+        if ($loan->direction === 'borrowed') {
+            return $this->postBorrowedDrawdown($txn);
+        }
+
         if (! $this->lentPosts($loan) || ! $txn->bank_id) {
+            return null;
+        }
+
+        if ($this->entryFor('financing_txn', $txn->id)) {
+            return null;
+        }
+
+        $amount = round((float) $txn->amount, 2);
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        $bank = Bank::find($txn->bank_id);
+
+        // Same rule as the first advance: the account has to hold what it pays.
+        // postBorrowedDrawdown is the mirror of this and takes no guard — there
+        // the bank is DEBITED, because money is arriving, not leaving.
+        \App\Models\Bank::assertCanCover(
+            $this->bankAccountId($txn->bank_id),
+            $amount,
+            $this->bankLabel($txn->bank_id)
+        );
+
+        return $this->write(
+            companyId:   $this->lentCompanyId($loan, $txn->bank_id),
+            date:        $txn->date,
+            reference:   'FINDRAW-' . str_pad((string) $txn->id, 5, '0', STR_PAD_LEFT),
+            source:      'financing_txn',
+            sourceId:    $txn->id,
+            description: 'Taken by ' . $loan->counterparty_name
+                            . ($txn->memo ? ' — ' . $txn->memo : ''),
+            lines:       [
+                ['account_id' => (int) $loan->gl_account_id, 'debit' => $amount, 'credit' => 0,
+                 'note' => 'Advanced to ' . $loan->counterparty_name,
+                 'party_type' => $loan->party_type, 'party_id' => $loan->party_id],
+                ['account_id' => $this->bankAccountId($txn->bank_id), 'debit' => 0, 'credit' => $amount,
+                 'note' => 'Paid from ' . ($bank->name ?? 'company account')],
+            ],
+        );
+    }
+
+
+    /**
+     * Does a taking on a BORROWING belong in the ledger?
+     *
+     * Only when the money actually arrived in a company account, and only when
+     * the debt is the company's. A facility in a person's own name is not the
+     * company's liability — nothing about it belongs on these books, which is the
+     * same rule postLoanSetup() applies to a fixed personal loan.
+     */
+    public function borrowedDrawdownPosts(FinancingLoan $loan): bool
+    {
+        return $loan->direction === 'borrowed'
+            && $loan->taken_for === 'company'
+            && ! empty($loan->gl_account_id);
+    }
+
+    /**
+     * A drawing on a borrowed running facility — the company taking another
+     * 200,000 off an overdraft, or off what the boss is lending it.
+     *
+     *     Dr  bank                     the cash that arrived
+     *         Cr  2410 (or whichever)  what the company now owes
+     *
+     * The mirror of postDrawdown()'s lent case, and deliberately a separate
+     * method: the two move opposite ways, and folding them into one with a sign
+     * flip is how a facility ends up reducing a liability it was meant to raise.
+     *
+     * No interest leg. Interest accrues over the term and is settled on
+     * repayment; charging it the day the money lands would state a cost nobody
+     * has incurred yet.
+     */
+    private function postBorrowedDrawdown(FinancingTransaction $txn): ?JournalEntry
+    {
+        $loan = $txn->loan;
+
+        if (! $loan || ! $this->borrowedDrawdownPosts($loan) || ! $txn->bank_id) {
             return null;
         }
 
@@ -523,14 +682,14 @@ class FinancingPostingService
             reference:   'FINDRAW-' . str_pad((string) $txn->id, 5, '0', STR_PAD_LEFT),
             source:      'financing_txn',
             sourceId:    $txn->id,
-            description: 'Taken by ' . $loan->counterparty_name
+            description: 'Drawn from ' . $loan->counterparty_name
                             . ($txn->memo ? ' — ' . $txn->memo : ''),
             lines:       [
-                ['account_id' => (int) $loan->gl_account_id, 'debit' => $amount, 'credit' => 0,
-                 'note' => 'Advanced to ' . $loan->counterparty_name,
+                ['account_id' => $this->bankAccountId($txn->bank_id), 'debit' => $amount, 'credit' => 0,
+                 'note' => 'Received into ' . ($bank->name ?? 'company account')],
+                ['account_id' => (int) $loan->gl_account_id, 'debit' => 0, 'credit' => $amount,
+                 'note' => 'Owed to ' . $loan->counterparty_name,
                  'party_type' => $loan->party_type, 'party_id' => $loan->party_id],
-                ['account_id' => $this->bankAccountId($txn->bank_id), 'debit' => 0, 'credit' => $amount,
-                 'note' => 'Paid from ' . ($bank->name ?? 'company account')],
             ],
         );
     }
@@ -657,6 +816,12 @@ class FinancingPostingService
         string $description,
         array $lines,
         ?int $reversalOf = null,
+        ?string $entryTime = null,
+        ?string $beneficiary = null,
+        ?int $beneficiaryPartyId = null,
+        ?string $beneficiaryMethod = null,
+        ?string $beneficiaryBank = null,
+        ?string $beneficiaryRef = null,
     ): JournalEntry {
         $debit  = round(array_sum(array_map(fn ($l) => (float) ($l['debit'] ?? 0), $lines)), 2);
         $credit = round(array_sum(array_map(fn ($l) => (float) ($l['credit'] ?? 0), $lines)), 2);
@@ -671,10 +836,16 @@ class FinancingPostingService
             'company_id'                => $companyId,
             'created_by'                => Auth::id(),
             'date'                      => $date,
+            'entry_time'                => $entryTime ? $entryTime . ':00' : null,
             'reference'                 => $reference,
             'source'                    => $source,
             'source_id'                 => $sourceId,
             'description'               => $description,
+            'beneficiary'               => $beneficiary,
+            'beneficiary_party_id'      => $beneficiaryPartyId,
+            'beneficiary_method'        => $beneficiaryMethod,
+            'beneficiary_bank'          => $beneficiaryBank,
+            'beneficiary_ref'           => $beneficiaryRef,
             'reversed_journal_entry_id' => $reversalOf,
         ]);
 
@@ -757,5 +928,11 @@ class FinancingPostingService
         }
 
         return (int) $bank->account_id;
+    }
+
+    /** A readable name for the account a payment is leaving, for refusal messages. */
+    private function bankLabel($bankId): string
+    {
+        return optional(\App\Models\Bank::find($bankId))->name ?: 'That account';
     }
 }

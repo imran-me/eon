@@ -62,6 +62,7 @@
     </style>
 @endsection
 @section('main-content')
+    @include('layout.visa-processing-tabs')
     @php $role = auth()->user()->getRoleNames()->first(); @endphp
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden mt-0">
@@ -96,7 +97,7 @@
                 <select name="status" class="border border-gray-200 rounded-md px-2 py-1.5 text-sm">
                     <option value="">All Status</option>
                     <option value="pending"    {{ request('status')=='pending'    ? 'selected' : '' }}>NEW</option>
-                    <option value="received"   {{ request('status')=='received'   ? 'selected' : '' }}>DOC COLLECTION</option>
+                    <option value="received"   {{ request('status')=='received'   ? 'selected' : '' }}>DOCUMENTS PREPARATION</option>
                     <option value="in_embassy" {{ request('status')=='in_embassy' ? 'selected' : '' }}>IN EMBASSY</option>
                     <option value="approved"   {{ request('status')=='approved'   ? 'selected' : '' }}>APPROVED</option>
                     <option value="delivered"  {{ request('status')=='delivered'  ? 'selected' : '' }}>DELIVERED</option>
@@ -146,7 +147,7 @@
                                 @php
                                     $statusLabels = [
                                         'pending'    => ['NEW',          'pill-pending'],
-                                        'received'   => ['DOC COLLECT',  'pill-received'],
+                                        'received'   => ['DOC PREPARATION', 'pill-received'],
                                         'in_embassy' => ['IN EMBASSY',   'pill-in_embassy'],
                                         'approved'   => ['APPROVED',     'pill-approved'],
                                         'delivered'  => ['DELIVERED',    'pill-delivered'],

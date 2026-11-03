@@ -106,9 +106,13 @@
 @section('main-content')
 @php $company = Auth::user()->company; @endphp
 
-<div class="gl-page">
+{{-- Outside .gl-page on purpose: that wrapper adds 20px of padding, which
+     pushed this band 20px lower than the same band on the other seven
+     report pages (and on Manage Banks and Expenses). Every desk's tab row
+     must start at the same height. --}}
+@include('report.partials.account-report-tabs')
 
-    @include('report.partials.account-report-tabs')
+<div class="gl-page">
 
     {{-- Filter Card --}}
     <div class="filter-card no-print">

@@ -129,12 +129,21 @@ export class DropdownEngine {
                 }
             }
 
-            // Clear and focus search
+            // Clear and focus search.
+            //
+            // preventScroll is not a nicety — without it this dropdown closed
+            // itself. The panel is fixed, but the TOGGLE sits inside a column
+            // that scrolls, so focusing the search box made the browser scroll
+            // that column to bring the focused element into view; the board
+            // closes all dropdowns on column scroll (board-show.js), and the
+            // panel vanished ~70ms after opening. It only ever hit the three
+            // dropdowns that have a search box — priority, assignees, labels —
+            // which is why the date pickers next to them worked fine.
             const search = panel.querySelector('[data-role="dropdown-search"]');
             if (search) {
                 search.value = '';
                 this._filterItems(search); // Reset filter
-                setTimeout(() => search.focus(), 50);
+                setTimeout(() => search.focus({ preventScroll: true }), 50);
             }
         }
     }

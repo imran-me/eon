@@ -9,6 +9,7 @@ use App\Models\JournalItem;
 use App\Models\Portal;
 use App\Models\PortalBalance;
 use App\Models\Transaction;
+use App\Models\User;
 
 /**
  * Posts/reconciles the double-entry chart-of-accounts journal for a purchase
@@ -39,8 +40,12 @@ trait PostsPurchaseJournal
         float $paidAmount,
         float $dueAmount,
         ?int $paymentAccountId,
-        string $costAccountCode
+        string $costAccountCode,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
+
         $journal = JournalEntry::create([
             'company_id'  => $companyId,
             'created_by'  => auth()->id(),
@@ -49,9 +54,11 @@ trait PostsPurchaseJournal
             'source'      => $source,
             'source_id'   => $sourceId,
             'description' => $description,
+            'beneficiary' => $partyName,
+            'beneficiary_party_id' => $partyId,
         ]);
 
-        $this->syncPurchaseJournalItems($journal, $reference, $costAmount, $paidAmount, $dueAmount, $paymentAccountId, $costAccountCode);
+        $this->syncPurchaseJournalItems($journal, $reference, $costAmount, $paidAmount, $dueAmount, $paymentAccountId, $costAccountCode, $partyType, $partyId);
     }
 
     /**
@@ -71,21 +78,36 @@ trait PostsPurchaseJournal
         float $dueAmount,
         ?int $paymentAccountId,
         string $costAccountCode,
-        bool $cancelled = false
+        bool $cancelled = false,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
-        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->first();
+        // The ORIGINAL purchase journal is the lowest id. Later journals with
+        // the same source/source_id are settlement postings from a "pay
+        // vendor" action (postPurchaseJournalPayment) and must not be
+        // rewritten as if they were the purchase itself.
+        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->orderBy('id')->first();
 
         if ($cancelled) {
-            if ($journal) {
-                $journal->items()->delete();
-                $journal->delete();
-            }
+            JournalEntry::where('source', $source)->where('source_id', $sourceId)->get()->each(function ($entry) {
+                $entry->items()->delete();
+                $entry->delete();
+            });
             return;
         }
 
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
+
         if ($journal) {
             $journal->items()->delete();
-            $journal->update(['date' => $date, 'description' => $description]);
+            $journal->update([
+                'company_id' => $companyId,
+                'date' => $date,
+                'reference' => $reference,
+                'description' => $description,
+                'beneficiary' => $partyName,
+                'beneficiary_party_id' => $partyId,
+            ]);
         } else {
             $journal = JournalEntry::create([
                 'company_id'  => $companyId,
@@ -95,10 +117,12 @@ trait PostsPurchaseJournal
                 'source'      => $source,
                 'source_id'   => $sourceId,
                 'description' => $description,
+                'beneficiary' => $partyName,
+                'beneficiary_party_id' => $partyId,
             ]);
         }
 
-        $this->syncPurchaseJournalItems($journal, $reference, $costAmount, $paidAmount, $dueAmount, $paymentAccountId, $costAccountCode);
+        $this->syncPurchaseJournalItems($journal, $reference, $costAmount, $paidAmount, $dueAmount, $paymentAccountId, $costAccountCode, $partyType, $partyId);
     }
 
     /**
@@ -106,11 +130,14 @@ trait PostsPurchaseJournal
      */
     protected function deletePurchaseJournal(string $source, int $sourceId): void
     {
-        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->first();
-        if ($journal) {
+        // Every journal for this source goes — the purchase's own AND any
+        // settlement journals posted against it later. Removing only the
+        // first left "Payable cleared" postings in the GL with no purchase
+        // behind them once a settled purchase was deleted.
+        JournalEntry::where('source', $source)->where('source_id', $sourceId)->get()->each(function ($journal) {
             $journal->items()->forceDelete();
             $journal->forceDelete();
-        }
+        });
     }
 
     /**
@@ -126,9 +153,19 @@ trait PostsPurchaseJournal
         string $reference,
         string $description,
         float $paymentAmount,
-        int $paymentAccountId
+        int $paymentAccountId,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
         $payableAccount = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
+        $paymentAccount = Account::findOrFail($paymentAccountId);
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
+
+        Bank::assertCanCover(
+            $paymentAccountId,
+            $paymentAmount,
+            $paymentAccount->name
+        );
 
         $journal = JournalEntry::create([
             'company_id'  => $companyId,
@@ -138,6 +175,8 @@ trait PostsPurchaseJournal
             'source'      => $source,
             'source_id'   => $sourceId,
             'description' => $description,
+            'beneficiary' => $partyName,
+            'beneficiary_party_id' => $partyId,
         ]);
 
         JournalItem::create([
@@ -146,6 +185,8 @@ trait PostsPurchaseJournal
             'debit'            => $paymentAmount,
             'credit'           => 0,
             'note'             => 'Payable cleared — ' . $reference,
+            'party_type'       => $partyType,
+            'party_id'         => $partyId,
         ]);
 
         JournalItem::create([
@@ -264,7 +305,9 @@ trait PostsPurchaseJournal
         float $paidAmount,
         float $dueAmount,
         ?int $paymentAccountId,
-        string $costAccountCode
+        string $costAccountCode,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
         $costAccount    = Account::where('code', $costAccountCode)->firstOrFail();
         $payableAccount = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
@@ -279,6 +322,9 @@ trait PostsPurchaseJournal
         ];
 
         if ($paidAmount > 0 && $paymentAccountId) {
+            $paymentAccount = Account::findOrFail($paymentAccountId);
+            Bank::assertCanCover($paymentAccountId, $paidAmount, $paymentAccount->name);
+
             $items[] = [
                 'account_id' => $paymentAccountId,
                 'debit'      => 0,
@@ -293,6 +339,8 @@ trait PostsPurchaseJournal
                 'debit'      => 0,
                 'credit'     => $dueAmount,
                 'note'       => 'Amount owed — ' . $reference,
+                'party_type' => $partyType,
+                'party_id'   => $partyId,
             ];
         }
 

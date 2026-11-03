@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Bank;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
+use App\Models\User;
 
 /**
  * Posts/reconciles the double-entry chart-of-accounts journal for a sale
@@ -31,8 +32,12 @@ trait PostsSaleJournal
         float $paidAmount,
         float $dueAmount,
         ?int $bankId,
-        string $revenueAccountCode
+        string $revenueAccountCode,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
+
         $journal = JournalEntry::create([
             'company_id'  => $companyId,
             'created_by'  => auth()->id(),
@@ -41,9 +46,11 @@ trait PostsSaleJournal
             'source'      => $source,
             'source_id'   => $sourceId,
             'description' => $description,
+            'beneficiary' => $partyName,
+            'beneficiary_party_id' => $partyId,
         ]);
 
-        $this->syncSaleJournalItems($journal, $reference, $totalAmount, $paidAmount, $dueAmount, $bankId, $revenueAccountCode);
+        $this->syncSaleJournalItems($journal, $reference, $totalAmount, $paidAmount, $dueAmount, $bankId, $revenueAccountCode, $partyType, $partyId);
     }
 
     /**
@@ -63,21 +70,34 @@ trait PostsSaleJournal
         float $dueAmount,
         ?int $bankId,
         string $revenueAccountCode,
-        bool $cancelled = false
+        bool $cancelled = false,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
-        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->first();
+        // The first entry is the sale recognition. Later entries for the same
+        // source are receipts which clear AR and must not be rewritten on edit.
+        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->orderBy('id')->first();
 
         if ($cancelled) {
-            if ($journal) {
-                $journal->items()->delete();
-                $journal->delete();
-            }
+            JournalEntry::where('source', $source)->where('source_id', $sourceId)->get()->each(function ($entry) {
+                $entry->items()->delete();
+                $entry->delete();
+            });
             return;
         }
 
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
+
         if ($journal) {
             $journal->items()->delete();
-            $journal->update(['date' => $date, 'description' => $description]);
+            $journal->update([
+                'company_id' => $companyId,
+                'date' => $date,
+                'reference' => $reference,
+                'description' => $description,
+                'beneficiary' => $partyName,
+                'beneficiary_party_id' => $partyId,
+            ]);
         } else {
             $journal = JournalEntry::create([
                 'company_id'  => $companyId,
@@ -87,10 +107,12 @@ trait PostsSaleJournal
                 'source'      => $source,
                 'source_id'   => $sourceId,
                 'description' => $description,
+                'beneficiary' => $partyName,
+                'beneficiary_party_id' => $partyId,
             ]);
         }
 
-        $this->syncSaleJournalItems($journal, $reference, $totalAmount, $paidAmount, $dueAmount, $bankId, $revenueAccountCode);
+        $this->syncSaleJournalItems($journal, $reference, $totalAmount, $paidAmount, $dueAmount, $bankId, $revenueAccountCode, $partyType, $partyId);
     }
 
     /**
@@ -98,11 +120,10 @@ trait PostsSaleJournal
      */
     protected function deleteSaleJournal(string $source, int $sourceId): void
     {
-        $journal = JournalEntry::where('source', $source)->where('source_id', $sourceId)->first();
-        if ($journal) {
+        JournalEntry::where('source', $source)->where('source_id', $sourceId)->get()->each(function ($journal) {
             $journal->items()->forceDelete();
             $journal->forceDelete();
-        }
+        });
     }
 
     /**
@@ -117,14 +138,17 @@ trait PostsSaleJournal
         string $reference,
         string $description,
         float $paymentAmount,
-        int $bankId
-    ): void {
+        int $bankId,
+        ?string $partyType = null,
+        ?int $partyId = null
+    ): JournalEntry {
         $bank = Bank::find($bankId);
         if (!$bank || !$bank->account_id) {
             throw new \Exception('Bank is not linked to a chart-of-accounts account.');
         }
 
         $receivableAccount = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
+        $partyName = $partyId ? User::whereKey($partyId)->value('name') : null;
 
         $journal = JournalEntry::create([
             'company_id'  => $companyId,
@@ -134,6 +158,8 @@ trait PostsSaleJournal
             'source'      => $source,
             'source_id'   => $sourceId,
             'description' => $description,
+            'beneficiary' => $partyName,
+            'beneficiary_party_id' => $partyId,
         ]);
 
         JournalItem::create([
@@ -150,7 +176,11 @@ trait PostsSaleJournal
             'debit'            => 0,
             'credit'           => $paymentAmount,
             'note'             => 'AR cleared — ' . $reference,
+            'party_type'       => $partyType,
+            'party_id'         => $partyId,
         ]);
+
+        return $journal;
     }
 
     private function syncSaleJournalItems(
@@ -160,7 +190,9 @@ trait PostsSaleJournal
         float $paidAmount,
         float $dueAmount,
         ?int $bankId,
-        string $revenueAccountCode
+        string $revenueAccountCode,
+        ?string $partyType = null,
+        ?int $partyId = null
     ): void {
         $revenueAccount    = Account::where('code', $revenueAccountCode)->firstOrFail();
         $receivableAccount = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
@@ -186,6 +218,8 @@ trait PostsSaleJournal
                 'debit'      => $dueAmount,
                 'credit'     => 0,
                 'note'       => 'Amount due — ' . $reference,
+                'party_type' => $partyType,
+                'party_id'   => $partyId,
             ];
         }
 

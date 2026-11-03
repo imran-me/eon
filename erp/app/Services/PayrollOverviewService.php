@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AdvanceSalary;
 use App\Models\Bank;
+use App\Models\EmployeePaymentAllocation;
 use App\Models\EmployeeSalary;
 use App\Models\Loan;
 use App\Models\LoanTransaction;
@@ -36,8 +37,7 @@ class PayrollOverviewService
     public function __construct(
         private LoanBookService $loanBook,
         private PayrollService $payroll,
-    ) {
-    }
+    ) {}
 
     /* ============================================================== the team */
 
@@ -104,21 +104,21 @@ class PayrollOverviewService
         $loans = $this->openLoans($holders);
 
         return [
-            'liability'        => round((float) $encashment->sum('value'), 2),
-            'accruing'         => $encashment->where('eligible', false)->count(),
-            'encashable'       => $encashment->where('eligible', true)->count(),
+            'liability' => round((float) $encashment->sum('value'), 2),
+            'accruing' => $encashment->where('eligible', false)->count(),
+            'encashable' => $encashment->where('eligible', true)->count(),
 
-            'salary_due'       => round((float) $due->sum('amount'), 2),
-            'due_heads'        => $due->count(),
+            'salary_due' => round((float) $due->sum('amount'), 2),
+            'due_heads' => $due->count(),
 
-            'advance_out'      => round((float) $advance->sum('amount'), 2),
-            'advance_holders'  => $advance->count(),
+            'advance_out' => round((float) $advance->sum('amount'), 2),
+            'advance_holders' => $advance->count(),
 
-            'loan_out'         => round((float) $loans->sum(fn (Loan $l) => $l->outstanding), 2),
-            'loan_count'       => $loans->count(),
-            'emi_total'        => round((float) $loans->sum(fn (Loan $l) => (float) $l->monthly_deduction), 2),
+            'loan_out' => round((float) $loans->sum(fn (Loan $l) => $l->outstanding), 2),
+            'loan_count' => $loans->count(),
+            'emi_total' => round((float) $loans->sum(fn (Loan $l) => (float) $l->monthly_deduction), 2),
 
-            'headcount'        => $team->count(),
+            'headcount' => $team->count(),
         ];
     }
 
@@ -127,13 +127,9 @@ class PayrollOverviewService
     /**
      * What the group would owe in leave encashment if every clock stopped today.
      *
-     * This app does not accrue encashment day by day. It pays one month's gross
-     * plus a refund of the leave deducted over the service year, once a year in
-     * February (PayrollService::maybeProcessAnniversaryReconciliation). So the
-     * provision is the pro-rata of that payout: how far through the current
-     * Feb–Jan cycle the employee is, times one month's gross, plus the leave
-     * already deducted inside the cycle — which is refunded in full whenever the
-     * payout lands.
+     * Each completed payroll month earns two days. Approved-leave days consume
+     * that balance; their exact salary deductions are refunded. The remaining
+     * days plus those refunds settle in March or when the employee exits.
      *
      * "Eligible" is the same test the reconciliation applies: a full year of
      * effective service completed. Anyone short of it is still accruing and
@@ -141,13 +137,20 @@ class PayrollOverviewService
      */
     public function encashmentRows(Collection $team): Collection
     {
-        $cycleStart = $this->currentCycleStart();
         $today = Carbon::today();
 
-        return $team->map(function (User $user) use ($cycleStart, $today) {
+        return $team->map(function (User $user) use ($today) {
             $joining = $user->profile?->joining_date;
 
             if (! $joining) {
+                return null;
+            }
+
+            // Fixed-salary employees are excluded from the February payout
+            // itself (PayrollService::maybeProcessAnniversaryReconciliation),
+            // so they carry no provision here either — otherwise the report
+            // would state a liability that never becomes payable.
+            if ($user->fixed_salary) {
                 return null;
             }
 
@@ -158,46 +161,36 @@ class PayrollOverviewService
                 return null;
             }
 
-            $accrualFrom = $effectiveStart->greaterThan($cycleStart) ? $effectiveStart : $cycleStart;
+            $projection = $this->payroll->projectPendingReconciliation($user, $today);
+            if (!$projection) {
+                return null;
+            }
 
-            // Worked in DAYS over the 365-day cycle rather than in months: a
-            // month-diff is coarse near the boundaries, and Carbon's fractional
-            // month helper is deprecated in this version.
-            $daysAccrued = min(365, max(0, $accrualFrom->diffInDays($today)));
-            $monthsAccrued = $daysAccrued / 365 * 12;
-
-            $monthGross = (float) ($user->profile?->salary ?? 0);
-
-            // Leave deducted inside this cycle comes back with the payout, so it
-            // is part of what is owed today.
-            $leaveRefund = (float) EmployeeSalary::where('user_id', $user->id)
-                ->whereRaw("STR_TO_DATE(CONCAT(year, '-', LPAD(month, 2, '0'), '-01'), '%Y-%m-%d') >= ?", [$accrualFrom->toDateString()])
-                ->sum('leave_deduction');
-
-            $value = round($monthGross * ($daysAccrued / 365) + $leaveRefund, 2);
+            $monthsAccrued = $projection['earned_days'] / 2;
+            $value = $projection['projected_total_payout'];
 
             if ($value <= 0) {
                 return null;
             }
 
             return [
-                'user'     => $user,
-                'company'  => $user->company,
-                'dept'     => $user->profile?->department?->name ?: 'Unassigned',
-                'months'   => round($monthsAccrued, 2),
-                'value'    => $value,
+                'user' => $user,
+                'company' => $user->company,
+                'dept' => $user->profile?->department?->name ?: 'Unassigned',
+                'months' => round($monthsAccrued, 2),
+                'value' => $value,
                 'eligible' => $effectiveStart->copy()->addYear()->lte($today),
             ];
         })->filter()->values();
     }
 
-    /** The Feb 1 that opened the encashment year we are currently inside. */
+    /** The March 1 that opened the encashment year we are currently inside. */
     private function currentCycleStart(): Carbon
     {
         $today = Carbon::today();
-        $feb = Carbon::create($today->year, 2, 1)->startOfDay();
+        $march = Carbon::create($today->year, 3, 1)->startOfDay();
 
-        return $today->lt($feb) ? $feb->subYear() : $feb;
+        return $today->lt($march) ? $march->subYear() : $march;
     }
 
     /* ─────────────────────────────────────────────────── 2. salary due ── */
@@ -220,21 +213,17 @@ class PayrollOverviewService
 
         return $team->map(function (User $user) use ($salaries) {
             $due = ($salaries[$user->id] ?? collect())->sum(function (EmployeeSalary $s) {
-                if (strtolower((string) $s->status) === 'paid') {
-                    return 0;
-                }
-
-                $paid = (float) $s->schedules->sum(fn ($x) => (float) ($x->paid_amount ?? 0));
+                $paid = EmployeePaymentAllocation::paidForSalary($s->id);
 
                 return max(0, round((float) $s->net_salary - $paid, 2));
             });
 
             return $due > 0 ? [
-                'user'    => $user,
+                'user' => $user,
                 'company' => $user->company,
-                'dept'    => $user->profile?->department?->name ?: 'Unassigned',
-                'amount'  => round((float) $due, 2),
-                'left'    => $this->hasLeft($user),
+                'dept' => $user->profile?->department?->name ?: 'Unassigned',
+                'amount' => round((float) $due, 2),
+                'left' => $this->hasLeft($user),
             ] : null;
         })->filter()->sortByDesc('amount')->values();
     }
@@ -267,12 +256,12 @@ class PayrollOverviewService
                 ->sum(fn (AdvanceSalary $a) => $a->outstanding), 2);
 
             return $held > 0 ? [
-                'user'    => $user,
+                'user' => $user,
                 'company' => $user->company,
-                'dept'    => $user->profile?->department?->name ?: 'Unassigned',
-                'amount'  => round($held, 2),
-                'count'   => ($advances[$user->id] ?? collect())->count(),
-                'left'    => $this->hasLeft($user),
+                'dept' => $user->profile?->department?->name ?: 'Unassigned',
+                'amount' => round($held, 2),
+                'count' => ($advances[$user->id] ?? collect())->count(),
+                'left' => $this->hasLeft($user),
             ] : null;
         })->filter()->sortByDesc('amount')->values();
     }
@@ -304,9 +293,9 @@ class PayrollOverviewService
         return $team
             ->groupBy(fn (User $u) => $u->profile?->department?->name ?: 'Unassigned')
             ->map(fn (Collection $members, string $dept) => [
-                'dept'  => $dept,
+                'dept' => $dept,
                 'heads' => $members->count(),
-                'cost'  => round((float) $members->sum(fn (User $u) => (float) ($u->profile?->salary ?? 0)), 2),
+                'cost' => round((float) $members->sum(fn (User $u) => (float) ($u->profile?->salary ?? 0)), 2),
             ])
             ->sortByDesc('cost')
             ->values();
@@ -344,16 +333,16 @@ class PayrollOverviewService
         $rows = [];
 
         $bucket = function (?int $bankId) use (&$rows, $banks): string {
-            $key = $bankId ? 'bank:' . $bankId : 'cash';
-            $label = $bankId ? ($banks[$bankId] ?? 'Account #' . $bankId) : 'Cash / not recorded';
+            $key = $bankId ? 'bank:'.$bankId : 'cash';
+            $label = $bankId ? ($banks[$bankId] ?? 'Account #'.$bankId) : 'Cash / not recorded';
 
             $rows[$key] ??= [
                 'account' => $label,
-                'salary'  => 0.0,
+                'salary' => 0.0,
                 'advance' => 0.0,
-                'loan'    => 0.0,
-                'out'     => 0.0,
-                'back'    => 0.0,
+                'loan' => 0.0,
+                'out' => 0.0,
+                'back' => 0.0,
             ];
 
             return $key;
@@ -372,6 +361,7 @@ class PayrollOverviewService
                 $k = $bucket($t->bank_id);
                 $rows[$k]['loan'] += (float) $t->amount;
                 $rows[$k]['out'] += (float) $t->amount;
+
                 continue;
             }
 
@@ -408,13 +398,13 @@ class PayrollOverviewService
         $rows = collect($rows)->sortByDesc('out')->values();
 
         return [
-            'rows'      => $rows,
-            'out'       => round((float) $rows->sum('out'), 2),
-            'back'      => round((float) $rows->sum('back'), 2),
+            'rows' => $rows,
+            'out' => round((float) $rows->sum('out'), 2),
+            'back' => round((float) $rows->sum('back'), 2),
             'recovered' => round($recovered, 2),
-            'from'      => $from,
-            'to'        => $to,
-            'months'    => $months,
+            'from' => $from,
+            'to' => $to,
+            'months' => $months,
         ];
     }
 
@@ -427,15 +417,15 @@ class PayrollOverviewService
     public function sheet(string $section, Collection $team, Collection $holders, bool $withCompany, int $months = 6): array
     {
         $sheet = match ($section) {
-            'encashment'  => $this->encashmentSheet($this->encashmentRows($team), $withCompany),
-            'salary-due'  => $this->peopleSheet($this->salaryDueRows($holders), $withCompany, 'Salary Due',
+            'encashment' => $this->encashmentSheet($this->encashmentRows($team), $withCompany),
+            'salary-due' => $this->peopleSheet($this->salaryDueRows($holders), $withCompany, 'Salary Due',
                 'who is still owed salary, and how much', 'salary-due', 'Outstanding'),
-            'advance'     => $this->peopleSheet($this->advanceRows($holders), $withCompany, 'Advance Outstanding',
+            'advance' => $this->peopleSheet($this->advanceRows($holders), $withCompany, 'Advance Outstanding',
                 'who is holding an advance right now', 'advance-outstanding', 'Advance Held'),
-            'loan'        => $this->loanSheet($this->openLoans($holders), $withCompany),
-            'department'  => $this->departmentSheet($this->departmentRows($team)),
-            'money-flow'  => $this->moneyFlowSheet($this->moneyFlowRows($holders, $months)),
-            default       => throw new \InvalidArgumentException('Unknown payroll report section: ' . $section),
+            'loan' => $this->loanSheet($this->openLoans($holders), $withCompany),
+            'department' => $this->departmentSheet($this->departmentRows($team)),
+            'money-flow' => $this->moneyFlowSheet($this->moneyFlowRows($holders, $months)),
+            default => throw new \InvalidArgumentException('Unknown payroll report section: '.$section),
         };
 
         // The unit is stated once in the heading, as the party statement's export
@@ -455,8 +445,8 @@ class PayrollOverviewService
         $eligible = $rows->where('eligible', true)->count();
 
         return [
-            'key'      => 'encashment',
-            'title'    => 'Leave Encashment Liability',
+            'key' => 'encashment',
+            'title' => 'Leave Encashment Liability',
             'subtitle' => 'what would be owed if every clock stopped today',
             'filename' => 'leave-encashment-liability',
             'headings' => array_values(array_filter([
@@ -482,13 +472,13 @@ class PayrollOverviewService
              * today and who is still inside the service condition is the whole
              * point of the column. */
             'totals' => array_values(array_filter([
-                $rows->count() . ' ' . Str::plural('employee', $rows->count()),
+                $rows->count().' '.Str::plural('employee', $rows->count()),
                 null,
                 $withCompany ? null : false,
                 null,
                 number_format($rows->sum('months'), 2),
                 round((float) $rows->sum('value'), 2),
-                $eligible . ' eligible · ' . ($rows->count() - $eligible) . ' accruing',
+                $eligible.' eligible · '.($rows->count() - $eligible).' accruing',
             ], fn ($v) => $v !== false)),
         ];
     }
@@ -497,8 +487,8 @@ class PayrollOverviewService
     private function peopleSheet(Collection $rows, bool $withCompany, string $title, string $subtitle, string $filename, string $amountLabel): array
     {
         return [
-            'key'      => $filename,
-            'title'    => $title,
+            'key' => $filename,
+            'title' => $title,
             'subtitle' => $subtitle,
             'filename' => $filename,
             'headings' => array_values(array_filter([
@@ -509,14 +499,14 @@ class PayrollOverviewService
                 ['label' => $amountLabel, 'money' => true],
             ])),
             'rows' => $rows->map(fn (array $r) => array_values(array_filter([
-                $r['user']->name . (!empty($r['left']) ? ' (left)' : ''),
+                $r['user']->name.(! empty($r['left']) ? ' (left)' : ''),
                 $r['user']->employee_id_no ?: '—',
                 $withCompany ? ($r['company']?->short_name ?: $r['company']?->name ?: '—') : null,
                 $r['dept'],
                 $r['amount'],
             ], fn ($v) => $v !== null)))->all(),
             'totals' => array_values(array_filter([
-                $rows->count() . ' ' . Str::plural('person', $rows->count()),
+                $rows->count().' '.Str::plural('person', $rows->count()),
                 null,
                 $withCompany ? null : false,
                 null,
@@ -528,8 +518,8 @@ class PayrollOverviewService
     private function loanSheet(Collection $loans, bool $withCompany): array
     {
         return [
-            'key'      => 'loan',
-            'title'    => 'Loan Outstanding',
+            'key' => 'loan',
+            'title' => 'Loan Outstanding',
             'subtitle' => 'loans in progress — taken · paid till now · still due',
             'filename' => 'loan-outstanding',
             'headings' => array_values(array_filter([
@@ -544,7 +534,7 @@ class PayrollOverviewService
                 ['label' => 'EMI', 'money' => true],
             ])),
             'rows' => $loans->map(fn (Loan $l) => array_values(array_filter([
-                $l->user?->name ?? 'Employee #' . $l->user_id,
+                $l->user?->name ?? 'Employee #'.$l->user_id,
                 $l->user?->employee_id_no ?: '—',
                 $withCompany ? ($l->user?->company?->short_name ?: $l->user?->company?->name ?: '—') : null,
                 $l->user?->profile?->department?->name ?: 'Unassigned',
@@ -557,7 +547,7 @@ class PayrollOverviewService
             /* The money columns sum, and EMI sums only where a plan exists — a
              * loan with no plan contributes nothing, which is what "no plan" means. */
             'totals' => array_values(array_filter([
-                $loans->count() . ' ' . Str::plural('loan', $loans->count()),
+                $loans->count().' '.Str::plural('loan', $loans->count()),
                 null,
                 $withCompany ? null : false,
                 null,
@@ -573,8 +563,8 @@ class PayrollOverviewService
     private function departmentSheet(Collection $rows): array
     {
         return [
-            'key'      => 'department',
-            'title'    => 'Department Cost (monthly gross)',
+            'key' => 'department',
+            'title' => 'Department Cost (monthly gross)',
             'subtitle' => 'salary cost by department',
             'filename' => 'department-cost',
             'headings' => [
@@ -584,7 +574,7 @@ class PayrollOverviewService
             ],
             'rows' => $rows->map(fn (array $r) => [$r['dept'], $r['heads'], $r['cost']])->all(),
             'totals' => [
-                $rows->count() . ' ' . Str::plural('department', $rows->count()),
+                $rows->count().' '.Str::plural('department', $rows->count()),
                 (int) $rows->sum('heads'),
                 round((float) $rows->sum('cost'), 2),
             ],
@@ -594,8 +584,8 @@ class PayrollOverviewService
     private function moneyFlowSheet(array $flow): array
     {
         return [
-            'key'      => 'money-flow',
-            'title'    => 'Where The Money Went',
+            'key' => 'money-flow',
+            'title' => 'Where The Money Went',
             'subtitle' => 'every payroll taka by the account it left, on the day it moved',
             'filename' => 'payroll-money-flow',
             'headings' => [
@@ -610,7 +600,7 @@ class PayrollOverviewService
                 $r['account'], $r['salary'], $r['advance'], $r['loan'], $r['out'], $r['back'],
             ])->all(),
             'totals' => [
-                $flow['rows']->count() . ' ' . Str::plural('account', $flow['rows']->count()),
+                $flow['rows']->count().' '.Str::plural('account', $flow['rows']->count()),
                 round((float) $flow['rows']->sum('salary'), 2),
                 round((float) $flow['rows']->sum('advance'), 2),
                 round((float) $flow['rows']->sum('loan'), 2),

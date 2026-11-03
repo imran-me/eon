@@ -57,11 +57,12 @@ class DashboardController extends Controller
         |--------------------------------------------------------------------------
         */
         $monthLeaves = Leave::query()
+            ->with('leave_type')
             ->where('user_id', $userId)
             ->where('status', 'approved')
             ->whereDate('start_date', '<=', $calendarEnd->toDateString())
             ->whereDate('end_date', '>=', $calendarStart->toDateString())
-            ->get(['id', 'leave_type_id', 'start_date', 'end_date', 'reason', 'status']);
+            ->get(['id', 'leave_type_id', 'start_date', 'end_date', 'leave_time', 'reason', 'status']);
 
         $monthHolidays = Holiday::query()
             ->whereDate('start_date', '<=', $calendarEnd->toDateString())
@@ -96,6 +97,9 @@ class DashboardController extends Controller
                 return $dateStr >= Carbon::parse($leave->start_date)->toDateString()
                     && $dateStr <= Carbon::parse($leave->end_date)->toDateString();
             });
+            $approvedLateIn = $leaveRecord?->leave_type?->exempts_late_deduction
+                ? $leaveRecord
+                : null;
 
             $isWeekend = in_array($dayName, $weekendDays, true);
 
@@ -123,16 +127,20 @@ class DashboardController extends Controller
                         ->addMinutes($graceMinutes);
                     $checkInTime = Carbon::parse($dateStr . ' ' . $checkIn);
 
-                    if ($checkInTime->gt($lateThreshold)) {
+                    if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                         $status = 'Late';
                         $lateMinutes = $checkInTime->diffInMinutes($lateThreshold);
                     }
                 } elseif (!empty($record->status)) {
                     $status = ucfirst(strtolower($record->status));
                 }
+
+                if ($approvedLateIn) {
+                    $note = 'Approved Late In (until ' . Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
+                }
             }
             // Leave
-            elseif ($leaveRecord) {
+            elseif ($leaveRecord && !$approvedLateIn) {
                 $status = 'Leave';
                 $note = $leaveRecord->reason ?: 'Approved Leave';
             }

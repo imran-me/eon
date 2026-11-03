@@ -99,7 +99,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
                                 @canany(['view project', 'edit project', 'delete project'])
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width:1%;white-space:nowrap">Actions</th>
                                 @endcanany
                             </tr>
                         </thead>
@@ -166,12 +166,12 @@
                                         @endif
                                     </td>
                                     @canany(['view project', 'edit project', 'delete project'])
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="btn-group btn-group-sm flex space-x-1">
+                                    <td class="px-2 py-4 whitespace-nowrap">
+                                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                             <a href="{{ route('role.projects.show', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'project' => $value->id]) }}"
                                                class="btn border border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white px-3 py-1 rounded-md transition duration-200"
-                                               title="Project Overview">
-                                                <i class="fas fa-eye"></i>
+                                               title="Project Overview" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-eye" style="font-size:11px;margin:0"></i>
                                             </a>
                                             @can('edit project')
                                             <button class="btn btn-outline-primary edit-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" 
@@ -190,13 +190,13 @@
                                                 data-team_members="{{ json_encode($value->team_members) }}"
                                                 data-type="{{ $value->type ?? 'task_project' }}"
                                                 data-department_id="{{ $value->department_id }}"
-                                                data-action="{{ route('role.projects.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'project' => $value->id]) }}" title="Edit Item">
-                                                <i class="fas fa-edit"></i>
+                                                data-action="{{ route('role.projects.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'project' => $value->id]) }}" title="Edit Item" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-edit" style="font-size:11px;margin:0"></i>
                                             </button>
                                             @endcan
                                             @can('delete project')
-                                            <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->project_name }}')">
-                                                <i class="fas fa-trash"></i>
+                                            <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->project_name }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Delete">
+                                                <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                             </button>
                                                 @endcan
                                         </div>

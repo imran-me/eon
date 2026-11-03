@@ -37,7 +37,12 @@ class AttendanceController implements HasMiddleware
         if('employee' == Str::slug(Auth::user()->getRoleNames()->first()) && !Auth::user()->hasPermissionTo('view all attendance')) {
              $request->merge(['user_id' => Auth::id()]);
         }
-        $query = Attendance::select('attendances.*')
+        $query = Attendance::with([
+                'user:id,name,employee_id_no,company_id',
+                'company:id,name',
+                'shift:id,name',
+            ])
+            ->select('attendances.*')
             ->leftJoin('users', 'users.id', '=', 'attendances.user_id')
             ->leftJoin('companies', 'companies.id', '=', 'attendances.company_id')
             ->leftJoin('shifts', 'shifts.id', '=', 'attendances.shift_id')
@@ -100,9 +105,13 @@ class AttendanceController implements HasMiddleware
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required',
-            'date' => 'required',
-            'status' => 'required'
+            'user_id' => 'required|exists:users,id',
+            'shift_id' => 'nullable|exists:shifts,id',
+            'date' => 'required|date',
+            'status' => 'required|in:present,absent,leave,holiday',
+            'check_in' => 'nullable|date_format:H:i,H:i:s',
+            'check_out' => 'nullable|date_format:H:i,H:i:s',
+            'note' => 'nullable|string|max:1000',
         ]);
 
         // If validation fails
@@ -181,20 +190,22 @@ class AttendanceController implements HasMiddleware
             ]);
         }
         $validated = $request->validate([
-            'user_id' => 'required',
-            // 'company_id' => 'required',
-            // 'shift_id' => 'required',
-            // 'date' => 'required',
-            // 'status' => 'required'
+            'user_id' => 'required|exists:users,id',
+            'shift_id' => 'nullable|exists:shifts,id',
+            'date' => 'required|date',
+            'status' => 'required|in:present,absent,leave,holiday',
+            'check_in' => 'nullable|date_format:H:i,H:i:s',
+            'check_out' => 'nullable|date_format:H:i,H:i:s',
+            'note' => 'nullable|string|max:1000',
         ]);
 
-        // if ($request->filled('check_in') && $request->filled('check_out')) {
-        //     if (Carbon::parse($request->check_out)->lt(Carbon::parse($request->check_in))) {
-        //         return response()->json([
-        //             'message' => 'Check out cannot be earlier than Check in time.'
-        //         ]);
-        //     }
-        // }
+        if ($request->filled('check_in') && $request->filled('check_out')
+            && Carbon::parse($request->check_out)->lt(Carbon::parse($request->check_in))) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Check out cannot be earlier than check in time.',
+            ], 422);
+        }
 
         $data->update([
             'user_id' => $request->user_id,
@@ -205,7 +216,7 @@ class AttendanceController implements HasMiddleware
             'check_in' => $request->check_in,
             'check_out' => $request->check_out,
             'note' => $request->note,
-            // 'status' => $request->status
+            'status' => $request->status,
         ]);
 
         if ($request->ajax()) {

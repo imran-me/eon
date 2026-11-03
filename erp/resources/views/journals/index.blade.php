@@ -7,6 +7,67 @@
 @section('css')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     @include('journals.css')
+    <style>
+        #viewModal .modal-box { width:calc(100vw - 40px); max-width:1040px!important; max-height:90vh; display:flex; flex-direction:column; }
+        #viewModal .modal-header { background:linear-gradient(120deg,#1e40af,#2563eb)!important; padding:22px 26px; flex-shrink:0; }
+        #viewModal .modal-header h4 { font-size:20px; }
+        #viewModal .modal-body { display:block; padding:26px; overflow-y:auto; }
+        #viewModal .modal-footer { padding:16px 26px; background:#f8fafc; flex-shrink:0; }
+        .journal-detail-meta { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; padding:18px; border:1px solid #e2e8f0; border-radius:10px; background:#f8fafc; overflow-wrap:anywhere; line-height:1.7; }
+        .journal-detail-table-wrap { overflow-x:auto; border:1px solid #e2e8f0; border-radius:10px; }
+        #viewModal table { min-width:620px; }
+        #viewModal table th { padding:13px 16px!important; color:#475569; }
+        #viewModal table td { padding:15px 16px!important; line-height:1.6; }
+        #viewModal table th:first-child { width:40%; }
+        #viewModal table th:last-child { width:28%; }
+        .journal-detail-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-top:22px; }
+        .journal-detail-actions a, .journal-detail-actions button { margin:0!important; padding:11px 16px!important; border-radius:7px!important; font-size:13px; }
+        @media(max-width:640px) { #viewModal .modal-body { padding:16px; } .journal-detail-meta { grid-template-columns:1fr; gap:8px; } }
+        .journal-editor-popup { padding:0 0 24px!important; border-radius:14px!important; overflow:hidden; }
+        .journal-editor-popup .swal2-title { text-align:left; padding:22px 26px; margin:0; background:#eff6ff; color:#1e3a8a; font-size:22px; }
+        .journal-editor-popup .swal2-html-container { margin:0; padding:24px 26px; overflow-x:hidden; text-align:left; font-size:13px; }
+        .journal-editor-popup .swal2-actions { justify-content:flex-end; margin:0; padding:0 26px; }
+        .journal-editor-popup input, .journal-editor-popup select, .journal-editor-popup textarea { box-sizing:border-box; width:100%; min-width:0; border:1px solid #cbd5e1; border-radius:7px; padding:10px 12px; background:#fff; color:#1e293b; font-size:13px; }
+        .journal-editor-popup input:focus, .journal-editor-popup select:focus, .journal-editor-popup textarea:focus { outline:2px solid #bfdbfe; border-color:#2563eb; }
+        .journal-editor-popup input[type=number] { text-align:right; }
+        .journal-editor-popup .je-grid { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr); gap:12px; }
+        .journal-editor-popup [hidden] { display:none!important; }
+        .uj-popup { max-width:calc(100vw - 32px)!important; }
+        .uj-popup .swal2-html-container { max-height:calc(90vh - 170px); overflow-y:auto; }
+        .uj-popup .swal2-actions { padding-top:18px; border-top:1px solid #e2e8f0; }
+        .uj-form input, .uj-form select { height:40px; align-self:center; }
+        .uj-form .select2-container { min-width:0; width:100%!important; }
+        .uj-form .select2-selection--single { height:40px!important; border:1px solid #cbd5e1!important; border-radius:7px!important; }
+        .uj-form .select2-selection__rendered { line-height:38px!important; padding-left:12px!important; font-size:13px; }
+        .uj-form .select2-selection__arrow { height:38px!important; }
+        .uj-popup .select2-dropdown { border-color:#cbd5e1; }
+        .uj-popup .select2-search__field { height:36px; }
+        .uj-form input[type=number] { font-variant-numeric:tabular-nums; }
+        .uj-section { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px 0 12px; }
+        .uj-section strong { font-size:15px; color:#1e293b; }
+        .uj-section span { font-size:12px; color:#64748b; }
+        .uj-table { border:1px solid #e2e8f0; border-radius:9px; overflow-x:auto; }
+        .uj-line-grid { display:grid; grid-template-columns:28px minmax(180px,2fr) minmax(150px,1.5fr) minmax(100px,1fr) minmax(100px,1fr) minmax(140px,1.4fr) 32px; gap:10px; min-width:880px; align-items:center; }
+        .uj-heading { padding:12px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700; text-transform:uppercase; }
+        .uj-row { padding:12px; border-top:1px solid #e2e8f0; }
+        .uj-row:nth-child(even) { background:#fafcff; }
+        .uj-row-number { color:#94a3b8; font-weight:600; }
+        .uj-remove { height:30px; width:30px; border-radius:6px; color:#dc2626; background:#fff1f2; font-size:20px; }
+        .uj-remove:disabled { opacity:.3; cursor:not-allowed; }
+        .uj-add { margin-top:12px; padding:9px 14px; border:1px solid #bfdbfe; border-radius:7px; color:#1d4ed8; background:#eff6ff; font-weight:600; }
+        .uj-summary { display:grid; grid-template-columns:1fr 1fr 1fr auto; align-items:center; gap:20px; margin:22px 0 0; padding:18px; border:1px solid #e2e8f0; background:#f8fafc; border-radius:10px; }
+        .uj-summary span { display:block; font-size:11px; color:#64748b; margin-bottom:5px; }
+        .uj-summary strong { font-size:18px; color:#1e293b; font-variant-numeric:tabular-nums; }
+        .uj-summary .is-balanced { color:#15803d; background:#dcfce7; padding:8px 12px; border-radius:20px; font-weight:600; }
+        .uj-summary .is-pending { color:#64748b; font-size:12px; }
+        @media(max-width:640px) { .uj-summary { grid-template-columns:1fr 1fr; } .uj-section { align-items:flex-start; flex-direction:column; } }
+        .journal-editor-popup .je-heading { margin-top:22px; padding:10px 12px; background:#f1f5f9; border-radius:7px; font-weight:700; color:#475569; }
+        .journal-editor-popup .je-row { padding:12px; border-bottom:1px solid #e2e8f0; }
+        .journal-editor-popup .je-notice { padding:12px 14px; margin:0 0 18px; background:#f8fafc; border-left:3px solid #2563eb; line-height:1.6; }
+        .journal-editor-popup label { display:block; font-weight:600; margin:14px 0 7px; color:#334155; }
+        .journal-editor-popup .je-totals { margin:16px 0; padding:14px; background:#f0fdf4; border-radius:8px; font-weight:700; text-align:right; }
+        @media(max-width:640px) { .journal-editor-popup .je-grid { grid-template-columns:minmax(0,1fr) minmax(0,1fr); } .journal-editor-popup .swal2-html-container { padding:16px; } }
+    </style>
 @endsection
 
 @section('main-content')
@@ -25,11 +86,8 @@
             </div>
             @can('create journal')
             <div class="jnl-header-actions">
-                <button id="openCreateModalV2" class="btn-hdr btn-hdr-credit">
-                    <i class="fas fa-arrow-down"></i>Credit Journal
-                </button>
-                <button id="openCreateModalV22" class="btn-hdr btn-hdr-debit">
-                    <i class="fas fa-arrow-up"></i>Debit Journal
+                <button type="button" id="openUnifiedJournal" class="btn-hdr btn-hdr-credit">
+                    <i class="fas fa-plus"></i>New Journal
                 </button>
                 <div class="opening-dropdown" id="openingDropdown">
                     <button type="button" class="btn-hdr btn-hdr-opening" id="openingDropdownToggle">
@@ -93,58 +151,37 @@
         <div class="states-table-content">
 
             {{-- ── Filter Panel ── --}}
-            <form action="" method="GET" id="filterForm">
-                <div class="filter-container">
-                    <div class="filter-header {{ request()->hasAny(['date_from','date_to','reference','source']) ? 'active' : '' }}" id="filterToggleHeader">
-                        <h3>
-                            <i class="fas fa-filter mr-2"></i>Filter Options
-                            @if(request()->hasAny(['date_from','date_to','reference','source']))
-                                <span class="filter-badge">Active</span>
-                            @endif
-                        </h3>
-                        <i class="fas fa-chevron-down toggle-icon"></i>
-                    </div>
-                    <div class="filter-content {{ request()->hasAny(['date_from','date_to','reference','source']) ? 'active' : '' }}"
-                         id="filterBody">
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label for="date_from">Date From</label>
-                                <input type="date" name="date_from" id="date_from"
-                                       value="{{ request('date_from') }}" class="form-control">
-                            </div>
-                            <div class="filter-group">
-                                <label for="date_to">Date To</label>
-                                <input type="date" name="date_to" id="date_to"
-                                       value="{{ request('date_to') }}" class="form-control">
-                            </div>
-                            <div class="filter-group">
-                                <label for="f_reference">Reference</label>
-                                <input type="text" name="reference" id="f_reference"
-                                       value="{{ request('reference') }}"
-                                       placeholder="Search reference…" class="form-control">
-                            </div>
-                            <div class="filter-group">
-                                <label for="f_source">Source</label>
-                                <select name="source" id="f_source" class="form-control select2" style="width:100%">
-                                    <option value="">All Sources</option>
-                                    @foreach($sources as $src)
-                                        <option value="{{ $src }}" {{ request('source') === $src ? 'selected' : '' }}>
-                                            {{ ucfirst($src) }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        </div>
-                        <div class="filter-actions">
-                            <button type="button" class="reset-btn" id="resetFilterBtn">
-                                <i class="fas fa-undo mr-1"></i>Reset
-                            </button>
-                            <button type="submit" class="apply-btn">
-                                <i class="fas fa-search mr-1"></i>Apply Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            <form method="GET" id="filterForm" class="lfb-panel" style="margin:16px 14px;">
+                @if(request('reference'))
+                    <input type="hidden" name="reference" value="{{ request('reference') }}">
+                @endif
+                <x-list-filter-bar from="date_from" to="date_to" placeholder="Search reference, description, account or amount..." :total="$journals->total()">
+                    @if(Auth::user()->is_super_admin)
+                        <select name="company_id" aria-label="Company">
+                            <option value="">All Companies / Group</option>
+                            @foreach($companies as $company)
+                                <option value="{{ $company->id }}" @selected((int)$companyId === (int)$company->id)>{{ $company->name }}</option>
+                            @endforeach
+                        </select>
+                    @endif
+                    @if($companyId)
+                        <select name="project_id" aria-label="Project">
+                            <option value="">All projects</option>
+                            @foreach($projects as $project)
+                                <option value="{{ $project->id }}" @selected((int)$projectId === (int)$project->id)>{{ $project->name }}</option>
+                            @endforeach
+                        </select>
+                    @endif
+                    <select name="source" aria-label="Source">
+                        <option value="">All Sources</option>
+                        @foreach($sources as $src)
+                            <option value="{{ $src }}" @selected(request('source') === $src)>{{ Str::headline($src) }}</option>
+                        @endforeach
+                    </select>
+                    <x-slot:actions>
+                        <button type="button" id="printJournalBtn" class="lfb-action"><i class="fas fa-print"></i> Print</button>
+                    </x-slot:actions>
+                </x-list-filter-bar>
             </form>
 
             {{-- Flash messages --}}
@@ -158,12 +195,13 @@
             <div class="table-wrapper" id="printArea">
                 <span class="print-meta">
                     Printed on: {{ now()->format('d M Y, h:i A') }}
-                    @if(request()->hasAny(['date_from','date_to','reference','source']))
+                    @if(request()->hasAny(['company_id','company','project_id','date_from','date_to','reference','source']))
                         &nbsp;|&nbsp; Filters:
                         @if(request('date_from')) From: {{ request('date_from') }} @endif
                         @if(request('date_to')) To: {{ request('date_to') }} @endif
                         @if(request('reference')) Ref: {{ request('reference') }} @endif
                         @if(request('source')) Source: {{ request('source') }} @endif
+                        @if($projectId) Project: {{ optional($projects->firstWhere('id', $projectId))->name }} @endif
                     @endif
                 </span>
                 @if($journals->isEmpty())
@@ -178,9 +216,6 @@
                         <i class="fas fa-table mr-1"></i>
                         Showing {{ $journals->firstItem() }}–{{ $journals->lastItem() }} of {{ $journals->total() }} entries
                     </span>
-                    <button type="button" id="printJournalBtn" class="btn-print">
-                        <i class="fas fa-print"></i>Print / Export
-                    </button>
                 </div>
                 <div class="table-scroll">
                 <table class="journal-table" id="journalTable">
@@ -198,7 +233,7 @@
                             <th style="text-align:right">@include('partials.sortable-th', ['key' => 'credit', 'label' => 'Total Credit', 'dirDefault' => 'desc'])</th>
                             <th>Balanced</th>
                             <th>@include('partials.sortable-th', ['key' => 'created_by', 'label' => 'Created By'])</th>
-                            <th class="no-print" style="text-align:center">Actions</th>
+                            <th class="no-print" style="text-align:center;width:1%;white-space:nowrap">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -256,50 +291,40 @@
                             </td>
 
                             <td data-label="Actions" class="no-print" style="text-align:center;">
-                                <div class="action-cell">
+                                <div class="action-cell" style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                     {{-- View --}}
                                     <button class="btn-action btn-view btn-view-journal"
                                             title="View Items"
-                                            data-id="{{ $journal->id }}">
-                                        <i class="fas fa-eye"></i>
+                                            data-id="{{ $journal->id }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <i class="fas fa-eye" style="font-size:11px;margin:0"></i>
                                     </button>
 
                                     {{-- Print Company Voucher --}}
                                     <a class="btn-action btn-voucher"
                                        title="Company Voucher"
                                        href="{{ route('role.journals.voucher', ['role' => Str::slug(auth()->user()->getRoleNames()->first()), 'journal' => $journal->id]) }}"
-                                       target="_blank">
-                                        <i class="fas fa-print"></i>
+                                       target="_blank" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <i class="fas fa-print" style="font-size:11px;margin:0"></i>
                                     </a>
 
-                                    {{-- Print Party Voucher (Customer / Supplier / Others) --}}
-                                    @php
-                                        $hasParty = $journal->items->contains(fn($i) => $i->party_type && $i->party_id);
-                                    @endphp
-                                    @if($hasParty)
-                                    <a class="btn-action btn-voucher-party"
-                                       title="Party Voucher (Customer / Supplier)"
-                                       href="{{ route('role.journals.party-voucher', ['role' => Str::slug(auth()->user()->getRoleNames()->first()), 'journal' => $journal->id]) }}"
-                                       target="_blank">
-                                        <i class="fas fa-user-tag"></i>
-                                    </a>
-                                    @endif
-
-                                    @if($journal->source === 'manual')
                                         @can('edit journal')
-                                        <button class="btn-action btn-edit btn-edit-journal"
-                                                title="Edit"
-                                                data-id="{{ $journal->id }}">
-                                            <i class="fas fa-pen"></i>
+                                        @if(!$journal->reversed_journal_entry_id && !$journal->reversedBy)
+                                        <button type="button" class="btn-action btn-edit btn-correct-journal"
+                                                title="Edit debit and credit journal rows"
+                                                aria-label="Edit journal {{ $journal->reference }}"
+                                                data-id="{{ $journal->id }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                            <i class="fas fa-pen" style="font-size:11px;margin:0"></i>
                                         </button>
+                                        @endif
                                         @endcan
 
+                                    @if($journal->source === 'manual')
                                         @can('delete journal')
                                         <button class="btn-action btn-delete btn-delete-journal"
                                                 title="Delete"
                                                 data-id="{{ $journal->id }}"
-                                                data-ref="{{ $journal->reference ?? 'Entry #'.$journal->id }}">
-                                            <i class="fas fa-trash-alt"></i>
+                                                data-ref="{{ $journal->reference ?? 'Entry #'.$journal->id }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                            <i class="fas fa-trash-alt" style="font-size:11px;margin:0"></i>
                                         </button>
                                         @endcan
                                     @endif
@@ -368,9 +393,7 @@
                         <label>Bank <span class="req">*</span></label>
                         <select id="cr_bank_id" class="form-control select2-modal" style="width:100%">
                             <option value="">— Select Bank —</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}" data-account="{{ $bank->account_id }}">{{ $bank->name }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                         <div class="invalid-feedback" id="cr_err_bank"></div>
                     </div>
@@ -456,9 +479,7 @@
                         <label>Bank <span class="req">*</span></label>
                         <select id="dr_bank_id" class="form-control select2-modal" style="width:100%">
                             <option value="">— Select Bank —</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}" data-account="{{ $bank->account_id }}">{{ $bank->name }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                         <div class="invalid-feedback" id="dr_err_bank"></div>
                     </div>
@@ -904,13 +925,37 @@
     </div>
 </div>
 
+@can('edit journal')
+<div class="modal-overlay" id="reclassifyModal">
+    <div class="modal-box" style="max-width:620px;">
+        <div class="modal-header" style="background:#4338ca;">
+            <h4><i class="fas fa-right-left mr-2"></i>Reclassify Account Head</h4>
+            <button type="button" class="modal-close" id="closeReclassifyModal"><i class="fas fa-times"></i></button>
+        </div>
+        <form id="reclassifyForm">
+            @csrf
+            <div class="modal-body">
+                <div style="padding:11px 13px;margin-bottom:14px;border:1px solid #c7d2fe;border-radius:8px;background:#eef2ff;color:#3730a3;font-size:12px;line-height:1.55;"><strong>Audit-safe correction:</strong> the original journal remains unchanged. A balanced adjustment moves this line from the old head to the new head.</div>
+                <div class="form-group"><label>Current journal line</label><div id="reclassifyCurrent" style="padding:10px 12px;border:1px solid #e2e8f0;border-radius:7px;background:#f8fafc;font-size:13px;"></div></div>
+                <div class="form-row">
+                    <div class="form-group half"><label>New Account Head <span class="req">*</span></label><select id="reclassifyAccount" class="form-control" style="width:100%"></select></div>
+                    <div class="form-group half"><label>Effective Date <span class="req">*</span></label><input id="reclassifyDate" type="date" class="form-control" required></div>
+                </div>
+                <div class="form-group"><label>Correction Reason <span class="req">*</span></label><textarea id="reclassifyReason" class="form-control" rows="3" maxlength="500" required placeholder="Why is this account head being corrected?"></textarea><div style="font-size:11px;color:#64748b;margin-top:5px;">This reason becomes part of the permanent journal description.</div></div>
+            </div>
+            <div class="modal-footer"><button type="button" id="cancelReclassify" class="btn-modal-cancel">Cancel</button><button type="submit" id="saveReclassify" class="btn-modal-save" style="background:#4338ca;"><i class="fas fa-check"></i>Create Adjustment</button></div>
+        </form>
+    </div>
+</div>
+@endcan
+
 {{-- Bank data for JS (account_id mapping) --}}
 <script id="banksData" type="application/json">
     {!! json_encode($banks->map(fn($b) => ['id' => $b->id, 'name' => $b->name, 'account_id' => $b->account_id])) !!}
 </script>
 {{-- Account data for JS (merged for preview lookup) --}}
 <script id="accountsData" type="application/json">
-    {!! json_encode($creditAccounts->merge($debitAccounts)->map(fn($a) => ['id' => $a->id, 'text' => '[' . $a->code . '] ' . $a->name . ' (' . ucfirst($a->type) . ')'])) !!}
+    {!! json_encode($creditAccounts->merge($debitAccounts)->map(fn($a) => ['id' => $a->id, 'company_id' => $a->company_id, 'text' => '[' . $a->code . '] ' . $a->name . ' (' . ucfirst($a->type) . ')'])) !!}
 </script>
 {{-- Party data for Opening Balance modals --}}
 <script id="partiesData" type="application/json">
@@ -942,6 +987,9 @@ $(document).ready(function () {
     const storeUrl   = '{{ route("role.journals.store", ["role" => Str::slug(Auth::user()->getRoleNames()->first())]) }}';
     const banksData  = JSON.parse(document.getElementById('banksData').textContent);
     const accountsData = JSON.parse(document.getElementById('accountsData').textContent);
+    const canReclassifyJournal = @json(auth()->user()->can('edit journal'));
+    let reclassifyContext = null;
+    @include('journals.unified-entry-script')
 
     // ── Opening Balances dropdown toggle ────────────────
     $('#openingDropdownToggle').on('click', function (e) {
@@ -1187,26 +1235,32 @@ $(document).ready(function () {
         $('#viewModal').addClass('show'); $('body').css('overflow', 'hidden');
 
         $.get(viewBase + '/' + id + '/edit', function (data) {
+            window.currentJournalForCorrection = data;
             let rows = '';
             let totalD = 0, totalC = 0;
             data.items.forEach(item => {
                 totalD += parseFloat(item.debit);
                 totalC += parseFloat(item.credit);
+                const amount = parseFloat(item.debit) > 0 ? parseFloat(item.debit) : parseFloat(item.credit);
+                const side = parseFloat(item.debit) > 0 ? 'Debit' : 'Credit';
+                const correctionAction = canReclassifyJournal && item.can_reclassify
+                    ? `<button type="button" class="btn-reclassify-line" data-journal="${data.id}" data-item="${item.id}" data-account="${item.account_id}" data-company="${data.company_id}" data-date="${String(data.date).substring(0,10)}" data-side="${side}" data-amount="${amount}" style="margin-left:7px;border:1px solid #c7d2fe;border-radius:5px;background:#eef2ff;color:#4338ca;padding:3px 7px;font-size:10px;font-weight:700;cursor:pointer" title="Move this line to another account head"><i class="fas fa-right-left"></i> Reclassify</button>`
+                    : (canReclassifyJournal && !item.can_reclassify ? `<span style="margin-left:7px;color:#94a3b8;font-size:10px">Already corrected / reversed</span>` : '');
                 rows += `<tr>
-                    <td style="padding:6px 10px;">${item.account ? '['+item.account.code+'] '+item.account.name : '—'}</td>
+                    <td style="padding:6px 10px;">${item.account ? '['+item.account.code+'] '+item.account.name : '—'}${correctionAction}</td>
                     <td style="padding:6px 10px;text-align:right;color:#1d4ed8;">${parseFloat(item.debit) > 0 ? parseFloat(item.debit).toLocaleString('en-BD',{minimumFractionDigits:2}) : '—'}</td>
                     <td style="padding:6px 10px;text-align:right;color:#15803d;">${parseFloat(item.credit) > 0 ? parseFloat(item.credit).toLocaleString('en-BD',{minimumFractionDigits:2}) : '—'}</td>
                     <td style="padding:6px 10px;color:#6b7280;">${item.note ?? ''}</td>
                 </tr>`;
             });
             $('#viewModalBody').html(`
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
-                    <div><strong>Date:</strong> ${data.date}</div>
+                <div class="journal-detail-meta">
+                    <div><strong>Date:</strong> ${new Intl.DateTimeFormat('en-GB', {day:'2-digit', month:'short', year:'numeric', timeZone:'Asia/Dhaka'}).format(new Date(data.date))}</div>
                     <div><strong>Reference:</strong> ${data.reference ?? '—'}</div>
-                    <div><strong>Source:</strong> ${data.source}</div>
+                    <div><strong>Source:</strong> ${String(data.source).replaceAll('_',' ')}</div>
                     <div><strong>Description:</strong> ${data.description ?? '—'}</div>
                 </div>
-                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <div class="journal-detail-table-wrap"><table style="width:100%;border-collapse:collapse;font-size:14px;">
                     <thead><tr style="background:#f1f5f9;">
                         <th style="padding:6px 10px;text-align:left;">Account</th>
                         <th style="padding:6px 10px;text-align:right;">Debit</th>
@@ -1220,12 +1274,133 @@ $(document).ready(function () {
                         <td style="padding:6px 10px;text-align:right;color:#15803d;">${totalC.toLocaleString('en-BD',{minimumFractionDigits:2})}</td>
                         <td></td>
                     </tr></tfoot>
-                </table>`);
+                </table></div><div class="journal-detail-actions"></div>`);
+            if (data.items.some(item => item.party_type && item.party_id)) {
+                $('#viewModalBody .journal-detail-actions').append($('<a>', {href:`${viewBase}/${data.id}/party-voucher`, target:'_blank', rel:'noopener', text:'Print Party Voucher'}).css({display:'inline-block', color:'#4338ca', border:'1px solid #c7d2fe', borderRadius:6}));
+            }
+            if (canReclassifyJournal && data.can_reverse_replace) {
+                $('#viewModalBody .journal-detail-actions').append('<button type="button" id="reverseReplaceJournal" style="border:0;border-radius:6px;background:#4338ca;color:white;font-weight:600"><i class="fas fa-pen"></i> Edit Journal / Reverse & Replace</button>');
+            }
         });
     });
 
+    $(document).on('click', '.btn-correct-journal', async function () {
+        try {
+            const journal = await $.get(`${viewBase}/${this.dataset.id}/edit`);
+            if (!journal.can_reverse_replace) {
+                Swal.fire('Journal already reversed', 'Open its replacement journal to make another correction.', 'info');
+                return;
+            }
+            openFullJournalEditor(journal);
+        } catch (xhr) {
+            Swal.fire('Unable to open journal', xhr.responseJSON?.message || 'Please retry.', 'error');
+        }
+    });
+
+    $(document).on('click', '#reverseReplaceJournal', function () {
+        $('#viewModal').removeClass('show');
+        $('body').css('overflow', '');
+        openFullJournalEditor(window.currentJournalForCorrection);
+    });
+
+    async function openFullJournalEditor(journal) {
+        const form = document.createElement('div');
+        const notice = document.createElement('p');
+        notice.className = 'je-notice';
+        notice.textContent = 'Saving reverses the entire original journal and its earlier head adjustments, then posts your edited journal. Review both debit and credit totals.';
+        form.append(notice);
+        const date = document.createElement('input');
+        date.type = 'date'; date.value = @json(now()->timezone('Asia/Dhaka')->format('Y-m-d')); date.min = journal.date.substring(0,10);
+        const dateLabel = document.createElement('label'); dateLabel.textContent = 'Correction Date'; form.append(dateLabel);
+        date.style.maxWidth = '240px';
+        form.append(date);
+        const heading = document.createElement('div');
+        heading.className = 'je-grid je-heading';
+        ['Account Head', 'Debit (BDT)', 'Credit (BDT)', 'Note'].forEach(label => {
+            const cell = document.createElement('span'); cell.textContent = label; heading.append(cell);
+        });
+        form.append(heading);
+        const fields = [];
+        journal.items.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'je-grid je-row';
+            const account = document.createElement('select');
+            accountsData.filter(a => !a.company_id || String(a.company_id) === String(journal.company_id))
+                .forEach(a => account.add(new Option(a.text, a.id)));
+            account.value = item.account_id;
+            const debit = document.createElement('input'); debit.type = 'number'; debit.min = 0; debit.step = '.01'; debit.value = item.debit; debit.setAttribute('aria-label','Debit');
+            const credit = document.createElement('input'); credit.type = 'number'; credit.min = 0; credit.step = '.01'; credit.value = item.credit; credit.setAttribute('aria-label','Credit');
+            const note = document.createElement('input'); note.value = item.note || ''; note.placeholder = 'Note';
+            row.append(account, debit, credit, note); form.append(row);
+            fields.push({id:item.id, account, debit, credit, note});
+        });
+        const totals = document.createElement('p'); totals.className = 'je-totals';
+        const updateTotals = () => {
+            const debit = fields.reduce((sum, f) => sum + Number(f.debit.value), 0);
+            const credit = fields.reduce((sum, f) => sum + Number(f.credit.value), 0);
+            totals.textContent = `Debit: ${debit.toFixed(2)} | Credit: ${credit.toFixed(2)} | Difference: ${(debit-credit).toFixed(2)}`;
+            totals.style.color = Math.abs(debit-credit) < .01 ? '#15803d' : '#dc2626';
+        };
+        fields.forEach(f => { f.debit.addEventListener('input', updateTotals); f.credit.addEventListener('input', updateTotals); });
+        updateTotals(); form.append(totals);
+        const reasonLabel = document.createElement('label'); reasonLabel.textContent = 'Correction Reason *'; form.append(reasonLabel);
+        const reason = document.createElement('textarea'); reason.placeholder = 'Explain the correction (at least 5 characters)'; reason.rows = 3; reason.maxLength = 500; form.append(reason);
+        const result = await Swal.fire({title:'Edit Journal', html:form, width:1000, customClass:{popup:'journal-editor-popup'}, showCloseButton:true, showCancelButton:true,
+            confirmButtonText:'Reverse & Post Replacement', showLoaderOnConfirm:true, allowOutsideClick:() => !Swal.isLoading(),
+            preConfirm:async () => {
+                const heads = {}, lines = {}; let debit = 0, credit = 0;
+                fields.forEach(f => { heads[f.id] = f.account.value; lines[f.id] = {debit:f.debit.value, credit:f.credit.value, note:f.note.value}; debit += Number(f.debit.value); credit += Number(f.credit.value); });
+                if (!date.value || reason.value.trim().length < 5 || Math.abs(debit-credit) >= .01 || debit <= 0) {
+                    Swal.showValidationMessage('Enter a date, correction reason, and equal positive debit/credit totals.'); return false;
+                }
+                try { return await $.ajax({url:`${viewBase}/${journal.id}/reverse-replace`, method:'POST',
+                    data:{_token:$('meta[name="csrf-token"]').attr('content'), date:date.value, reason:reason.value.trim(), heads, lines}}); }
+                catch (xhr) { Swal.showValidationMessage(xhr.responseJSON?.message || 'Unable to post replacement.'); return false; }
+            }});
+        if (result.isConfirmed) await Swal.fire('Journal replaced', result.value.message, 'success').then(() => location.reload());
+    }
+
     $('#closeViewModal, #closeViewModalBtn').on('click', function () {
         $('#viewModal').removeClass('show'); $('body').css('overflow', '');
+    });
+
+    $(document).on('click', '.btn-reclassify-line', function () {
+        const button = this;
+        const current = accountsData.find(account => String(account.id) === String(button.dataset.account));
+        reclassifyContext = { journal: button.dataset.journal, item: button.dataset.item, company: button.dataset.company };
+        $('#reclassifyCurrent').text(`${current?.text || 'Current account'} · ${button.dataset.side} ${Number(button.dataset.amount).toLocaleString('en-BD', {minimumFractionDigits:2})}`);
+        $('#reclassifyAccount').empty().append('<option value="">— Select new account head —</option>');
+        accountsData.filter(account => String(account.id) !== String(button.dataset.account)
+            && (!account.company_id || String(account.company_id) === String(button.dataset.company)))
+            .forEach(account => $('#reclassifyAccount').append(new Option(account.text, account.id)));
+        $('#reclassifyDate').attr('min', button.dataset.date).val(button.dataset.date);
+        $('#reclassifyReason').val('');
+        $('#viewModal').removeClass('show');
+        $('#reclassifyModal').addClass('show');
+        $('#reclassifyAccount').select2({ dropdownParent: $('#reclassifyModal'), width: '100%' });
+    });
+
+    $('#closeReclassifyModal, #cancelReclassify').on('click', function () {
+        $('#reclassifyModal').removeClass('show');
+        $('body').css('overflow', '');
+        reclassifyContext = null;
+    });
+
+    $('#reclassifyForm').on('submit', function (event) {
+        event.preventDefault();
+        if (!reclassifyContext || !$('#reclassifyAccount').val() || !$('#reclassifyDate').val() || $('#reclassifyReason').val().trim().length < 5) {
+            Swal.fire('Missing information', 'Choose the new head, date and enter a clear correction reason.', 'warning');
+            return;
+        }
+        const $button = $('#saveReclassify').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>Posting…');
+        $.ajax({
+            url: `${viewBase}/${reclassifyContext.journal}/items/${reclassifyContext.item}/reclassify`,
+            method: 'POST',
+            data: { _token: $('meta[name="csrf-token"]').attr('content'), account_id: $('#reclassifyAccount').val(), date: $('#reclassifyDate').val(), reason: $('#reclassifyReason').val().trim() },
+            success: response => Swal.fire('Head reclassified', response.message, 'success').then(() => location.reload()),
+            error: xhr => Swal.fire('Unable to reclassify', xhr.responseJSON?.message || 'The adjustment could not be posted.', 'error'),
+            complete: () => $button.prop('disabled', false).html('<i class="fas fa-check"></i>Create Adjustment'),
+        });
     });
 
     // ── OPENING RECEIVABLE Modal ─────────────────────────

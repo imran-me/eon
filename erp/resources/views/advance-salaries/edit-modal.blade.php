@@ -1,6 +1,6 @@
 <div id="editModal" class="modal fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="modal-backdrop fixed inset-0 bg-black opacity-50"></div>
-    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto" style="max-height:calc(100vh - 32px)">
         <div class="modal-content py-4 text-left px-6">
             <div class="modal-header flex justify-between items-center pb-3">
                 <h3 class="text-xl font-semibold">Edit </h3>
@@ -43,6 +43,9 @@
                                 <option value="Rejected">Rejected</option>                        
                             </select>
                         </div>
+                    </div>
+                    <div class="mb-4 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
+                        Approval does not move money. After approval, use the separate Pay / Release action in the Advance Register.
                     </div>
                     <div class="mb-4">
                         <label for="edit_reason" class="block text-gray-700 text-sm font-bold mb-2">Reason</label>                            

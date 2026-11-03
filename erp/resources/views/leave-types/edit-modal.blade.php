@@ -36,6 +36,11 @@
                             class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
                         <label for="edit_exempts_early_out_deduction" class="ml-2 block text-sm text-gray-700">Waives early-checkout salary deduction</label>
                     </div>
+                    <div class="mt-2 flex items-center">
+                        <input type="checkbox" id="edit_exempts_late_deduction" name="exempts_late_deduction" value="1"
+                            class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <label for="edit_exempts_late_deduction" class="ml-2 block text-sm text-gray-700">Waives late-arrival salary deduction</label>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer flex justify-end pt-2">

@@ -18,16 +18,23 @@ class BankTransfer extends Model
         'to_bank_id',
         'amount',
         'payment_date',
+        'entry_time',
         'reference_no',
         'payment_method',
         'status',
         'remarks',
+        'charge_amount',
+        'charge_account_id',
+        'vat_amount',
+        'vat_account_id',
         'created_by',
     ];
 
     protected $casts = [
         'payment_date' => 'date',
         'amount'       => 'decimal:2',
+        'charge_amount'=> 'decimal:2',
+        'vat_amount'   => 'decimal:2',
     ];
 
     // ─── Relationships ────────────────────────────────────────────────────────

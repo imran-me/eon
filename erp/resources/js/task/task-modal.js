@@ -53,10 +53,13 @@ async function refreshBoardListsInPlace() {
         if (currentColumnCard) {
             const countBadge = currentColumnCard.querySelector('.flex.justify-between.items-center .flex.items-center.gap-2 span');
             if (countBadge) {
-                countBadge.textContent = String(listEl.querySelectorAll('.task-item').length);
+                countBadge.textContent = String(window.kbcCount ? window.kbcCount(listEl) : listEl.querySelectorAll('.task-item').length);
             }
         }
     });
+
+    // The refresh brought fresh infinite-scroll sentinels along; watch them.
+    if (window.kbcObserve) window.kbcObserve();
 }
 
 /**
@@ -101,6 +104,7 @@ function formatDatetimeLocal(dateStr) {
 }
 
 export function openCreateModal(columnId) {
+    clearTaskFieldError('title');
     const taskModal = document.getElementById('taskModal');
     document.getElementById('modalTitle').innerText = 'Create new work item';
 
@@ -228,6 +232,7 @@ export function openEditModal(id, title, description, assignedUsers, startDate, 
 }
 
 export function closeTaskModal() {
+    clearTaskFieldError('title');
     const taskModal = document.getElementById('taskModal');
     taskModal.classList.replace('flex', 'hidden');
     if (typeof $ !== 'undefined' && $.fn.summernote) $('#description').summernote('destroy');
@@ -361,8 +366,34 @@ export function saveTask(config) {
     //   console.log('Saving task with payload:', payload);
     //   return; // Remove this line to enable saving
 
+    // Title is the one required field: say so on the field itself, before any
+    // request goes out.
+    clearTaskFieldError('title');
+    if (!payload.title.trim()) {
+        showTaskFieldError('title', 'Title is required');
+        return;
+    }
+
+    // Spinner + lock while the request is in flight, so a slow save never looks
+    // frozen and a second click cannot create the same task twice.
+    const saveBtn = document.getElementById('taskSaveBtn');
+    if (saveBtn) {
+        if (saveBtn.disabled) return;
+        saveBtn.dataset.label = saveBtn.innerHTML;
+        saveBtn.disabled = true;
+        saveBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving…';
+    }
+    const resetSaveBtn = () => {
+        if (!saveBtn) return;
+        saveBtn.disabled = false;
+        saveBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+        if (saveBtn.dataset.label) saveBtn.innerHTML = saveBtn.dataset.label;
+    };
+
     TaskApi.save(role, { id: id || null, ...payload })
         .then(async () => {
+            resetSaveBtn();
             const createMore = document.getElementById('create_more')?.checked;
             if (createMore && !id) {
                 const colId = document.getElementById('column_id')?.value;
@@ -380,9 +411,44 @@ export function saveTask(config) {
             }
         })
         .catch(err => {
-            alert('Error: ' + (err?.message || err));
+            resetSaveBtn();
             console.error(err);
+
+            // Server-side validation: the title's message goes under the title.
+            const titleMsg = err?.errors?.title?.[0];
+            if (titleMsg) {
+                showTaskFieldError('title', titleMsg);
+                return;
+            }
+            alert('Error: ' + (err?.message || err));
         });
+}
+
+/** Red outline + message under a field (title only has a slot today: #title_error). */
+export function showTaskFieldError(field, message) {
+    const input = document.getElementById(field);
+    const box = document.getElementById(`${field}_error`);
+    if (input) {
+        input.classList.remove('border-gray-300');
+        input.classList.add('border-red-500', 'ring-1', 'ring-red-500');
+        input.setAttribute('aria-invalid', 'true');
+        input.focus();
+    }
+    if (box) {
+        box.querySelector('span').textContent = message;
+        box.classList.remove('hidden');
+    }
+}
+
+export function clearTaskFieldError(field) {
+    const input = document.getElementById(field);
+    const box = document.getElementById(`${field}_error`);
+    if (input) {
+        input.classList.remove('border-red-500', 'ring-1', 'ring-red-500');
+        input.classList.add('border-gray-300');
+        input.removeAttribute('aria-invalid');
+    }
+    if (box) box.classList.add('hidden');
 }
 
 /* ── Summernote init ── */

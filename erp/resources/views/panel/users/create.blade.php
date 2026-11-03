@@ -69,14 +69,16 @@
         .manage-user-container .tri-column { grid-template-columns: 1fr; }
         .manage-user-container .full-width { grid-column: span 1; }
     }
-</style> 
+</style>
+@include('panel.users.form-modern-styles')
 @endsection
 @section('main-content')   
 <div class="manage-user-container">
     <div class="form-card">
         <div class="form-header">
-            <h2>Add New User</h2>
-            <p>Enter the employee's personal and professional details.</p>
+            <span class="form-header-icon"><i class="fas fa-user-plus"></i></span>
+            <div class="form-header-copy"><h2>Add New {{ request()->route('role') === 'employee' ? 'Employee' : 'User' }}</h2><p>Create the employee's personal, employment and access profile.</p></div>
+            <a class="header-back" href="{{ route('role.user.index', ['role' => request()->route('role')]) }}"><i class="fas fa-arrow-left"></i><span>Back to Users</span></a>
         </div>
 
         <div class="form-body">
@@ -95,7 +97,7 @@
                 </div>
             @endif
 
-            <form action="{{ route('role.user.store', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" method="POST">
+            <form action="{{ route('role.user.store', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="form-section">
@@ -226,7 +228,8 @@
                 </div>
 
                 <div class="form-footer">
-                    <button type="submit" class="btn-save">Save User Profile</button>
+                    <a class="btn-back" href="{{ route('role.user.index', ['role' => request()->route('role')]) }}"><i class="fas fa-arrow-left"></i>Back</a>
+                    <button type="submit" class="btn-save"><i class="fas fa-check"></i>Save User Profile</button>
                 </div>
             </form>
         </div>

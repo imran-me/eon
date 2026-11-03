@@ -7,6 +7,7 @@ use App\Models\Bank;
 use App\Models\Company;
 use App\Models\Loan;
 use App\Models\LoanTransaction;
+use App\Models\EmployeeRequest;
 use App\Models\User;
 use App\Services\LoanBookService;
 use App\Services\LoanLedgerService;
@@ -78,17 +79,43 @@ class LoanController implements HasMiddleware
         $authUser = Auth::user();
         $userCompanyId = $authUser->company_id;
 
-        $bankQuery = Bank::orderBy('name')->where('status', 1);
+        $bankQuery = Bank::orderBy('name')->where('status', 1)->whereNotNull('account_id');
         if (!$authUser->can('view all bank') && !empty($userCompanyId)) {
-            $bankQuery->where('company_id', $userCompanyId);
+            $bankQuery->where(function ($query) use ($userCompanyId) {
+                $query->where('company_id', $userCompanyId)->orWhereNull('company_id');
+            });
         }
         $banks = $bankQuery->get();
 
         $employeeQuery = User::orderBy('name')->where('status', 'active')->role('employee');
-        if (!$authUser->can('view all loan') && !empty($userCompanyId)) {
+        if ($authUser->hasRole('employee') && !$authUser->can('view all loan')) {
+            $employeeQuery->where('id', $authUser->id);
+        } elseif (!$authUser->can('view all loan') && !empty($userCompanyId)) {
             $employeeQuery->where('company_id', $userCompanyId);
         }
         $users = $employeeQuery->get();
+        $myLoanRequests = collect();
+        if ($authUser->hasRole('employee') && !$authUser->can('view all loan')) {
+            $myLoanRequests = EmployeeRequest::where('employee_id', $authUser->id)
+                ->where('request_type', 'loan')->latest('id')->limit(5)->get();
+        }
+
+        $loanRequestQuery = EmployeeRequest::with(['employee.company'])
+            ->where('category', EmployeeRequest::CATEGORY_REQUEST)
+            ->where('request_type', 'loan')
+            ->whereIn('status', [
+                EmployeeRequest::STATUS_PENDING,
+                EmployeeRequest::STATUS_UNDER_REVIEW,
+                EmployeeRequest::STATUS_APPROVED,
+            ]);
+        if ($authUser->hasRole('employee') && !$authUser->can('view all loan')) {
+            $loanRequestQuery->where('employee_id', $authUser->id);
+        } elseif (!$authUser->can('view all loan') && $userCompanyId) {
+            $loanRequestQuery->whereHas('employee', fn ($query) => $query->where('company_id', $userCompanyId));
+        } elseif ($request->filled('company_id')) {
+            $loanRequestQuery->whereHas('employee', fn ($query) => $query->where('company_id', (int) $request->company_id));
+        }
+        $loanRequests = $loanRequestQuery->latest('id')->get();
 
         // Recording a repayment needs a loan that still owes something — the
         // picker in the repay modal offers exactly those, and nothing else.
@@ -105,6 +132,8 @@ class LoanController implements HasMiddleware
             'openLoans',
             'users',
             'banks',
+            'myLoanRequests',
+            'loanRequests',
         ));
     }
 
@@ -320,13 +349,22 @@ class LoanController implements HasMiddleware
         }
 
         if ($request->filled('search')) {
-            $bits[] = 'Search: "' . $request->search . '"';
+            $bits[] = 'Search: "' . (is_string($request->search) ? $request->search : '') . '"';
         }
 
-        if ($request->filled('start_date') || $request->filled('end_date')) {
-            $from = $request->filled('start_date') ? Carbon::parse($request->start_date . '-01')->format('M Y') : 'inception';
-            $to = $request->filled('end_date') ? Carbon::parse($request->end_date . '-01')->format('M Y') : 'date';
+        // Legacy month bounds (bookmarked ?start_date=Y-m / ?end_date=Y-m) — only
+        // a real Y-m is read; anything else is ignored rather than parsed.
+        $legacyStart = $this->legacyMonth($request->input('start_date'));
+        $legacyEnd = $this->legacyMonth($request->input('end_date'));
+        if ($legacyStart || $legacyEnd) {
+            $from = $legacyStart ? Carbon::parse($legacyStart . '-01')->format('M Y') : 'inception';
+            $to = $legacyEnd ? Carbon::parse($legacyEnd . '-01')->format('M Y') : 'date';
             $bits[] = 'Taken ' . $from . ' – ' . $to;
+        }
+
+        [$fromDate, $toDate] = $this->listDateRange($request);
+        if ($fromDate) {
+            $bits[] = 'Taken ' . ($fromDate === $toDate ? $fromDate : $fromDate . ' to ' . $toDate);
         }
 
         return $bits ? implode(' · ', $bits) : 'No filters — the whole book';
@@ -388,16 +426,24 @@ class LoanController implements HasMiddleware
 
         // Taken-on range. These were `whereDate` against a month input, which
         // could never match a full date — a filter that silently returned nothing.
-        if ($request->filled('start_date')) {
-            $query->whereDate('loans.start_date', '>=', $request->start_date . '-01');
+        // Kept for bookmarked links; only a real Y-m is read (a raw value once
+        // went straight into Carbon::parse and 500'd the page).
+        if ($legacyStart = $this->legacyMonth($request->input('start_date'))) {
+            $query->whereDate('loans.start_date', '>=', $legacyStart . '-01');
         }
 
-        if ($request->filled('end_date')) {
-            $query->whereDate('loans.start_date', '<=', Carbon::parse($request->end_date . '-01')->endOfMonth());
+        if ($legacyEnd = $this->legacyMonth($request->input('end_date'))) {
+            $query->whereDate('loans.start_date', '<=', Carbon::parse($legacyEnd . '-01')->endOfMonth()->toDateString());
+        }
+
+        // The filter bar's day range on the taken-on date.
+        [$fromDate, $toDate] = $this->listDateRange($request);
+        if ($fromDate) {
+            $query->whereDate('loans.start_date', '>=', $fromDate)->whereDate('loans.start_date', '<=', $toDate);
         }
 
         if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
+            $term = '%' . (is_string($request->search) ? $request->search : '') . '%';
             $query->where(function ($q) use ($term) {
                 $q->where('users.name', 'like', $term)
                     ->orWhere('users.employee_id_no', 'like', $term);
@@ -415,6 +461,35 @@ class LoanController implements HasMiddleware
         }
 
         return $loans;
+    }
+
+    /**
+     * The list's issued/added date range from ?from_date / ?to_date. Only a
+     * real Y-m-d is accepted — anything else reads as "no bound", never a
+     * Carbon exception. A lone date means that day; a reversed pair is swapped.
+     */
+    private function listDateRange(Request $request): array
+    {
+        $read = function ($v) {
+            if (! is_string($v) || ! preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $v, $m)) {
+                return null;
+            }
+            return checkdate((int) $m[2], (int) $m[3], (int) $m[1]) ? $v : null;
+        };
+        $from = $read($request->input('from_date'));
+        $to   = $read($request->input('to_date'));
+        $from ??= $to;
+        $to   ??= $from;
+        if ($from && $to && $from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        return [$from, $to];
+    }
+
+    /** A legacy ?start_date / ?end_date month value, or null unless it is a real Y-m. */
+    private function legacyMonth($value): ?string
+    {
+        return is_string($value) && preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $value) ? $value : null;
     }
 
     /**
@@ -477,10 +552,52 @@ class LoanController implements HasMiddleware
      */
     public function store(Request $request)
     {
+        $actor = Auth::user();
+        if ($actor->hasRole('employee') && !$actor->can('view all loan')) {
+            $validator = Validator::make($request->all(), [
+                'amount' => 'required|numeric|min:0.01',
+                'monthly_deduction' => 'required|numeric|min:0.01|lte:amount',
+                'needed_by' => 'nullable|date|after_or_equal:today',
+                'reason' => 'required|string|min:5|max:1000',
+            ]);
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+            }
+
+            $loanRequest = EmployeeRequest::create([
+                'employee_id' => $actor->id,
+                'category' => EmployeeRequest::CATEGORY_REQUEST,
+                'request_type' => 'loan',
+                'amount' => $request->amount,
+                'reason' => $request->reason,
+                'deadline' => $request->needed_by,
+                'requested_at' => now(),
+                'status' => EmployeeRequest::STATUS_PENDING,
+                'metadata' => [
+                    'monthly_deduction' => (float) $request->monthly_deduction,
+                    'requested_from' => 'loan_management',
+                ],
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Loan request submitted for approval. No money or journal has been posted yet.',
+                'data' => $loanRequest,
+            ]);
+        }
+
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required',
-            'amount' => 'required',
-            'start_date' => 'required'
+            'user_id' => 'required|exists:users,id',
+            'amount' => 'required|numeric|min:0.01',
+            'monthly_deduction' => 'nullable|numeric|min:0',
+            'start_date' => 'required|date',
+            'bank_id' => 'required|exists:banks,id',
+            'payment_method' => 'required|in:cash,bank_transfer,mobile_banking,cheque,card',
+            'transaction_time' => 'required|date_format:H:i',
+            'reference' => 'nullable|string|max:191',
+            'recipient_bank' => 'nullable|string|max:150',
+            'recipient_account' => 'nullable|string|max:100',
+            'reason' => 'nullable|string|max:500',
         ]);
 
         // If validation fails
@@ -495,6 +612,25 @@ class LoanController implements HasMiddleware
             $data = null;
 
             DB::transaction(function () use ($request, &$data) {
+                $employee = User::findOrFail($request->user_id);
+                $actor = Auth::user();
+                if ($actor->hasRole('employee') && !$actor->can('view all loan')
+                    && (int) $employee->id !== (int) $actor->id) {
+                    throw new \RuntimeException('You can only create a loan for your own employee account.');
+                }
+                if (!$actor->can('view all loan') && $actor->company_id && $employee->company_id
+                    && (int) $employee->company_id !== (int) $actor->company_id) {
+                    throw new \RuntimeException('You can only create loans for employees in your company.');
+                }
+                $bank = Bank::whereKey($request->bank_id)->whereNotNull('account_id')->firstOrFail();
+
+                if ($bank->company_id && $employee->company_id
+                    && (int) $bank->company_id !== (int) $employee->company_id) {
+                    throw new \RuntimeException('Choose an account owned by the employee company, or a Group / Shared account.');
+                }
+
+                Bank::assertCanCover((int) $bank->account_id, (float) $request->amount, $bank->name);
+
                 $data = Loan::create([
                     'user_id' => $request->user_id,            
                     'bank_id' => $request->bank_id,            
@@ -509,14 +645,23 @@ class LoanController implements HasMiddleware
                 // ── JOURNAL (auto) ────────────────────────────────────────
                 $loanReceivableAccount = \App\Models\Account::where('code', config('accounts.loan_receivable'))->firstOrFail();
 
+                $reference = trim((string) $request->reference)
+                    ?: 'LOAN-' . now()->format('YmdHis') . random_int(10, 99);
                 $journal = \App\Models\JournalEntry::create([
-                    'company_id'  => auth()->user()->company_id ?? 2,
+                    'company_id'  => $employee->company_id ?? auth()->user()->company_id ?? 2,
                     'created_by'  => auth()->id(),
                     'date'        => $data->start_date,
-                    'reference'   => 'LOAN-' . str_pad($data->id, 5, '0', STR_PAD_LEFT),
+                    'entry_time'  => $request->transaction_time . ':00',
+                    'reference'   => $reference,
                     'source'      => 'loan',
                     'source_id'   => $data->id,
-                    'description' => 'Loan issued — User #' . $data->user_id,
+                    'description' => 'Staff loan paid — ' . $employee->name
+                        . ($request->filled('reason') ? ' — ' . $request->reason : ''),
+                    'beneficiary' => $employee->name,
+                    'beneficiary_party_id' => $employee->id,
+                    'beneficiary_method' => in_array($request->payment_method, ['cash', 'cheque']) ? $request->payment_method : 'bank',
+                    'beneficiary_bank' => $request->recipient_bank,
+                    'beneficiary_ref' => $request->recipient_account,
                 ]);
 
                 // Debit: Loan Receivable — employee owes us this amount
@@ -526,32 +671,20 @@ class LoanController implements HasMiddleware
                     'debit'            => $data->amount,
                     'credit'           => 0,
                     'note'             => 'Loan issued to employee',
+                    'party_type'       => 'employee',
+                    'party_id'         => $employee->id,
                 ]);
 
-                // Credit: Bank — money went out (if bank_id provided)
-                if ($request->bank_id) {
-                    $bank = \App\Models\Bank::find($request->bank_id);
-                    if (!$bank || !$bank->account_id) {
-                        throw new \Exception('Bank is not linked to a chart-of-accounts account.');
-                    }
-                    \App\Models\JournalItem::create([
-                        'journal_entry_id' => $journal->id,
-                        'account_id'       => $bank->account_id,
-                        'debit'            => 0,
-                        'credit'           => $data->amount,
-                        'note'             => 'Loan disbursed from bank',
-                    ]);
-                } else {
-                    // No bank selected — use cash/general payable as fallback
-                    $salaryPayableAccount = \App\Models\Account::where('code', config('accounts.salary_payable'))->firstOrFail();
-                    \App\Models\JournalItem::create([
-                        'journal_entry_id' => $journal->id,
-                        'account_id'       => $salaryPayableAccount->id,
-                        'debit'            => 0,
-                        'credit'           => $data->amount,
-                        'note'             => 'Loan issued — bank not specified',
-                    ]);
-                }
+                // Credit the exact bank/cash account the money left from.
+                \App\Models\JournalItem::create([
+                    'journal_entry_id' => $journal->id,
+                    'account_id'       => $bank->account_id,
+                    'debit'            => 0,
+                    'credit'           => $data->amount,
+                    'note'             => 'Staff loan paid from ' . $bank->name,
+                    'party_type'       => 'employee',
+                    'party_id'         => $employee->id,
+                ]);
                 // ── END JOURNAL ───────────────────────────────────────────
 
                 // The movement itself. Without this row the loan exists but its
@@ -606,7 +739,7 @@ class LoanController implements HasMiddleware
         $validated = $request->validate([
             'user_id' => 'required',
             'amount' => 'required',
-            'start_date' => 'required'
+            'start_date' => 'required|date'
         ]);
 
         try {
@@ -660,6 +793,10 @@ class LoanController implements HasMiddleware
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+
+                    // The money is leaving this bank now, so it must be there.
+                    \App\Models\Bank::assertCanCover((int) $bank->account_id, (float) $data->amount, $bank->name);
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,

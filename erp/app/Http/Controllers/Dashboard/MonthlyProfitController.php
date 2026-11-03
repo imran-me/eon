@@ -10,12 +10,14 @@ class MonthlyProfitController extends Controller
 {
     public function index()
     {
+        $this->guard();
         $years = $this->availableYears();
         return view('reports.monthly-profit', compact('years'));
     }
 
     public function data(Request $request)
     {
+        $this->guard();
         $year = (int) ($request->year ?? date('Y'));
         [$months, $annual] = $this->buildProfitData($year);
         return response()->json(compact('months', 'annual', 'year'));
@@ -23,6 +25,7 @@ class MonthlyProfitController extends Controller
 
     public function printView(Request $request)
     {
+        $this->guard();
         $year    = (int) ($request->year ?? date('Y'));
         $company = \App\Models\Company::first();
 
@@ -69,6 +72,15 @@ class MonthlyProfitController extends Controller
             ->get()->keyBy('m');
 
         $months = [];
+        $newFileRevenue = \App\Services\ContractFileReporting::revenue()->whereYear('j.date', $year)
+            ->selectRaw('MONTH(j.date) as m, SUM(i.credit - i.debit) as total')
+            ->groupByRaw('MONTH(j.date)')->pluck('total', 'm');
+        $newFileCost = \App\Services\ContractFileReporting::cost()->whereYear('j.date', $year)
+            ->whereExists(function ($q) {
+                $q->selectRaw('1')->from('contract_files as cf')->whereColumn('cf.id', 'j.source_id')->whereNotNull('cf.client_id');
+            })
+            ->selectRaw('MONTH(j.date) as m, SUM(i.debit - i.credit) as total')
+            ->groupByRaw('MONTH(j.date)')->pluck('total', 'm');
         for ($m = 1; $m <= 12; $m++) {
             $t  = $ticketRows->get($m);
             $v  = $visaRows->get($m);
@@ -79,6 +91,8 @@ class MonthlyProfitController extends Controller
             $vRev  = (float)($v?->revenue  ?? 0); $vCost  = (float)($v?->cost  ?? 0);
             $fRev  = (float)($fl?->revenue ?? 0); $fCost  = (float)($fl?->cost ?? 0);
             $fiRev = (float)($fi?->revenue ?? 0); $fiCost = (float)($fi?->cost ?? 0);
+            $fiRev += (float) $newFileRevenue->get($m, 0);
+            $fiCost += (float) $newFileCost->get($m, 0);
 
             $totRev  = $tRev + $vRev + $fRev + $fiRev;
             $totCost = $tCost + $vCost + $fCost + $fiCost;
@@ -130,5 +144,10 @@ class MonthlyProfitController extends Controller
 
         $min = $years->filter()->min() ?: date('Y');
         return range(date('Y'), $min);
+    }
+
+    private function guard(): void
+    {
+        abort_unless(auth()->user()?->can('view profit loss report'), 403, 'You do not have permission to view profitability reports.');
     }
 }

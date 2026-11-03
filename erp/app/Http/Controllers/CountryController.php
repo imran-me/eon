@@ -40,6 +40,14 @@ class CountryController extends Controller
             }
         }
     
+        // The list bar's date range: the day the country was added.
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
         $countries = $query->paginate(30);
     
         // Counts

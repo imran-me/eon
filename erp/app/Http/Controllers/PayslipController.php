@@ -11,6 +11,7 @@ use App\Services\PayslipBookService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -218,7 +219,7 @@ class PayslipController implements HasMiddleware
         }
 
         if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
+            $term = '%' . (is_string($request->search) ? $request->search : '') . '%';
             $query->where(function ($q) use ($term) {
                 $q->where('users.name', 'like', $term)
                     ->orWhere('users.employee_id_no', 'like', $term)
@@ -314,7 +315,7 @@ class PayslipController implements HasMiddleware
         }
 
         if ($request->filled('search')) {
-            $bits[] = 'Search: "' . $request->search . '"';
+            $bits[] = 'Search: "' . (is_string($request->search) ? $request->search : '') . '"';
         }
 
         return $bits ? implode(' · ', $bits) : 'No filters — every payslip';
@@ -396,7 +397,10 @@ class PayslipController implements HasMiddleware
             ]);
         }
 
+        $data = null;
+
         try {
+            DB::transaction(function () use ($request, &$data) {
             $data = Payslip::updateOrCreate([
                 'user_id' => $request->user_id,
                 'employee_salary_id' => $request->employee_salary_id,
@@ -460,6 +464,9 @@ class PayslipController implements HasMiddleware
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    // Salary leaves this bank, so it has to hold enough.
+                    \App\Models\Bank::assertCanCover((int) $bank->account_id, (float) ($empSalary->net_salary ?? 0), $bank->name);
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,
@@ -478,6 +485,7 @@ class PayslipController implements HasMiddleware
                     ]);
                 }
                 // ── END JOURNAL ───────────────────────────────────────────
+            });
 
         } catch (\Throwable $th) {
             return response()->json([

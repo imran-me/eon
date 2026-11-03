@@ -26,6 +26,12 @@ class Notification extends Model
         'notice_published',
         'notice_updated',
         'payslip_generated',
+        'employee_payment',
+        'operation_assigned',
+        'operation_note',
+        'ticket_booking',
+        'manual_attendance_submitted',
+        'manual_attendance_decision',
     ];
 
     protected $fillable = [
@@ -33,7 +39,7 @@ class Notification extends Model
         'type',
         'data',
         'read_at',
-        'bulletin_dismissed_at'
+        'bulletin_dismissed_at',
     ];
 
     protected $casts = [
@@ -41,7 +47,7 @@ class Notification extends Model
         'read_at' => 'datetime',
         'bulletin_dismissed_at' => 'datetime',
         'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'updated_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -78,7 +84,7 @@ class Notification extends Model
      */
     public function markAsUnread()
     {
-        if (!is_null($this->read_at)) {
+        if (! is_null($this->read_at)) {
             $this->forceFill(['read_at' => null])->save();
         }
     }
@@ -141,6 +147,10 @@ class Notification extends Model
             'notice_published' => 'fas fa-bullhorn text-orange-600',
             'notice_updated' => 'fas fa-bell text-amber-600',
             'leave_applied' => 'fas fa-calendar-check text-blue-600',
+            'ticket_booking' => 'fas fa-plane-departure text-indigo-600',
+            'manual_attendance_submitted' => 'fas fa-user-clock text-amber-600',
+            'manual_attendance_decision' => 'fas fa-calendar-check text-emerald-600',
+            'employee_payment' => 'fas fa-money-check-dollar text-emerald-600',
         ];
 
         return $icons[$this->type] ?? 'fas fa-bell text-gray-600';
@@ -168,6 +178,10 @@ class Notification extends Model
             'notice_published' => 'bg-orange-100',
             'notice_updated' => 'bg-amber-100',
             'leave_applied' => 'bg-blue-100',
+            'ticket_booking' => 'bg-indigo-100',
+            'manual_attendance_submitted' => 'bg-amber-100',
+            'manual_attendance_decision' => 'bg-emerald-100',
+            'employee_payment' => 'bg-emerald-100',
         ];
 
         return $backgrounds[$this->type] ?? 'bg-gray-100';

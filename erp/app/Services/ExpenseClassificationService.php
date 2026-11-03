@@ -3,10 +3,11 @@
 namespace App\Services;
 
 use App\Models\Account;
-use App\Models\ExpenseDepartment;
 use App\Models\ExpenseCategory;
+use App\Models\ExpenseDepartment;
 use App\Models\ExpenseSubCategory;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * What an expense is FOR — Company › Department › Category › Sub-category.
@@ -28,6 +29,113 @@ use Illuminate\Support\Collection;
  */
 class ExpenseClassificationService
 {
+    /** Departments used for company-wide operating costs, not project costs. */
+    public const OPERATING_COST_DEPARTMENT_DESCRIPTION = 'Overall Cost';
+
+    /** @var Collection<int, int>|null */
+    private ?Collection $mainExpenseAccountIds = null;
+
+    /**
+     * Expense heads that belong on ERP's operational Expense desk.
+     *
+     * Everything else is still a valid chart-of-accounts head, but is entered
+     * from Accounting > Payment Entry. Keeping this list in one server-side
+     * place makes the split a posting rule rather than a dropdown convention.
+     */
+    public const MAIN_EXPENSE_ACCOUNT_NAMES = [
+        'Consultancy Fees',
+        'Bank Fees and Charges',
+        'Cleaning and Freshness',
+        'Corporate Mobile Bill',
+        'Cultural Program & Entertainment',
+        'Management Remuneration',
+        'Office Accessories',
+        'Office Stationery & Printing',
+        'Online Marchant banking Charge',
+        'Product Sourcing Cost',
+        'Repairs and Maintenance',
+        'Salaries and Employee Wages',
+        'Sales Commission',
+        'Transportation',
+        'Software renewal & Subscription',
+        'CHAT-GPT',
+        'Other Software Expense',
+        'Website Maintenance',
+        'ERP (Accounting Software)',
+        'Electricity Expense',
+        'Corporate Office (Electricity)',
+        'Other Office Electricity',
+        'Rent Expense',
+        'Corporate Office Rent Expense',
+        'Other Office Rent Expense',
+        'Service Charge (Rent)',
+        'Corporate Office Service Charge',
+        'Other Office Service Charge',
+        'Brand Development Expenses',
+        'In-house Content Expenses',
+        'Out Source Content Expenses',
+        'Internet Expenses',
+        'Corporate Office Internet Expense',
+        'Others Internet Expense',
+        'Employee Benefits',
+        'Performance Bonus',
+        'Training Allowances',
+        'Food & Allowance',
+        'Snacks and Entertainment',
+        'VAT Expense',
+        'VAT On Office Rent',
+        'VAT On Sales',
+    ];
+
+    /** @return Collection<int, int> */
+    public function mainExpenseAccountIds(): Collection
+    {
+        if ($this->mainExpenseAccountIds !== null) {
+            return $this->mainExpenseAccountIds;
+        }
+
+        $wanted = collect(self::MAIN_EXPENSE_ACCOUNT_NAMES)
+            ->map(fn (string $name) => $this->normaliseAccountName($name))
+            ->flip();
+
+        $accounts = Account::query()
+            ->where('type', 'expense')
+            ->where('status', 1)
+            ->get(['id', 'name', 'parent_id']);
+
+        // Charts created by the newer setup use a 6000 OPERATING EXPENSES
+        // parent and more formal leaf names (for example "Office Supplies &
+        // Stationery"). They are the same operating-expense family, so accept
+        // that tree as well as the owner's legacy names. Do not include the
+        // summary parent itself: payment lines belong on a posting head.
+        $operatingRoots = $accounts
+            ->filter(fn (Account $account) => in_array($this->normaliseAccountName($account->name), [
+                'operating expense',
+                'operating expenses',
+            ], true))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        $allowedIds = $accounts
+            ->filter(fn (Account $account) => $wanted->has($this->normaliseAccountName($account->name)))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+        $frontier = $operatingRoots;
+
+        while ($frontier->isNotEmpty()) {
+            $children = $accounts
+                ->filter(fn (Account $account) => $frontier->contains((int) $account->parent_id))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->values();
+            $allowedIds = $allowedIds->merge($children);
+            $frontier = $children;
+        }
+
+        return $this->mainExpenseAccountIds = $allowedIds->unique()->values();
+    }
+
     /**
      * Everything the picker needs, in one payload.
      *
@@ -44,6 +152,8 @@ class ExpenseClassificationService
      */
     public function payload(?int $companyId = null): array
     {
+        $allowedAccountIds = $this->mainExpenseAccountIds();
+
         $categories = ExpenseCategory::query()
             ->where('status', 1)
             ->when($companyId, fn ($q) => $q->where(
@@ -56,21 +166,32 @@ class ExpenseClassificationService
             ->where('status', 1)
             ->whereIn('expense_category_id', $categories->pluck('id'))
             ->orderBy('name')
-            ->get(['id', 'name', 'company_id', 'expense_category_id']);
+            ->get(['id', 'name', 'company_id', 'expense_category_id', 'account_id']);
+
+        $subCategories = $subCategories
+            ->filter(fn (ExpenseSubCategory $subCategory) => $allowedAccountIds->contains((int) $subCategory->account_id))
+            ->values();
+
+        $categoryIdsWithAllowedChildren = $subCategories->pluck('expense_category_id')->map(fn ($id) => (int) $id);
+        $categories = $categories
+            ->filter(fn (ExpenseCategory $category) => $allowedAccountIds->contains((int) $category->account_id)
+                || $categoryIdsWithAllowedChildren->contains((int) $category->id))
+            ->values();
 
         return [
             'categories' => $categories->map(fn ($c) => [
-                'id'         => $c->id,
-                'name'       => $c->name,
+                'id' => $c->id,
+                'name' => $c->name,
                 'company_id' => $c->company_id,
                 'account_id' => $c->account_id,
             ])->values(),
 
             'subCategories' => $subCategories->map(fn ($s) => [
-                'id'          => $s->id,
-                'name'        => $s->name,
+                'id' => $s->id,
+                'name' => $s->name,
                 'category_id' => $s->expense_category_id,
-                'company_id'  => $s->company_id,
+                'account_id' => $s->account_id,
+                'company_id' => $s->company_id,
             ])->values(),
 
             'departments' => $this->departments($companyId)->values(),
@@ -91,14 +212,21 @@ class ExpenseClassificationService
     {
         return ExpenseDepartment::query()
             ->where('status', 1)
+            ->where('description', self::OPERATING_COST_DEPARTMENT_DESCRIPTION)
             ->when($companyId, fn ($q) => $q->where('company_id', $companyId))
             ->orderBy('name')
             ->get(['id', 'name', 'company_id'])
             ->map(fn (ExpenseDepartment $d) => [
-                'id'         => $d->id,
-                'name'       => $d->name,
+                'id' => $d->id,
+                'name' => $d->name,
                 'company_id' => (int) $d->company_id,
             ]);
+    }
+
+    public function isOperatingCostDepartment(ExpenseDepartment $department): bool
+    {
+        return $department->status
+            && strcasecmp(trim((string) $department->description), self::OPERATING_COST_DEPARTMENT_DESCRIPTION) === 0;
     }
 
     /**
@@ -121,18 +249,59 @@ class ExpenseClassificationService
      */
     public function accountFor(?int $categoryId, ?int $subCategoryId = null): ?int
     {
-        $mapped = $subCategoryId
+        $subMapped = $subCategoryId
             ? ExpenseSubCategory::whereKey($subCategoryId)->value('account_id')
             : null;
 
-        $mapped = $mapped ?: ($categoryId
-            ? ExpenseCategory::whereKey($categoryId)->value('account_id')
-            : null);
-
-        if ($mapped) {
-            return (int) $mapped;
+        if ($this->isPostableExpenseAccount($subMapped)) {
+            return (int) $subMapped;
         }
 
-        return Account::where('code', config('accounts.general_expense'))->value('id');
+        $categoryMapped = $categoryId
+            ? ExpenseCategory::whereKey($categoryId)->value('account_id')
+            : null;
+
+        if ($this->isPostableExpenseAccount($categoryMapped)) {
+            return (int) $categoryMapped;
+        }
+
+        return Account::query()
+            ->where('code', config('accounts.general_expense'))
+            ->where('type', 'expense')
+            ->where('status', 1)
+            ->value('id');
+    }
+
+    /** Persist each line's classification and resolved head, not just a header label. */
+    public function resolveLine(array $line, int $companyId, ?int $defaultCategory, ?int $defaultSub): array
+    {
+        $categoryId = ! empty($line['expense_category_id']) ? (int) $line['expense_category_id'] : $defaultCategory;
+        $subId = ! empty($line['expense_sub_category_id']) ? (int) $line['expense_sub_category_id']
+            : (empty($line['expense_category_id']) ? $defaultSub : null);
+        $category = $categoryId ? ExpenseCategory::find($categoryId) : null;
+        $sub = $subId ? ExpenseSubCategory::find($subId) : null;
+        if (! $category || ! $category->status || ($category->company_id && (int) $category->company_id !== $companyId)) {
+            throw ValidationException::withMessages(['items' => 'Choose an active line category available to this company.']);
+        }
+        if ($subId && (! $sub || ! $sub->status || (int) $sub->expense_category_id !== $categoryId
+            || ($sub->company_id && (int) $sub->company_id !== $companyId))) {
+            throw ValidationException::withMessages(['items' => 'The line sub-category must belong to its category and company.']);
+        }
+        $accountId = ! empty($line['account_id']) ? (int) $line['account_id'] : $this->accountFor($categoryId, $subId);
+        if (! $this->isPostableExpenseAccount($accountId)) {
+            throw ValidationException::withMessages(['items' => 'Choose an active expense head for every line.']);
+        }
+
+        return ['expense_category_id' => $categoryId, 'expense_sub_category_id' => $subId, 'account_id' => $accountId];
+    }
+
+    private function isPostableExpenseAccount($accountId): bool
+    {
+        return $accountId && $this->mainExpenseAccountIds()->contains((int) $accountId);
+    }
+
+    private function normaliseAccountName(string $name): string
+    {
+        return mb_strtolower((string) preg_replace('/\s+/u', ' ', trim($name)));
     }
 }

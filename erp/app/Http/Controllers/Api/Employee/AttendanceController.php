@@ -102,6 +102,9 @@ class AttendanceController extends Controller
                 return $dateString >= Carbon::parse($leave->start_date)->toDateString()
                     && $dateString <= Carbon::parse($leave->end_date)->toDateString();
             });
+            $approvedLateIn = $leaveRecord?->leave_type?->exempts_late_deduction
+                ? $leaveRecord
+                : null;
 
             $holidayRecord = $holidays->first(function ($holiday) use ($dateString) {
                 return $dateString >= Carbon::parse($holiday->start_date)->toDateString()
@@ -121,12 +124,16 @@ class AttendanceController extends Controller
                     $lateThreshold = Carbon::parse($dateString . ' ' . $record->shift->start_time)->addMinutes($graceMinutes);
                     $checkInTime = Carbon::parse($dateString . ' ' . $checkIn);
 
-                    if ($checkInTime->gt($lateThreshold)) {
+                    if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                         $lateMinutes = $checkInTime->diffInMinutes($lateThreshold);
                         $status = 'Late';
                         $summary['late']++;
                         $summary['late_minutes'] += $lateMinutes;
                     }
+                }
+
+                if ($approvedLateIn) {
+                    $note = 'Approved Late In (until ' . Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                 }
 
                 $summary['present']++;
@@ -163,7 +170,7 @@ class AttendanceController extends Controller
                 continue;
             }
 
-            if ($leaveRecord) {
+            if ($leaveRecord && !$approvedLateIn) {
                 $summary['leave']++;
                 $records->push([
                     'date' => $dateString,
@@ -255,6 +262,7 @@ class AttendanceController extends Controller
                 ->get();
 
             $leaves = Leave::query()
+                ->with('leave_type')
                 ->where('user_id', $userId)
                 ->where('status', 'approved')
                 ->whereDate('start_date', '<=', $calendarEnd->toDateString())
@@ -370,6 +378,7 @@ class AttendanceController extends Controller
             })->get();
 
         $leaves = Leave::query()
+            ->with('leave_type')
             ->where('user_id', $userId)
             ->where('status', 'approved')
             ->where(function ($query) use ($startDate, $endDate) {

@@ -245,6 +245,30 @@ class FinancingLoan extends Model
         return max(0, round($this->exposure - $this->settled_amount, 2));
     }
 
+    /**
+     * What came back BEYOND the balance — the amount the account has swung past
+     * zero and now runs the other way.
+     *
+     * The clamp above is right for the figure it labels: "Still To Collect"
+     * cannot sensibly read minus six thousand, and progress_pct, the register
+     * and the KPI cards are all built on it staying at or above zero. But the
+     * clamp does not make the money disappear, it only stops that one number
+     * from mentioning it — collecting 20,000 on a running balance of 14,000
+     * moved 1351 Director's Current Account to −6,000, exactly right, while the
+     * desk went on saying 0.00 as though the account were merely clear.
+     *
+     * So the overshoot is answered by its own accessor rather than by loosening
+     * the clamp. On a running account it is ordinary: a current account swings
+     * both ways, and past zero it simply means the company owes him now. On a
+     * fixed loan it should never appear at all — recordPayment() refuses a
+     * payment larger than what is left to settle — so if it ever does, it is
+     * evidence of rows written before that refusal existed.
+     */
+    public function getOverpaidAttribute(): float
+    {
+        return max(0, round($this->settled_amount - $this->exposure, 2));
+    }
+
     public function getProgressPctAttribute(): float
     {
         $exposure = $this->exposure;

@@ -54,11 +54,15 @@
                                 <select id="edit_company_id" name="company_id" required
                                     class="w-full text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 select2" style="width:100%">
                                     <option value="">-- Select Company --</option>
+                                    @if($canViewAllBanks)
+                                        <option value="shared">GROUP / SHARED — All Companies</option>
+                                    @endif
                                     @foreach ($companies as $company)
                                         <option value="{{ $company->id }}">{{ $company->name }}</option>
                                     @endforeach
                                 </select>
                                 <p id="edit_company_id_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select a company</p>
+                                @if($canViewAllBanks)<p class="mt-1 text-[10px] leading-4 text-amber-600">Shared accounts are available to transactions from every company. Use only for centrally managed group funds.</p>@endif
                             </div>
                             <div>
                                 <label for="edit_type" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -68,6 +72,7 @@
                                     class="w-full text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 select2" style="width:100%">
                                     <option value="">-- Select Type --</option>
                                     <option value="bank">Bank</option>
+                                    <option value="credit_card">Credit Card</option>
                                     <option value="cash">Cash</option>
                                     <option value="mobile_banking">Mobile Banking</option>
                                     <option value="digital_wallet">Digital Wallet</option>
@@ -129,7 +134,7 @@
                                     @foreach ($accounts as $account)
                                     {{-- Code first: several accounts share a name (Office Cash / OFFICE CASH),
                                          and the code is the only thing that tells them apart. --}}
-                                    <option value="{{ $account->id }}">{{ $account->code }} — {{ $account->name }} ({{ $account->type }})</option>
+                                    <option value="{{ $account->id }}" data-ledger-type="{{ $account->type }}">{{ $account->code }} — {{ $account->name }} ({{ $account->type }})</option>
                                     @endforeach
                                 </select>
                                 <p class="text-amber-600 text-[11px] mt-1">Changing this relinks the bank directly to that account and moves its whole transaction history over — use only to fix a wrong/broken link.</p>
@@ -153,6 +158,8 @@
                                     <option value="savings">Savings</option>
                                     <option value="current">Current</option>
                                     <option value="fixed">Fixed</option>
+                                    <option value="credit_card">Credit Card</option>
+                                    <option value="personal">Personal</option>
                                 </select>
                                 <p id="edit_account_type_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select an account type</p>
                             </div>
@@ -171,11 +178,20 @@
                             </div>
                             <div>
                                 <label for="edit_balance" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                                    Balance <span class="text-red-500">*</span>
+                                    Opening Balance <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" id="edit_balance" name="balance" placeholder="Enter an amount"
                                     class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 transition">
                                 <p id="edit_balance_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please enter an amount</p>
+                                <p class="text-gray-400 text-[11px] mt-1">This is not the current balance. It creates or updates the first opening journal entry.</p>
+                            </div>
+                            <div>
+                                <label for="edit_opening_balance_date" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                                    Opening Balance Date
+                                </label>
+                                <input type="date" id="edit_opening_balance_date" name="opening_balance_date" max="{{ now()->toDateString() }}"
+                                    class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 transition">
+                                <p id="edit_opening_balance_date_msg" class="text-red-500 text-xs mt-1 hidden error-message">Select a date on or before the first transaction</p>
                             </div>
                         </div>
                     </div>

@@ -159,62 +159,19 @@
                 </div>
 
                 <div class="states-table-content">
-                    <form action="" method="get">
+                    {{-- Filter bar — the Manage Flights strip. The sheet is one
+                         month (the header's picker, hidden date=), so no date
+                         range and no template filter here. --}}
+                    <form action="{{ route('role.employee-salaries.index', ['role' => $role]) }}" method="get">
                         <input type="hidden" name="date" value="{{ $period }}">
                         @if($companyId)
                             <input type="hidden" name="company_id" value="{{ $companyId }}">
                         @endif
-                        <div class="filter-container">
-                            <div class="filter-header">
-                                <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                            <div class="filter-content">
-                                <div class="closest filter-row">
-                                    <div class="filter-group">
-                                        <label for="employee_search">Employee ID / Name</label>
-                                        <input type="text" id="employee_search" name="search" class="form-control"
-                                            value="{{ request('search') }}" placeholder="e.g. EG25 109" style="width: 100%">
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="user_id">Employee</label>
-                                        <select id="user_id" name="user_id" class="form-control select2" style="width: 100%">
-                                            <option value="" data-emp-id="">All</option>
-                                            {{-- $salaryUsers so a resigned employee's sheet stays reachable. --}}
-                                            @foreach ($salaryUsers as $user)
-                                                <option value="{{ $user->id }}" data-emp-id="{{ $user->employee_id_no }}"
-                                                    {{ $user->id == request('user_id') ? 'selected' : '' }}>{{ $user->name }}{{ $user->employee_id_no ? ' — ' . $user->employee_id_no : '' }}@if($user->status !== 'active') ({{ $user->status ?: 'inactive' }})@endif
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="salary_template_id">Salary Template</label>
-                                        <select id="salary_template_id" name="salary_template_id" class="form-control select2"
-                                            style="width: 100%">
-                                            <option value="">All</option>
-                                            @foreach ($templates as $template)
-                                                <option value="{{ $template->id }}"
-                                                    {{ $template->id == request('salary_template_id') ? 'selected' : '' }}>
-                                                    {{ $template->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="status">Status</label>
-                                        <select id="status" name="status" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            <option value="Pending" {{ request('status') == 'Pending' ? 'selected' : '' }}>Pending</option>
-                                            <option value="Paid" {{ request('status') == 'Paid' ? 'selected' : '' }}>Paid</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="filter-actions">
-                                    <button type="button" class="reset-btn">Reset</button>
-                                    <button type="submit" class="apply-btn">Apply Filters</button>
-                                </div>
-                            </div>
-                        </div>
+                        <x-payroll-filter-bar placeholder="Search employee name or ID…" :dates="false"
+                            :segments="[['name' => 'status', 'label' => 'Status', 'options' => ['Pending' => 'Pending', 'Paid' => 'Paid']]]"
+                            :reset="route('role.employee-salaries.index', ['role' => $role])" :keep="['company_id', 'date']"
+                            :total="$datas->total()">
+                        </x-payroll-filter-bar>
                     </form>
 
                     <!-- Table with Data -->
@@ -254,8 +211,8 @@
                                     <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:8%">
                                         <i class="fas fa-tag mr-1 text-yellow-400"></i>Status
                                     </th>
-                                    @canany(['edit salary', 'delete salary', 'view salary'])
-                                        <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:10%">
+                                    @canany(['edit salary', 'delete salary', 'view salary', 'edit payment schedule'])
+                                        <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                             <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                         </th>
                                     @endcan
@@ -271,7 +228,7 @@
                                         </td>
                                         <td class="px-4 py-3 whitespace-nowrap">
                                             @if($value->user)
-                                                <a href="{{ route('role.user.summary', ['role' => $role, 'user' => $value->user_id]) }}"
+                                                <a href="{{ route('role.employee-ledger.show', ['role' => $role, 'user' => $value->user_id]) }}"
                                                     class="flex items-center gap-2 group" title="View {{ $value->user->name }}'s profile">
                                                     <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold uppercase">
                                                         {{ strtoupper(substr($value->user->name, 0, 2)) }}
@@ -357,10 +314,10 @@
                                             @endif
                                         </td>
                                         @php
-                                            $isPaid = strtolower($value->status) == 'paid';
                                             $activeSchedule = $value->schedules->firstWhere(fn($s) => in_array($s->status, ['pending', 'overdue', 'approved']));
-                                            $paidSoFar = \App\Models\PaymentSchedule::paidTotal($value->schedules);
+                                            $paidSoFar = \App\Models\EmployeePaymentAllocation::paidForSalary($value->id);
                                             $due = max(0, (float) $value->net_salary - $paidSoFar);
+                                            $isPaid = $due <= 0.01;
                                             $isPartial = !$isPaid && $paidSoFar > 0;
                                         @endphp
                                         <td class="px-4 py-3 whitespace-nowrap text-center">
@@ -379,33 +336,36 @@
                                                 </span>
                                             @endif
                                         </td>
-                                        @canany(['edit salary', 'delete salary', 'view salary'])
-                                            <td class="px-4 py-3 whitespace-nowrap text-center">
-                                                <div class="flex items-center justify-center gap-1">
+                                        @canany(['edit salary', 'delete salary', 'view salary', 'edit payment schedule'])
+                                            <td class="px-2 py-3 whitespace-nowrap text-center">
+                                                <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                                     @can('view salary')
                                                         <a href="{{ route('role.employee-salaries.show', ['role' => $role, 'employee_salary' => $value->id]) }}"
-                                                            class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150"
+                                                            class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150"
                                                             title="View Salary Slip">
-                                                            <i class="fas fa-file-invoice-dollar"></i>
-                                                            <span>Slip</span>
+                                                            <i class="fas fa-file-invoice-dollar" style="font-size:11px"></i>
                                                         </a>
                                                     @endcan
-                                                    @can('edit salary')
-                                                        @if($activeSchedule)
+                                                    @can('edit payment schedule')
+                                                        @if(!$isPaid && $due > 0.01)
                                                             <button type="button"
-                                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150 pay-item-btn"
-                                                                data-schedule_id="{{ $activeSchedule->id }}"
+                                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150 salary-pay-now-btn"
                                                                 data-employee_name="{{ $value->user?->name ?? 'Employee' }}"
+                                                                data-user_id="{{ $value->user_id }}"
+                                                                data-salary_id="{{ $value->id }}"
                                                                 data-due_amount="{{ $due }}"
-                                                                data-scheduled_date="{{ $activeSchedule->scheduled_date ? \Carbon\Carbon::parse($activeSchedule->scheduled_date)->format('Y-m-d') : date('Y-m-d') }}"
-                                                                title="Record Payment">
-                                                                <i class="fas fa-money-bill-wave text-xs"></i>
+                                                                title="Pay this payslip (schedule independent)">
+                                                                <i class="fas fa-money-bill-wave" style="font-size:11px"></i>
                                                             </button>
                                                         @endif
                                                     @endcan
                                                     @can('edit salary')
+                                                        @php
+                                                            $postedPaymentMethod = optional(optional($value->paymentAllocations->first())->payment)->payment_method;
+                                                            $editPaymentMethod = $postedPaymentMethod ?: ($value->payment_method ?: 'cash');
+                                                        @endphp
                                                         <button
-                                                            class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
+                                                            class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
                                                             data-item_id="{{ $value->id }}"
                                                             data-user_id="{{ $value->user_id }}"
                                                             data-salary_template_id="{{ $value->salary_template_id }}"
@@ -414,23 +374,37 @@
                                                             data-gross_salary="{{ $value->gross_salary }}"
                                                             data-total_deductions="{{ $value->total_deductions }}"
                                                             data-net_salary="{{ $value->net_salary }}"
+                                                            {{-- The parts Net Salary is made of. Without them the modal
+                                                                 could only ever recompute gross − deductions, which is
+                                                                 how an edit used to quietly drop the overtime pay. --}}
+                                                            data-absent_deduction="{{ $value->absent_deduction }}"
+                                                            data-leave_deduction="{{ $value->leave_deduction }}"
+                                                            data-late_deduction="{{ $value->late_deduction }}"
+                                                            data-early_leave_deduction="{{ $value->early_leave_deduction }}"
+                                                            data-loan_deduction="{{ $value->loan_deduction }}"
+                                                            data-advance_salary_deduction="{{ $value->advance_salary_deduction }}"
+                                                            data-over_time="{{ $value->over_time }}"
+                                                            data-over_time_days="{{ $value->over_time_days }}"
+                                                            data-overtime_salary="{{ $value->overtime_salary }}"
+                                                            data-bonus_amount="{{ $value->bonus_amount }}"
+                                                            data-salary_adjustment="{{ $value->salary_adjustment }}"
                                                             data-payment_date="{{ $value->salary_generation_date ? \Carbon\Carbon::parse($value->salary_generation_date)->format('Y-m-d') : date('Y-m-d') }}"
                                                             data-scheduled_date="{{ $value->scheduled_date ? \Carbon\Carbon::parse($value->scheduled_date)->format('Y-m-d') : '' }}"
-                                                            data-payment_method="{{ $value->payment_method }}"
+                                                            data-payment_method="{{ $editPaymentMethod }}"
                                                             data-bank_id="{{ $value->bank_id }}"
                                                             data-status="{{ $value->status }}"
                                                             data-notes="{{ $value->notes }}"
                                                             title="Edit">
-                                                            <i class="fas fa-edit text-xs"></i>
+                                                            <i class="fas fa-edit" style="font-size:11px"></i>
                                                         </button>
                                                     @endcan
                                                     @can('delete salary')
                                                         @if (strtolower($value->status) != 'paid')
                                                             <button
-                                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
+                                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
                                                                 onclick="confirmDelete('{{ $value->id }}', 'this item')"
                                                                 title="Delete">
-                                                                <i class="fas fa-trash text-xs"></i>
+                                                                <i class="fas fa-trash" style="font-size:11px"></i>
                                                             </button>
                                                         @endif
                                                     @endcan
@@ -709,9 +683,12 @@
                     <button type="button" class="modal-close-pay text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
                 </div>
                 <form id="markPaidForm" method="POST"
-                    data-url-template="{{ route('role.payment-schedules.mark-paid', ['role' => $role, 'schedule' => 'REPLACE_ID']) }}">
+                    data-url-template="{{ route('role.payment-schedules.mark-paid', ['role' => $role, 'schedule' => 'REPLACE_ID']) }}"
+                    data-direct-url-template="{{ route('role.user.pay-due-amount', ['role' => $role, 'user' => 'REPLACE_USER']) }}">
                     @csrf
                     @method('PATCH')
+                    <input type="hidden" name="employee_salary_id" id="mp_employee_salary_id">
+                    <input type="hidden" name="amount" id="mp_direct_amount">
                     <div class="py-4">
                         <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-3 flex items-center justify-between mb-4">
                             <div>
@@ -773,9 +750,7 @@
                                 <select name="bank_id" id="mp_bank_id" required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                                     <option value="">— Select Bank —</option>
-                                    @foreach ($banks as $bank)
-                                        <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                    @endforeach
+                                    @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                                 </select>
                             </div>
                             <div class="col-span-2">
@@ -805,6 +780,23 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
+        // Whole-taka display, always rounded up — the JS-side twin of the blade
+        // $taka() helper. Used only for on-screen figures; the amount actually
+        // posted still comes from the untouched input value.
+        //
+        // Declared here, at page scope, on purpose. It used to live inside the
+        // first $(document).ready() block while the create form's attendance
+        // handler — a separate <script> block, so a separate scope — called it.
+        // That threw ReferenceError on the first breakdown line and killed the
+        // rest of the handler, which is where the net salary was recalculated
+        // and the "Fetching attendance data..." note was cleared. Three ৳50,000
+        // payslips were filed at ৳8,064.60, ৳6,666.58 and ৳6,451.70 because of
+        // it between 2026-08-04 and 2026-08-20. Keep it out here.
+        function takaWhole(amount) {
+            return Math.ceil(parseFloat(amount) || 0).toLocaleString('en-US');
+        }
+    </script>
+    <script>
         $(document).ready(function() {
 
             // initialized select2
@@ -818,6 +810,8 @@
 
             // Show create modal
             $('.create-new-btn').click(function() {
+                setCreateSubmitting(false);
+                $('#createProcessingNotice').addClass('hidden');
                 $('#createModal').removeClass('hidden');
             });
 
@@ -826,6 +820,7 @@
 
             // Show edit modal
             $('.edit-item-btn').click(function() {
+                setEditSubmitting(false);
                 const item_id = $(this).data('item_id');
                 const user_id = $(this).data('user_id');
                 const salary_template_id = $(this).data('salary_template_id');
@@ -846,6 +841,29 @@
                 const updateUrl = urlTemplate.replace('REPLACE_ID', item_id);
                 $('#editSubmit').data('action', updateUrl);
 
+                // The parts Net Salary is built from. Loaded before anything
+                // that can trigger a recalculation, so the first recalculation
+                // already has the overtime and bonus in hand.
+                $('#edit_absent_deduction').val($(this).data('absent_deduction') || 0);
+                $('#edit_leave_deduction').val($(this).data('leave_deduction') || 0);
+                $('#edit_late_deduction').val($(this).data('late_deduction') || 0);
+                $('#edit_early_leave_deduction').val($(this).data('early_leave_deduction') || 0);
+                $('#edit_over_time').val($(this).data('over_time') || 0);
+                $('#edit_over_time_days').val($(this).data('over_time_days') || 0);
+                $('#edit_overtime_salary').val($(this).data('overtime_salary') || 0);
+                $('#edit_bonus_amount').val($(this).data('bonus_amount') || 0);
+                $('#edit_salary_adjustment').val($(this).data('salary_adjustment') || 0);
+                // Reference only — not posted, but a recalculated Total
+                // Deductions still has to carry them.
+                $('#edit_loan_deduction_ref').val($(this).data('loan_deduction') || 0);
+                $('#edit_advance_salary_deduction_ref').val($(this).data('advance_salary_deduction') || 0);
+
+                // A fresh open starts with no recalculation on screen — what is
+                // shown is what is stored on the row.
+                $('#edit_deduction_breakdown_container, #edit_overtime_salary_container, #edit_attendance_summary_container, #edit_fixed_salary_notice')
+                    .addClass('hidden');
+                $('#edit_recalculate_status').text('').removeClass('text-red-600 text-green-600').addClass('text-gray-500');
+
                 // Set values in the edit form
                 $('#editItemId').val(item_id);
                 $('#edit_user_id').val(user_id).trigger('change');
@@ -853,6 +871,9 @@
                 $('#edit_date').val(`${year}-${String(month).padStart(2, '0')}`);
                 $('#edit_gross_salary').val(gross_salary);
                 $('#edit_total_deductions').val(total_deductions);
+                // Last, and deliberately: the template/gross handlers above
+                // recompute this field, and on opening we want the figure the
+                // row actually holds, not a fresh one.
                 $('#edit_net_salary').val(net_salary);
                 $('#edit_payment_date').val(payment_date);
                 $('#edit_scheduled_date').val(scheduled_date);
@@ -923,14 +944,26 @@
                 }
             })();
 
-            // Whole-taka display, always rounded up — the JS-side twin of the
-            // blade $taka() helper. Used only for on-screen figures; the amount
-            // actually posted still comes from the untouched input value.
-            const takaWhole = (amount) =>
-                Math.ceil(parseFloat(amount) || 0).toLocaleString('en-US');
+            // takaWhole() is declared at page scope near the top of this file —
+            // every modal script block on this page needs it.
+
+            // Note field doubled as the payment's reference number but was
+            // left for the person to type. Pre-fills the same 'SAL-{YmdHis}'
+            // shape the bank ledger's Cash In/Out and other modules now
+            // preview before saving — still a normal editable field for a
+            // real cheque or transfer reference.
+            function setSalaryNoteNow() {
+                const now = new Date();
+                const pad2 = n => String(n).padStart(2, '0');
+                const ymdhis = now.getFullYear() + pad2(now.getMonth() + 1) + pad2(now.getDate())
+                    + pad2(now.getHours()) + pad2(now.getMinutes()) + pad2(now.getSeconds());
+                $('#mp_note').val('SAL-' + ymdhis);
+            }
 
             // Show mark-paid modal
             $('.pay-item-btn').click(function() {
+                $('#markPaidForm').data('direct-payment', false).find('input[name="_method"]').prop('disabled', false);
+                $('#mp_employee_salary_id, #mp_direct_amount').val('');
                 const scheduleId = $(this).data('schedule_id');
                 const employeeName = $(this).data('employee_name');
                 const dueAmount = parseFloat($(this).data('due_amount')) || 0;
@@ -941,7 +974,7 @@
                 $('#mp_payment_date').val('{{ now()->format('Y-m-d') }}');
                 $('#mp_payment_method').val('');
                 $('#mp_bank_id').val('');
-                $('#mp_note').val('');
+                setSalaryNoteNow();
                 $('#mp_partial_toggle').prop('checked', false);
                 $('#mp_partial_fields').addClass('hidden');
                 $('#mp_paid_amount').val('').prop('required', false).attr('max', dueAmount);
@@ -951,6 +984,29 @@
                 const actionUrlTemplate = $('#markPaidForm').data('url-template');
                 $('#markPaidForm').attr('action', actionUrlTemplate.replace('REPLACE_ID', scheduleId));
 
+                $('#markPaidModal').removeClass('hidden').addClass('flex');
+            });
+
+            $('.salary-pay-now-btn').click(function() {
+                const userId = $(this).data('user_id');
+                const salaryId = $(this).data('salary_id');
+                const dueAmount = parseFloat($(this).data('due_amount')) || 0;
+                window._mpDueAmount = dueAmount;
+                $('#mp_employee_name').text($(this).data('employee_name'));
+                $('#mp_due_amount').text('৳ ' + takaWhole(dueAmount));
+                $('#mp_payment_date').val('{{ now()->format('Y-m-d') }}');
+                $('#mp_payment_method, #mp_bank_id').val('');
+                $('#mp_paid_amount').val('');
+                setSalaryNoteNow();
+                $('#mp_partial_toggle').prop('checked', false);
+                $('#mp_partial_fields').addClass('hidden');
+                $('#mp_paid_amount').prop('required', false).attr('max', dueAmount);
+                $('#mp_employee_salary_id').val(salaryId);
+                $('#mp_direct_amount').val(dueAmount);
+                const form = $('#markPaidForm');
+                form.data('direct-payment', true);
+                form.find('input[name="_method"]').prop('disabled', true);
+                form.attr('action', form.data('direct-url-template').replace('REPLACE_USER', userId));
                 $('#markPaidModal').removeClass('hidden').addClass('flex');
             });
 
@@ -972,14 +1028,55 @@
                 $('#mp_remaining_display').text('৳ ' + takaWhole(remaining));
             }
 
+            $('#markPaidForm').on('submit', function(e) {
+                const form = $(this);
+                if (!form.data('direct-payment')) return;
+                e.preventDefault();
+                const amount = $('#mp_partial_toggle').is(':checked')
+                    ? (parseFloat($('#mp_paid_amount').val()) || 0)
+                    : (window._mpDueAmount || 0);
+                $('#mp_direct_amount').val(amount);
+                const submit = form.find('button[type="submit"]').prop('disabled', true);
+                $.ajax({ url: form.attr('action'), method: 'POST', data: form.serialize() })
+                    .done(function(response) {
+                        if (response.success) window.location.reload();
+                        else { Swal.fire('Payment failed', response.message || 'Something went wrong.', 'error'); submit.prop('disabled', false); }
+                    })
+                    .fail(function(xhr) {
+                        Swal.fire('Payment failed', xhr.responseJSON?.message || 'Something went wrong.', 'error');
+                        submit.prop('disabled', false);
+                    });
+            });
+
             $('.modal-close-pay, .modal-backdrop').click(function(e) {
                 if ($(e.target).hasClass('modal-backdrop') || $(e.target).closest('.modal-close-pay').length) {
                     $('#markPaidModal').addClass('hidden').removeClass('flex');
                 }
             });
 
+            function setCreateSubmitting(isSubmitting) {
+                $('#createProcessingNotice').toggleClass('hidden', !isSubmitting);
+                $('#createSubmit')
+                    .prop('disabled', isSubmitting)
+                    .toggleClass('opacity-70 cursor-not-allowed', isSubmitting);
+                $('#createSubmitText').toggleClass('hidden', isSubmitting);
+                $('#createSubmitLoading').toggleClass('hidden', !isSubmitting);
+                $('.modal-close-create')
+                    .prop('disabled', isSubmitting)
+                    .toggleClass('opacity-60 cursor-not-allowed', isSubmitting);
+            }
+
+            // A previous AJAX request can finish after the modal has already
+            // closed. Always initialise the create controls in their idle state;
+            // the spinner becomes visible only from AJAX beforeSend.
+            setCreateSubmitting(false);
+
             // Close modals
             $('.modal-close-create, .modal-backdrop').click(function(e) {
+                if ($('#createSubmit').prop('disabled')) {
+                    return;
+                }
+
                 if ($(e.target).closest('.modal-close-create').length || $(e.target).hasClass(
                         'modal-backdrop')) {
                     $('#createModal').addClass('hidden');
@@ -1005,9 +1102,14 @@
                 $(this).closest('.alert').addClass('hidden');
             });
 
-            // Create state form submission
+            // Create salary form submission
             $('#createSubmit').click(function(e) {
                 e.preventDefault();
+
+                if ($(this).prop('disabled')) {
+                    return;
+                }
+
                 console.log(validateCreateForm());
                 if (validateCreateForm()) {
                     let formData = new FormData($('#createForm')[0]);
@@ -1017,6 +1119,9 @@
                         data: formData,
                         processData: false,
                         contentType: false,
+                        beforeSend: function() {
+                            setCreateSubmitting(true);
+                        },
                         success: function(response) {
                             if (response.success) {
                                 Swal.fire({
@@ -1042,10 +1147,23 @@
                                 title: 'Error!',
                                 text: 'Failed to create data.'
                             });
+                        },
+                        complete: function() {
+                            setCreateSubmitting(false);
                         }
                     });
                 }
             });
+
+            function setEditSubmitting(isSubmitting) {
+                $('#editSubmit').prop('disabled', isSubmitting)
+                    .toggleClass('opacity-60 cursor-not-allowed', isSubmitting);
+                $('#editSubmitIdle').toggleClass('hidden', isSubmitting);
+                $('#editSubmitLoading').toggleClass('hidden', !isSubmitting)
+                    .toggleClass('inline-flex', isSubmitting);
+            }
+
+            setEditSubmitting(false);
 
             // Edit state form submission
             $('#editSubmit').click(function() {
@@ -1057,6 +1175,9 @@
                         data: formData,
                         processData: false,
                         contentType: false,
+                        beforeSend: function() {
+                            setEditSubmitting(true);
+                        },
                         success: function(response) {
                             if (response.success) {
                                 Swal.fire({
@@ -1081,6 +1202,9 @@
                                 title: 'Error!',
                                 text: 'Something went wrong!'
                             });
+                        },
+                        complete: function() {
+                            setEditSubmitting(false);
                         }
                     });
                 }
@@ -1253,78 +1377,135 @@
         }
     </script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterHeader = document.querySelector('.filter-container .filter-header');
-            const filterContent = document.querySelector('.filter-container .filter-content');
-
-            filterHeader.addEventListener('click', function() {
-                this.classList.toggle('active');
-                filterContent.classList.toggle('active');
-            });
-
-            // Reset button functionality
-            document.querySelector('.filter-container .reset-btn').addEventListener('click', function() {
-                const inputs = document.querySelectorAll(
-                    '.filter-container select, .filter-container input');
-                inputs.forEach(input => {
-                    if (input.type === 'date') {
-                        input.value = '';
-                    } else {
-                        input.selectedIndex = 0;
-                    }
-                });
-            });
-            document.querySelector('.reset-btn').addEventListener('click', function(e) {
-                e.preventDefault();
-                window.location =
-                    '{{ route('role.employee-salaries.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}';
-            });
-
-            // Picking someone from the Employee list drops their id into the
-            // search box, so the two filters agree instead of quietly narrowing
-            // on different people.
-            var $picker = $('#user_id');
-            var $search = $('#employee_search');
-
-            if ($picker.length && $search.length) {
-                $picker.on('change', function() {
-                    var empId = $picker.find('option:selected').attr('data-emp-id') || '';
-
-                    if ($picker.val() && empId) {
-                        $search.val(empId).attr('data-autofilled', '1');
-                        return;
-                    }
-
-                    // Back to "All" — only wipe the box if we were the ones who
-                    // filled it. Someone with no id on file leaves whatever was
-                    // typed alone rather than blanking it.
-                    if (!$picker.val() && $search.attr('data-autofilled') === '1') {
-                        $search.val('').attr('data-autofilled', '0');
-                    }
-                });
-
-                // Typed by hand means the box is the user's again, not ours to clear.
-                $search.on('input', function() { $(this).attr('data-autofilled', '0'); });
-            }
-        });
-    </script>
-    <script>
         $(document).ready(function() {
+
+            const num = (selector) => parseFloat($(selector).val()) || 0;
+
+            // Same expression the server derives Net Salary from, so what the
+            // modal shows is what gets saved. The old version was
+            // gross − deductions, which silently threw away overtime pay,
+            // bonus and adjustment every time a payslip was edited.
+            function recalculateEditSalary() {
+                const netSalary = Math.ceil(num('#edit_gross_salary')
+                    + num('#edit_overtime_salary')
+                    + num('#edit_bonus_amount')
+                    + num('#edit_salary_adjustment')
+                    - num('#edit_total_deductions'));
+
+                $('#edit_net_salary').val(netSalary.toFixed(0));
+            }
 
             // When salary template changes - EDIT
             $('#edit_salary_template_id').on('change', function() {
                 let salary = $(this).find(':selected').data('salary');
                 if (salary) {
                     $('#edit_gross_salary').val(salary);
-                    let deductions = parseFloat($('#edit_total_deductions').val()) || 0;
-                    $('#edit_net_salary').val(salary - deductions);
+                    recalculateEditSalary();
                 }
             });
-            $('#edit_total_deductions').on('input', function() {
-                let gross = parseFloat($('#edit_gross_salary').val()) || 0;
-                let deductions = parseFloat($(this).val()) || 0;
-                $('#edit_net_salary').val(gross - deductions);
+
+            $('#edit_gross_salary, #edit_total_deductions').on('input', recalculateEditSalary);
+
+            // ── Recalculate from Attendance ───────────────────────────────
+            // Fixing an absent day to present in the Attendance module changed
+            // nothing on an already-generated payslip: the modal kept the
+            // deductions worked out the day it was created, and there was no
+            // way to pull them again short of deleting the payslip. This asks
+            // the same endpoint the create form uses, for the employee and
+            // month currently selected.
+            $('#edit_recalculate_btn').on('click', function() {
+                const userId = $('#edit_user_id').val();
+                const dateVal = $('#edit_date').val(); // YYYY-MM
+                const $status = $('#edit_recalculate_status');
+                const $btn = $(this);
+
+                if (!userId || !dateVal) {
+                    $status.removeClass('text-gray-500 text-green-600').addClass('text-red-600')
+                        .text('Select an employee and a salary month first.');
+                    return;
+                }
+
+                $btn.prop('disabled', true).addClass('opacity-60');
+                $status.removeClass('text-red-600 text-green-600').addClass('text-gray-500')
+                    .text('Fetching attendance…');
+
+                $.ajax({
+                    url: "{{ route('role.employee-salaries.attendance', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}",
+                    method: 'GET',
+                    data: { user_id: userId, month: dateVal },
+                    success: function(data) {
+                        const fmt = (val) => takaWhole(val);
+
+                        const absent = parseFloat(data.absent_deduction) || 0;
+                        const leave = parseFloat(data.leave_deduction) || 0;
+                        const late = parseFloat(data.late_deduction) || 0;
+                        const earlyOut = parseFloat(data.early_out_deduction) || 0;
+
+                        // Loan and advance instalments are carried over from the
+                        // row rather than taken from the response. Rewriting them
+                        // here would leave the loan register holding a repayment
+                        // this payslip no longer takes — a separate ledger this
+                        // screen has no business touching.
+                        const loan = num('#edit_loan_deduction_ref');
+                        const advance = num('#edit_advance_salary_deduction_ref');
+
+                        $('#edit_absent_deduction').val(absent);
+                        $('#edit_leave_deduction').val(leave);
+                        $('#edit_late_deduction').val(late);
+                        $('#edit_early_leave_deduction').val(earlyOut);
+                        $('#edit_over_time').val(data.summary?.overtime_minutes || 0);
+                        $('#edit_over_time_days').val(data.summary?.overtime_days || 0);
+                        $('#edit_overtime_salary').val(parseFloat(data.overtime_salary) || 0);
+
+                        $('#edit_total_deductions').val((absent + leave + late + earlyOut + loan + advance).toFixed(2));
+                        recalculateEditSalary();
+
+                        $('#edit_breakdown_absent').text(fmt(absent));
+                        $('#edit_breakdown_leave').text(fmt(leave));
+                        $('#edit_breakdown_late').text(fmt(late));
+                        $('#edit_breakdown_early_out').text(fmt(earlyOut));
+                        $('#edit_breakdown_advance').text(fmt(advance));
+                        $('#edit_breakdown_loan').text(fmt(loan));
+                        $('#edit_deduction_breakdown_container').removeClass('hidden');
+                        $('#edit_fixed_salary_notice').toggleClass('hidden', !data.fixed_salary);
+
+                        const overtimeSalary = parseFloat(data.overtime_salary) || 0;
+                        if (overtimeSalary > 0 || (data.summary?.overtime_minutes || 0) > 0) {
+                            $('#edit_breakdown_overtime_minutes').text(data.summary?.overtime_minutes || 0);
+                            $('#edit_breakdown_overtime_days').text(data.summary?.overtime_days || 0);
+                            $('#edit_breakdown_overtime_salary').text(
+                                data.overtime_eligible ? '৳ ' + fmt(overtimeSalary) : 'Not eligible for overtime pay'
+                            );
+                            $('#edit_overtime_salary_container').removeClass('hidden');
+                        } else {
+                            $('#edit_overtime_salary_container').addClass('hidden');
+                        }
+
+                        if (data.summary) {
+                            $('#edit_sum_total_days').text(data.summary.total_days);
+                            $('#edit_sum_present').text(data.summary.present);
+                            $('#edit_sum_absent').text(data.summary.absent);
+                            $('#edit_sum_leave').text(data.summary.leave);
+                            $('#edit_sum_late').text(`${data.summary.late} (${data.summary.late_minutes}m)`);
+                            $('#edit_sum_early_out').text(`${data.summary.early_out} (${data.summary.early_minutes}m)`);
+                            $('#edit_sum_holiday').text(data.summary.holiday);
+                            $('#edit_sum_overtime').text(`${data.summary.overtime_days} (${data.summary.overtime_minutes} mins)`);
+                            $('#edit_attendance_summary_container').removeClass('hidden');
+                        }
+
+                        $status.removeClass('text-gray-500 text-red-600').addClass('text-green-600')
+                            .text('Recalculated. Review the figures, then press Update to save.');
+                    },
+                    error: function() {
+                        $status.removeClass('text-gray-500 text-green-600').addClass('text-red-600')
+                            .text('Could not load attendance. Nothing was changed.');
+                    },
+                    complete: function() {
+                        $btn.prop('disabled', false).removeClass('opacity-60');
+                    }
+                });
             });
+            // ── END Recalculate from Attendance ───────────────────────────
 
         });
     </script>
@@ -1342,15 +1523,15 @@
                     $('#create_total_additions').val(totalAdditions.toFixed(2));
 
                     // Formula: Gross + Total Additions - Total Deductions
-                    const netSalary = gross + totalAdditions - deductions;
-                    $('#create_net_salary').val(netSalary.toFixed(2));
+                    const netSalary = Math.ceil(gross + totalAdditions - deductions);
+                    $('#create_net_salary').val(netSalary.toFixed(0));
                 }
 
             $('#create_gross_salary, #create_total_deductions, #create_bonus_amount, #create_salary_adjustment').on(
                 'input', recalculateSalary);
 
             $('#create_user_id, #create_date').on('change', function() {
-                $('#deduction_breakdown_container, #attendance_summary_container, #overtime_salary_container').addClass('hidden');
+                $('#deduction_breakdown_container, #attendance_summary_container, #overtime_salary_container, #fixed_salary_notice').addClass('hidden');
                 $('#breakdown_absent, #breakdown_leave, #breakdown_late, #breakdown_advance, #breakdown_loan').text('0');
                 $('#hidden_overtime_salary').val(0);
 
@@ -1401,6 +1582,21 @@
                             // 3. Set Total Deductions
                             $('#create_total_deductions').val(data.total_deductions);
 
+                            // 4. Recalculate net salary, and clear the status
+                            //    message parked in the Note box.
+                            //
+                            //    Both of these deliberately run before a single
+                            //    line of display code. They used to sit at the
+                            //    bottom, after the breakdown boxes were painted,
+                            //    so when one cosmetic line threw the handler died
+                            //    with the net salary still holding the previous
+                            //    employee's figure and the placeholder note still
+                            //    in the box — and the form saved exactly that.
+                            //    Nothing below may be allowed to decide what gets
+                            //    stored.
+                            recalculateSalary();
+                            $('#create_notes').val('');
+
                             // Display only — #create_total_deductions above still receives the raw
                             // value, so what gets saved is unaffected by this rounding.
                             const fmt = (val) => takaWhole(val);
@@ -1412,6 +1608,7 @@
                             $('#breakdown_loan').text(fmt(data.loan_deduction));
 
                             $('#deduction_breakdown_container').removeClass('hidden');
+                            $('#fixed_salary_notice').toggleClass('hidden', !data.fixed_salary);
 
                             // 5. Show overtime breakdown
                             const overtimeSalary = parseFloat(data.overtime_salary || 0);
@@ -1429,10 +1626,7 @@
                                 $('#overtime_salary_container').addClass('hidden');
                             }
 
-                            // 6. Recalculate total additions & net salary
-                            recalculateSalary();
-
-                            // 4. Attendance Summary
+                            // 6. Attendance Summary
                             if (data.summary) {
                                 $('#attendance_summary_container').removeClass('hidden');
                                 $('#sum_total_days').text(data.summary.total_days);
@@ -1449,7 +1643,6 @@
                                     `${data.summary.overtime_days} (${data.summary.overtime_minutes} mins)`
                                     );
                             }
-                            $('#create_notes').val('');
                         },
                         error: function() {
                             $('#create_notes').val('Error loading data.');

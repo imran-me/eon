@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\FlightPackageTicketBilling;
+use App\Traits\HasPartyDiscounts;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,13 +11,23 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TicketSale extends Model
 {
+    use HasPartyDiscounts;
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        $sync = fn (self $sale) => app(FlightPackageTicketBilling::class)->sync((int) $sale->id);
+        static::saved($sync);
+        static::deleted($sync);
+        static::restored($sync);
+    }
 
     protected $table = 'ticket_sales';
 
     protected $fillable = [
         'company_id',
         'bank_id',
+        'payment_instruction_bank_id',
         'paid_amount',
         'due_amount',
         'payment_status',
@@ -48,7 +60,7 @@ class TicketSale extends Model
 
     public function ticket(): BelongsTo
     {
-        return $this->belongsTo(Ticket::class, 'ticket_id');
+        return $this->belongsTo(Ticket::class, 'ticket_id')->withTrashed();
     }
 
     public function transactions()
@@ -66,6 +78,11 @@ class TicketSale extends Model
         return $this->belongsTo(Bank::class, 'bank_id');
     }
 
+    public function paymentInstructionBank()
+    {
+        return $this->belongsTo(Bank::class, 'payment_instruction_bank_id');
+    }
+
     public function schedules()
     {
         return $this->morphMany(PaymentSchedule::class, 'schedulable');
@@ -80,6 +97,7 @@ class TicketSale extends Model
     {
         $last = static::withTrashed()->latest('id')->first();
         $next = $last ? $last->id + 1 : 1;
-        return 'INV' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+
+        return 'INV'.str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 }

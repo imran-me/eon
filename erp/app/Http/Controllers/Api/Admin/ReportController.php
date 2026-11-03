@@ -72,12 +72,16 @@ class ReportController extends Controller
 
             // Fetch Approved Leaves for this user
             $leaves = \DB::table('leaves')
-                ->where('user_id', $userId)
-                ->where('status', 'approved')
+                ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+                ->where('leaves.user_id', $userId)
+                ->where('leaves.status', 'approved')
+                ->whereNull('leaves.deleted_at')
                 ->where(function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('end_date', [$startDate, $endDate]);
-                })->get();
+                    $query->whereBetween('leaves.start_date', [$startDate, $endDate])
+                        ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
+                })
+                ->select('leaves.*', 'leave_types.exempts_late_deduction')
+                ->get();
 
             foreach ($period as $date) {
                 $dateString = $date->format('Y-m-d');
@@ -85,6 +89,7 @@ class ReportController extends Controller
 
                 if (isset($dbAttendances[$dateString])) {
                     $record = $dbAttendances[$dateString];
+                    $approvedLateIn = $leaves->first(fn($l) => $l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date);
 
                     // --- CONSISTENT LATE CALCULATION ---
                     if ($record->check_in && $record->attendence_setting) {
@@ -95,7 +100,7 @@ class ReportController extends Controller
                             ->addMinutes($minutes);
                         // late min count
                         $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
-                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0) {
+                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0 && !$approvedLateIn) {
                             $record->status = 'Late ' . $lateMinutes . ' mins';
                             $summary['late']++;    // Increment Late
                             $summary['present']++; // Also increment Present (as they are physically there)
@@ -103,6 +108,9 @@ class ReportController extends Controller
                         } else {
                             $record->status = 'Present';
                             $summary['present']++;
+                        }
+                        if ($approvedLateIn) {
+                            $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                         }
                         if ($record->check_out && $record->attendence_setting) {
                             $checkOutTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_out);
@@ -154,7 +162,7 @@ class ReportController extends Controller
                             $summary[$status]++;
                         }
                     }
-                } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+                } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                     $record = (object)[
                         'date' => $dateString,
                         'shift' => $defaultShift,
@@ -241,12 +249,16 @@ class ReportController extends Controller
 
         // Fetch Approved Leaves for this user
         $leaves = \DB::table('leaves')
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
+            ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->where('leaves.user_id', $userId)
+            ->where('leaves.status', 'approved')
+            ->whereNull('leaves.deleted_at')
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate]);
-            })->get();
+                $query->whereBetween('leaves.start_date', [$startDate, $endDate])
+                    ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
+            })
+            ->select('leaves.*', 'leave_types.exempts_late_deduction')
+            ->get();
 
         // Initialize counters
         $totalMinutes = 0;
@@ -262,6 +274,7 @@ class ReportController extends Controller
 
             if (isset($dbAttendances[$dateString])) {
                 $record = $dbAttendances[$dateString];
+                $approvedLateIn = $leaves->first(fn($l) => $l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date);
                 $record->shift_name = $record->shift?->name ?? '-';
                 $record->worked_display = "Missing Out";
 
@@ -292,13 +305,16 @@ class ReportController extends Controller
                     $lateThreshold = \Carbon\Carbon::parse($dateString . ' ' . $user->shift->start_time)
                         ->addMinutes($minutes);
 
-                    if ($checkInTime->gt($lateThreshold)) {
+                    if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                         $record->status = 'Late';
                         $late++;
                         $present++; // Late people are physically present
                     } else {
                         $record->status = 'Present';
                         $present++;
+                    }
+                    if ($approvedLateIn) {
+                        $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                     }
                 } else {
                     // If no check_in (e.g. manual status entries like Leave)
@@ -307,7 +323,7 @@ class ReportController extends Controller
                     elseif ($currentStatus == 'holiday') $holiday++;
                     else $absent++;
                 }
-            } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+            } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                 $record = (object)[
                     'date' => $dateString,
                     'employee_id' => $user->employee_id ?? '',
@@ -415,12 +431,16 @@ class ReportController extends Controller
 
         // Fetch Approved Leaves for this user
         $leaves = \DB::table('leaves')
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
+            ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->where('leaves.user_id', $userId)
+            ->where('leaves.status', 'approved')
+            ->whereNull('leaves.deleted_at')
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate]);
-            })->get();
+                $query->whereBetween('leaves.start_date', [$startDate, $endDate])
+                    ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
+            })
+            ->select('leaves.*', 'leave_types.exempts_late_deduction')
+            ->get();
 
         $fullMonthData = collect();
         $summary = ['present' => 0, 'absent' => 0, 'late' => 0, 'holiday' => 0, 'leave' => 0, 'late_minutes' => 0, 'early_out' => 0, 'early_minutes' => 0, 'overtime_days' => 0, 'overtime_minutes' => 0];
@@ -431,6 +451,7 @@ class ReportController extends Controller
 
             if (isset($dbAttendances[$dateString])) {
                 $record = $dbAttendances[$dateString];
+                $approvedLateIn = $leaves->first(fn($l) => $l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date);
                 // $record->shift_name = $defaultShift->name ?? '-';
                 if ($record->check_in && $record->attendence_setting) {
                     $checkInTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_in);
@@ -438,7 +459,7 @@ class ReportController extends Controller
                     $lateThreshold = \Carbon\Carbon::parse($dateString . ' ' . $record->shift->start_time)
                         ->addMinutes($minutes);
                     $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
-                    if ($checkInTime->gt($lateThreshold)) {
+                    if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                         $record->status = 'Late ' . $lateMinutes . ' mins';
                         $record->late_minutes = $lateMinutes;
                         $summary['late']++;
@@ -447,6 +468,9 @@ class ReportController extends Controller
                     } else {
                         $record->status = 'Present';
                         $summary['present']++;
+                    }
+                    if ($approvedLateIn) {
+                        $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                     }
                     if ($record->check_out && $record->attendence_setting) {
                             $checkOutTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_out);
@@ -496,7 +520,7 @@ class ReportController extends Controller
                     $status = strtolower($record->status);
                     if (array_key_exists($status, $summary)) $summary[$status]++;
                 }
-            } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+            } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                 $record = (object)[
                     'date' => $dateString,
                     'shift_name' => $defaultShift->name ?? '-',

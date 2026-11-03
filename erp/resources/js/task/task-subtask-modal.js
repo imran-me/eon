@@ -148,6 +148,11 @@ export function submitCreateSubtask(config) {
         // Reload subtasks section in the drawer
         if (typeof window._reloadSubtasks === 'function') window._reloadSubtasks(parentId);
 
+        // ...and the parent's card on the board, which may have been what opened
+        // this modal (the + button) and may have had no chip or panel at all
+        // until this item existed.
+        if (typeof window._refreshCardSubtasks === 'function') window._refreshCardSubtasks(parentId);
+
         // Show success toast if available
         if (typeof Swal !== 'undefined') {
             Swal.fire({ icon: 'success', title: 'Sub-task created', timer: 1500, showConfirmButton: false });

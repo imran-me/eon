@@ -1,6 +1,7 @@
 @extends('layout.app')
 @section('meta-information')<title>Country Management</title>@endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
 @php($role = Str::slug(Auth::user()->getRoleNames()->first()))
 <div class="space-y-4">
  <header class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -18,12 +19,14 @@
  </section>
 </div>
 <section class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
- <form class="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 md:grid-cols-[1fr_220px_auto]">
-  <input name="country_name" value="{{ request('country_name') }}" class="h-10 rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Search country...">
-  <select name="status" class="h-10 rounded-lg border border-slate-300 px-3 text-sm"><option value="all">All statuses</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select>
-  <div class="flex gap-2"><button class="rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white">Filter</button><a href="{{ route('role.countries.index',['role'=>$role]) }}" class="flex items-center rounded-lg border border-slate-300 px-4 text-xs font-semibold text-slate-600">Reset</a></div>
+ {{-- The Manage Banks filter bar. The date range reads the day a country was
+      added — the only date the table has. --}}
+ <form method="GET">
+  <x-ticketing-filter-bar search="country_name" placeholder="Search country…" :reset="route('role.countries.index',['role'=>$role])" :total="$countries->total()">
+   <select name="status" onchange="this.form.requestSubmit()" aria-label="Status"><option value="all">All statuses</option><option value="active" @selected(request('status') === 'active')>Active</option><option value="inactive" @selected(request('status') === 'inactive')>Inactive</option></select>
+  </x-ticketing-filter-bar>
  </form>
- <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200">
+ <div class="overflow-x-auto" data-tfb-swap><table class="min-w-full divide-y divide-slate-200" data-cf-sort>
   <thead class="bg-slate-50"><tr>
    @foreach(['SL','Country','Code','Status','Created'] as $heading)<th class="px-5 py-3 text-left text-[11px] font-bold uppercase text-slate-500">{{ $heading }}</th>@endforeach
    <th class="px-5 py-3 text-right text-[11px] font-bold uppercase text-slate-500">Action</th>
@@ -45,7 +48,7 @@
   @endforelse
   </tbody>
  </table></div>
- <div class="border-t border-slate-100 p-4">{{ $countries->appends(request()->all())->links() }}</div>
+ <div class="border-t border-slate-100 p-4" data-tfb-swap>{{ $countries->appends(request()->all())->links() }}</div>
 </section>
 @include('country.modals')
 @endsection
@@ -59,8 +62,8 @@ $(function(){
  const done=r=>Swal.fire({icon:'success',title:'Done',text:r.message}).then(()=>location.reload());
  const fail=x=>Swal.fire({icon:'error',title:'Error',text:x.responseJSON?.message||Object.values(x.responseJSON?.errors||{})[0]?.[0]||'Something went wrong.'});
  $('.create-country-btn').click(()=>open('#createCountryModal'));
- $('.edit-country-btn').click(function(){$('#editCountryName').val($(this).data('name'));$('#editCountryCode').val($(this).data('code'));$('#editCountryForm').attr('action',$(this).data('action'));open('#editCountryModal')});
- $('.delete-country-btn').click(function(){$('#deleteCountryName').text($(this).data('name'));$('#deleteCountrySubmit').data('action',$(this).data('action'));open('#deleteCountryModal')});
+ $(document).on('click','.edit-country-btn',function(){$('#editCountryName').val($(this).data('name'));$('#editCountryCode').val($(this).data('code'));$('#editCountryForm').attr('action',$(this).data('action'));open('#editCountryModal')});
+ $(document).on('click','.delete-country-btn',function(){$('#deleteCountryName').text($(this).data('name'));$('#deleteCountrySubmit').data('action',$(this).data('action'));open('#deleteCountryModal')});
  $('.country-close,.country-overlay').click(function(e){if($(this).hasClass('country-close')||e.target===this)close()});
  $('#createCountrySubmit').click(()=>$.post($('#createCountryForm').attr('action'),$('#createCountryForm').serialize()).done(done).fail(fail));
  $('#editCountrySubmit').click(()=>$.ajax({url:$('#editCountryForm').attr('action'),method:'PUT',data:$('#editCountryForm').serialize()}).done(done).fail(fail));

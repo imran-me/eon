@@ -16,10 +16,12 @@ class LeaveType extends Model
         'max_leaves_count',
         'requires_time',
         'exempts_early_out_deduction',
+        'exempts_late_deduction',
     ];
 
     protected $casts = [
         'requires_time' => 'boolean',
         'exempts_early_out_deduction' => 'boolean',
+        'exempts_late_deduction' => 'boolean',
     ];
 }

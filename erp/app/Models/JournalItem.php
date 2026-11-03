@@ -2,19 +2,31 @@
 
 namespace App\Models;
 
+use App\Services\FlightPackageTicketBilling;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\User;
 
 class JournalItem extends Model
 {
     use SoftDeletes;
+
+    protected static function booted(): void
+    {
+        static::saved(function (self $item) {
+            $entry = $item->journalEntry;
+            if ($entry?->source === 'ticket_sale') {
+                app(FlightPackageTicketBilling::class)->sync((int) $entry->source_id);
+            }
+        });
+    }
 
     protected $table = 'journal_items';
 
     protected $fillable = [
         'journal_entry_id',
         'account_id',
+        'expense_department_id',
         'debit',
         'credit',
         'note',
@@ -23,7 +35,7 @@ class JournalItem extends Model
     ];
 
     protected $casts = [
-        'debit'  => 'decimal:2',
+        'debit' => 'decimal:2',
         'credit' => 'decimal:2',
     ];
 
@@ -32,9 +44,16 @@ class JournalItem extends Model
         return $this->belongsTo(JournalEntry::class, 'journal_entry_id');
     }
 
-    public function account()
+    /** @return BelongsTo<Account, $this> */
+    public function account(): BelongsTo
     {
         return $this->belongsTo(Account::class, 'account_id');
+    }
+
+    /** @return BelongsTo<ExpenseDepartment, $this> */
+    public function expenseDepartment(): BelongsTo
+    {
+        return $this->belongsTo(ExpenseDepartment::class, 'expense_department_id');
     }
 
     /**

@@ -314,7 +314,9 @@
             <tr>
                 <th width="6%">#</th>
                 <th>Description</th>
-                <th width="22%" style="text-align:right;">Amount</th>
+                <th width="10%" style="text-align:center;">Qty</th>
+                <th width="18%" style="text-align:right;">Unit Price</th>
+                <th width="20%" style="text-align:right;">Amount</th>
             </tr>
         </thead>
         <tbody>
@@ -322,17 +324,21 @@
             <tr>
                 <td class="num">{{ $i + 1 }}</td>
                 <td>{{ $item->description ?: '—' }}</td>
+                <td class="num" style="text-align:center;">{{ number_format($item->quantity ?? 1, 2) }}</td>
+                <td class="num" style="text-align:right;">{{ number_format($item->unit_price ?? $item->amount, 2) }}</td>
                 <td class="num" style="text-align:right;">{{ number_format($item->amount, 2) }}</td>
             </tr>
             @empty
             <tr>
                 <td class="num">1</td>
                 <td>{{ $expense->title }}</td>
+                <td class="num" style="text-align:center;">1.00</td>
+                <td class="num" style="text-align:right;">{{ number_format($expense->amount, 2) }}</td>
                 <td class="num" style="text-align:right;">{{ number_format($expense->amount, 2) }}</td>
             </tr>
             @endforelse
             <tr class="total-row">
-                <td colspan="2">Total</td>
+                <td colspan="4">Total</td>
                 <td class="num" style="text-align:right;">{{ number_format($expense->amount, 2) }}</td>
             </tr>
         </tbody>
@@ -399,6 +405,7 @@
     {{-- Signature --}}
     <div class="signature-section">
         <div class="sig-container">
+            <x-signature :company="$company" />
             <div class="sig-line">Authorized Signatory</div>
             <div style="font-size:11px; margin-top:5px; font-family:var(--text-font);">
                 For, {{ $company?->name ?? config('app.name') }}

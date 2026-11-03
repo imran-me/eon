@@ -27,10 +27,15 @@ class BankController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->whereDate('banks.status', $request->status);
+            $query->where('banks.status', $request->boolean('status'));
         }
 
         $datas = $query->paginate(20);
+        $datas->getCollection()->transform(function (Bank $bank) {
+            $bank->balance = $bank->availableBalance();
+
+            return $bank;
+        });
 
         // $accounts = Account::active()->where('type','asset')->get();
         // $companies = \App\Models\Company::all();
@@ -39,6 +44,18 @@ class BankController extends Controller
             'success' => true,
             'message' => 'Bank Data Retrieved Successfully.',
             'data' => $datas,
+        ]);
+    }
+
+    public function show($id)
+    {
+        $bank = Bank::findOrFail($id);
+        $bank->balance = $bank->availableBalance();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bank data retrieved successfully.',
+            'data' => $bank,
         ]);
     }
 
@@ -192,7 +209,9 @@ class BankController extends Controller
             'swift_code' => 'nullable|string|max:11',
             'currency' => 'required|string|max:10',
             'address' => 'nullable|string|max:255',
-            'balance' => 'required|numeric|min:0',
+            // Accepted for backwards compatibility, but ledger entries are the
+            // only supported way to change a bank balance.
+            'balance' => 'nullable|numeric',
         ]);
 
         // If validation fails
@@ -204,28 +223,35 @@ class BankController extends Controller
             ]);
         }
 
-        $data->update([
-            'name' => $request->name,
-            'company_id' => $request->company_id,
-            'branch_name' => $request->branch_name,
-            'account_id' => $request->account_id,
-            'account_name' => $request->account_name,
-            'account_type' => $request->account_type,
-            'bank_type' => $request->bank_type,
-            'type' => $request->type,
-            'routing_number' => $request->routing_number,
-            'account_number' => $request->account_number,
-            'iban' => $request->iban,
-            'swift_code' => $request->swift_code,
-            'currency' => $request->currency,
-            'address' => $request->address,
-            'balance' => $request->balance,
-            'last_transaction_date' => $request->last_transaction_date,
-            'last_transaction_amount' => $request->last_transaction_amount,
-            'last_transaction_type' => $request->last_transaction_type,
-            'updated_by' => auth()->id(),
-            'status' => $request->status ? 1 : 0
-        ]);
+        DB::transaction(function () use ($request, $data) {
+            $data = Bank::query()->whereKey($data->id)->lockForUpdate()->firstOrFail();
+            $data->update([
+                'name' => $request->name,
+                'company_id' => $request->company_id,
+                'branch_name' => $request->branch_name,
+                'account_id' => $request->account_id,
+                'account_name' => $request->account_name,
+                'account_type' => $request->account_type,
+                'bank_type' => $request->bank_type,
+                'type' => $request->type,
+                'routing_number' => $request->routing_number,
+                'account_number' => $request->account_number,
+                'iban' => $request->iban,
+                'swift_code' => $request->swift_code,
+                'currency' => $request->currency,
+                'address' => $request->address,
+                // Never overwrite the cache from an API payload: it bypasses
+                // the journal and was one source of dashboard/API disagreement.
+                'last_transaction_date' => $request->last_transaction_date,
+                'last_transaction_amount' => $request->last_transaction_amount,
+                'last_transaction_type' => $request->last_transaction_type,
+                'updated_by' => auth()->id(),
+                'status' => $request->status ? 1 : 0
+            ]);
+        });
+
+        $data->refresh();
+        $data->balance = $data->availableBalance();
 
         return response()->json([
             'success' => true,

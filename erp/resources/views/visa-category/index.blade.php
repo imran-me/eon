@@ -12,6 +12,7 @@
 @endsection
 
 @section('main-content')
+@include('layout.visa-processing-tabs')
 @php
     $total        = $datas->total();
     $active       = $datas->getCollection()->where('is_active', 1)->count();
@@ -19,42 +20,17 @@
     $countryCount = $datas->getCollection()->pluck('country_id')->filter()->unique()->count();
 @endphp
 
-{{-- Stat Cards --}}
-<section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-    <div class="rounded-xl bg-blue-50 p-4">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xl mb-3 shadow-md"><i class="fas fa-layer-group"></i></div>
-        <div class="text-3xl font-black text-blue-900 leading-none mb-1">{{ $total }}</div>
-        <div class="text-[10px] font-bold uppercase tracking-wide text-blue-700">Total Categories</div>
-    </div>
-    <div class="rounded-xl bg-emerald-50 p-4">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white text-xl mb-3 shadow-md"><i class="fas fa-check-circle"></i></div>
-        <div class="text-3xl font-black text-emerald-900 leading-none mb-1">{{ $active }}</div>
-        <div class="text-[10px] font-bold uppercase tracking-wide text-emerald-700">Active</div>
-    </div>
-    <div class="rounded-xl bg-amber-50 p-4">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-xl mb-3 shadow-md"><i class="fas fa-pause-circle"></i></div>
-        <div class="text-3xl font-black text-amber-900 leading-none mb-1">{{ $inactive }}</div>
-        <div class="text-[10px] font-bold uppercase tracking-wide text-amber-700">Inactive</div>
-    </div>
-    <div class="rounded-xl bg-violet-50 p-4">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white text-xl mb-3 shadow-md"><i class="fas fa-globe"></i></div>
-        <div class="text-3xl font-black text-violet-900 leading-none mb-1">{{ $countryCount }}</div>
-        <div class="text-[10px] font-bold uppercase tracking-wide text-violet-700">Countries</div>
-        <div class="text-xs text-slate-500 mt-1">This page</div>
-    </div>
-</section>
-
-{{-- Page header --}}
-<header class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm mb-4">
-    <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600 flex-shrink-0"><i class="fas fa-layer-group"></i></span>
-    <div class="flex-1">
-        <h1 class="text-lg font-bold text-slate-900">Visa Categories</h1>
-        <p class="text-xs text-slate-500">Manage visa category pricing, types and processing timelines</p>
-    </div>
-    <button type="button" class="create-btn rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-        <i class="fas fa-plus mr-1"></i> Add Category
-    </button>
-</header>
+@include('visa-processing.partials.page-top', [
+    'vxTiles' => [
+        ['Total Categories', $total, null, 'fa-layer-group', 'blue', null],
+        ['Active', $active, null, 'fa-check-circle', 'green', null],
+        ['Inactive', $inactive, null, 'fa-pause-circle', 'amber', null],
+        ['Countries', $countryCount, 'This page', 'fa-globe', 'violet', null],
+    ],
+    'vxIcon' => 'fa-layer-group', 'vxTitle' => 'Visa Categories',
+    'vxSub' => 'Manage visa category pricing, types and processing timelines',
+    'vxAction' => '<button type="button" class="create-btn vx-btn"><i class="fas fa-plus"></i> Add Category</button>',
+])
 
 {{-- Filter + Table --}}
 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

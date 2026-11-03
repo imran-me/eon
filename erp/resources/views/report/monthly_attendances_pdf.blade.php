@@ -1,273 +1,38 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <title>Attendance Report</title>
-    <style>
-        body {
-            font-family: DejaVu Sans, sans-serif;
-            font-size: 12px;
-            color: #333;
-        }
-
-        /* Header */
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-            border-bottom: 2px solid #444;
-            padding-bottom: 10px;
-        }
-
-        .company-name {
-            font-size: 20px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        /* Employee Info */
-        .user-table {
-            width: 100%;
-            margin-bottom: 20px;
-            border: 1px solid #ddd;
-        }
-
-        .user-table td {
-            padding: 10px;
-            vertical-align: top;
-            border-right: 1px solid #ddd;
-        }
-
-        .user-table td:last-child {
-            border-right: none;
-            text-align: right;
-        }
-
-        /* Attendance Table */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 25px;
-        }
-
-        th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 7px;
-            text-align: center;
-        }
-
-        td:first-child,
-        td:nth-child(2) {
-            text-align: left;
-        }
-
-        /* Status Badges */
-        .status-present {
-            color: #0a7c2f;
-            font-weight: bold;
-        }
-
-        .status-late {
-            color: #d97706;
-            font-weight: bold;
-        }
-
-        .status-absent {
-            color: #dc2626;
-            font-weight: bold;
-        }
-
-        /* Summary */
-        .summary-box {
-            width: 100%;
-            border: 1px solid #ddd;
-            padding: 8px 10px;
-            background: #fafafa;
-            margin-top: 20px;
-        }
-
-        .summary-box h3 {
-            margin: 0 0 6px 0;
-            text-align: center;
-            font-size: 13px;
-            border-bottom: 1px solid #ccc;
-            padding-bottom: 4px;
-        }
-
-        .summary-table.single-row {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-
-        .summary-table.single-row td {
-            padding: 4px 6px;
-            white-space: nowrap;
-        }
-
-        .summary-table.single-row .label {
-            color: #555;
-            font-weight: 600;
-            text-align: left;
-        }
-
-        .summary-table.single-row .value {
-            font-weight: bold;
-            text-align: right;
-            padding-right: 10px;
-        }
-
-        .summary-table.single-row td:not(:last-child) {
-            border-right: 1px dashed #ddd;
-        }
-        .clear {
-            clear: both;
-        }
-
-        .note-cell {
-            text-align: left;
-            font-size: 11px;
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Monthly Attendance Statement — {{ $user->name }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Montserrat:wght@600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@page{size:A4 portrait;margin:12mm}:root{--p:#3730a3;--ps:#f5f7ff;--h:#564fc8;--b:#e2e8f0;--t:#1e293b}*,*:before,*:after{box-sizing:border-box;margin:0;padding:0;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{padding:28px;background:#f0f2f5;color:var(--t);font:12px Inter,Arial,sans-serif}.actions{max-width:794px;margin:0 auto 12px;display:flex;justify-content:flex-end;gap:8px}.action{border:0;border-radius:4px;padding:8px 18px;color:#fff;background:#4f46e5;font:600 12px Montserrat,sans-serif;text-decoration:none;cursor:pointer}.action.back{background:#6b7280}.card{max-width:794px;margin:auto;padding:40px;border-radius:4px;background:#fff;box-shadow:0 4px 20px #0000000f}.masthead{width:100%;border-collapse:collapse}.masthead td{border:0;padding:0;vertical-align:middle}.logo{width:190px;max-height:90px;margin-left:-16px;object-fit:contain}.logo-text{color:var(--p);font:800 26px Montserrat,sans-serif}.company{text-align:right;color:#475569;font-size:12px;line-height:1.7}.company strong{display:block;color:var(--t);font:700 16px Montserrat,sans-serif}.title-bar{margin-bottom:24px;padding:10px;border-top:2px solid var(--p);background:var(--ps);color:var(--p);text-align:center;text-transform:uppercase;letter-spacing:2px;font:700 11px Montserrat,sans-serif}.meta{width:100%;margin-bottom:20px;border-collapse:collapse}.meta td{border:0;padding:1px 0;vertical-align:top;font-size:12px;line-height:1.7}.employee-title{margin-bottom:5px;color:var(--p);text-transform:uppercase;letter-spacing:.05em;font:700 11px Montserrat,sans-serif}.employee-name{font-size:13px;font-weight:700}.meta-right{width:46%}.meta-right table{width:100%;border-collapse:collapse}.meta-right td{padding:2px 0 2px 18px;white-space:nowrap;font-weight:600}.meta-right td:first-child{color:#64748b}.meta-right td:last-child{font:11px "Space Mono",monospace}.summary-strip{display:flex;overflow:hidden;margin-bottom:20px;border:1px solid var(--b);border-radius:6px}.summary-card{flex:1;padding:10px 12px;border-right:1px solid var(--b)}.summary-card:last-child{border:0;background:linear-gradient(135deg,#4f46e5,#3730a3)}.summary-label{margin-bottom:3px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;font-size:8px;font-weight:600}.summary-value{color:var(--t);font:700 11px "Space Mono",monospace}.summary-card:last-child .summary-label{color:#ffffffb8}.summary-card:last-child .summary-value{color:#fff;font-size:12px}.ledger{width:100%;margin-bottom:20px;border-collapse:collapse;table-layout:fixed;font-size:10px}.ledger thead{display:table-header-group}.ledger tr{break-inside:avoid;page-break-inside:avoid}.ledger th{padding:7px;background:var(--h);color:#fff;text-align:left;text-transform:uppercase;letter-spacing:.04em;font:700 8px Montserrat,sans-serif}.ledger td{padding:5px 7px;border-bottom:1px solid var(--b);vertical-align:middle;font-size:9px;line-height:1.35}.ledger tbody tr:nth-child(even) td{background:#f8f9ff}.nowrap{white-space:nowrap}.note{color:#64748b;font-size:8px}.status{display:inline-block;padding:2px 6px;border-radius:8px;background:#f1f5f9;font-size:7px;font-weight:700;text-transform:uppercase}.present{color:#15803d;background:#dcfce7}.late{color:#b45309;background:#fef3c7}.absent{color:#be123c;background:#ffe4e6}.leave,.early-leave{color:#7e22ce;background:#f3e8ff}.holiday{color:#475569;background:#e2e8f0}.section-heading{padding:6px 12px;background:var(--h);color:#fff;text-transform:uppercase;letter-spacing:.03em;font:600 10px Montserrat,sans-serif}.summary{width:100%;border:1px solid var(--b);border-collapse:collapse;table-layout:fixed}.summary td{padding:8px 10px;border-right:1px solid var(--b);border-bottom:1px solid var(--b);vertical-align:top}.summary tr:last-child td{border-bottom:0}.summary td:last-child{border-right:0}.sum-label{color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;font-size:8px;font-weight:600}.sum-value{display:block;margin-top:3px;color:var(--p);font:700 11px "Space Mono",monospace}.footer{margin-top:14px;padding-top:7px;border-top:1px solid var(--b);color:#94a3b8;font-size:8px}@media print{body{padding:0!important;background:#fff!important}.actions{display:none!important}.card{max-width:100%!important;padding:0!important;border-radius:0;box-shadow:none!important}.title-bar{padding:7px;margin-bottom:14px}.meta{margin-bottom:14px}.ledger th{padding:6px}.ledger td{padding:4px 6px;font-size:8.5px}}
+</style>
 </head>
-
 <body>
-    <!-- HEADER -->
-    <div class="header">
-        <div class="company-name">{{ $user->company?->name }}</div>
-        <div>Monthly Attendance Report : {{ $month }} {{ $year }}</div>
-    </div>
-
-    <!-- USER INFO -->
-    <table class="user-table">
-        <tr>
-            <td width="50%">
-                <strong>Employee:</strong> {{ $user->name }}<br>
-                <strong>Email:</strong> {{ $user->email }}
-            </td>
-            <td width="50%">
-                <strong>Phone:</strong> {{ $user->phone ?? 'N/A' }}<br>
-                <strong>Shift:</strong> {{ $user->shift?->name ?? 'N/A' }}
-            </td>
-        </tr>
-    </table>
-
-    @php $total_minutes = 0; @endphp
-
-    <!-- ATTENDANCE TABLE -->
-    <table>
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>Day</th>
-                <th>Check In</th>
-                <th>Check Out</th>
-                <th>Worked Hour</th>
-                <th>Status</th>
-                <th>Note</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach ($attendances as $row)
-                @php
-                    $worked_display = '--';
-                    $dt = \Carbon\Carbon::parse($row->date);
-
-                    if ($row->check_in && $row->check_out) {
-                        $start = \Carbon\Carbon::parse($row->check_in);
-                        $end = \Carbon\Carbon::parse($row->check_out);
-
-                        if ($end->lt($start)) {
-                            $end->addDay();
-                        }
-
-                        $diffInMinutes = $start->diffInMinutes($end);
-                        $total_minutes += $diffInMinutes;
-
-                        $h = floor($diffInMinutes / 60);
-                        $m = $diffInMinutes % 60;
-                        $worked_display = "{$h}h {$m}m";
-                    } elseif ($row->check_in) {
-                        $worked_display = 'Missing Out';
-                    }
-                @endphp
-
-                <tr>
-                    <td>{{ $dt->format('d-M-Y') }}</td>
-                    <td>{{ $dt->format('l') }}</td>
-                    <td>{{ $row->check_in ? \Carbon\Carbon::parse($row->check_in)->format('h:i A') : '--' }}</td>
-                    <td>{{ $row->check_out ? \Carbon\Carbon::parse($row->check_out)->format('h:i A') : '--' }}</td>
-                    <td>{{ $worked_display }}</td>
-                    <td class="status-{{ Str::slug(preg_replace('/\s+\d+\s+mins$/', '', $row->status)) }}">{{ ucfirst($row->status) }}</td>
-                    <td><small class="text-muted">@if(!empty($row->out_status)) <span style="color:red;font-weight:bold">{{ $row->out_status }}</span> @else{{ $row->note ?? '-' }} @endif</small></td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    @php
-        $total_h = floor($total_minutes / 60);
-        $total_m = $total_minutes % 60;
-    @endphp
-
-    <!-- SUMMARY -->
-    <div class="summary-box">
-        <h3>Attendance Summary</h3>
-
-        <table class="summary-table compact single-row">
-            <tr>
-                <td class="label">Present</td>
-                <td class="value">{{ $summary->present }}</td>
-
-                <td class="label">Late</td>
-                <td class="value">{{ $summary->late }}</td>
-                <td class="label">Late Minutes</td>
-                <td class="value">{{ $summary->late_minutes }}</td>
-                <td class="label">Total Early Leave Days</td>
-                <td class="value">{{ $summary->early_out }}</td>
-                
-
-
-                
-            </tr>
-            <tr>
-                <td class="label">Total Early Leave Minutes</td>
-                <td class="value">{{ $summary->early_minutes }}</td>
-                <td class="label">Absent</td>
-                <td class="value">{{ $summary->absent }}</td>
-                <td class="label">Worked Hours</td>
-                <td class="value">{{ "{$total_h}H {$total_m}M" }}</td>
-                <td class="label">Leave</td>
-                <td class="value">{{ $summary->leave }}</td>
-                
-                
-            </tr>
-            <tr>
-                <td class="label">Holiday</td>
-                <td class="value">{{ $summary->holiday }}</td>
-                <td class="label">Overtime Days</td>
-                <td class="value">{{ $summary->overtime_days }}</td>
-                <td class="label">Overtime Minutes</td>
-                <td class="value">{{ $summary->overtime_minutes }}</td>
-                <td></td>
-                <td></td>
-            </tr>
-        </table>
-    </div>
-
-
-
-
-
-    <div class="clear"></div>
-
-</body>
-
-</html>
+@php
+$company=$user->company;$logoPath=$company?->logo&&file_exists(public_path($company->logo))?public_path($company->logo):null;
+$employeeId=$user->employee_id_no?:'EMP-'.str_pad((string)$user->id,4,'0',STR_PAD_LEFT);$totalMinutes=0;
+@endphp
+<div class="actions"><a class="action back" href="javascript:history.back()">← Back</a><button class="action" onclick="window.print()">Print</button></div>
+<div class="card">
+<table class="masthead"><tr><td>@if($logoPath)<img class="logo" src="{{ $logoPath }}" alt="">@else<div class="logo-text">{{ $company?->name??config('app.name') }}</div>@endif</td><td class="company"><strong>{{ $company?->name??config('app.name') }}</strong>@if($company?->address){{ $company->address }}<br>@endif{{ $company?->phone }}{{ $company?->phone&&$company?->email?' | ':'' }}{{ $company?->email }}</td></tr></table>
+<div class="title-bar">Monthly Attendance Statement</div>
+<table class="meta"><tr><td><div class="employee-title">Employee Details</div><div class="employee-name">{{ $user->name }}</div><div>{{ $user->email }}</div>@if($user->phone)<div>{{ $user->phone }}</div>@endif</td><td class="meta-right"><table><tr><td>Employee ID</td><td>{{ $employeeId }}</td></tr><tr><td>Period</td><td>{{ $month }} {{ $year }}</td></tr><tr><td>Generated</td><td>{{ now()->format('d M Y') }}</td></tr><tr><td>Printed By</td><td>{{ Auth::user()->name }}</td></tr></table></td></tr></table>
+<div class="summary-strip"><div class="summary-card"><div class="summary-label">Total Days</div><div class="summary-value">{{ $attendances->count() }}</div></div><div class="summary-card"><div class="summary-label">Present</div><div class="summary-value">{{ $summary->present }}</div></div><div class="summary-card"><div class="summary-label">Absent</div><div class="summary-value">{{ $summary->absent }}</div></div><div class="summary-card"><div class="summary-label">Late Days</div><div class="summary-value">{{ $summary->late }}</div></div><div class="summary-card"><div class="summary-label">Period</div><div class="summary-value">{{ $month }} {{ $year }}</div></div></div>
+<table class="ledger"><colgroup><col style="width:12%"><col style="width:8%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:28%"></colgroup><thead><tr><th>Date</th><th>Day</th><th>Check In</th><th>Check Out</th><th>Worked</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+@foreach($attendances as $row)
+@php
+$dt=\Carbon\Carbon::parse($row->date);$worked='—';
+if($row->check_in&&$row->check_out){$start=\Carbon\Carbon::parse($row->check_in);$end=\Carbon\Carbon::parse($row->check_out);if($end->lt($start))$end->addDay();$minutes=$start->diffInMinutes($end);$totalMinutes+=$minutes;$worked=floor($minutes/60).'h '.($minutes%60).'m';}elseif($row->check_in){$worked='Missing Out';}
+$statusBase=Str::slug(preg_replace('/\s+\d+\s+mins$/i','',(string)$row->status));$note=!empty($row->out_status)?$row->out_status.(!empty($row->note)?' — '.$row->note:''):($row->note??'—');
+@endphp
+<tr><td class="nowrap"><strong>{{ $dt->format('d M Y') }}</strong></td><td>{{ $dt->format('D') }}</td><td class="nowrap">{{ $row->check_in?\Carbon\Carbon::parse($row->check_in)->format('h:i A'):'—' }}</td><td class="nowrap">{{ $row->check_out?\Carbon\Carbon::parse($row->check_out)->format('h:i A'):'—' }}</td><td class="nowrap">{{ $worked }}</td><td><span class="status {{ $statusBase }}">{{ $row->status }}</span></td><td class="note">{{ $note }}</td></tr>
+@endforeach
+</tbody></table>
+@php $totalH=floor($totalMinutes/60);$totalM=$totalMinutes%60; @endphp
+<div class="section-heading">Attendance Summary</div><table class="summary"><tr><td><span class="sum-label">Late Minutes</span><span class="sum-value">{{ $summary->late_minutes }} mins</span></td><td><span class="sum-label">Early Leave</span><span class="sum-value">{{ $summary->early_out }}</span></td><td><span class="sum-label">Early Minutes</span><span class="sum-value">{{ $summary->early_minutes }} mins</span></td><td><span class="sum-label">Worked</span><span class="sum-value">{{ $totalH }}h {{ $totalM }}m</span></td></tr><tr><td><span class="sum-label">Leave</span><span class="sum-value">{{ $summary->leave }}</span></td><td><span class="sum-label">Holiday</span><span class="sum-value">{{ $summary->holiday }}</span></td><td><span class="sum-label">Overtime Days</span><span class="sum-value">{{ $summary->overtime_days }}</span></td><td><span class="sum-label">Overtime</span><span class="sum-value">{{ $summary->overtime_minutes }} mins</span></td></tr></table>
+<div class="footer">{{ $company?->name??config('app.name') }} &nbsp;|&nbsp; {{ $employeeId }} &nbsp;|&nbsp; {{ $month }} {{ $year }}</div>
+</div>
+@if($autoPrint??false)<script>window.addEventListener('load',()=>window.print())</script>@endif
+</body></html>

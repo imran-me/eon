@@ -16,13 +16,15 @@
         <div class="rounded-xl bg-violet-50 p-4"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white"><i class="fas fa-earth-asia"></i></span><b class="mt-3 block text-2xl text-violet-700">{{ $countriesCount }}</b><p class="text-xs font-semibold uppercase text-violet-700">Countries Covered</p></div>
     </section>
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <form method="GET" class="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_200px_auto]">
-            <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">Country</span><select id="country_id" name="country_id" class="select2 w-full"><option value="">All Countries</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected($country->id == request('country_id'))>{{ $country->name }}</option>@endforeach</select></label>
-            <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">State</span><input name="state_name" value="{{ request('state_name') }}" class="h-[42px] w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Search state..."></label>
-            <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">Status</span><select id="status" name="status" class="select2 w-full"><option value="">All Statuses</option><option value="1" @selected(request('status') === '1')>Active</option><option value="0" @selected(request('status') === '0')>Inactive</option></select></label>
-            <div class="flex items-end gap-2"><button class="h-[42px] rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white hover:bg-slate-800"><i class="fas fa-filter mr-1"></i>Filter</button><a href="{{ route('role.states.index',['role'=>$role]) }}" class="flex h-[42px] items-center rounded-lg border border-slate-300 px-4 text-xs font-semibold text-slate-600 hover:bg-white">Reset</a></div>
+        {{-- The Manage Banks filter bar, with the country / status selects slotted in.
+             The date range reads the day a state was added — the only date it has. --}}
+        <form method="GET">
+            <x-ticketing-filter-bar search="state_name" placeholder="Search state name…" :reset="route('role.states.index',['role'=>$role])" :total="$states->total()">
+                <select id="country_id" name="country_id" class="select2" aria-label="Country"><option value="">All Countries</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected($country->id == request('country_id'))>{{ $country->name }}</option>@endforeach</select>
+                <select id="status" name="status" class="select2" aria-label="Status"><option value="">All Statuses</option><option value="1" @selected(request('status') === '1')>Active</option><option value="0" @selected(request('status') === '0')>Inactive</option></select>
+            </x-ticketing-filter-bar>
         </form>
-        <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200">
+        <div class="overflow-x-auto" data-tfb-swap><table class="min-w-full divide-y divide-slate-200" data-cf-sort>
             <thead class="bg-slate-50"><tr>
                 @foreach(['SL','Country','State','Status','Created'] as $heading)<th class="px-5 py-3 text-left text-[11px] font-bold uppercase text-slate-500">{{ $heading }}</th>@endforeach
                 @canany(['edit geography','delete geography'])<th class="px-5 py-3 text-right text-[11px] font-bold uppercase text-slate-500">Action</th>@endcanany
@@ -47,6 +49,6 @@
             @endforelse
             </tbody>
         </table></div>
-        <div class="border-t border-slate-100 px-5 py-4">{{ $states->appends(request()->all())->links() }}</div>
+        <div class="border-t border-slate-100 px-5 py-4" data-tfb-swap>{{ $states->appends(request()->all())->links() }}</div>
     </section>
 </div>

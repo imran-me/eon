@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class LeaveController implements HasMiddleware
@@ -24,6 +25,7 @@ class LeaveController implements HasMiddleware
             new Middleware('permission:view leave', only: ['index', 'show']),
             new Middleware('permission:create leave', only: ['create', 'store']),
             new Middleware('permission:edit leave', only: ['edit', 'update']),
+            new Middleware('permission:approve leave', only: ['approve']),
             new Middleware('permission:delete leave', only: ['destroy']),
         ];
     }
@@ -36,6 +38,12 @@ class LeaveController implements HasMiddleware
     {
         if (!Auth::user()->hasPermissionTo('view all leave')) {
              $request->merge(['user_id' => Auth::id()]);
+        }
+
+        // Open on the current month for everyone. The filter remains available
+        // so employees and administrators can choose another month or all months.
+        if (!$request->exists('month')) {
+            $request->merge(['month' => now()->format('Y-m')]);
         }
         $query = Leave::select('leaves.*')
             ->leftJoin('users', 'users.id', '=', 'leaves.user_id')
@@ -65,6 +73,16 @@ class LeaveController implements HasMiddleware
             $query->whereRaw('? BETWEEN leaves.start_date AND leaves.end_date', [$request->date]);
         }
 
+        // Month-wise filter: keep any leave whose period overlaps the selected month
+        if ($request->filled('month')) {
+            $monthStart = $this->parseMonth($request->month);
+
+            if ($monthStart) {
+                $query->whereDate('leaves.start_date', '<=', $monthStart->copy()->endOfMonth()->toDateString())
+                    ->whereDate('leaves.end_date', '>=', $monthStart->toDateString());
+            }
+        }
+
         if ($request->filled('status')) {
             $query->where('leaves.status', $request->status);
         }
@@ -85,12 +103,14 @@ class LeaveController implements HasMiddleware
         }
 
         $leave_types = LeaveType::orderBy('name')->get();
+        $months = $this->availableMonths($request->month);
 
         return view('leaves.index', compact(
             'datas',
             'users',
             'companies',
             'leave_types',
+            'months',
             'totalCount',
             'pendingCount',
             'approvedCount',
@@ -297,7 +317,7 @@ class LeaveController implements HasMiddleware
 
         // Email the employee only when the status actually changes to a final decision
         if ($previousStatus !== $data->status && in_array($data->status, ['approved', 'rejected'])) {
-            $this->sendLeaveStatusEmail($data);
+            $this->sendLeaveDecisionNotifications($data);
         }
 
         if ($request->ajax()) {
@@ -309,6 +329,24 @@ class LeaveController implements HasMiddleware
         }
 
         return redirect('/super-admin/airport')->with('success', 'Data updated successfully.');
+    }
+
+    public function approve(string $role, Leave $leave)
+    {
+        if ($leave->status !== 'pending') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only pending leave requests can be approved.',
+            ], 422);
+        }
+
+        $leave->update(['status' => 'approved']);
+        $this->sendLeaveDecisionNotifications($leave);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Leave request approved successfully.',
+        ]);
     }
 
     /**
@@ -350,6 +388,69 @@ class LeaveController implements HasMiddleware
     }
 
     /**
+     * Turn a "YYYY-MM" filter value into the first day of that month.
+     */
+    private function parseMonth($month): ?Carbon
+    {
+        if (!is_string($month) || !preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return null;
+        }
+
+        try {
+            return Carbon::createFromFormat('Y-m-d', $month . '-01')->startOfMonth();
+        } catch (\Throwable $th) {
+            return null;
+        }
+    }
+
+    /**
+     * Months offered in the month-wise filter: every month from the oldest
+     * leave on record up to the current month, newest first.
+     */
+    private function availableMonths($selected = null): array
+    {
+        $rangeQuery = Leave::query();
+
+        if (!Auth::user()->hasPermissionTo('view all leave')) {
+            $rangeQuery->where('user_id', Auth::id());
+        }
+
+        $range = $rangeQuery->selectRaw('MIN(start_date) as min_date, MAX(end_date) as max_date')->first();
+
+        $newest = Carbon::now()->startOfMonth();
+        $oldest = $newest->copy();
+
+        if ($range && $range->min_date) {
+            $oldest = Carbon::parse($range->min_date)->startOfMonth();
+        }
+
+        if ($range && $range->max_date) {
+            $maxMonth = Carbon::parse($range->max_date)->startOfMonth();
+            if ($maxMonth->gt($newest)) {
+                $newest = $maxMonth;
+            }
+        }
+
+        $months = [];
+        $cursor = $newest->copy();
+
+        // Cap at ten years so a stray date cannot build a runaway dropdown
+        while ($cursor->gte($oldest) && count($months) < 120) {
+            $months[$cursor->format('Y-m')] = $cursor->format('F Y');
+            $cursor->subMonthNoOverflow();
+        }
+
+        // Keep a hand-typed month visible in the dropdown so the filter reads back correctly
+        $selectedMonth = $this->parseMonth($selected);
+        if ($selectedMonth && !isset($months[$selectedMonth->format('Y-m')])) {
+            $months[$selectedMonth->format('Y-m')] = $selectedMonth->format('F Y');
+            krsort($months);
+        }
+
+        return $months;
+    }
+
+    /**
      * Email the employee once their leave request is approved or rejected.
      */
     private function sendLeaveStatusEmail(Leave $leave): void
@@ -372,6 +473,37 @@ class LeaveController implements HasMiddleware
             'Leave Request ' . $status,
             "Your <strong>{$leaveTypeName}</strong> request for <strong>{$dateRange}</strong> has been <strong>" . strtolower($status) . '</strong>.'
         );
+    }
+
+    /** Deliver the same decision notice regardless of whether status changed
+     * through Edit Leave or the list's Quick Approve action. */
+    private function sendLeaveDecisionNotifications(Leave $leave): void
+    {
+        $leave->loadMissing(['user', 'leave_type']);
+
+        try {
+            $this->sendLeaveStatusEmail($leave);
+        } catch (\Throwable $th) {
+            Log::warning('Leave decision email failed.', ['leave_id' => $leave->id, 'error' => $th->getMessage()]);
+        }
+
+        try {
+            NotificationService::notifyLeaveDecision($leave);
+        } catch (\Throwable $th) {
+            Log::warning('Leave decision in-app/push notification failed.', ['leave_id' => $leave->id, 'error' => $th->getMessage()]);
+        }
+
+        if ($leave->user?->phone) {
+            try {
+                $leaveType = $leave->leave_type?->name ?? 'Leave';
+                $dateRange = Carbon::parse($leave->start_date)->isSameDay(Carbon::parse($leave->end_date))
+                    ? Carbon::parse($leave->start_date)->format('d M Y')
+                    : Carbon::parse($leave->start_date)->format('d M Y').' to '.Carbon::parse($leave->end_date)->format('d M Y');
+                sendSms($leave->user->phone, "Your {$leaveType} request for {$dateRange} has been {$leave->status}.");
+            } catch (\Throwable $th) {
+                Log::warning('Leave decision SMS failed.', ['leave_id' => $leave->id, 'error' => $th->getMessage()]);
+            }
+        }
     }
 
 }

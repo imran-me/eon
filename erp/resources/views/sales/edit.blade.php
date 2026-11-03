@@ -690,9 +690,7 @@
                                             <label for="bank_id" class="block text-sm font-medium text-gray-700 mb-1">Payment Account</label>
                                             <select name="bank_id" id="bank_id" class="form-control select2" style="width: 100%">
                                                 <option value="">Select</option>
-                                                @foreach ($banks as $bank)                                                    
-                                                    <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                                @endforeach
+                                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                                             </select>
                                         </div>
                                     </div>

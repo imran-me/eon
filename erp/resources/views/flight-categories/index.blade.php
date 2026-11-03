@@ -3,6 +3,10 @@
     <title>Flight Categories</title>
 @endsection
 @section('css')
+<style>
+    .cf-row { transition: background-color .15s ease, box-shadow .15s ease; }
+    .cf-row:hover { background: #eef2ff; box-shadow: inset 3px 0 0 #6366f1; }
+</style>
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     .select2-container--open, .select2-dropdown { z-index: 99999; }
@@ -11,6 +15,9 @@
 </style>
 @endsection
 @section('main-content')
+
+    @include('layout.contract-flight-tabs')
+    @include('layout.flight-category-tabs')
 
 <header class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm mb-4">
     <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 text-blue-600 flex-shrink-0">
@@ -71,12 +78,12 @@
      <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">Base Fare (৳)</th>
      <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">Airlines</th>
      <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">Status</th>
-     <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Action</th>
+     <th class="px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500" style="width:1%;white-space:nowrap">Action</th>
     </tr>
    </thead>
    <tbody class="divide-y divide-slate-100">
     @forelse ($datas as $value)
-    <tr class="hover:bg-slate-50">
+    <tr class="cf-row">
      <td class="px-4 py-3">
       <div class="flex items-center gap-2 text-sm font-semibold text-slate-900"><i class="fas {{ $value->icon ?? 'fa-folder' }} text-blue-500 w-4 text-center"></i>{{ $value->name }}</div>
      </td>
@@ -95,9 +102,9 @@
        <span class="rounded-full bg-red-100 px-2.5 py-1 text-[10px] font-semibold text-red-700">Inactive</span>
       @endif
      </td>
-     <td class="px-4 py-3">
-      <div class="flex justify-end gap-1.5">
-       <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" onclick="viewCategory({{ $value->id }})" title="View"><i class="fas fa-eye text-xs"></i></button>
+     <td class="px-2 py-3">
+      <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+       <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" onclick="viewCategory({{ $value->id }})" title="View" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-eye text-xs" style="font-size:11px;margin:0"></i></button>
        <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100 edit-btn"
         data-item_id="{{ $value->id }}"
         data-action="{{ route('role.flight-categories.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'flight_category' => $value->id]) }}"
@@ -110,8 +117,8 @@
         data-base_fare="{{ $value->base_fare }}"
         data-status="{{ $value->status }}"
         data-airline_ids="{{ $value->airlines->pluck('id')->implode(',') }}"
-        title="Edit"><i class="fas fa-edit text-xs"></i></button>
-       <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete('{{ $value->id }}', '{{ addslashes($value->name) }}')" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+        title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-edit text-xs" style="font-size:11px;margin:0"></i></button>
+       <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete('{{ $value->id }}', '{{ addslashes($value->name) }}')" title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i></button>
       </div>
      </td>
     </tr>

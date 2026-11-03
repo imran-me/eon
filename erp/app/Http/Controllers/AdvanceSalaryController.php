@@ -6,8 +6,11 @@ use App\Exports\PayrollBookExport;
 use App\Models\AdvanceSalary;
 use App\Models\Company;
 use App\Models\PaymentSchedule;
+use App\Models\RequestDisbursement;
 use App\Models\User;
 use App\Services\AdvanceBookService;
+use App\Services\AdvancePostingService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -20,7 +23,7 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class AdvanceSalaryController implements HasMiddleware
 {
-    public function __construct(private AdvanceBookService $book)
+    public function __construct(private AdvanceBookService $book, private AdvancePostingService $posting)
     {
     }
 
@@ -31,7 +34,7 @@ class AdvanceSalaryController implements HasMiddleware
             // user could already read, and scopedAdvances() applies the same locks.
             new Middleware('permission:view advance salary', only: ['index', 'show', 'schedule', 'paymentSlip', 'downloadPaymentSlip', 'exportExcel', 'exportPdf']),
             new Middleware('permission:create advance salary', only: ['create', 'store']),
-            new Middleware('permission:edit advance salary', only: ['edit', 'update', 'schedulePay']),
+            new Middleware('permission:edit advance salary', only: ['edit', 'update', 'release', 'schedulePay', 'reverse']),
             new Middleware('permission:delete advance salary', only: ['destroy']),
         ];
     }
@@ -85,7 +88,15 @@ class AdvanceSalaryController implements HasMiddleware
             'transactions',
             'periods',
             'users'
-        ));
+        ) + [
+            // For the approve fields: where the money leaves from, and the
+            // asset it is recorded in (Salary Advance by default).
+            'advanceBanks'     => $this->posting->banks(),
+            'advanceAccounts'  => $advanceAccounts = $this->posting->contraAccounts(),
+            'advanceDefaultId' => optional($advanceAccounts->firstWhere('code', AdvancePostingService::defaultAccountCode()))->id,
+            // Which bank each advance on this register page left from.
+            'paidFrom'         => $this->posting->paidFrom($register->pluck('id')),
+        ]);
     }
 
     /** One advance's whole life — the body of the detail modal. */
@@ -99,8 +110,9 @@ class AdvanceSalaryController implements HasMiddleware
         $this->assertVisible($advance);
 
         return view('advance-salaries.detail', [
-            'advance' => $advance,
-            'book'    => $this->book,
+            'advance'  => $advance,
+            'book'     => $this->book,
+            'paidFrom' => $this->posting->paidFrom([$advance->id])[$advance->id] ?? null,
         ])->render();
     }
 
@@ -194,7 +206,7 @@ class AdvanceSalaryController implements HasMiddleware
         }
 
         if ($request->filled('search')) {
-            $term = '%' . $request->search . '%';
+            $term = '%' . (is_string($request->search) ? $request->search : '') . '%';
             $query->where(function ($q) use ($term) {
                 $q->where('users.name', 'like', $term)
                     ->orWhere('users.employee_id_no', 'like', $term)
@@ -290,7 +302,7 @@ class AdvanceSalaryController implements HasMiddleware
         }
 
         if ($request->filled('search')) {
-            $bits[] = 'Search: "' . $request->search . '"';
+            $bits[] = 'Search: "' . (is_string($request->search) ? $request->search : '') . '"';
         }
 
         return $bits ? implode(' · ', $bits) : 'No filters — the whole book';
@@ -332,43 +344,80 @@ class AdvanceSalaryController implements HasMiddleware
     {
         $validator = Validator::make($request->all(), [
             'user_id' => 'required',
-            'amount'  => 'required',
+            'amount'  => 'required|numeric|min:0.01',
             'month'   => 'required',
-        ]);
+        ] + $this->approvalRules($request));
 
         if ($validator->fails()) {
             return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
         }
 
         try {
-            $data = AdvanceSalary::create([
-                'user_id'       => $request->user_id,
-                'amount'        => $request->amount,
-                'month'         => $request->month,
-                'schedule_date' => $request->schedule_date ?: null,
-                'reason'        => $request->reason,
-                'status'        => $request->status,
-            ]);
-
-            if ($request->filled('schedule_date')) {
-                $data->schedules()->create([
-                    'type'           => 'pay',
-                    'party_name'       => $data->user->name ?? 'Employee',
-                    'party_type'     => 'employee',
-                    'party_id'       => $request->user_id,
-                    'amount'         => $request->amount,
-                    'scheduled_date' => $request->schedule_date,
-                    'status'         => 'pending',
-                    'source_label'   => 'Advance Salary',
-                    'created_by'     => Auth::id(),
+            $data = DB::transaction(function () use ($request) {
+                $data = AdvanceSalary::create([
+                    'user_id'       => $request->user_id,
+                    'amount'        => $request->amount,
+                    'month'         => $request->month,
+                    'schedule_date' => $request->schedule_date ?: null,
+                    'reason'        => $request->reason,
+                    'status'        => $request->status,
                 ]);
-            }
+
+                // Created straight as Approved = paid out now, same as approving later.
+                if ($data->status === 'Approved') {
+                    $this->posting->release(
+                        $data, (int) $request->bank_id, (int) $request->contra_account_id,
+                        $request->transaction_date, $request->transaction_time,
+                        $request->payment_method, $request->recipient_bank,
+                        $request->recipient_account, $request->reference
+                    );
+                }
+
+                if ($request->filled('schedule_date')) {
+                    $data->schedules()->create([
+                        'type'           => 'pay',
+                        'party_name'       => $data->user->name ?? 'Employee',
+                        'party_type'     => 'employee',
+                        'party_id'       => $request->user_id,
+                        'amount'         => $request->amount,
+                        'scheduled_date' => $request->schedule_date,
+                        'status'         => 'pending',
+                        'source_label'   => 'Advance Salary',
+                        'created_by'     => Auth::id(),
+                    ]);
+                }
+
+                return $data;
+            });
         } catch (\Throwable $th) {
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
         }
 
         return response()->json(['success' => true, 'message' => 'Data created successfully.', 'data' => $data]);
     }
+
+    /**
+     * Approving is paying out: the bank it left from, the account it is
+     * recorded in and the date are required the moment status is Approved.
+     */
+    private function approvalRules(Request $request): array
+    {
+        if ($request->input('status') !== 'Approved') {
+            return [];
+        }
+
+        return [
+            'bank_id'           => 'required|integer|exists:banks,id',
+            'contra_account_id' => 'required|integer|exists:accounts,id',
+            'transaction_date'  => 'required|date|before_or_equal:today',
+            'transaction_time'  => 'required|date_format:H:i',
+            'payment_method'    => 'required|in:cash,bank_transfer,mobile_banking,cheque,card',
+            'recipient_bank'    => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:150',
+            'recipient_account' => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:100',
+            'reference'         => 'nullable|string|max:191',
+        ];
+    }
+
 
     public function edit($id)
     {
@@ -380,70 +429,58 @@ class AdvanceSalaryController implements HasMiddleware
         $id   = $request->id;
         $data = AdvanceSalary::findOrFail($id);
 
-        $request->validate([
-            'user_id' => 'required',
-            'amount'  => 'required',
-            'month'   => 'required',
-        ]);
+        if ($data->is_reversed) {
+            return response()->json(['success' => false, 'message' => 'This advance was reversed and cannot be edited. Create a new request for any new advance.'], 422);
+        }
 
-        // Captured before the update — approval is the moment money actually
-        // leaves the company (a Pending advance is just a request, nothing
-        // has moved yet), so the journal only posts on the transition INTO
-        // Approved, never on a Pending row being saved again or an
-        // already-Approved row being re-saved (which would double-post).
         $wasApproved = $data->status === 'Approved';
+        $posted = (bool) $this->posting->releaseJournal($data);
 
-        \Illuminate\Support\Facades\DB::transaction(function () use ($request, $data, $wasApproved) {
-            $data->update([
-                'user_id' => $request->user_id,
-                'amount'  => $request->amount,
-                'month'   => $request->month,
-                'reason'  => $request->reason,
-                'status'  => $request->status,
-            ]);
+        $rules = ['user_id' => 'required', 'amount' => 'required|numeric|min:0.01', 'month' => 'required'];
+        $validator = Validator::make($request->all(), $rules);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
 
-            if (!$wasApproved && $data->status === 'Approved') {
-                // ── JOURNAL (auto) ────────────────────────────────────────
-                // Mirrors LoanController::store()'s pattern: Dr the
-                // receivable-style asset (Prepaid Expense — an advance
-                // against salary not yet earned), Cr Salary Payable as the
-                // fallback since advance_salaries has no bank_id column to
-                // record which account the cash actually left from.
-                $prepaidExpenseAccount = \App\Models\Account::where('code', config('accounts.prepaid_expense'))->firstOrFail();
-                $salaryPayableAccount  = \App\Models\Account::where('code', config('accounts.salary_payable'))->firstOrFail();
+        // A paid-out advance's amount and employee are in the bank ledger.
+        // Changing them means reversing the payment first (back to Pending).
+        if ($posted && $request->status === 'Approved'
+            && ((int) $request->user_id !== (int) $data->user_id || round((float) $request->amount, 2) !== round((float) $data->amount, 2))) {
+            return response()->json(['success' => false, 'message' => 'This advance is already paid out. Set it back to Pending first (that reverses the payment), then change the amount or employee.']);
+        }
 
-                $journal = \App\Models\JournalEntry::create([
-                    'company_id'  => $data->user->company_id ?? auth()->user()->company_id ?? 2,
-                    'created_by'  => auth()->id(),
-                    'date'        => now()->toDateString(),
-                    'reference'   => 'ADV-' . str_pad($data->id, 5, '0', STR_PAD_LEFT),
-                    'source'      => 'advance_salary',
-                    'source_id'   => $data->id,
-                    'description' => 'Advance salary approved — ' . ($data->user->name ?? 'Employee'),
+        try {
+            DB::transaction(function () use ($request, $data, $wasApproved, $posted) {
+                // Leaving Approved takes the payment back out of the books.
+                if ($posted && $request->status !== 'Approved') {
+                    $this->posting->undoRelease($data);
+                }
+
+                $data->update([
+                    'user_id' => $request->user_id,
+                    'amount'  => $request->amount,
+                    'month'   => $request->month,
+                    'reason'  => $request->reason,
+                    'status'  => $request->status,
                 ]);
 
-                \App\Models\JournalItem::create([
-                    'journal_entry_id' => $journal->id,
-                    'account_id'       => $prepaidExpenseAccount->id,
-                    'debit'            => $data->amount,
-                    'credit'           => 0,
-                    'note'             => 'Advance salary given to employee',
-                    'party_type'       => 'employee',
-                    'party_id'         => $data->user_id,
-                ]);
-
-                \App\Models\JournalItem::create([
-                    'journal_entry_id' => $journal->id,
-                    'account_id'       => $salaryPayableAccount->id,
-                    'debit'            => 0,
-                    'credit'           => $data->amount,
-                    'note'             => 'Advance salary disbursed',
-                    'party_type'       => 'employee',
-                    'party_id'         => $data->user_id,
-                ]);
-                // ── END JOURNAL ───────────────────────────────────────────
-            }
-        });
+                if ($data->employee_request_id) {
+                    $requestUpdate = [
+                        'status' => match ($data->status) {
+                            'Approved' => \App\Models\EmployeeRequest::STATUS_APPROVED,
+                            'Rejected' => \App\Models\EmployeeRequest::STATUS_REJECTED,
+                            default => \App\Models\EmployeeRequest::STATUS_PENDING,
+                        },
+                    ];
+                    if ($data->status === 'Approved') {
+                        $requestUpdate += ['approved_by' => Auth::id(), 'approved_at' => now()];
+                    }
+                    \App\Models\EmployeeRequest::whereKey($data->employee_request_id)->update($requestUpdate);
+                }
+            });
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
 
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Data updated successfully.', 'data' => $data]);
@@ -452,12 +489,73 @@ class AdvanceSalaryController implements HasMiddleware
         return redirect('/super-admin/airport')->with('success', 'Data updated successfully.');
     }
 
+    public function release(Request $request, $role, $id)
+    {
+        $advance = AdvanceSalary::with('employeeRequest')->findOrFail($id);
+        if ($advance->status !== 'Approved') {
+            return response()->json(['success' => false, 'message' => 'Approve the advance request before releasing payment.']);
+        }
+        $validator = Validator::make($request->all(), $this->approvalRules(new Request(array_merge($request->all(), ['status' => 'Approved']))));
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()]);
+        }
+        try {
+            DB::transaction(function () use ($advance, $request) {
+                $journal = $this->posting->release(
+                    $advance, (int) $request->bank_id, (int) $request->contra_account_id,
+                    $request->transaction_date, $request->transaction_time, $request->payment_method,
+                    $request->recipient_bank, $request->recipient_account, $request->reference
+                );
+                if ($advance->employeeRequest) {
+                    RequestDisbursement::create([
+                        'request_id' => $advance->employee_request_id,
+                        'payment_method' => in_array($request->payment_method, ['mobile_banking', 'card'], true) ? 'bank_transfer' : $request->payment_method,
+                        'disbursed_amount' => $advance->amount, 'disbursed_by' => Auth::id(),
+                        'disbursed_at' => $request->transaction_date.' '.$request->transaction_time,
+                        'journal_entry_id' => $journal->id, 'note' => $advance->reason,
+                    ]);
+                    $advance->employeeRequest->update(['status' => \App\Models\EmployeeRequest::STATUS_FULFILLED]);
+                }
+            });
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        }
+        return response()->json(['success' => true, 'message' => 'Advance payment released and journaled successfully.']);
+    }
+
+    public function reverse(Request $request, $role, $id)
+    {
+        $advance = AdvanceSalary::with('user')->findOrFail($id);
+        $this->assertVisible($advance);
+        $data = $request->validate([
+            'reversal_date' => 'required|date_format:Y-m-d|before_or_equal:today',
+            'reason' => 'required|string|max:500',
+        ]);
+        try {
+            $this->posting->reverse($advance, $data['reversal_date'], $data['reason']);
+        } catch (\RuntimeException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+            return back()->with('error', $e->getMessage());
+        }
+        $message = 'Advance reversed. Future recovery stopped; existing salary payments were not changed.';
+        return $request->expectsJson()
+            ? response()->json(['success' => true, 'message' => $message])
+            : back()->with('success', $message);
+    }
+
     public function destroy(Request $request, $id)
     {
         try {
             $item = AdvanceSalary::find($request->item_id);
             if ($item) {
-                $item->delete();
+                // A paid-out advance takes its payment with it (refused once a
+                // salary has recovered it).
+                DB::transaction(function () use ($item) {
+                    $this->posting->undoRelease($item);
+                    $item->delete();
+                });
             } else {
                 return response()->json(['success' => false, 'message' => 'Data Info Not Found!']);
             }
@@ -506,8 +604,9 @@ class AdvanceSalaryController implements HasMiddleware
     {
         $data = AdvanceSalary::with('user.company')->findOrFail($id);
         $this->authorizeAdvanceSalaryAccess($data);
+        $paidFrom = $this->posting->paidFrom([$data->id])[$data->id] ?? null;
 
-        return view('advance-salaries.payment-slip', compact('data'));
+        return view('advance-salaries.payment-slip', compact('data', 'paidFrom'));
     }
 
     public function downloadPaymentSlip($role, $id)
@@ -523,7 +622,8 @@ class AdvanceSalaryController implements HasMiddleware
         }
 
         $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData ?: '');
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('advance-salaries.payment-slip-pdf', compact('data', 'logoBase64'));
+        $paidFrom = $this->posting->paidFrom([$data->id])[$data->id] ?? null;
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('advance-salaries.payment-slip-pdf', compact('data', 'logoBase64', 'paidFrom'));
 
         $employeeName = str_replace(' ', '_', $data->user->name ?? 'Employee');
 

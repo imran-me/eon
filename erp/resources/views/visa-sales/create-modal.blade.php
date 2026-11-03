@@ -1,29 +1,29 @@
 {{-- Create Sale Modal --}}
-<div id="vsCreateModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-start justify-center p-6 overflow-y-auto">
-    <div class="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl">
-        <div class="flex items-center gap-3 bg-gradient-to-r from-teal-700 to-cyan-500 px-5 py-4">
-            <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0">
+<div id="vsCreateModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-center justify-center p-4 overflow-hidden">
+    <div class="vs-create-shell w-full max-w-6xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div class="flex items-center gap-4 bg-gradient-to-r from-teal-700 via-teal-600 to-cyan-500 px-6 py-4 flex-shrink-0">
+            <div class="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0 shadow-inner">
                 <i class="fas fa-money-bill-wave"></i>
             </div>
             <div class="flex-1">
-                <h2 class="text-sm font-bold text-white">Create Sale (Client-wise Voucher)</h2>
-                <p class="text-xs text-teal-100 mt-0.5">Bundle multiple applications into one invoice</p>
+                <h2 class="text-base font-bold text-white">Create Visa Sale</h2>
+                <p class="text-xs text-teal-100 mt-0.5">Create one client-wise voucher from multiple applications and services</p>
             </div>
             <button onclick="vsCloseCreate()" class="ml-auto h-8 w-8 rounded-full bg-white/20 border-0 text-white cursor-pointer flex items-center justify-center">
                 <i class="fas fa-times text-xs"></i>
             </button>
         </div>
 
-        <div class="p-5 max-h-[calc(100vh-120px)] overflow-y-auto">
+        <div class="vs-create-body p-6 overflow-y-auto">
             <form id="vsCreateForm" method="POST" action="{{ route('role.visa-sales.store', ['role' => $role]) }}">
                 @csrf
 
                 {{-- Client Information --}}
-                <p class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <p class="vs-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-700">
                     <i class="fas fa-user"></i> Client Information
                 </p>
                 <input type="hidden" id="create_client_id" name="client_id">
-                <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 mb-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Select Existing Client</label>
                         <select id="create_select_client" class="select2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500" style="width:100%" onchange="vsPickParty('create', 'client', this.value)">
@@ -42,10 +42,6 @@
                             @endforeach
                         </select>
                     </div>
-                </div>
-                <p class="text-[11px] text-slate-400 mb-3 -mt-2">Pick one — selecting a client clears the agent, and vice versa. Phone &amp; email are shown from that party's record.</p>
-                <p id="create_client_id_msg" class="text-red-500 text-xs mb-3 -mt-2 hidden error-message">Please select a client or agent</p>
-                <div class="grid grid-cols-2 gap-3 mb-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Phone</label>
                         <input type="text" id="create_client_phone" readonly placeholder="Auto from selected party"
@@ -65,13 +61,15 @@
                         </select>
                     </div>
                 </div>
+                <p class="text-[11px] text-slate-400 mb-2">Pick one — selecting a client clears the agent, and vice versa. Phone &amp; email are shown from that party's record.</p>
+                <p id="create_client_id_msg" class="text-red-500 text-xs mb-2 hidden error-message">Please select a client or agent</p>
 
                 {{-- Select Applications --}}
-                <p class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <p class="vs-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-700">
                     <i class="fas fa-passport"></i> Select Applications to Bundle
                     <span class="ml-1 normal-case font-normal">Application Board থেকে multiple applications select করুন</span>
                 </p>
-                <div class="flex gap-2 mb-2 items-center">
+                <div class="flex flex-col sm:flex-row gap-3 mb-3 items-stretch sm:items-center">
                     <select id="vsCountryFilter" class="flex-1 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500" onchange="vsLoadApplications()">
                         <option value="">— All Countries —</option>
                     </select>
@@ -80,7 +78,7 @@
                         <i class="fas fa-filter text-[10px]"></i> Show Unpaid
                     </button>
                 </div>
-                <div class="rounded-xl overflow-hidden max-h-64 overflow-y-auto border border-slate-200 mb-1" id="vsAppsTableWrap">
+                <div class="rounded-xl overflow-hidden max-h-80 overflow-y-auto border border-slate-200 shadow-sm mb-1" id="vsAppsTableWrap">
                     <table class="vs-apps-table w-full border-collapse text-xs">
                         <thead class="bg-slate-50 sticky top-0">
                             <tr>
@@ -107,11 +105,11 @@
                 <div id="vsHiddenInputs"></div>
 
                 {{-- Add Other Services --}}
-                <p class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <p class="vs-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-700">
                     <i class="fas fa-puzzle-piece"></i> Add Other Services
                     <span class="ml-1 normal-case font-normal">এই client-এর Others service খুঁজে নিচের তালিকা থেকে যোগ করুন</span>
                 </p>
-                <div class="rounded-xl overflow-hidden max-h-52 overflow-y-auto border border-slate-200 mb-4" id="vsOtherTableWrap">
+                <div class="rounded-xl overflow-hidden max-h-64 overflow-y-auto border border-slate-200 shadow-sm mb-4" id="vsOtherTableWrap">
                     <table class="vs-apps-table w-full border-collapse text-xs">
                         <thead class="bg-slate-50 sticky top-0">
                             <tr>
@@ -137,10 +135,10 @@
                 <div id="vsOtherHiddenInputs"></div>
 
                 {{-- Voucher Details --}}
-                <p class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <p class="vs-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-700">
                     <i class="fas fa-file-invoice"></i> Voucher Details
                 </p>
-                <div class="grid grid-cols-2 gap-3 mb-3">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Invoice Number</label>
                         <input type="text" name="invoice_number" value="{{ $nextInvoice }}" readonly
@@ -169,10 +167,10 @@
                 </div>
 
                 {{-- Payment Information --}}
-                <p class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <p class="vs-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-teal-700">
                     <i class="fas fa-wallet"></i> Payment Information
                 </p>
-                <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Total Amount ({{ $taka }})</label>
                         <input type="text" id="vsTotalDisplay" readonly value="0"
@@ -189,7 +187,7 @@
                             class="w-full rounded-xl border border-slate-200 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-600 outline-none">
                     </div>
                 </div>
-                <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">
                             Receivable Date
@@ -214,11 +212,17 @@
                         <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Account (Bank)</label>
                         <select name="bank_id" id="create_bank_id" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500">
                             <option value="">— Select bank —</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                     </div>
+                </div>
+
+                <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                    <label class="block text-xs font-semibold text-amber-900 mb-1">Pay Due To (shown on voucher)</label>
+                    <select name="payment_instruction_bank_id" id="create_payment_instruction_bank_id" class="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm">
+                        <option value="">— Do not show payment instructions —</option>
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
+                    </select>
                 </div>
 
                 {{-- Notes --}}
@@ -228,7 +232,7 @@
                         class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 resize-none"></textarea>
                 </div>
 
-                <div class="flex justify-end gap-2 bg-slate-50 -mx-5 px-5 py-3 -mb-5">
+                <div class="flex justify-end gap-3 bg-transparent pt-1">
                     <button type="button" onclick="vsCloseCreate()"
                         class="rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-2 text-sm font-semibold">Cancel</button>
                     <button type="button" id="vsCreateSubmit"

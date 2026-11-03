@@ -2,20 +2,18 @@
 
 namespace App\Traits;
 
-use App\Exports\PartyListExport;
 use App\Models\Company;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\PartyLedgerService;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\VendorClassificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
 
 /**
- * Excel/PDF list exports for the three party modules (agent, vendor,
+ * Browser print lists for the three party modules (agent, vendor,
  * customer). All three list screens are the same table over `users` filtered
- * by role, so the query, the row shape and both export responses live here
+ * by role, so the query, row shape and print response live here
  * instead of being copied into each controller.
  */
 trait ExportsPartyList
@@ -26,35 +24,24 @@ trait ExportsPartyList
      */
     abstract protected function partyExportMeta(): array;
 
-    public function exportExcel(Request $request)
-    {
-        $meta = $this->partyExportMeta();
-        $rows = $this->partyExportRows($request);
-
-        $filename = strtolower($meta['label']) . '-list-' . now()->format('Ymd-His') . '.xlsx';
-
-        return Excel::download(new PartyListExport($rows, $meta['label'], $request->search), $filename);
-    }
-
-    public function exportPdf(Request $request)
+    public function print(Request $request)
     {
         $meta = $this->partyExportMeta();
 
-        $pdf = Pdf::loadView('exports.party-list-pdf', [
-            'rows'    => $this->partyExportRows($request),
-            'label'   => $meta['label'],
-            'company' => Company::first(),
-            'search'  => $request->search,
-        ])->setPaper('a4', 'landscape');
-
-        return $pdf->download(strtolower($meta['label']) . '-list-' . now()->format('Ymd-His') . '.pdf');
+        return view('exports.party-list-pdf', [
+            'rows' => $this->partyPrintRows($request),
+            'label' => $meta['label'],
+            'company' => Company::find(auth()->user()?->company_id) ?? Company::first(),
+            'search' => $request->search,
+            'filters' => $request->only('service_category', 'vendor_type_id', 'vendor_category_id'),
+        ]);
     }
 
     /**
-     * Same filter as the index screen, but unpaginated — an export covers the
+     * Same filter as the index screen, but unpaginated — a print covers the
      * whole filtered result set, not just the page the user is looking at.
      */
-    protected function partyExportRows(Request $request): array
+    protected function partyPrintRows(Request $request): array
     {
         $meta = $this->partyExportMeta();
 
@@ -65,32 +52,49 @@ trait ExportsPartyList
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('email', 'like', '%' . $search . '%')
-                  ->orWhere('phone', 'like', '%' . $search . '%');
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%')
+                    ->orWhere('phone', 'like', '%'.$search.'%');
             });
         }
 
-        $parties  = $query->latest()->get();
+        if ($request->filled('service_category')) {
+            $query->whereJsonContains('service_categories', $request->service_category);
+        }
+
+        if ($meta['role'] === 'vendor' && VendorClassificationService::installed()) {
+            $query->with(['vendorProfile.type', 'vendorCategories']);
+            if ($request->filled('vendor_type_id')) {
+                $query->whereHas('vendorProfile', fn ($q) => $q->where('vendor_type_id', $request->vendor_type_id));
+            }
+            if ($request->filled('vendor_category_id')) {
+                $query->whereHas('vendorCategories', fn ($q) => $q->whereKey($request->vendor_category_id));
+            }
+        }
+
+        $parties = $query->latest()->get();
         $balances = $this->partyExportBalances($parties->pluck('id'));
 
         return $parties->map(function ($party) use ($meta, $balances) {
-            $ledger  = $balances[$party->id] ?? null;
+            $ledger = $balances[$party->id] ?? null;
             $balance = $ledger ? (float) $ledger->balance : 0.0;
 
             return [
-                'party_id'         => $meta['prefix'] . str_pad($party->id, 3, '0', STR_PAD_LEFT),
-                'name'             => $party->name,
-                'contact_person'   => $party->contact_person,
-                'email'            => $party->email,
-                'phone'            => $party->phone,
-                'address'          => $party->address,
-                'balance'          => abs($balance),
-                'balance_type'     => $balance > 0 ? 'Dr' : ($balance < 0 ? 'Cr' : ''),
+                'party_id' => $meta['prefix'].str_pad($party->id, 3, '0', STR_PAD_LEFT),
+                'name' => $party->name,
+                'services' => $meta['role'] === 'vendor' && $party->relationLoaded('vendorProfile') && $party->vendorProfile?->type
+                    ? collect([$party->vendorProfile->type->name])->merge($party->vendorCategories->pluck('name'))->implode(' — ')
+                    : collect($party->service_categories ?? [])->map(fn ($service) => ucfirst($service))->implode(', '),
+                'contact_person' => $party->contact_person,
+                'email' => $party->email,
+                'phone' => $party->phone,
+                'address' => $party->address,
+                'balance' => abs($balance),
+                'balance_type' => $balance > 0 ? 'Dr' : ($balance < 0 ? 'Cr' : ''),
                 'last_transaction' => $ledger && $ledger->payment_date
                     ? Carbon::parse($ledger->payment_date)->format('Y-m-d')
                     : null,
-                'status'           => ucwords(str_replace('_', ' ', $party->status ?? 'inactive')),
+                'status' => ucwords(str_replace('_', ' ', $party->status ?? 'inactive')),
             ];
         })->all();
     }

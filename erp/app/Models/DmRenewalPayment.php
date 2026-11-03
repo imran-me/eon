@@ -25,18 +25,26 @@ class DmRenewalPayment extends Model
         'source_type',
         'dm_id',
         'dm_group_id',
+        'dm_type_id',
+        'dm_category_id',
         'due_date',
+        'next_expiry',
         'title',
         'amount',
         'currency',
+        'cycle',
         'expense_id',
         'recorded_by',
         'paid_at',
+        'dm_synced_at',
+        'dm_sync_error',
     ];
 
     protected $casts = [
         'due_date' => 'date',
+        'next_expiry' => 'date',
         'paid_at'  => 'datetime',
+        'dm_synced_at' => 'datetime',
         'amount'   => 'decimal:2',
     ];
 
@@ -51,6 +59,28 @@ class DmRenewalPayment extends Model
     public static function periodKey(string $sourceType, int|string $dmId, string $dueDate): string
     {
         return $sourceType . ':' . $dmId . ':' . $dueDate;
+    }
+
+    /**
+     * The key that follows ONE commitment across its renewals.
+     *
+     * For a subscription that is just the DM row: one row, reused every cycle.
+     *
+     * For a document it is the folder PLUS the type and category, because
+     * document_id on its own is only a folder — 388 rows sit under 29 of them,
+     * and one folder holds a tax token, a licence and a certificate together.
+     * Grouping on the folder alone carried the wrong paper's amount forward.
+     */
+    public function paperKey(): string
+    {
+        return $this->source_type . ':' . $this->dm_group_id
+            . ':' . ($this->dm_type_id ?? '-') . ':' . ($this->dm_category_id ?? '-');
+    }
+
+    /** The same key built from a row on screen, before any payment exists. */
+    public static function paperKeyFor(string $sourceType, $groupId, $typeId = null, $categoryId = null): string
+    {
+        return $sourceType . ':' . $groupId . ':' . ($typeId ?? '-') . ':' . ($categoryId ?? '-');
     }
 
     /**
@@ -147,6 +177,59 @@ class DmRenewalPayment extends Model
 
             return $rows;
         }
+    }
+
+    /**
+     * Where the term runs to after this one is paid.
+     *
+     * The single definition of "one cycle later", used both to push the date into
+     * DM and to show what the next period will be. If these ever disagreed, the
+     * desk would promise one date and DM would hold another.
+     *
+     * addMonthsNoOverflow() matters more than it looks: a monthly subscription
+     * expiring 31 January must land on 28 February, not spill into 3 March. Plain
+     * addMonth() drifts the anniversary forward a few days every short month, and
+     * a year of that moves a renewal into the wrong month entirely.
+     *
+     * An unrecognised cycle returns NULL rather than a guess. DM's register has
+     * blank and mistyped cycles in it, and a wrong date written back here does not
+     * raise an error anywhere — it silently stops a reminder arriving. Better to
+     * leave that one to a person.
+     */
+    public static function nextExpiryFor(string $dueDate, ?string $cycle): ?string
+    {
+        try {
+            $from = \Carbon\Carbon::parse($dueDate)->startOfDay();
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return match ($cycle) {
+            'Weekly'      => $from->addWeek()->toDateString(),
+            'Monthly'     => $from->addMonthsNoOverflow(1)->toDateString(),
+            'Quarterly'   => $from->addMonthsNoOverflow(3)->toDateString(),
+            'Half-Yearly' => $from->addMonthsNoOverflow(6)->toDateString(),
+            'Yearly'      => $from->addYearNoOverflow()->toDateString(),
+            default       => null,
+        };
+    }
+
+    /** True once DM has been told about this renewal. */
+    public function getIsDmSyncedAttribute(): bool
+    {
+        return $this->dm_synced_at !== null;
+    }
+
+    /**
+     * Needs a push to DM: a paid subscription period that DM has not confirmed.
+     *
+     * Documents are excluded — DM records those as a NEW row per renewal rather
+     * than by moving a date, so they need a different call that does not exist
+     * yet. Reporting them as "sync pending" would be an alert nobody can action.
+     */
+    public function scopeAwaitingDmSync($query)
+    {
+        return $query->where('source_type', self::SUBSCRIPTION)->whereNull('dm_synced_at');
     }
 
     public function expense()

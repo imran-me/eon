@@ -7,16 +7,18 @@
 @section('css')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <style>
-        .select2-container .select2-selection--single {
-            height: 40px;
+        .task-report-container .select2-container .select2-selection--single {
+            height: 34px;
         }
 
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 38px;
+        .task-report-container .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 32px;
+            padding-left: 10px;
+            font-size: 12px;
         }
 
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 40px;
+        .task-report-container .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 32px;
             position: absolute;
             top: 1px;
             right: 3px;
@@ -29,40 +31,56 @@
             background-color: #f4f7f9;
             font-family: 'Inter', 'Segoe UI', sans-serif;
         }
+        .task-report-container .print-statement-head { display: none; }
+
+        .task-report-container .report-hero {
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+            margin-bottom: 18px; padding: 20px 22px; border-radius: 14px;
+            background: linear-gradient(135deg, #1e3a8a, #4f46e5); color: #fff;
+            box-shadow: 0 10px 24px rgba(49,46,129,.18);
+        }
+        .report-hero h1 { margin: 0; font-size: 22px; font-weight: 800; }
+        .report-hero p { margin: 4px 0 0; color: #c7d2fe; font-size: 12px; }
+        .report-period { flex: none; padding: 7px 12px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; background: rgba(255,255,255,.12); font-size: 12px; font-weight: 700; }
 
         /* Filter Section */
         .task-report-container .filter-section {
             background: #ffffff;
-            padding: 20px;
-            border-radius: 10px;
+            padding: 10px 12px;
+            border: 1px solid #dbe4f0;
+            border-radius: 9px;
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-            margin-bottom: 25px;
+            margin-bottom: 14px;
         }
 
         .task-report-container .filter-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            grid-template-columns: 135px minmax(175px, 1.25fr) minmax(165px, 1.15fr) minmax(125px, .8fr) 115px 135px 135px auto;
+            gap: 8px;
             align-items: end;
         }
 
         .task-report-container .form-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
+            gap: 3px;
         }
 
         .task-report-container .form-group label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #475569;
+            font-size: 10px;
+            line-height: 1.1;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: .035em;
         }
 
         .task-report-container .form-control {
-            padding: 8px 12px;
+            height: 34px;
+            padding: 5px 9px;
             border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 14px;
+            border-radius: 5px;
+            font-size: 12px;
         }
 
         .task-report-container .btn-filter {
@@ -75,6 +93,24 @@
             font-weight: 600;
             transition: background 0.2s;
         }
+        .task-report-container .filter-actions { display:flex; gap:8px; align-items:center; }
+        .task-report-container .filter-reset,
+        .task-report-container .filter-submit {
+            height: 34px; min-width: 72px; display:inline-flex !important; align-items:center; justify-content:center;
+            gap:5px; border-radius:5px; padding:0 10px !important; line-height:1 !important;
+            font-size:11px !important; font-weight:700 !important; text-decoration:none !important; white-space:nowrap;
+        }
+        .task-report-container .filter-reset { border:1px solid #cbd5e1; background:#fff; color:#475569 !important; }
+        .task-report-container .filter-submit { border:1px solid #4f46e5; background:#4f46e5 !important; color:#fff !important; }
+        .task-report-container .filter-submit i { color:#fff !important; }
+
+        .task-report-container .report-kpis { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+        .task-report-container .report-kpi { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+        .report-kpi .kpi-label { display:block; color:#64748b; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+        .report-kpi .kpi-value { display:block; margin-top:4px; color:#0f172a; font-size:22px; font-weight:800; }
+        .report-kpi.high .kpi-value,.report-kpi.overdue .kpi-value { color:#dc2626; }
+        .report-kpi.medium .kpi-value { color:#d97706; }
+        .report-kpi.low .kpi-value { color:#059669; }
 
         .task-report-container .btn-filter:hover {
             background-color: #4338ca;
@@ -137,7 +173,7 @@
         }
 
         .task-report-container .user-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #3157c8 0%, #6d4bb0 100%);
             color: white;
             padding: 15px 20px;
             font-size: 16px;
@@ -146,6 +182,10 @@
             justify-content: space-between;
             align-items: center;
         }
+        .task-report-container .no-data { padding:52px 20px; text-align:center; color:#64748b; }
+        @media (max-width: 1400px) { .task-report-container .filter-form { grid-template-columns:repeat(4,minmax(150px,1fr)); } }
+        @media (max-width: 900px) { .task-report-container .filter-form { grid-template-columns:repeat(2,minmax(140px,1fr)); } .task-report-container .report-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+        @media (max-width: 640px) { .task-report-container { padding:12px; } .task-report-container .report-hero { align-items:flex-start; flex-direction:column; } .task-report-container .filter-form { grid-template-columns:1fr; } .task-report-container .filter-actions { justify-content:flex-end; } .task-report-container .report-kpis { grid-template-columns:1fr; } }
 
         .task-report-container .user-task-count {
             background: rgba(255, 255, 255, 0.2);
@@ -260,7 +300,13 @@
             border-bottom: 2px solid #e2e8f0
         }
 
-        .header {
+        /* Scoped 2026-08-22. This was a bare `.header`, and `.header` is also the
+           class on the app's own top bar (layout/header.blade.php), so every page
+           loading this stylesheet had 25px of report padding and a 2px dark rule
+           added to the shell header — which is why the header stood taller here
+           than on pages that do not load it. It only ever meant the printed
+           report's heading. */
+        .header.show-print {
             text-align: center;
             margin-bottom: 30px;
             padding-top: 15px;
@@ -269,6 +315,7 @@
         }
 
         @media print {
+            @page { size: A4 landscape; margin: 8mm 9mm; }
             body * {
                 visibility: hidden;
             }
@@ -296,20 +343,54 @@
             }
 
             .task-report-container .filter-section,
-            .task-report-container .export-actions{
+            .task-report-container .export-actions,
+            .task-report-container .report-hero,
+            .task-report-container .report-kpis,
+            .task-report-container > .header {
                 display: none !important;
             }
+
+            .task-report-container .print-statement-head {
+                display: block !important;
+                visibility: visible !important;
+                margin-bottom: 8px;
+            }
+            .print-statement-head .print-brand { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+            .print-statement-head .print-logo { display:block; width:125px; max-width:125px; height:auto; max-height:42px; object-fit:contain; object-position:left center; }
+            .print-statement-head .print-company { color:#3730a3; font-size:18px; font-weight:800; }
+            .print-statement-head .print-meta { color:#64748b; font-size:8px; text-align:right; }
+            .print-statement-head .print-title { padding:6px; border-top:2px solid #3730a3; background:#f5f7ff !important; color:#3730a3; text-align:center; text-transform:uppercase; letter-spacing:1.3px; font-size:9px; font-weight:800; }
+            .print-statement-head .print-period { display:flex; justify-content:space-between; padding:5px 0; color:#475569; font-size:8px; }
+            .print-statement-head .print-details { display:grid; grid-template-columns:1fr auto; gap:24px; padding:5px 0 7px; font-size:7px; color:#475569; }
+            .print-statement-head .print-details strong { color:#1e293b; }
+            .print-statement-head .print-details-title { margin-bottom:2px; color:#3730a3; text-transform:uppercase; letter-spacing:.4px; font-size:6px; font-weight:800; }
 
             /* Reduce table spacing for print */
             .task-report-container .table th,
             .task-report-container .table td {
-                padding: 6px 8px !important;
-                font-size: 12px !important;
+                padding: 1.5px 3px !important;
+                font-size: 6.3px !important;
+                line-height: 1.05 !important;
             }
 
+            .task-report-container .table th { padding-top: 2.5px !important; padding-bottom: 2.5px !important; }
+            .task-report-container .table th:nth-child(1) { width: 2% !important; }
+            .task-report-container .table th:nth-child(2) { width: 57% !important; }
+            .task-report-container .table th:nth-child(3) { width: 13% !important; }
+            .task-report-container .table th:nth-child(4) { width: 6% !important; }
+            .task-report-container .table th:nth-child(5) { width: 6% !important; }
+            .task-report-container .table th:nth-child(6),
+            .task-report-container .table th:nth-child(7) { width: 8% !important; }
+            .task-report-container .user-section { margin-bottom: 6px !important; border-radius: 0 !important; box-shadow: none !important; page-break-inside: auto; }
+            .task-report-container .report-table-wrapper { overflow: visible !important; }
+            .task-report-container .badge,
+            .task-report-container .status-badge { padding: 1px 3px !important; font-size: 5.8px !important; line-height: 1 !important; }
+
             .task-report-container .user-header {
-                padding: 10px 15px !important;
-                font-size: 14px !important;
+                padding: 5px 7px !important;
+                font-size: 8px !important;
+                background: #eef2ff !important;
+                color: #3730a3 !important;
             }
 
             .task-report-container .badge,
@@ -323,16 +404,65 @@
 
 @section('main-content')
     <div class="task-report-container">
-        <!-- <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 700; color: #1e293b;">
-            <i class="fa fa-tasks"></i> Task Report
-        </h2> -->
+        @php
+            $firstPrintGroup = $tasksByUser->first();
+            $printUser = $firstPrintGroup['user'] ?? Auth::user();
+            $printCompany = $printUser?->company ?? Auth::user()->company;
+            $singleEmployeeReport = $tasksByUser->count() === 1;
+            $printEmployeeId = $printUser?->employee_id_no ?: ($printUser ? 'EMP-' . str_pad((string) $printUser->id, 4, '0', STR_PAD_LEFT) : 'N/A');
+        @endphp
+        <div class="print-statement-head">
+            <div class="print-brand">
+                <div>
+                    @if($printCompany?->logo)
+                        <img class="print-logo" src="{{ asset($printCompany->logo) }}" alt="{{ $printCompany->name }}">
+                    @else
+                        <div class="print-company">{{ $printCompany?->name ?? config('app.name') }}</div>
+                    @endif
+                </div>
+                <div class="print-meta">
+                    <strong>{{ $printCompany?->name ?? config('app.name') }}</strong><br>
+                    @if($printCompany?->address){{ $printCompany->address }}<br>@endif
+                    {{ $printCompany?->phone }}{{ $printCompany?->phone && $printCompany?->email ? ' | ' : '' }}{{ $printCompany?->email }}
+                </div>
+            </div>
+            <div class="print-title">Employee Task Statement</div>
+            <div class="print-details">
+                <div>
+                    <div class="print-details-title">Employee Details</div>
+                    <strong>{{ $singleEmployeeReport ? $printUser?->name : 'All Employees' }}</strong><br>
+                    @if($singleEmployeeReport){{ $printUser?->email }}@endif
+                </div>
+                <div>
+                    @if($singleEmployeeReport)<strong>Employee ID:</strong> {{ $printEmployeeId }}<br>@endif
+                    <strong>Period:</strong> {{ \Carbon\Carbon::createFromFormat('Y-m', $selectedMonth)->format('F Y') }}<br>
+                    <strong>Generated:</strong> {{ now()->format('d M Y') }}<br>
+                    <strong>Printed by:</strong> {{ Auth::user()->name }}
+                </div>
+            </div>
+        </div>
+        <div class="report-hero">
+            <div>
+                <h1><i class="fa fa-list-check"></i> Employee Task Report</h1>
+                <p>Review employee workload, progress and deadlines for a selected month.</p>
+            </div>
+            <div class="report-period">
+                <i class="fa-regular fa-calendar"></i>
+                {{ \Carbon\Carbon::createFromFormat('Y-m', $selectedMonth)->format('F Y') }}
+            </div>
+        </div>
 
         <!-- Filter Section -->
         <div class="filter-section">
-            <form class="filter-form" method="get">
+            <form id="taskReportFilterForm" class="filter-form" method="get">
+                <div class="form-group">
+                    <label>Report Month</label>
+                    <input type="month" name="month" class="form-control" value="{{ $selectedMonth }}">
+                </div>
+
                 <div class="form-group">
                     <label>User / Employee</label>
-                    <select name="user_id" class="form-control select2" style="width: 100%">
+                    <select id="taskReportUserFilter" name="user_id" class="form-control select2" style="width: 100%">
                         @if($isAdminUser)
                             <option value="">All Users</option>
                         @endif
@@ -391,14 +521,12 @@
                     <input type="date" name="end_date" class="form-control" value="{{ request('end_date') }}">
                 </div>
 
-                <div style="display: flex; gap: 10px;">
-                    <a href="{{ route('role.report.task.reports', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" class="btn btn-sm bg-secondary"
-                        style="background: #e8e8e8; width: 100px; height: 40px; line-height: 40px; text-align: center; display: inline-block; border-radius: 4px; cursor: pointer;">
-                        Reset
+                <div class="filter-actions">
+                    <a href="{{ route('role.report.task.reports', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" class="filter-reset">
+                        <i class="fa fa-rotate-left"></i> Reset
                     </a>
-                    <button type="submit" class="btn btn-sm btn-filter"
-                        style="width: 100px; height: 40px; line-height: 40px; text-align: center; border: none;">
-                        Filter
+                    <button type="submit" class="filter-submit">
+                        <i class="fa fa-filter"></i> Apply
                     </button>
                 </div>
             </form>
@@ -415,40 +543,39 @@
             <strong>Phone:</strong> 01785451241
         </div> -->
         
-        <!-- Summary Cards -->
-        <!-- <div class="summary-grid">
-            <div class="summary-card card-total">
-                <span class="summary-value">{{ $summary['total_tasks'] }}</span>
-                <span class="summary-label">Total Tasks</span>
+        <div class="report-kpis">
+            <div class="report-kpi">
+                <span class="kpi-label">Total Tasks</span>
+                <span class="kpi-value">{{ number_format($summary['total_tasks']) }}</span>
             </div>
-            <div class="summary-card card-high">
-                <span class="summary-value">{{ $summary['by_priority']['high'] }}</span>
-                <span class="summary-label">High Priority</span>
+            <div class="report-kpi high">
+                <span class="kpi-label">High Priority</span>
+                <span class="kpi-value">{{ number_format($summary['by_priority']['high']) }}</span>
             </div>
-            <div class="summary-card card-medium">
-                <span class="summary-value">{{ $summary['by_priority']['medium'] }}</span>
-                <span class="summary-label">Medium Priority</span>
+            <div class="report-kpi medium">
+                <span class="kpi-label">Medium Priority</span>
+                <span class="kpi-value">{{ number_format($summary['by_priority']['medium']) }}</span>
             </div>
-            <div class="summary-card card-low">
-                <span class="summary-value">{{ $summary['by_priority']['low'] }}</span>
-                <span class="summary-label">Low Priority</span>
+            <div class="report-kpi low">
+                <span class="kpi-label">Low Priority</span>
+                <span class="kpi-value">{{ number_format($summary['by_priority']['low']) }}</span>
             </div>
-            <div class="summary-card card-overdue">
-                <span class="summary-value">{{ $summary['overdue'] }}</span>
-                <span class="summary-label">Overdue Tasks</span>
+            <div class="report-kpi overdue">
+                <span class="kpi-label">Overdue</span>
+                <span class="kpi-value">{{ number_format($summary['overdue']) }}</span>
             </div>
-        </div> -->
+        </div>
         
         
         <!-- Export Actions -->
         <div class="export-actions" style="margin-bottom: 20px;">
-            <a href="{{ route('export.task.report.excel', request()->all()) }}" class="btn-export">
+            <a href="{{ route('export.task.report.excel', array_merge(request()->all(), ['month' => $selectedMonth])) }}" class="btn-export">
                 <i class="fa-solid fa-file-excel" style="margin-right: 5px"></i> Export Excel
             </a>
-            <a href="{{ route('export.task.report.pdf', request()->all()) }}" class="btn-export btn-pdf">
+            <a href="{{ route('export.task.report.pdf', array_merge(request()->all(), ['month' => $selectedMonth])) }}" class="btn-export btn-pdf">
                 <i class="fa-solid fa-file-pdf" style="margin-right: 5px"></i> Export PDF
             </a>
-            <a href="javascript:void(0)" onclick="window.print()" class="btn-export btn-print">
+            <a href="{{ route('export.task.report.pdf', array_merge(request()->all(), ['month' => $selectedMonth, 'preview' => 1])) }}" target="_blank" class="btn-export btn-print">
                 <i class="fa-solid fa-print" style="margin-right: 5px"></i> Print
             </a>
         </div>
@@ -476,13 +603,13 @@
                         <table class="table">
                             <thead>
                                 <tr>
-                                    <th style="width: 5%">#</th>
-                                    <th style="width: 25%">Task Title</th>
-                                    <th style="width: 15%">Project</th>
-                                    <th style="width: 12%">Status</th>
-                                    <th style="width: 10%">Priority</th>
-                                    <th style="width: 10%">Start Date</th>
-                                    <th style="width: 10%">Due Date</th>
+                                    <th style="width: 2%">#</th>
+                                    <th style="width: 57%">Task Title</th>
+                                    <th style="width: 13%">Project</th>
+                                    <th style="width: 6%">Status</th>
+                                    <th style="width: 6%">Priority</th>
+                                    <th style="width: 8%">Start Date</th>
+                                    <th style="width: 8%">Due Date</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -491,6 +618,22 @@
                                         $dueDate = $task->due_date ? \Carbon\Carbon::parse($task->due_date) : null;
                                         $startDate = $task->start_date ? \Carbon\Carbon::parse($task->start_date) : null;
                                         $statusName = strtolower(trim($task->column->name ?? ''));
+                                        $statusColor = $task->column->color ?? '#64748b';
+                                        $statusHex = ltrim($statusColor, '#');
+                                        if (strlen($statusHex) === 3) {
+                                            $statusHex = implode('', array_map(fn ($char) => $char . $char, str_split($statusHex)));
+                                        }
+                                        $statusTextColor = '#ffffff';
+                                        if (preg_match('/^[0-9a-fA-F]{6}$/', $statusHex)) {
+                                            $red = hexdec(substr($statusHex, 0, 2));
+                                            $green = hexdec(substr($statusHex, 2, 2));
+                                            $blue = hexdec(substr($statusHex, 4, 2));
+                                            $brightness = (($red * 299) + ($green * 587) + ($blue * 114)) / 1000;
+                                            $statusTextColor = $brightness > 155 ? '#3f3f1f' : '#ffffff';
+                                        }
+                                        if (in_array($statusName, ['progress', 'pending', 'in progress', 'on hold'], true)) {
+                                            $statusTextColor = '#3f3f1f';
+                                        }
                                         $isDoneStatus = in_array($statusName, ['done', 'completed', 'complete', 'closed'], true);
                                         $isOverdue = $dueDate && !$isDoneStatus && $dueDate->copy()->endOfDay()->lt(now());
                                         $daysRemaining = $dueDate ? now()->diffInDays($dueDate, false) : null;
@@ -502,7 +645,24 @@
                                             @if($task->labels->isNotEmpty())
                                                 <div style="margin-top: 5px;">
                                                     @foreach($task->labels as $label)
-                                                        <span class="badge" style="background-color: {{ $label->color }}; opacity: 0.8; color: white; margin-right: 5px;">
+                                                        @php
+                                                            $labelName = strtolower(trim($label->name ?? ''));
+                                                            $labelColor = $label->color ?? '#64748b';
+                                                            $labelHex = ltrim($labelColor, '#');
+                                                            $labelTextColor = in_array($labelName, ['editing', 'shooting', 'progress', 'pending', 'in progress'], true)
+                                                                ? '#3f3f1f'
+                                                                : '#ffffff';
+                                                            if (strlen($labelHex) === 3) {
+                                                                $labelHex = implode('', array_map(fn ($char) => $char . $char, str_split($labelHex)));
+                                                            }
+                                                            if (preg_match('/^[0-9a-fA-F]{6}$/', $labelHex)) {
+                                                                $labelBrightness = ((hexdec(substr($labelHex, 0, 2)) * 299)
+                                                                    + (hexdec(substr($labelHex, 2, 2)) * 587)
+                                                                    + (hexdec(substr($labelHex, 4, 2)) * 114)) / 1000;
+                                                                $labelTextColor = $labelBrightness > 155 ? '#3f3f1f' : '#ffffff';
+                                                            }
+                                                        @endphp
+                                                        <span class="badge" style="background-color: {{ $labelColor }}; color: {{ $labelTextColor }} !important; margin-right: 5px;">
                                                             {{ $label->name }}
                                                         </span>
                                                     @endforeach
@@ -511,7 +671,7 @@
                                         </td>
                                         <td>{{ $task->board->project->project_name ?? 'N/A' }}</td>
                                         <td>
-                                            <span class="status-badge" style="background-color: {{ $task->column->color }}; opacity: 0.9; color: white;">
+                                            <span class="status-badge" style="background-color: {{ $statusColor }}; color: {{ $statusTextColor }} !important;">
                                                 {{ $task->column->name }}
                                             </span>
                                         </td>
@@ -562,6 +722,20 @@
     <script>
         $(document).ready(function() {
             $('.select2').select2();
+
+            $('#taskReportUserFilter').on('change.taskReportAutoLoad', function() {
+                const form = document.getElementById('taskReportFilterForm');
+                const applyButton = form?.querySelector('.filter-submit');
+
+                if (applyButton) {
+                    applyButton.disabled = true;
+                    applyButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Loading';
+                }
+
+                if (form) {
+                    form.requestSubmit ? form.requestSubmit() : form.submit();
+                }
+            });
         });
 
         function viewTaskDetails(taskId) {

@@ -296,6 +296,13 @@
         </div>
     </div>
 
+    @if(!empty($paidFrom))
+        <div class="reason-box">
+            <strong style="display: block; margin-bottom: 5px; color: var(--slate-900);">Paid from:</strong>
+            {{ $paidFrom['bank'] }} &middot; {{ $paidFrom['ref'] }}
+        </div>
+    @endif
+
     <div class="reason-box">
         <strong style="display: block; margin-bottom: 5px; color: var(--slate-900);">Reason for Request:</strong>
         {{ $data->reason ?: 'Standard salary advance request.' }}

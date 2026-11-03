@@ -3,20 +3,21 @@
 namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
-use App\Models\Company;
 use App\Models\PassportHolder;
 use App\Models\PassportHolderCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
 
 class PassportHolderControllerV2 extends Controller
 {
     private const TYPES = ['general', 'visa', 'ticket', 'contract_flight', 'contract_file'];
+
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -25,12 +26,16 @@ class PassportHolderControllerV2 extends Controller
             ->orderBy('passport_holder_categories.name', 'asc')
             ->orderBy('passport_holders.name', 'asc');
 
-        if ($request->has('category_id') && !empty($request->category_id)) {
+        if ($request->has('category_id') && ! empty($request->category_id)) {
             $query->where('passport_holders.category_id', $request->category_id);
         }
 
+        // Part of the name or the passport number (owner, 2026-10-05: "AFRIDE"
+        // and "A07533425" both found nothing — this matched the exact full name only).
         if ($request->filled('name')) {
-            $query->where('passport_holders.name', $request->name);
+            $term = '%'.addcslashes(trim($request->name), '%_\\').'%';
+            $query->where(fn ($q) => $q->where('passport_holders.name', 'like', $term)
+                ->orWhere('passport_holders.passport_no', 'like', $term));
         }
 
         if ($request->filled('status')) {
@@ -52,11 +57,10 @@ class PassportHolderControllerV2 extends Controller
         ));
     }
 
-
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -66,21 +70,23 @@ class PassportHolderControllerV2 extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
+        // Contract File's quick add asks for the name only (owner, 2026-10-26); every other
+        // screen keeps nationality, category and type required.
+        $nameOnly = $request->input('source') === 'contract_file';
         $validator = Validator::make($request->all(), [
-            'name'           => 'required|string|max:255',
-            'passport_no'    => 'required|string|max:50|unique:passport_holders,passport_no',
-            'nationality'    => 'required|string|max:100',
-            'phone'          => 'required|string|max:20',
-                // 'date_of_birth'  => 'required|date',
-                // 'issue_date'     => 'required|date',
-                // 'expiry_date'    => 'required|date|after_or_equal:issue_date',
-            'category_id'    => 'required|exists:passport_holder_categories,id',
-            'type'           => 'required|in:' . implode(',', self::TYPES),
+            'name' => 'required|string|max:255',
+            'passport_no' => 'nullable|string|max:50|unique:passport_holders,passport_no',
+            'nationality' => ($nameOnly ? 'nullable' : 'required').'|string|max:100',
+            'phone' => 'nullable|string|max:20',
+            // 'date_of_birth'  => 'required|date',
+            // 'issue_date'     => 'required|date',
+            // 'expiry_date'    => 'required|date|after_or_equal:issue_date',
+            'category_id' => ($nameOnly ? 'nullable' : 'required').'|exists:passport_holder_categories,id',
+            'type' => ($nameOnly ? 'nullable' : 'required').'|in:'.implode(',', self::TYPES),
         ]);
 
         // If validation fails
@@ -88,7 +94,7 @@ class PassportHolderControllerV2 extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ]);
             }
 
@@ -97,23 +103,23 @@ class PassportHolderControllerV2 extends Controller
 
         $data = PassportHolder::create([
             'name' => $request->name,
-            'passport_no' => $request->passport_no,
-            'nationality' => $request->nationality,
+            'passport_no' => trim((string) $request->passport_no) !== '' ? strtoupper(trim($request->passport_no)) : null,
+            'nationality' => $request->nationality ?? '',   // NOT NULL column; blank only on a name-only add
             'phone' => $request->phone,
             'date_of_birth' => $request->date_of_birth,
             'issue_date' => $request->issue_date,
             'expiry_date' => $request->expiry_date,
             'category_id' => $request->category_id,
-            'type' => $request->type,
+            'type' => $request->type ?: 'contract_file',     // only a name-only add can arrive without one
             'created_by' => auth()->id(),
-            'status' => $request->status ? 1 : 0
+            'status' => $request->status ? 1 : 0,
         ]);
 
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Data created successfully.',
-                'data' => $data
+                'data' => $data,
             ]);
         }
 
@@ -124,7 +130,7 @@ class PassportHolderControllerV2 extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -134,9 +140,8 @@ class PassportHolderControllerV2 extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -145,19 +150,19 @@ class PassportHolderControllerV2 extends Controller
         if (empty($data)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data Info Not Found!'
+                'message' => 'Data Info Not Found!',
             ]);
         }
-        $validator = Validator::make($request->all(), [        
-            'name'           => 'required|string|max:255',
-            'passport_no'    => 'required|string|max:50|unique:passport_holders,passport_no,' . $data->id,
-            'nationality'    => 'required|string|max:100',
-            'phone'          => 'required|string|max:20',
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'passport_no' => 'nullable|string|max:50|unique:passport_holders,passport_no,'.$data->id,
+            'nationality' => 'required|string|max:100',
+            'phone' => 'nullable|string|max:20',
             // 'date_of_birth'  => 'required|date',
             // 'issue_date'     => 'required|date',
             // 'expiry_date'    => 'required|date|after_or_equal:issue_date',
-            'category_id'    => 'required|exists:passport_holder_categories,id',
-            'type'           => 'required|in:' . implode(',', self::TYPES),
+            'category_id' => 'required|exists:passport_holder_categories,id',
+            'type' => 'required|in:'.implode(',', self::TYPES),
         ]);
 
         // If validation fails
@@ -165,15 +170,16 @@ class PassportHolderControllerV2 extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ]);
             }
+
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
         $data->update([
             'name' => $request->name,
-            'passport_no' => $request->passport_no,
+            'passport_no' => trim((string) $request->passport_no) !== '' ? strtoupper(trim($request->passport_no)) : null,
             'nationality' => $request->nationality,
             'phone' => $request->phone,
             'date_of_birth' => $request->date_of_birth,
@@ -181,14 +187,14 @@ class PassportHolderControllerV2 extends Controller
             'expiry_date' => $request->expiry_date,
             'category_id' => $request->category_id,
             'type' => $request->type,
-            'status' => $request->status ? 1 : 0
+            'status' => $request->status ? 1 : 0,
         ]);
 
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Data updated successfully.',
-                'data' => $data
+                'data' => $data,
             ]);
         }
 
@@ -199,7 +205,7 @@ class PassportHolderControllerV2 extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Request $request, $id)
     {
@@ -210,19 +216,19 @@ class PassportHolderControllerV2 extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Info Not Found!'
+                    'message' => 'Data Info Not Found!',
                 ]);
             }
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Data deleted successfully.'
+            'message' => 'Data deleted successfully.',
         ]);
     }
 
@@ -233,14 +239,14 @@ class PassportHolderControllerV2 extends Controller
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ]);
         }
 
         return response()->json([
             'data' => $data,
             'success' => true,
-            'message' => 'Data Found Successfully.'
+            'message' => 'Data Found Successfully.',
         ]);
     }
 }

@@ -29,15 +29,13 @@
                             <label for="edit_bank_id" class="block text-gray-700 text-sm font-bold mb-2">Bank</label>
                             <select id="edit_bank_id" name="bank_id" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">
                                 <option value="">All</option>
-                                @foreach ($banks as $bank)
-                                    <option value="{{ $bank->id }}">{{ $bank->name }}</option>                                            
-                                @endforeach
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                             </select>
                             <p id="edit_bank_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select a bank</p>
                         </div> 
                         <div class="mb-4">
                             <label for="edit_start_date" class="block text-gray-700 text-sm font-bold mb-2">Start Date</label>
-                            <input type="date" id="edit_start_date" name="start_date" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="date" id="edit_start_date" name="start_date" required class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <p class="text-red-500 text-xs mt-1 hidden error-message">Please select a Start Date</p>
                         </div>	
                         <div class="mb-4">

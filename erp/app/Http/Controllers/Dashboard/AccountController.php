@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Dashboard;
 use App\Models\Account;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
@@ -35,6 +36,15 @@ class AccountController implements HasMiddleware
         $canViewAll = auth()->user()->can('view all account');
 
         $query = Account::with(['parent', 'company']);
+        // Match Account Ledger: opening balance plus posted debit minus credit.
+        // Aggregate directly posted lines only; parent accounts are not rollups.
+        $movement = DB::table('journal_items as balance_items')
+            ->join('journal_entries as balance_entries', 'balance_entries.id', '=', 'balance_items.journal_entry_id')
+            ->whereColumn('balance_items.account_id', 'accounts.id')
+            ->whereNull('balance_items.deleted_at')->whereNull('balance_entries.deleted_at')
+            ->when(!$canViewAll && !empty($userCompanyId), fn ($q) => $q->where('balance_entries.company_id', $userCompanyId))
+            ->selectRaw('COALESCE(SUM(balance_items.debit - balance_items.credit), 0)');
+        $query->select('accounts.*')->selectSub($movement, 'ledger_movement');
 
         // Users without "view all account" only see accounts that are
         // either shared across every company (company_id NULL) or belong
@@ -84,8 +94,10 @@ class AccountController implements HasMiddleware
         $sortKey = is_string($sortRaw) ? $sortRaw : '';
         $sortDir = (is_string($dirRaw) && strtolower($dirRaw) === 'asc') ? 'asc' : 'desc';
 
-        if (in_array($sortKey, ['code', 'name', 'type', 'parent', 'company', 'opening_balance', 'status'], true)) {
-            if ($sortKey === 'parent') {
+        if (in_array($sortKey, ['code', 'name', 'type', 'parent', 'company', 'opening_balance', 'closing_balance', 'status'], true)) {
+            if ($sortKey === 'closing_balance') {
+                $query->orderByRaw('(accounts.opening_balance + ledger_movement) ' . $sortDir);
+            } elseif ($sortKey === 'parent') {
                 // Self-referencing: accounts ordered by their parent's name. A
                 // subquery keeps the two apart — a join would need aliasing and
                 // would risk the parent's columns overwriting the row's own.
@@ -122,7 +134,23 @@ class AccountController implements HasMiddleware
             $query->orderBy('code');
         }
 
-        $accounts     = $query->paginate(15)->withQueryString();
+        // Build the hierarchy before pagination. Paginating the SQL query first
+        // can put a parent on one page and its children on another, making the
+        // chart look like an unrelated flat list.
+        $orderedAccounts = $this->flattenAccountHierarchy($query->get());
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = 15;
+        $accounts = new LengthAwarePaginator(
+            $orderedAccounts->forPage($page, $perPage)->values(),
+            $orderedAccounts->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $accounts->getCollection()->each(function ($account) {
+            $account->setAttribute('closing_balance', (float) $account->opening_balance + (float) $account->ledger_movement);
+        });
         $allAccounts  = Account::active()->orderBy('name')->get(); // for parent dropdown
 
         // Companies selectable in the create/edit form: company-locked users
@@ -133,6 +161,46 @@ class AccountController implements HasMiddleware
             : Company::orderBy('name')->get();
 
         return view('accounts.index', compact('accounts', 'allAccounts', 'role', 'companies'));
+    }
+
+    /** Order visible accounts parent-first and annotate their display depth. */
+    private function flattenAccountHierarchy($accounts)
+    {
+        $visibleIds = $accounts->pluck('id')->flip();
+        $childrenByParent = $accounts->groupBy(fn (Account $account) => (int) ($account->parent_id ?? 0));
+        $ordered = collect();
+        $visited = [];
+
+        $append = function (Account $account, int $depth = 0) use (&$append, &$visited, $childrenByParent, $ordered) {
+            if (isset($visited[$account->id])) {
+                return;
+            }
+
+            $visited[$account->id] = true;
+            $children = $childrenByParent->get((int) $account->id, collect());
+            $account->setAttribute('tree_depth', $depth);
+            $account->setAttribute('tree_has_children', $children->isNotEmpty());
+            $ordered->push($account);
+
+            foreach ($children as $child) {
+                $append($child, $depth + 1);
+            }
+        };
+
+        // A filtered result may contain a child without its parent. Treat that
+        // child as a visible root instead of dropping it from the result.
+        foreach ($accounts as $account) {
+            if (! $account->parent_id || ! $visibleIds->has($account->parent_id)) {
+                $append($account);
+            }
+        }
+
+        // Defensive fallback for malformed/circular legacy data.
+        foreach ($accounts as $account) {
+            $append($account);
+        }
+
+        return $ordered;
     }
 
     /**

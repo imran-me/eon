@@ -5,6 +5,7 @@
 @endsection
 
 @section('css')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 @include('journals.css')
 <style>
     /* ── Summary cards ─────────────────────────────── */
@@ -54,6 +55,7 @@
     .btn-reschedule{ background:#e0e7ff; color:#3730a3; } .btn-reschedule:hover{ background:#c7d2fe; }
     .btn-mark-paid { background:#1e40af; color:#fff;    } .btn-mark-paid:hover { background:#1e3a8a; }
     .btn-cancel-sched { background:#fef3c7; color:#d97706; } .btn-cancel-sched:hover { background:#fde68a; }
+    .btn-reopen { background:#ccfbf1; color:#0f766e; } .btn-reopen:hover { background:#99f6e4; }
     .btn-del   { background:#fee2e2; color:#b91c1c; } .btn-del:hover { background:#fecaca; }
 
     /* ── Paid meta ─────────────────────────────────── */
@@ -548,7 +550,7 @@
                         <th>@include('partials.sortable-th', ['key' => 'priority', 'label' => 'Priority'])</th>
                         <th>@include('partials.sortable-th', ['key' => 'status', 'label' => 'Status'])</th>
                         <th class="text-right">@include('partials.sortable-th', ['key' => 'amount', 'label' => 'Amount (৳)', 'dirDefault' => 'desc'])</th>
-                        <th class="no-print text-center">Actions</th>
+                        <th class="no-print text-center" style="width:1%;white-space:nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -670,31 +672,37 @@
                         @endif
                     </td>
                     <td data-label="Actions" class="text-center no-print">
-                        <div class="flex items-center justify-center gap-1 flex-wrap">
-                            <a href="{{ route('role.payment-schedules.voucher', ['role' => $role, 'schedule' => $schedule->id]) }}" target="_blank" class="btn-act" title="Receivable Invoice" style="background:#dbeafe;color:#1d4ed8;"><i class="fas fa-file-invoice"></i></a>
+                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+                            <a href="{{ route('role.payment-schedules.voucher', ['role' => $role, 'schedule' => $schedule->id]) }}" target="_blank" class="btn-act" title="Receivable Invoice" style="background:#dbeafe;color:#1d4ed8;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-file-invoice" style="font-size:11px;margin:0"></i></a>
                             @can('approve payment schedule')
                             @if(in_array($schedule->status, ['pending','overdue']))
-                            <button class="btn-act btn-approve" title="Approve" onclick="openApprove({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-check"></i></button>
+                            <button class="btn-act btn-approve" title="Approve" onclick="openApprove({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-check" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @endcan
                             @if($schedule->status === 'approved')
-                            <button class="btn-act btn-mark-paid" title="Mark as Paid" onclick="openMarkPaid({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}', {{ $schedule->amount }}, '{{ $schedule->type }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}')"><i class="fas fa-money-bill-wave"></i></button>
+                            <button class="btn-act btn-mark-paid" title="Mark as Paid" onclick="openMarkPaid({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}', {{ $schedule->amount }}, '{{ $schedule->type }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-money-bill-wave" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @can('approve payment schedule')
                             @if(in_array($schedule->status, ['pending','overdue','approved']))
-                            <button class="btn-act btn-reject" title="Reject" onclick="openReject({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-times"></i></button>
+                            <button class="btn-act btn-reject" title="Reject" onclick="openReject({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-times" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @endcan
                             @if(! in_array($schedule->status, ['paid','cancelled']))
-                            <button class="btn-act btn-reschedule" title="Reschedule" onclick="openReschedule({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}', {{ $schedule->reschedule_count }})"><i class="fas fa-calendar-alt"></i></button>
+                            <button class="btn-act btn-reschedule" title="Reschedule" onclick="openReschedule({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}', {{ $schedule->reschedule_count }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-calendar-alt" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @if(in_array($schedule->status, ['pending','overdue','approved','rejected']))
-                            <form method="POST" action="{{ route('role.payment-schedules.cancel', ['role' => $role, 'schedule' => $schedule->id]) }}" id="cancelForm-{{ $schedule->id }}" style="display:inline;">@csrf @method('PATCH')</form>
-                            <button class="btn-act btn-cancel-sched" title="Cancel" onclick="confirmCancel({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-ban"></i></button>
+                            <form method="POST" action="{{ route('role.payment-schedules.cancel', ['role' => $role, 'schedule' => $schedule->id]) }}" id="cancelForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('PATCH')</form>
+                            <button class="btn-act btn-cancel-sched" title="Cancel" onclick="confirmCancel({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-ban" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @if($schedule->status === 'cancelled')
-                            <form method="POST" action="{{ route('role.payment-schedules.destroy', ['role' => $role, 'payment_schedule' => $schedule->id]) }}" id="deleteForm-{{ $schedule->id }}" style="display:inline;">@csrf @method('DELETE')</form>
-                            <button class="btn-act btn-del" title="Delete" onclick="confirmDelete({{ $schedule->id }}, '{{ addslashes($partyName) }}')"><i class="fas fa-trash-alt"></i></button>
+                            {{-- Cancel used to be one-way: Delete was the only action left, so a
+                                 schedule cancelled by mistake could never be paid again — and
+                                 "Pay Due Amount" skips cancelled rows, so that month's payment
+                                 quietly became an unattributed ledger credit. --}}
+                            <form method="POST" action="{{ route('role.payment-schedules.reopen', ['role' => $role, 'schedule' => $schedule->id]) }}" id="reopenForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('PATCH')</form>
+                            <button class="btn-act btn-reopen" title="Reopen (back to pending)" onclick="confirmReopen({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-rotate-left" style="font-size:11px;margin:0"></i></button>
+                            <form method="POST" action="{{ route('role.payment-schedules.destroy', ['role' => $role, 'payment_schedule' => $schedule->id]) }}" id="deleteForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('DELETE')</form>
+                            <button class="btn-act btn-del" title="Delete" onclick="confirmDelete({{ $schedule->id }}, '{{ addslashes($partyName) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-trash-alt" style="font-size:11px;margin:0"></i></button>
                             @endif
                         </div>
                     </td>
@@ -744,7 +752,7 @@
                         <th>@include('partials.sortable-th', ['key' => 'priority', 'label' => 'Priority'])</th>
                         <th>@include('partials.sortable-th', ['key' => 'status', 'label' => 'Status'])</th>
                         <th class="text-right">@include('partials.sortable-th', ['key' => 'amount', 'label' => 'Amount (৳)', 'dirDefault' => 'desc'])</th>
-                        <th class="no-print text-center">Actions</th>
+                        <th class="no-print text-center" style="width:1%;white-space:nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -866,31 +874,37 @@
                         @endif
                     </td>
                     <td data-label="Actions" class="text-center no-print">
-                        <div class="flex items-center justify-center gap-1 flex-wrap">
-                            <a href="{{ route('role.payment-schedules.voucher', ['role' => $role, 'schedule' => $schedule->id]) }}" target="_blank" class="btn-act" title="Payment Voucher" style="background:#fef3c7;color:#92400e;"><i class="fas fa-file-invoice"></i></a>
+                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+                            <a href="{{ route('role.payment-schedules.voucher', ['role' => $role, 'schedule' => $schedule->id]) }}" target="_blank" class="btn-act" title="Payment Voucher" style="background:#fef3c7;color:#92400e;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-file-invoice" style="font-size:11px;margin:0"></i></a>
                             @can('approve payment schedule')
                             @if(in_array($schedule->status, ['pending','overdue']))
-                            <button class="btn-act btn-approve" title="Approve" onclick="openApprove({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-check"></i></button>
+                            <button class="btn-act btn-approve" title="Approve" onclick="openApprove({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-check" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @endcan
                             @if($schedule->status === 'approved')
-                            <button class="btn-act btn-mark-paid" title="Mark as Paid" onclick="openMarkPaid({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}', {{ $schedule->amount }}, '{{ $schedule->type }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}')"><i class="fas fa-money-bill-wave"></i></button>
+                            <button class="btn-act btn-mark-paid" title="Mark as Paid" onclick="openMarkPaid({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}', {{ $schedule->amount }}, '{{ $schedule->type }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-money-bill-wave" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @can('approve payment schedule')
                             @if(in_array($schedule->status, ['pending','overdue','approved']))
-                            <button class="btn-act btn-reject" title="Reject" onclick="openReject({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-times"></i></button>
+                            <button class="btn-act btn-reject" title="Reject" onclick="openReject({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-times" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @endcan
                             @if(! in_array($schedule->status, ['paid','cancelled']))
-                            <button class="btn-act btn-reschedule" title="Reschedule" onclick="openReschedule({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}', {{ $schedule->reschedule_count }})"><i class="fas fa-calendar-alt"></i></button>
+                            <button class="btn-act btn-reschedule" title="Reschedule" onclick="openReschedule({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ $schedule->scheduled_date->format('Y-m-d') }}', {{ $schedule->reschedule_count }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-calendar-alt" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @if(in_array($schedule->status, ['pending','overdue','approved','rejected']))
-                            <form method="POST" action="{{ route('role.payment-schedules.cancel', ['role' => $role, 'schedule' => $schedule->id]) }}" id="cancelForm-{{ $schedule->id }}" style="display:inline;">@csrf @method('PATCH')</form>
-                            <button class="btn-act btn-cancel-sched" title="Cancel" onclick="confirmCancel({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')"><i class="fas fa-ban"></i></button>
+                            <form method="POST" action="{{ route('role.payment-schedules.cancel', ['role' => $role, 'schedule' => $schedule->id]) }}" id="cancelForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('PATCH')</form>
+                            <button class="btn-act btn-cancel-sched" title="Cancel" onclick="confirmCancel({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-ban" style="font-size:11px;margin:0"></i></button>
                             @endif
                             @if($schedule->status === 'cancelled')
-                            <form method="POST" action="{{ route('role.payment-schedules.destroy', ['role' => $role, 'payment_schedule' => $schedule->id]) }}" id="deleteForm-{{ $schedule->id }}" style="display:inline;">@csrf @method('DELETE')</form>
-                            <button class="btn-act btn-del" title="Delete" onclick="confirmDelete({{ $schedule->id }}, '{{ addslashes($partyName) }}')"><i class="fas fa-trash-alt"></i></button>
+                            {{-- Cancel used to be one-way: Delete was the only action left, so a
+                                 schedule cancelled by mistake could never be paid again — and
+                                 "Pay Due Amount" skips cancelled rows, so that month's payment
+                                 quietly became an unattributed ledger credit. --}}
+                            <form method="POST" action="{{ route('role.payment-schedules.reopen', ['role' => $role, 'schedule' => $schedule->id]) }}" id="reopenForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('PATCH')</form>
+                            <button class="btn-act btn-reopen" title="Reopen (back to pending)" onclick="confirmReopen({{ $schedule->id }}, '{{ addslashes($partyName) }}', '{{ number_format($schedule->amount, 2) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-rotate-left" style="font-size:11px;margin:0"></i></button>
+                            <form method="POST" action="{{ route('role.payment-schedules.destroy', ['role' => $role, 'payment_schedule' => $schedule->id]) }}" id="deleteForm-{{ $schedule->id }}" style="display:inline;display:contents">@csrf @method('DELETE')</form>
+                            <button class="btn-act btn-del" title="Delete" onclick="confirmDelete({{ $schedule->id }}, '{{ addslashes($partyName) }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-trash-alt" style="font-size:11px;margin:0"></i></button>
                             @endif
                         </div>
                     </td>
@@ -1167,9 +1181,7 @@
                         <label>Bank Account <span class="req">*</span></label>
                         <select name="bank_id" id="mp_bank" class="form-control" required>
                             <option value="">— Select Bank —</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                     </div>
                     <div class="form-group half">
@@ -1223,6 +1235,10 @@
                 <div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:#6d28d9;">
                     <i class="fas fa-info-circle mr-1"></i>
                     Use this form to schedule payments not linked to any invoice — e.g. office rent, utility bill, government tax, loan instalment, advance to employee.
+                </div>
+                <div id="adHocProcessingNotice" style="display:none;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:12.5px;color:#5b21b6;font-weight:700;">
+                    <i class="fas fa-spinner fa-spin mr-1"></i>
+                    Your request is being processed. Please wait while the schedule is created.
                 </div>
 
                 <div class="form-row">
@@ -1310,13 +1326,14 @@
 
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="schedClose('adHocModal')"
+                <button type="button" id="adHocCancelBtn" onclick="schedClose('adHocModal')"
                         style="padding:9px 20px;border-radius:7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;cursor:pointer;font-weight:600;">
                     Cancel
                 </button>
-                <button type="submit"
+                <button type="submit" id="adHocSubmitBtn"
                         style="padding:9px 22px;border-radius:7px;background:#7c3aed;color:#fff;border:none;cursor:pointer;font-weight:700;">
-                    <i class="fas fa-save mr-1"></i>Create Schedule
+                    <span id="adHocSubmitText"><i class="fas fa-save mr-1"></i>Create Schedule</span>
+                    <span id="adHocSubmitLoading" style="display:none;"><i class="fas fa-spinner fa-spin mr-1"></i>Processing...</span>
                 </button>
             </div>
         </form>
@@ -1328,6 +1345,7 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"
         integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
 <script>
 const _role = '{{ $role }}';
@@ -1350,6 +1368,69 @@ $(document).ready(function () {
         if ($(e.target).hasClass('modal-overlay')) schedClose($(this).attr('id'));
     });
 
+    /* ── Searchable dropdowns in the modals ─────────
+       dropdownParent keeps the panel inside the overlay, which is what the
+       .modal-overlay .select2-dropdown z-index rules in journals/css target.
+       minimumResultsForSearch hides the search box on the short fixed lists
+       (schedule type, priority, payment method) while leaving it on the long
+       ones — company, party type, party, bank. */
+    $('#adHocModal select, #markPaidModal select').each(function () {
+        const $sel = $(this);
+        $sel.select2({
+            dropdownParent: $sel.closest('.modal-overlay'),
+            width: '100%',
+            minimumResultsForSearch: 8,
+        });
+    });
+
+    /* Select2 raises jQuery events, but the dependent-dropdown logic below
+       listens with native addEventListener, which never sees them — that is
+       why picking a company left Party Type stuck on "Select Company first".
+       Bridge a Select2 pick back to a real DOM event. select2:select only
+       fires for a choice made in the Select2 UI, so it cannot recurse, and
+       the namespaced change.select2 schedSyncSelect2() uses is not matched
+       here — resetting the form must not kick off a fetch. */
+    $('#adHocModal select, #markPaidModal select').on('select2:select select2:clear', function () {
+        this.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    /* The ad-hoc form swaps <option> lists in by hand as the company and
+       party type change. Select2 reads the options live when it opens, so the
+       list itself is always right — only the rendered label goes stale. Watch
+       for the swap rather than chasing every innerHTML assignment, so a later
+       one added here stays in sync for free. */
+    if (window.MutationObserver) {
+        const s2Observer = new MutationObserver(() => schedSyncSelect2());
+        document.querySelectorAll('#adHocModal select').forEach(function (el) {
+            s2Observer.observe(el, { childList: true });
+        });
+    }
+
+    $('#adHocForm').on('submit', function () {
+        const form = this;
+
+        if ($(form).data('submitting')) {
+            return false;
+        }
+
+        if (!form.checkValidity()) {
+            return true;
+        }
+
+        $(form).data('submitting', true);
+        $('#adHocProcessingNotice').show();
+        $('#adHocSubmitBtn')
+            .prop('disabled', true)
+            .css({ opacity: 0.75, cursor: 'not-allowed' });
+        $('#adHocCancelBtn, #adHocModal .modal-close')
+            .prop('disabled', true)
+            .css({ opacity: 0.65, cursor: 'not-allowed' });
+        $('#adHocSubmitText').hide();
+        $('#adHocSubmitLoading').show();
+
+        return true;
+    });
+
     /* ── Reject form validation ────────────────────── */
     $('#rejectForm').on('submit', function (e) {
         const note = $('#rj_note').val().trim();
@@ -1366,7 +1447,18 @@ $(document).ready(function () {
 });
 
 /* ── Modal helpers ──────────────────────────────── */
+/* Re-render the Select2 labels after we set values or swap options by hand. */
+function schedSyncSelect2() {
+    if (!window.jQuery || !$.fn.select2) return;
+    $('#adHocModal select, #markPaidModal select').each(function () {
+        if ($(this).data('select2')) $(this).trigger('change.select2');
+    });
+}
+
 function schedClose(id) {
+    if (id === 'adHocModal' && $('#adHocForm').data('submitting')) {
+        return;
+    }
     document.getElementById(id).classList.remove('show');
     document.body.style.overflow = '';
 }
@@ -1410,6 +1502,105 @@ function openReschedule(id, party, currentDate, reschedCount) {
     schedOpen('rescheduleModal');
 }
 
+/* ── Payment method narrows the account list ─────────────────────────────
+   Choosing "Mobile Banking" and then being offered a current account is an
+   invitation to a wrong posting: the money is recorded as leaving an account it
+   never left. The account's own kind lives on data-type, which
+   partials/bank-options emits for every picker in the ERP.
+
+   'other' deliberately maps to nothing — it means "none of the above", so every
+   account stays reachable rather than becoming un-selectable. Cheque and card
+   both settle against a bank account, so they narrow to 'bank'.
+
+   Scoped to this modal's two ids; it touches nothing else on the page. */
+var MP_TYPE_FOR = {
+    cash:           'cash',
+    bank_transfer:  'bank',
+    mobile_banking: 'mobile_banking',
+    cheque:         'bank',
+    card:           'bank',
+};
+
+var MP_TYPE_LABEL = {
+    cash:           'cash',
+    bank:           'bank',
+    mobile_banking: 'mobile banking',
+};
+
+/* The full list is cached on first use, because filtering rebuilds the select
+   and the options would otherwise be gone the second time round. Optgroups are
+   rebuilt too, so the company grouping survives the filter. */
+function mpFilterBanks() {
+    var method = document.getElementById('mp_method');
+    var bank   = document.getElementById('mp_bank');
+    if (!method || !bank) return;
+
+    if (!bank._mpAll) {
+        bank._mpAll = Array.prototype.map.call(bank.querySelectorAll('option'), function (o) {
+            return {
+                value: o.value,
+                label: o.textContent,
+                type:  o.getAttribute('data-type') || '',
+                group: o.parentNode && o.parentNode.tagName === 'OPTGROUP' ? o.parentNode.label : null,
+                attrs: Array.prototype.filter.call(o.attributes, function (a) {
+                    return a.name.indexOf('data-') === 0;
+                }).map(function (a) { return [a.name, a.value]; }),
+            };
+        });
+    }
+
+    var want     = MP_TYPE_FOR[method.value] || null;
+    var previous = bank.value;
+
+    bank.innerHTML = '';
+
+    var placeholder = document.createElement('option');
+    placeholder.value = '';
+    bank.appendChild(placeholder);
+
+    var kept = 0, groups = {};
+
+    bank._mpAll.forEach(function (o) {
+        if (!o.value) return;                       // the old placeholder
+        if (want && o.type !== want) return;
+
+        var el = document.createElement('option');
+        el.value = o.value;
+        el.textContent = o.label;
+        o.attrs.forEach(function (a) { el.setAttribute(a[0], a[1]); });
+
+        if (o.group) {
+            if (!groups[o.group]) {
+                groups[o.group] = document.createElement('optgroup');
+                groups[o.group].label = o.group;
+                bank.appendChild(groups[o.group]);
+            }
+            groups[o.group].appendChild(el);
+        } else {
+            bank.appendChild(el);
+        }
+
+        kept++;
+    });
+
+    // Say why the list is empty rather than showing an empty picker and letting
+    // the required-field error explain it after the click.
+    placeholder.textContent = kept === 0 && want
+        ? 'No ' + (MP_TYPE_LABEL[want] || want) + ' account on file'
+        : '— Select Bank —';
+
+    // Keep the choice only if it survived the new filter.
+    var survived = Array.prototype.some.call(bank.querySelectorAll('option'), function (o) {
+        return o.value === previous;
+    });
+    bank.value = survived ? previous : '';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var method = document.getElementById('mp_method');
+    if (method) method.addEventListener('change', mpFilterBanks);
+});
+
 /* ── MARK PAID modal ────────────────────────────── */
 var _mpRawAmount = 0;
 function openMarkPaid(id, party, displayAmount, rawAmount, type, scheduledDate) {
@@ -1419,6 +1610,9 @@ function openMarkPaid(id, party, displayAmount, rawAmount, type, scheduledDate) 
     document.getElementById('mp_type_label').textContent       = type === 'pay' ? 'Amount to Pay Out' : 'Amount to Collect';
     document.getElementById('mp_date').value                   = new Date().toISOString().split('T')[0];
     document.getElementById('mp_method').value                 = '';
+    // Re-run the filter after clearing the method, or the account list would
+    // still be narrowed to whatever the previous row was paid by.
+    mpFilterBanks();
     document.getElementById('mp_bank').value                   = '';
     document.getElementById('mp_note').value                   = '';
     document.getElementById('mp_partial_toggle').checked       = false;
@@ -1431,6 +1625,7 @@ function openMarkPaid(id, party, displayAmount, rawAmount, type, scheduledDate) 
     document.getElementById('mp_remaining_display').textContent = '৳ 0.00';
     document.getElementById('markPaidForm').action             =
         '/' + _role + '/payment-schedules/' + id + '/mark-paid';
+    schedSyncSelect2();
     schedOpen('markPaidModal');
 }
 function togglePartialPayment() {
@@ -1470,6 +1665,7 @@ function openAdHoc() {
     document.getElementById('ah_party_name_wrap').style.display   = 'none';
     document.getElementById('ah_party_id').required   = false;
     document.getElementById('ah_party_name').required = false;
+    schedSyncSelect2();
     schedOpen('adHocModal');
 }
 
@@ -1625,6 +1821,24 @@ function confirmCancel(id, party, amount) {
         cancelButtonText: 'Keep',
     }).then(result => {
         if (result.isConfirmed) document.getElementById('cancelForm-' + id).submit();
+    });
+}
+
+/* ── REOPEN confirmation ────────────────────────── */
+function confirmReopen(id, party, amount) {
+    Swal.fire({
+        title: 'Reopen Schedule?',
+        html: `Put <strong>${party}</strong> — ৳ ${amount} back in the payment queue?<br>
+               <small style="color:#6b7280;">Status returns to <em>pending</em>. The amount is re-checked
+               against the payslip, so a figure that was wrong when it got cancelled is corrected.</small>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0f766e',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: '<i class="fas fa-rotate-left"></i> Yes, Reopen',
+        cancelButtonText: 'Leave Cancelled',
+    }).then(result => {
+        if (result.isConfirmed) document.getElementById('reopenForm-' + id).submit();
     });
 }
 

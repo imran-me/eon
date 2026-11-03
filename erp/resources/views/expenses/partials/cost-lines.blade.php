@@ -18,7 +18,7 @@
 <div class="md:col-span-2">
     <div class="flex items-center justify-between gap-3 mb-2">
         <label class="block text-sm font-semibold text-gray-700">
-            Cost Lines <span class="text-red-500">*</span>
+            Expense Breakdown <span class="text-red-500">*</span>
         </label>
         <button type="button" onclick="addItemRow('{{ $prefix }}')"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-teal-300 bg-teal-50 text-teal-700 hover:bg-teal-600 hover:text-white hover:border-teal-600 transition-colors">
@@ -27,10 +27,14 @@
     </div>
 
     <div class="overflow-x-auto rounded border border-gray-200">
-        <table class="w-full text-sm" style="min-width: 400px">
+        <table class="expense-cost-table w-full text-sm" style="min-width: 1040px">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-3 py-2 text-center border-b text-gray-600 font-medium w-12">SL</th>
+                    <th class="px-3 py-2 text-left border-b text-gray-600 font-medium" style="width:360px">Expense Head / Category <span class="text-red-500">*</span></th>
                     <th class="px-3 py-2 text-left border-b text-gray-600 font-medium">Description</th>
+                    <th class="px-3 py-2 text-center border-b text-gray-600 font-medium w-24">Quantity</th>
+                    <th class="px-3 py-2 text-right border-b text-gray-600 font-medium w-32">Unit Price</th>
                     <th class="px-3 py-2 text-right border-b text-gray-600 font-medium w-36">Amount</th>
                     <th class="px-3 py-2 border-b w-8"></th>
                 </tr>
@@ -38,7 +42,7 @@
             <tbody id="{{ $prefix }}_items_body"></tbody>
             <tfoot>
                 <tr class="bg-gray-50">
-                    <td class="px-3 py-2 text-right font-bold text-gray-700 border-t">Total</td>
+                    <td colspan="5" class="px-3 py-2 text-right font-bold text-gray-700 border-t">Total Payment</td>
                     <td class="px-3 py-2 text-right font-bold text-blue-700 border-t" id="{{ $prefix }}_items_total">0.00</td>
                     <td class="border-t"></td>
                 </tr>
@@ -48,7 +52,7 @@
 
     <p class="text-[11px] text-gray-500 mt-1">
         <i class="fas fa-circle-info text-gray-400"></i>
-        Break the payment into lines if it covered several things — the total above is their sum.
+        Choose one cost head for each line. Its category, sub-category and journal account are filled together automatically. Company and payment source are shared.
     </p>
     <p id="{{ $prefix }}_items_msg" class="text-red-500 text-xs mt-1 hidden">Add at least one line with an amount above zero</p>
 </div>

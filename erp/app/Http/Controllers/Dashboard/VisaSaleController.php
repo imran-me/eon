@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Models\VisaProcess;
 use App\Models\VisaSale;
 use App\Models\VisaSaleItem;
+use App\Support\TravelCompany;
 use App\Traits\PostsPartyLedger;
 use App\Traits\PostsSaleJournal;
 use App\Traits\ResolvesPartyType;
@@ -37,9 +38,9 @@ class VisaSaleController extends Controller
 
         $stats = [
             'total_sales_mtd' => (clone $mtdSales)->count(),
-            'revenue_mtd'     => (clone $mtdSales)->sum('total_amount'),
-            'total_due'       => VisaSale::where('status', '!=', 'paid')->sum('due_amount'),
-            'commission'      => VisaSaleItem::join('visa_processes', 'visa_sale_items.visa_process_id', '=', 'visa_processes.id')
+            'revenue_mtd' => (clone $mtdSales)->sum('total_amount'),
+            'total_due' => VisaSale::where('status', '!=', 'paid')->sum('due_amount'),
+            'commission' => VisaSaleItem::join('visa_processes', 'visa_sale_items.visa_process_id', '=', 'visa_processes.id')
                 ->selectRaw('SUM(visa_sale_items.sale_price - visa_processes.costing_price) as profit')
                 ->value('profit') ?? 0,
         ];
@@ -47,20 +48,19 @@ class VisaSaleController extends Controller
         $query = VisaSale::with([
             'items.visaProcess.country',
             'items.visaProcess.visaCategory',
+            'items.visaProcess.vendor:id,name',
             'issuedBy',
-            'client',
+            'client.roles:id,name',
         ]);
 
-        $query->when($request->filled('search'), fn($q) =>
-            $q->where(function ($inner) use ($request) {
-                $inner->where('invoice_number', 'like', "%{$request->search}%")
-                      ->orWhereHas('client', fn ($client) => $client->where('name', 'like', "%{$request->search}%")
-                          ->orWhere('phone', 'like', "%{$request->search}%"));
-            })
+        $query->when($request->filled('search'), fn ($q) => $q->where(function ($inner) use ($request) {
+            $inner->where('invoice_number', 'like', "%{$request->search}%")
+                ->orWhereHas('client', fn ($client) => $client->where('name', 'like', "%{$request->search}%")
+                    ->orWhere('phone', 'like', "%{$request->search}%"));
+        })
         );
 
-        $query->when($request->filled('status'), fn($q) =>
-            $q->where('status', $request->status)
+        $query->when($request->filled('status'), fn ($q) => $q->where('status', $request->status)
         );
 
         $query->when($request->filled('month'), function ($q) use ($request) {
@@ -68,10 +68,10 @@ class VisaSaleController extends Controller
             $q->whereYear('voucher_date', $year)->whereMonth('voucher_date', $month);
         });
 
-        $sales  = $query->latest()->paginate(15)->withQueryString();
-        $users  = User::orderBy('name')->role('visa')->get(['id', 'name']);
+        $sales = $query->latest()->paginate(15)->withQueryString();
+        $users = User::orderBy('name')->role('visa')->get(['id', 'name']);
         $clients = User::orderBy('name')->role('customer')->get(['id', 'name', 'phone', 'email']);
-        $agents  = User::whereHas('roles', fn ($q) => $q->whereIn('name', ['vendor', 'agent']))
+        $agents = User::whereHas('roles', fn ($q) => $q->whereIn('name', ['vendor', 'agent']))
             ->orderBy('name')->get(['id', 'name', 'phone', 'email']);
         $nextInvoice = VisaSale::nextInvoiceNumber();
         $banks = Bank::where('status', 1)->get();
@@ -100,14 +100,14 @@ class VisaSaleController extends Controller
             $query->whereIn('payment_status', ['pending', 'partial']);
         }
 
-        $processes = $query->latest()->get()->map(fn($p) => [
-            'id'        => $p->id,
-            'app_id'    => $p->application_id,
+        $processes = $query->latest()->get()->map(fn ($p) => [
+            'id' => $p->id,
+            'app_id' => $p->application_id,
             'applicant' => optional($p->passportHolder)->name ?? '—',
-            'country'   => optional($p->country)->name ?? '—',
+            'country' => optional($p->country)->name ?? '—',
             'visa_type' => $p->visa_type ?? (optional($p->visaCategory)->name ?? '—'),
             'sale_price' => $p->sale_price,
-            'status'    => $p->payment_status,
+            'status' => $p->payment_status,
         ]);
 
         // Country filter options should list every country used by any visa process,
@@ -123,7 +123,7 @@ class VisaSaleController extends Controller
 
         return response()->json([
             'applications' => $processes,
-            'countries'    => $countries,
+            'countries' => $countries,
         ]);
     }
 
@@ -147,15 +147,15 @@ class VisaSaleController extends Controller
             ->whereNotIn('id', $alreadyBundled)
             ->latest()
             ->get()
-            ->map(fn($s) => [
-                'id'            => $s->id,
-                'service_code'  => $s->service_code,
-                'applicant'     => optional($s->passportHolder)->name ?? '—',
-                'service_type'  => optional($s->serviceType)->name ?? '—',
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'service_code' => $s->service_code,
+                'applicant' => optional($s->passportHolder)->name ?? '—',
+                'service_type' => optional($s->serviceType)->name ?? '—',
                 'service_color' => optional($s->serviceType)->color ?? '#64748b',
-                'service_bg'    => optional($s->serviceType)->bg_color ?? '#f1f5f9',
-                'sale_price'    => $s->sale_price,
-                'status'        => $s->status,
+                'service_bg' => optional($s->serviceType)->bg_color ?? '#f1f5f9',
+                'sale_price' => $s->sale_price,
+                'status' => $s->status,
             ]);
 
         return response()->json([
@@ -166,20 +166,21 @@ class VisaSaleController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'client_id'          => 'required|exists:users,id',
-            'send_via'           => 'required|in:email,sms,whatsapp',
-            'bundle_label'       => 'nullable|string|max:100',
-            'voucher_date'       => 'required|date',
-            'receivable_date'    => 'nullable|date',
-            'issued_by'          => 'nullable|exists:users,id',
-            'visa_process_ids'   => 'nullable|array',
+            'client_id' => 'required|exists:users,id',
+            'send_via' => 'required|in:email,sms,whatsapp',
+            'bundle_label' => 'nullable|string|max:100',
+            'voucher_date' => 'required|date',
+            'receivable_date' => 'nullable|date',
+            'issued_by' => 'nullable|exists:users,id',
+            'visa_process_ids' => 'nullable|array',
             'visa_process_ids.*' => 'exists:visa_processes,id',
-            'other_service_ids'   => 'nullable|array',
+            'other_service_ids' => 'nullable|array',
             'other_service_ids.*' => 'exists:other_visa_services,id',
-            'paid_amount'        => 'required|numeric|min:0',
-            'payment_method'     => 'nullable|string|max:50',
-            'bank_id'            => 'nullable|exists:banks,id',
-            'notes'              => 'nullable|string',
+            'paid_amount' => 'required|numeric|min:0',
+            'payment_method' => 'nullable|string|max:50',
+            'bank_id' => 'nullable|exists:banks,id',
+            'payment_instruction_bank_id' => 'nullable|exists:banks,id',
+            'notes' => 'nullable|string',
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -192,57 +193,59 @@ class VisaSaleController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ]);
             }
+
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        $processes     = VisaProcess::whereIn('id', $request->visa_process_ids ?? [])->get();
+        $processes = VisaProcess::whereIn('id', $request->visa_process_ids ?? [])->get();
         $otherServices = OtherVisaService::whereIn('id', $request->other_service_ids ?? [])->get();
-        $totalAmount   = $processes->sum('sale_price') + $otherServices->sum('sale_price');
-        $paidAmount    = min((float) $request->paid_amount, $totalAmount);
-        $dueAmount     = max(0, $totalAmount - $paidAmount);
-        $status        = $dueAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'pending');
+        $totalAmount = $processes->sum('sale_price') + $otherServices->sum('sale_price');
+        $paidAmount = min((float) $request->paid_amount, $totalAmount);
+        $dueAmount = max(0, $totalAmount - $paidAmount);
+        $status = $dueAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'pending');
 
         $sale = DB::transaction(function () use ($request, $processes, $otherServices, $totalAmount, $paidAmount, $dueAmount, $status) {
             $sale = VisaSale::create([
-                'company_id'     => Auth::user()->company_id ?? 2,
+                'company_id' => TravelCompany::ID,
                 'invoice_number' => VisaSale::nextInvoiceNumber(),
-                'client_id'      => $request->client_id,
-                'send_via'       => $request->send_via,
-                'bundle_label'   => $request->bundle_label,
-                'voucher_date'    => $request->voucher_date,
+                'client_id' => $request->client_id,
+                'send_via' => $request->send_via,
+                'bundle_label' => $request->bundle_label,
+                'voucher_date' => $request->voucher_date,
                 'receivable_date' => $request->receivable_date,
-                'issued_by'      => $request->issued_by,
-                'total_amount'   => $totalAmount,
-                'paid_amount'    => $paidAmount,
-                'due_amount'     => $dueAmount,
+                'issued_by' => $request->issued_by,
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'due_amount' => $dueAmount,
                 'payment_method' => $request->payment_method,
-                'bank_id'        => $request->bank_id,
-                'notes'          => $request->notes,
-                'status'         => $status,
-                'created_by'     => Auth::id(),
+                'bank_id' => $request->bank_id,
+                'payment_instruction_bank_id' => $request->payment_instruction_bank_id,
+                'notes' => $request->notes,
+                'status' => $status,
+                'created_by' => Auth::id(),
             ]);
 
             foreach ($processes as $process) {
                 VisaSaleItem::create([
-                    'visa_sale_id'    => $sale->id,
+                    'visa_sale_id' => $sale->id,
                     'visa_process_id' => $process->id,
-                    'sale_price'      => $process->sale_price,
+                    'sale_price' => $process->sale_price,
                 ]);
             }
 
             foreach ($otherServices as $service) {
                 VisaSaleItem::create([
-                    'visa_sale_id'           => $sale->id,
-                    'other_visa_service_id'  => $service->id,
-                    'sale_price'             => $service->sale_price,
+                    'visa_sale_id' => $sale->id,
+                    'other_visa_service_id' => $service->id,
+                    'sale_price' => $service->sale_price,
                 ]);
             }
 
             $this->reconcileVisaSaleLedger($sale, null);
-            $this->syncVisaSaleJournal($sale, 'Visa sale — ' . $sale->invoice_number);
+            $this->syncVisaSaleJournal($sale, 'Visa sale — '.$sale->invoice_number);
             $this->syncVisaSaleReceivableSchedule($sale);
 
             return $sale;
@@ -256,30 +259,49 @@ class VisaSaleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Sale voucher created successfully.' . ($emailStatus === false ? ' (Voucher email failed to send.)' : ''),
+            'message' => 'Sale voucher created successfully.'.($emailStatus === false ? ' (Voucher email failed to send.)' : ''),
         ]);
     }
 
     public function makePayment(Request $request, $role, VisaSale $visaSale)
     {
-        $request->validate([
+        $validated = $request->validate([
             'payment_amount' => 'required|numeric|min:0.01',
-            'payment_method' => 'nullable|string|max:50',
-            'bank_id'        => 'nullable|exists:banks,id',
+            'payment_date' => 'required|date|before_or_equal:today',
+            'transaction_time' => 'required|date_format:H:i',
+            'payment_method' => 'required|string|max:50',
+            'bank_id' => 'required|exists:banks,id',
+            'reference' => 'nullable|string|max:191',
+            'payer_bank' => 'required_if:payment_method,bank_transfer,cheque,mobile_banking|nullable|string|max:150',
+            'payer_reference' => 'required_if:payment_method,bank_transfer,cheque,mobile_banking|nullable|string|max:100',
+            'notes' => 'nullable|string|max:500',
         ]);
 
-        $newPaid = $visaSale->paid_amount + (float) $request->payment_amount;
-        $newPaid = min($newPaid, $visaSale->total_amount);
-        $newDue  = max(0, $visaSale->total_amount - $newPaid);
-        $status  = $newDue <= 0 ? 'paid' : 'partial';
+        $amount = round((float) $validated['payment_amount'], 2);
 
-        DB::transaction(function () use ($request, $visaSale, $newPaid, $newDue, $status) {
+        DB::transaction(function () use ($validated, $visaSale, $amount) {
+            $visaSale = VisaSale::whereKey($visaSale->id)->lockForUpdate()->firstOrFail();
+            $currentDue = round((float) $visaSale->due_amount, 2);
+            if ($currentDue <= 0) {
+                throw new \RuntimeException('This visa invoice is already fully paid.');
+            }
+            if ($amount > $currentDue + 0.001) {
+                throw new \RuntimeException('Payment cannot exceed the current due amount of ৳'.number_format($currentDue, 2).'.');
+            }
+
+            $newPaid = round((float) $visaSale->paid_amount + $amount, 2);
+            $newDue = max(0, round((float) $visaSale->total_amount - $newPaid, 2));
+            $status = $newDue <= 0 ? 'paid' : 'partial';
+            $reference = trim((string) ($validated['reference'] ?? ''))
+                ?: $visaSale->invoice_number.'-PAY-'.now()->format('YmdHis');
+            $partyType = $visaSale->client ? $this->resolvePartyType($visaSale->client) : null;
+
             $visaSale->update([
-                'paid_amount'    => $newPaid,
-                'due_amount'     => $newDue,
-                'status'         => $status,
-                'payment_method' => $request->payment_method ?? $visaSale->payment_method,
-                'bank_id'        => $request->bank_id ?? $visaSale->bank_id,
+                'paid_amount' => $newPaid,
+                'due_amount' => $newDue,
+                'status' => $status,
+                'payment_method' => $validated['payment_method'],
+                'bank_id' => $validated['bank_id'],
             ]);
 
             if ($visaSale->client_id) {
@@ -288,30 +310,41 @@ class VisaSaleController extends Controller
                 $this->reconcilePartyLedgerRow(
                     $visaSale->client_id, 'visa_sale', $visaSale->id, false, (float) $newPaid,
                     [
-                        'payment_date'   => now()->toDateString(),
-                        'reference_no'   => $visaSale->invoice_number,
-                        'remarks'        => 'Visa sale payment received — ' . $visaSale->invoice_number,
-                        'account_id'     => $visaSale->bank_id,
+                        'payment_date' => $validated['payment_date'],
+                        'reference_no' => $reference,
+                        'remarks' => 'Visa sale payment received — '.$visaSale->invoice_number
+                            .(filled($validated['notes'] ?? null) ? ' — '.$validated['notes'] : ''),
+                        'account_id' => $visaSale->bank_id,
                         'payment_method' => $visaSale->payment_method,
                     ]
                 );
             }
 
-            if ($request->bank_id && $request->payment_amount > 0) {
-                $this->postSaleJournalPayment(
-                    'visa_sale',
-                    $visaSale->id,
-                    $visaSale->company_id ?? (Auth::user()->company_id ?? 2),
-                    now(),
-                    $visaSale->invoice_number,
-                    'Visa sale payment received — ' . $visaSale->invoice_number,
-                    (float) $request->payment_amount,
-                    $request->bank_id
-                );
-            }
+            $journal = $this->postSaleJournalPayment(
+                'visa_sale', $visaSale->id,
+                TravelCompany::ID,
+                $validated['payment_date'], $reference,
+                'Visa sale payment received — '.$visaSale->invoice_number,
+                $amount, (int) $validated['bank_id'], $partyType, $visaSale->client_id
+            );
+            $journal->update([
+                'entry_time' => $validated['transaction_time'].':00',
+                'beneficiary' => $visaSale->client?->name,
+                'beneficiary_party_id' => $visaSale->client_id,
+                'beneficiary_method' => match ($validated['payment_method']) {
+                    'cash' => 'cash',
+                    'cheque' => 'cheque',
+                    'bank_transfer', 'mobile_banking', 'card' => 'bank',
+                    default => null,
+                },
+                'beneficiary_bank' => $validated['payer_bank'] ?? null,
+                'beneficiary_ref' => $validated['payer_reference'] ?? null,
+            ]);
+
+            $this->syncVisaSaleReceivableSchedule($visaSale);
         });
 
-        return back()->with('success', 'Payment of ৳' . number_format($request->payment_amount, 2) . ' recorded.');
+        return back()->with('success', 'Payment of ৳'.number_format($amount, 2).' recorded successfully.');
     }
 
     /**
@@ -326,7 +359,7 @@ class VisaSaleController extends Controller
             $this->reversePartyLedger('visa_sale', $sale->id);
         }
 
-        if (!$sale->client_id) {
+        if (! $sale->client_id) {
             return;
         }
 
@@ -339,14 +372,14 @@ class VisaSaleController extends Controller
 
         $this->reconcilePartyLedgerRow(
             $sale->client_id, 'visa_sale', $sale->id, true, (float) $sale->total_amount,
-            $common + ['remarks' => 'Visa sale invoice — ' . $sale->invoice_number]
+            $common + ['remarks' => 'Visa sale invoice — '.$sale->invoice_number]
         );
 
         $this->reconcilePartyLedgerRow(
             $sale->client_id, 'visa_sale', $sale->id, false, (float) $sale->paid_amount,
             $common + [
-                'remarks'        => 'Visa sale payment received — ' . $sale->invoice_number,
-                'account_id'     => $sale->bank_id,
+                'remarks' => 'Visa sale payment received — '.$sale->invoice_number,
+                'account_id' => $sale->bank_id,
                 'payment_method' => $sale->payment_method,
             ]
         );
@@ -361,7 +394,7 @@ class VisaSaleController extends Controller
         $this->updateSaleJournal(
             'visa_sale',
             $sale->id,
-            $sale->company_id ?? (Auth::user()->company_id ?? 2),
+            TravelCompany::ID,
             now(),
             $sale->invoice_number,
             $description,
@@ -369,7 +402,10 @@ class VisaSaleController extends Controller
             (float) $sale->paid_amount,
             (float) $sale->due_amount,
             $sale->bank_id,
-            config('accounts.visa_sales_revenue')
+            config('accounts.visa_sales_revenue'),
+            false,
+            $sale->client ? $this->resolvePartyType($sale->client) : null,
+            $sale->client_id
         );
     }
 
@@ -391,19 +427,22 @@ class VisaSaleController extends Controller
         $sale->loadMissing('client');
 
         PaymentSchedule::create([
-            'company_id'       => $sale->company_id,
+            'company_id' => $sale->company_id,
             'schedulable_type' => VisaSale::class,
-            'schedulable_id'   => $sale->id,
-            'type'             => 'receive',
-            'party_type'       => $this->resolvePartyType($sale->client),
-            'party_id'         => $sale->client_id,
-            'party_name'       => $sale->client?->name,
-            'source_label'     => $sale->invoice_number,
-            'amount'           => (float) $sale->due_amount,
-            'paid_amount'      => (float) $sale->paid_amount,
-            'scheduled_date'   => $sale->receivable_date?->toDateString() ?? $sale->voucher_date?->toDateString() ?? now()->toDateString(),
-            'status'           => 'pending',
-            'created_by'       => Auth::id(),
+            'schedulable_id' => $sale->id,
+            'type' => 'receive',
+            'party_type' => $this->resolvePartyType($sale->client),
+            'party_id' => $sale->client_id,
+            'party_name' => $sale->client?->name,
+            'source_label' => $sale->invoice_number,
+            // Keep the schedule's face value stable; paid_amount carries the
+            // receipts. Setting amount to the remaining due makes a partial
+            // payment get subtracted twice by every schedule balance reader.
+            'amount' => (float) $sale->total_amount,
+            'paid_amount' => (float) $sale->paid_amount,
+            'scheduled_date' => $sale->receivable_date?->toDateString() ?? $sale->voucher_date?->toDateString() ?? now()->toDateString(),
+            'status' => 'pending',
+            'created_by' => Auth::id(),
         ]);
     }
 
@@ -422,47 +461,48 @@ class VisaSaleController extends Controller
         $items = $visaSale->items->map(function ($item) {
             if ($item->other_visa_service_id) {
                 $service = $item->otherVisaService;
+
                 return [
-                    'line_type'   => 'other_service',
-                    'app_id'      => optional($service)->service_code,
-                    'applicant'   => optional(optional($service)->passportHolder)->name ?? '—',
+                    'line_type' => 'other_service',
+                    'app_id' => optional($service)->service_code,
+                    'applicant' => optional(optional($service)->passportHolder)->name ?? '—',
                     'passport_no' => optional(optional($service)->passportHolder)->passport_no ?? '',
-                    'country'     => optional(optional($service)->serviceType)->name ?? '—',
-                    'visa_type'   => 'Other Service',
-                    'sale_price'  => $item->sale_price,
-                    'status'      => optional($service)->status ?? 'pending',
+                    'country' => optional(optional($service)->serviceType)->name ?? '—',
+                    'visa_type' => 'Other Service',
+                    'sale_price' => $item->sale_price,
+                    'status' => optional($service)->status ?? 'pending',
                 ];
             }
 
             return [
-                'line_type'   => 'visa_process',
-                'app_id'      => optional($item->visaProcess)->application_id,
-                'applicant'   => optional(optional($item->visaProcess)->passportHolder)->name ?? '—',
+                'line_type' => 'visa_process',
+                'app_id' => optional($item->visaProcess)->application_id,
+                'applicant' => optional(optional($item->visaProcess)->passportHolder)->name ?? '—',
                 'passport_no' => optional(optional($item->visaProcess)->passportHolder)->passport_no ?? '',
-                'country'     => optional(optional($item->visaProcess)->country)->name ?? '—',
-                'visa_type'   => optional($item->visaProcess)->visa_type
+                'country' => optional(optional($item->visaProcess)->country)->name ?? '—',
+                'visa_type' => optional($item->visaProcess)->visa_type
                                ?? optional(optional($item->visaProcess)->visaCategory)->name ?? '—',
-                'sale_price'  => $item->sale_price,
-                'status'      => optional($item->visaProcess)->status ?? 'pending',
+                'sale_price' => $item->sale_price,
+                'status' => optional($item->visaProcess)->status ?? 'pending',
             ];
         });
 
         return response()->json([
-            'id'             => $visaSale->id,
+            'id' => $visaSale->id,
             'invoice_number' => $visaSale->invoice_number,
-            'client_id'      => $visaSale->client_id,
-            'client_name'    => $visaSale->client?->name,
-            'client_phone'   => $visaSale->client?->phone,
-            'client_email'   => $visaSale->client?->email,
-            'voucher_date'   => $visaSale->voucher_date->format('d M Y'),
-            'bundle_label'   => $visaSale->bundle_label,
-            'total_amount'   => $visaSale->total_amount,
-            'paid_amount'    => $visaSale->paid_amount,
-            'due_amount'     => $visaSale->due_amount,
-            'status'         => $visaSale->status,
-            'notes'          => $visaSale->notes,
-            'issued_by'      => optional($visaSale->issuedBy)->name,
-            'items'          => $items,
+            'client_id' => $visaSale->client_id,
+            'client_name' => $visaSale->client?->name,
+            'client_phone' => $visaSale->client?->phone,
+            'client_email' => $visaSale->client?->email,
+            'voucher_date' => $visaSale->voucher_date->format('d M Y'),
+            'bundle_label' => $visaSale->bundle_label,
+            'total_amount' => $visaSale->total_amount,
+            'paid_amount' => $visaSale->paid_amount,
+            'due_amount' => $visaSale->due_amount,
+            'status' => $visaSale->status,
+            'notes' => $visaSale->notes,
+            'issued_by' => optional($visaSale->issuedBy)->name,
+            'items' => $items,
         ]);
     }
 
@@ -471,21 +511,22 @@ class VisaSaleController extends Controller
         $visaSale->load('items', 'client');
 
         return response()->json([
-            'id'               => $visaSale->id,
-            'invoice_number'   => $visaSale->invoice_number,
-            'client_id'        => $visaSale->client_id,
-            'client_name'      => $visaSale->client?->name,
-            'client_phone'     => $visaSale->client?->phone,
-            'client_email'     => $visaSale->client?->email,
-            'send_via'         => $visaSale->send_via,
-            'bundle_label'     => $visaSale->bundle_label ?? '',
-            'voucher_date'     => $visaSale->voucher_date->format('Y-m-d'),
-            'receivable_date'  => $visaSale->receivable_date?->format('Y-m-d') ?? '',
-            'issued_by'        => $visaSale->issued_by ?? '',
-            'paid_amount'      => $visaSale->paid_amount,
-            'payment_method'   => $visaSale->payment_method ?? '',
-            'bank_id'          => $visaSale->bank_id,
-            'notes'            => $visaSale->notes ?? '',
+            'id' => $visaSale->id,
+            'invoice_number' => $visaSale->invoice_number,
+            'client_id' => $visaSale->client_id,
+            'client_name' => $visaSale->client?->name,
+            'client_phone' => $visaSale->client?->phone,
+            'client_email' => $visaSale->client?->email,
+            'send_via' => $visaSale->send_via,
+            'bundle_label' => $visaSale->bundle_label ?? '',
+            'voucher_date' => $visaSale->voucher_date->format('Y-m-d'),
+            'receivable_date' => $visaSale->receivable_date?->format('Y-m-d') ?? '',
+            'issued_by' => $visaSale->issued_by ?? '',
+            'paid_amount' => $visaSale->paid_amount,
+            'payment_method' => $visaSale->payment_method ?? '',
+            'bank_id' => $visaSale->bank_id,
+            'payment_instruction_bank_id' => $visaSale->payment_instruction_bank_id,
+            'notes' => $visaSale->notes ?? '',
             'visa_process_ids' => $visaSale->items->pluck('visa_process_id')->filter()->values()->toArray(),
             'other_service_ids' => $visaSale->items->pluck('other_visa_service_id')->filter()->values()->toArray(),
         ]);
@@ -494,20 +535,21 @@ class VisaSaleController extends Controller
     public function update(Request $request, $role, VisaSale $visaSale)
     {
         $validator = Validator::make($request->all(), [
-            'client_id'           => 'required|exists:users,id',
-            'send_via'            => 'required|in:email,sms,whatsapp',
-            'bundle_label'        => 'nullable|string|max:100',
-            'voucher_date'        => 'required|date',
-            'receivable_date'     => 'nullable|date',
-            'issued_by'           => 'nullable|exists:users,id',
-            'visa_process_ids'    => 'nullable|array',
-            'visa_process_ids.*'  => 'exists:visa_processes,id',
-            'other_service_ids'   => 'nullable|array',
+            'client_id' => 'required|exists:users,id',
+            'send_via' => 'required|in:email,sms,whatsapp',
+            'bundle_label' => 'nullable|string|max:100',
+            'voucher_date' => 'required|date',
+            'receivable_date' => 'nullable|date',
+            'issued_by' => 'nullable|exists:users,id',
+            'visa_process_ids' => 'nullable|array',
+            'visa_process_ids.*' => 'exists:visa_processes,id',
+            'other_service_ids' => 'nullable|array',
             'other_service_ids.*' => 'exists:other_visa_services,id',
-            'paid_amount'         => 'required|numeric|min:0',
-            'payment_method'      => 'nullable|string|max:50',
-            'bank_id'             => 'nullable|exists:banks,id',
-            'notes'               => 'nullable|string',
+            'paid_amount' => 'required|numeric|min:0',
+            'payment_method' => 'nullable|string|max:50',
+            'bank_id' => 'nullable|exists:banks,id',
+            'payment_instruction_bank_id' => 'nullable|exists:banks,id',
+            'notes' => 'nullable|string',
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -523,51 +565,52 @@ class VisaSaleController extends Controller
             ]);
         }
 
-        $processes     = VisaProcess::whereIn('id', $request->visa_process_ids ?? [])->get();
+        $processes = VisaProcess::whereIn('id', $request->visa_process_ids ?? [])->get();
         $otherServices = OtherVisaService::whereIn('id', $request->other_service_ids ?? [])->get();
-        $totalAmount   = $processes->sum('sale_price') + $otherServices->sum('sale_price');
-        $paidAmount    = min((float) $request->paid_amount, $totalAmount);
-        $dueAmount     = max(0, $totalAmount - $paidAmount);
-        $status        = $dueAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'pending');
+        $totalAmount = $processes->sum('sale_price') + $otherServices->sum('sale_price');
+        $paidAmount = min((float) $request->paid_amount, $totalAmount);
+        $dueAmount = max(0, $totalAmount - $paidAmount);
+        $status = $dueAmount <= 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'pending');
 
         DB::transaction(function () use ($request, $visaSale, $processes, $otherServices, $totalAmount, $paidAmount, $dueAmount, $status) {
             $oldClientId = $visaSale->client_id;
 
             $visaSale->update([
-                'client_id'     => $request->client_id,
-                'send_via'      => $request->send_via,
-                'bundle_label'  => $request->bundle_label,
-                'voucher_date'    => $request->voucher_date,
+                'client_id' => $request->client_id,
+                'send_via' => $request->send_via,
+                'bundle_label' => $request->bundle_label,
+                'voucher_date' => $request->voucher_date,
                 'receivable_date' => $request->receivable_date,
-                'issued_by'     => $request->issued_by,
-                'total_amount'  => $totalAmount,
-                'paid_amount'   => $paidAmount,
-                'due_amount'    => $dueAmount,
+                'issued_by' => $request->issued_by,
+                'total_amount' => $totalAmount,
+                'paid_amount' => $paidAmount,
+                'due_amount' => $dueAmount,
                 'payment_method' => $request->payment_method,
-                'bank_id'       => $request->bank_id,
-                'notes'         => $request->notes,
-                'status'        => $status,
+                'bank_id' => $request->bank_id,
+                'payment_instruction_bank_id' => $request->payment_instruction_bank_id,
+                'notes' => $request->notes,
+                'status' => $status,
             ]);
 
             $this->reconcileVisaSaleLedger($visaSale, $oldClientId);
-            $this->syncVisaSaleJournal($visaSale, 'Visa sale (edited) — ' . $visaSale->invoice_number);
+            $this->syncVisaSaleJournal($visaSale, 'Visa sale (edited) — '.$visaSale->invoice_number);
             $this->syncVisaSaleReceivableSchedule($visaSale);
 
             VisaSaleItem::where('visa_sale_id', $visaSale->id)->delete();
 
             foreach ($processes as $process) {
                 VisaSaleItem::create([
-                    'visa_sale_id'    => $visaSale->id,
+                    'visa_sale_id' => $visaSale->id,
                     'visa_process_id' => $process->id,
-                    'sale_price'      => $process->sale_price,
+                    'sale_price' => $process->sale_price,
                 ]);
             }
 
             foreach ($otherServices as $service) {
                 VisaSaleItem::create([
-                    'visa_sale_id'          => $visaSale->id,
+                    'visa_sale_id' => $visaSale->id,
                     'other_visa_service_id' => $service->id,
-                    'sale_price'            => $service->sale_price,
+                    'sale_price' => $service->sale_price,
                 ]);
             }
         });
@@ -625,7 +668,7 @@ class VisaSaleController extends Controller
 
         $email = $request->input('email') ?: $visaSale->client?->email;
 
-        if (!$email) {
+        if (! $email) {
             return response()->json([
                 'success' => false,
                 'message' => 'No email address available for this client.',
@@ -636,7 +679,7 @@ class VisaSaleController extends Controller
 
         return response()->json([
             'success' => $sent,
-            'message' => $sent ? 'Voucher emailed to ' . $email . '.' : 'Failed to send the voucher email.',
+            'message' => $sent ? 'Voucher emailed to '.$email.'.' : 'Failed to send the voucher email.',
         ]);
     }
 
@@ -647,14 +690,14 @@ class VisaSaleController extends Controller
     {
         try {
             $visaSale->load(
-            'items.visaProcess.country',
-            'items.visaProcess.visaCategory',
-            'items.visaProcess.passportHolder',
-            'items.otherVisaService.passportHolder',
-            'items.otherVisaService.serviceType',
-            'issuedBy',
-            'client'
-        );
+                'items.visaProcess.country',
+                'items.visaProcess.visaCategory',
+                'items.visaProcess.passportHolder',
+                'items.otherVisaService.passportHolder',
+                'items.otherVisaService.serviceType',
+                'issuedBy',
+                'client'
+            );
             $company = $visaSale->company ?? Company::find(2);
             $invoiceTemplate = InvoiceTemplate::with('fields', 'style')
                 ->where('type', 'visa_sale')->where('is_default', 1)->first()
@@ -667,6 +710,7 @@ class VisaSaleController extends Controller
             return true;
         } catch (\Throwable $e) {
             report($e);
+
             return false;
         }
     }

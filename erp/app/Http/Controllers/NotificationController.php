@@ -28,6 +28,7 @@ class NotificationController extends Controller
                         'type' => $notification->type,
                         'data' => $notification->data,
                         'message' => $notification->data['message'] ?? '',
+                        'url' => $notification->data['url'] ?? null,
                         'task_id' => $notification->data['task_id'] ?? null,
                         'task_title' => $notification->data['task_title'] ?? null,
                         'board_id' => $notification->data['board_id'] ?? null,
@@ -70,6 +71,9 @@ class NotificationController extends Controller
         if (str_contains($type, 'notice_published')) return 'fa-bullhorn';
         if (str_contains($type, 'notice_updated')) return 'fa-bell';
         if (str_contains($type, 'payslip_generated')) return 'fa-file-invoice-dollar';
+        if (str_contains($type, 'operation_assigned')) return 'fa-user-check';
+        if (str_contains($type, 'operation_note')) return 'fa-note-sticky';
+        if (str_contains($type, 'ticket_booking')) return 'fa-plane-departure';
 
         return 'fa-bell';
     }
@@ -95,6 +99,9 @@ class NotificationController extends Controller
         if (str_contains($type, 'notice_published')) return 'bg-orange-500';
         if (str_contains($type, 'notice_updated')) return 'bg-amber-500';
         if (str_contains($type, 'payslip_generated')) return 'bg-teal-600';
+        if (str_contains($type, 'operation_assigned')) return 'bg-blue-600';
+        if (str_contains($type, 'operation_note')) return 'bg-slate-600';
+        if (str_contains($type, 'ticket_booking')) return 'bg-indigo-600';
 
         return 'bg-gray-500';
     }
@@ -119,6 +126,7 @@ class NotificationController extends Controller
                             'id' => $notification->id,
                             'type' => $notification->type,
                             'message' => $notification->data['message'] ?? '',
+                        'url' => $notification->data['url'] ?? null,
                             'task_id' => $notification->data['task_id'] ?? null,
                             'board_id' => $notification->data['board_id'] ?? null,
                             'is_read' => !is_null($notification->read_at),

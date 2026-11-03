@@ -104,7 +104,8 @@
             -webkit-backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.8);
             box-shadow: 0 1px 16px rgba(0, 0, 0, 0.06);
-            margin-bottom: 15px !important;
+            /* 15px → 8px: owner, 2026-10-04 — header-to-bulletin gap halved */
+            margin-bottom: 8px !important;
         }
 
         /* ── Notification badge ── */
@@ -481,6 +482,22 @@
         ]
     }
     </script>
+    {{-- ERP-wide table row separator (owner, 2026-09-27): every table's body
+         rows are divided by the Flight Dashboard's hairline — 1px #b8c4d4,
+         nothing under the last row — one rule here rather than each view
+         drawing its own. CSS only: no markup or behaviour changes. Wood Art
+         keeps its own design (isolation rule); a table opts out with
+         class="no-row-sep". --}}
+    @unless(request()->routeIs('role.woodart.*') || request()->is('*/woodart', '*/woodart/*'))
+    <style>
+        main table:not(.no-row-sep) > tbody > tr > td,
+        main table:not(.no-row-sep) > tbody > tr > th { border-bottom: 1px solid #b8c4d4 !important; }
+        main table:not(.no-row-sep) > tbody > tr:last-child > td,
+        main table:not(.no-row-sep) > tbody > tr:last-child > th { border-bottom: 0 !important; }
+        html.dark main table:not(.no-row-sep) > tbody > tr > td,
+        html.dark main table:not(.no-row-sep) > tbody > tr > th { border-bottom-color: #334155 !important; }
+    </style>
+    @endunless
 </head>
 <body class="bg-gray-50">
 
@@ -502,6 +519,9 @@
         <!-- Header -->        
         @include('layout.header', ['title' => $title ?? 'Dashboard'])
         @include('layout.headline-ticker')
+        {{-- Per-user shortcut tabs. Zero-height: sits in the gap the ticker
+             and <main> already leave, so the page below does not move. --}}
+        @include('layout.shortcuts')
 
         <!-- Main Content -->
         <main class="flex-1 p-3">
@@ -680,6 +700,11 @@
             });
 
             window.addEventListener('beforeunload', saveSidebarScrollPosition);
+
+            // beforeunload is skipped when a page is put into the back/forward
+            // cache, and on some navigations in mobile browsers. pagehide always
+            // fires, so the position is still current when you come back.
+            window.addEventListener('pagehide', saveSidebarScrollPosition);
         }
 
         // Toggle sidebar for both desktop and mobile
@@ -1516,6 +1541,33 @@
     @yield('raw-script')
     @yield('script')
     @yield('js')
+    {{-- Travels dropdowns = Ticketing's (owner, 2026-10-11: "across the entire travels,
+         the dropdown style exactly same as ticketing"). The Travels screens that do not
+         already carry it — Ticketing's tab bar and the Contract Flight pages do — load
+         the one shared partial here. Guarded by Travels-only route names (and Party
+         Statement only when opened for Travels, ?company=2): on every other company's
+         page nothing below is rendered. A missing partial renders nothing. --}}
+    @if((request()->routeIs(
+            'role.portal-management.*', 'role.passport-holder.*', 'role.passport-holder-category.*',
+            'role.visa.*', 'role.visa-sales.*', 'role.visa-accounts.*', 'role.other-visa-services.*', 'role.other-service-types.*', 'role.visa-category.*',
+            'role.flight-categories.*', 'role.flight-category-types.*', 'role.flight-price-presets.*', 'role.flight-officers.*',
+            'role.contract-file-categories.*', 'role.contract-files.*', 'role.contract-file-sales.*', 'role.contract-flight-sales.*',
+            // Ticketing and Contract Flight already style their pickers; this turns their remaining
+            // plain dropdowns into the same picker. Loading it twice is a no-op (the partial checks).
+            'role.ticketing.*', 'role.tickets.*', 'role.ticket-sales.*', 'role.ticket-direct-sale.*', 'role.ticket-purchase.*',
+            'role.ticket-bookings.*', 'role.airlines.*', 'role.airport.*', 'role.countries.*', 'role.states.*',
+            'role.contract-flights.*', 'role.flight-schedules.*', 'role.contract-flight-board.*'
+        ) || (request()->routeIs('role.party-statement.*') && (int) request('company') === 2))
+        && ! $__env->hasSection('shared-party-ledger')
+        && view()->exists('contract-flights.partials.ticketing-dropdowns'))
+        @include('contract-flights.partials.ticketing-dropdowns')
+    @endif
+    {{-- Date + time picker on every ERP page (owner, 2026-09-30). Wood Art
+         pages are left out (isolation rule); a missing partial must never
+         break the shared shell. --}}
+    @if(! request()->is('*/woodart*') && view()->exists('partials.datetime-picker'))
+        @include('partials.datetime-picker')
+    @endif
 
     <script>
         if (!window.__globalUserSearchInitialized) {

@@ -18,9 +18,7 @@
                     <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Bank</label>
                     <select id="pv_bank_id" class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl bg-gray-50">
                         <option value="">— Select Bank —</option>
-                        @foreach ($banks as $bank)
-                            <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                        @endforeach
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                     </select>
                 </div>
                 <div>

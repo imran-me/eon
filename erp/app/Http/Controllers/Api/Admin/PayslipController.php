@@ -7,6 +7,7 @@ use App\Models\EmployeeSalary;
 use App\Models\Payslip;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class PayslipController extends Controller
@@ -87,7 +88,10 @@ class PayslipController extends Controller
             ]);
         }
 
+        $data = null;
+
         try {
+            DB::transaction(function () use ($request, &$data) {
             $data = Payslip::updateOrCreate([
                 'user_id' => $request->user_id,
                 'employee_salary_id' => $request->employee_salary_id,
@@ -150,6 +154,12 @@ class PayslipController extends Controller
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    \App\Models\Bank::assertCanCover(
+                        (int) $bank->account_id,
+                        (float) ($empSalary->net_salary ?? 0),
+                        $bank->name
+                    );
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,
@@ -168,8 +178,13 @@ class PayslipController extends Controller
                     ]);
                 }
                 // ── END JOURNAL ───────────────────────────────────────────
+            });
 
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $th->getMessage(),

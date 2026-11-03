@@ -7,6 +7,7 @@
     @include('layout.table-design')
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
     @include('states.content')
     @if (false)
     <div class="mb-4 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
@@ -234,7 +235,7 @@
             });
 
             // Show edit modal
-            $('.edit-state-btn').click(function() {
+            $(document).on('click', '.edit-state-btn', function() {
                 const stateId = $(this).data('state_id');
                 const stateName = $(this).data('state_name');
                 const countryId = $(this).data('country_id');

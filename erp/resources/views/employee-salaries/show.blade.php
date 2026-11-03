@@ -457,10 +457,45 @@
                     'Early leave'    => payslipRound($data->early_leave_deduction ?? 0),
                 ];
 
-                $gross_earning    = array_sum($earnings);
-                $total_deductions = array_sum($deductions);
+                $storedGross      = payslipRound($data->gross_salary ?? 0);
+                $storedDeductions = payslipRound($data->total_deductions ?? 0);
+                if (array_sum(array_slice($earnings, 0, 4)) !== $storedGross) {
+                    $earnings = ['Gross Salary' => $storedGross, ($data->bonus_label ?? 'Bonus') => payslipRound($data->bonus_amount ?? 0)];
+                    if (!empty($data->overtime_salary)) {
+                        $earnings['Overtime'] = payslipRound($data->overtime_salary);
+                    }
+                }
+                $rawDeductionTotal = (float) ($data->advance_salary_deduction ?? 0)
+                    + (float) ($data->loan_deduction ?? 0) + (float) ($data->absent_deduction ?? 0)
+                    + (float) ($data->leave_deduction ?? 0) + (float) ($data->late_deduction ?? 0)
+                    + (float) ($data->early_leave_deduction ?? 0);
+                if (abs($rawDeductionTotal - (float) ($data->total_deductions ?? 0)) <= .01) {
+                    $roundingDelta = $storedDeductions - array_sum($deductions);
+                    if ($roundingDelta !== 0) {
+                        foreach (array_reverse($deductions, true) as $label => $amount) {
+                            if ($amount !== 0) { $deductions[$label] += $roundingDelta; break; }
+                        }
+                    }
+                } else {
+                    $deductions = [$storedDeductions == 0 ? 'No deductions' : 'Recorded Deductions' => $storedDeductions];
+                }
+
+                $encashmentRows = $data->leaveEncashments;
+                $encashment = payslipRound($encashmentRows->sum('total_amount'));
+                $earnedDays = (float) $encashmentRows->sum('earned_days');
+                $encashmentDays = (float) $encashmentRows->sum('encashable_days');
+                $encashableValue = payslipRound($encashmentRows->sum('month_salary_amount'));
+                $encashmentRefund = payslipRound($encashmentRows->sum('leave_deduction_refund'));
+                $encashmentPeriod = $encashmentRows->isNotEmpty() ? $encashmentRows->min('period_start')->format('d M Y').' – '.$encashmentRows->max('period_end')->format('d M Y') : null;
+                if ($encashment > 0) {
+                    $earnings['Leave Encashment (' . number_format($earnedDays, 1) . ' days)'] = $encashment;
+                }
+                $salaryGross      = $storedGross + payslipRound($data->bonus_amount ?? 0) + payslipRound($data->overtime_salary ?? 0);
+                $gross_earning    = $salaryGross + $encashment;
+                $total_deductions = $storedDeductions;
                 $adjustment       = payslipRound($data->salary_adjustment ?? 0);
-                $net_salary       = $gross_earning - $total_deductions + $adjustment;
+                $salaryNet        = payslipRound($data->net_salary ?? 0);
+                $net_salary       = $salaryNet + $encashment;
             @endphp
 
             <div class="table-flex">
@@ -474,7 +509,7 @@
                         </tr>
                         @endforeach
                         <tr class="total-row">
-                            <td>Gross Earnings</td>
+                            <td>{{ $encashment > 0 ? 'Total Earnings' : 'Gross Earnings' }}</td>
                             <td>{{ number_format($gross_earning) }}</td>
                         </tr>
                     </table>
@@ -497,10 +532,20 @@
                 </div>
             </div>
 
+            @if($adjustment != 0)
             <div class="adjustment-row" style="text-align: center; margin: 10px 0; font-weight: 600;">
                 Salary Adjustment : {{ number_format($adjustment) }}
             </div>
+            @endif
 
+            @include('employee-salaries.partials.pay-breakdown', [
+                'salary_gross' => $salaryGross, 'salary_net' => $salaryNet,
+                'earned_days' => $earnedDays,
+                'encashment_days' => $encashmentDays, 'encashable_value' => $encashableValue,
+                'encashment_refund' => $encashmentRefund, 'encashment_period' => $encashmentPeriod,
+            ])
+
+            @if($encashment <= 0)
             <div class="net-payment-section">
                 <div class="net-label">
                     NET PAYABLE AMOUNT
@@ -512,6 +557,7 @@
                     BDT {{ number_format($net_salary) }}
                 </div>
             </div>
+            @endif
             <div class="security-hash" style="margin-top: 40px;">
                 Note : {{ $data->notes ?? 'No note available' }}
             </div>
@@ -520,8 +566,11 @@
                     <div class="sig-area">
                         Employee Signature
                     </div>
-                    <div class="sig-area">
-                        Authorized Signatory
+                    <div style="display:flex;flex-direction:column;align-items:center;">
+                        <x-signature :company="$data->user->company ?? null" />
+                        <div class="sig-area">
+                            Authorized Signatory
+                        </div>
                     </div>
                 </div>
                 <div class="security-hash">

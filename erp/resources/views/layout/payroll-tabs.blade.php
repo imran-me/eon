@@ -268,12 +268,12 @@
     /* Right-aligned under the nav band. Kept on its own row rather than beside
        the band: the two together need ~1630px, so sharing a row would put the
        switcher back into horizontal scrolling at every normal desktop width. */
-    .pr-switcher{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;}
-    .pr-cobtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;flex:0 0 auto;
-        padding:6px 11px;border-radius:7px;font-size:11.5px;font-weight:600;color:#0f172a;
+    .pr-switcher{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;}
+    .pr-cobtn{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;
+        padding:3px 6px;border-radius:6px;font-size:9.5px;line-height:1.35;font-weight:600;color:#0f172a;
         background:transparent;border:1px solid #cbd5e1;white-space:nowrap;text-decoration:none;user-select:none;
         transition:transform .1s ease-out,background .15s,border-color .15s,box-shadow .15s;}
-    .pr-cobtn i{font-size:10.5px;opacity:.7;}
+    .pr-cobtn i{font-size:9px;opacity:.7;}
     .pr-cobtn:hover{border-color:#94a3b8;transform:translateY(-1px);text-decoration:none;color:#0f172a;}
     .pr-cobtn:active{transform:translateY(0);}
     /* the selected concern takes the filled btn-primary treatment */
@@ -295,7 +295,7 @@
 
     @media(max-width:640px){
         .pr-navtab{padding:10px 10px 11px;font-size:11.5px;}
-        .pr-cobtn{padding:5px 9px;font-size:11px;}
+        .pr-cobtn{padding:3px 5px;font-size:9.5px;}
     }
 </style>
 @endif

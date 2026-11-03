@@ -105,7 +105,7 @@
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                 @canany(['edit lead manager', 'delete lead manager'])
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width:1%;white-space:nowrap">Actions</th>
                                 @endcanany
                             </tr>
                         </thead>
@@ -245,9 +245,8 @@
                                     </td>
 
                                     @canany(['edit lead manager', 'delete lead manager'])
-                                    <td class="px-4 py-3">
-                                        <div class="flex flex-col gap-1">
-                                            <div class="flex gap-1">
+                                    <td class="px-2 py-3">
+                                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                             @can('edit lead manager')
                                             <button class="edit-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-2 py-1 rounded text-xs"
                                                 data-item_id="{{ $value->id }}"
@@ -282,29 +281,26 @@
                                                 data-int_site_visit_date="{{ $value->interior?->site_visit_date?->format('Y-m-d') ?? '' }}"
                                                 data-int_design_notes="{{ $value->interior?->design_notes ?? '' }}"
                                                 data-action="{{ route('role.lead-manager.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'lead_manager' => $value->id]) }}"
-                                                title="Edit">
-                                                <i class="fas fa-edit"></i>
+                                                title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-edit" style="font-size:11px;margin:0"></i>
                                             </button>
                                             @endcan
                                             @can('delete lead manager')
                                             <button class="border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-2 py-1 rounded text-xs"
-                                                onclick="confirmDelete('{{ $value->id }}', '{{ $value->name }}')">
-                                                <i class="fas fa-trash"></i>
+                                                onclick="confirmDelete('{{ $value->id }}', '{{ $value->name }}')" title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                             </button>
                                             @endcan
-                                            </div>
                                             {{-- Convert to Project --}}
                                             @if($value->status === 'won')
                                                 @if($value->project)
                                                     <a href="{{ route('role.projects.show', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'project' => $value->project->id]) }}"
-                                                       class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold border border-green-300 hover:bg-green-200">
-                                                        <i class="fas fa-external-link-alt"></i> Project দেখুন
-                                                    </a>
+                                                       class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-semibold border border-green-300 hover:bg-green-200" title="Project দেখুন" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                        <i class="fas fa-external-link-alt" style="font-size:11px;margin:0"></i></a>
                                                 @else
                                                     <button onclick="openConvertModal({{ $value->id }}, '{{ addslashes($value->name) }}')"
-                                                        class="inline-flex items-center gap-1 px-2 py-1 bg-teal-600 text-white rounded text-xs font-semibold hover:bg-teal-700">
-                                                        <i class="fas fa-bolt"></i> Project এ Convert
-                                                    </button>
+                                                        class="inline-flex items-center gap-1 px-2 py-1 bg-teal-600 text-white rounded text-xs font-semibold hover:bg-teal-700" title="Project এ Convert" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                        <i class="fas fa-bolt" style="font-size:11px;margin:0"></i></button>
                                                 @endif
                                             @endif
                                         </div>

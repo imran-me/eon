@@ -31,7 +31,7 @@
                         </div>                                                                                                                        
                         <div class="mb-4">
                             <label for="create_payment_date" class="block text-gray-700 text-sm font-bold mb-2">Payment Date</label>
-                            <input type="date" id="create_payment_date" name="payment_date" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <input type="date" id="create_payment_date" name="payment_date" required class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <p class="text-red-500 text-xs mt-1 hidden error-message">Please select a Date</p>
                         </div>	                                                                        
                         <div class="mb-4">

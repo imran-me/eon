@@ -85,102 +85,6 @@
         @endforeach
     </div>
 
-    {{-- ── Filters ── --}}
-    <form method="GET" class="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm">
-        <input type="hidden" name="type" value="{{ $type }}">
-        <div class="flex flex-wrap items-end gap-3">
-
-            @if($companies->count() > 1)
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">Company</label>
-                <select name="company_id" class="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Companies</option>
-                    @foreach($companies as $c)
-                        <option value="{{ $c->id }}" @selected($companyId == $c->id)>{{ $c->short_name ?? $c->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            @endif
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">Employee ID / Name</label>
-                <div class="relative">
-                    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
-                    <input type="text" name="search" id="payrollSearch" value="{{ $search }}" placeholder="e.g. EG25 109"
-                        class="border border-gray-300 rounded-lg pl-8 pr-3 py-2 text-sm min-w-[180px] focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">
-                    Employee @if($type === 'individual')<span class="text-red-500">*</span>@endif
-                </label>
-                <select name="employee_id" id="payrollEmployee" @disabled($ownRecordsOnly)
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[190px] focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100">
-                    <option value="" data-emp-id="">{{ $type === 'individual' ? '— Select an employee —' : 'All Employees' }}</option>
-                    @foreach($employees as $emp)
-                        <option value="{{ $emp->id }}" data-emp-id="{{ $emp->employee_id_no }}" @selected($employeeId == $emp->id)>
-                            {{ $emp->name }}{{ $emp->employee_id_no ? ' — ' . $emp->employee_id_no : '' }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">From</label>
-                <input type="month" name="from" value="{{ $from }}"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">To</label>
-                <input type="month" name="to" value="{{ $to }}"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-gray-500 mb-1">Status</label>
-                <select name="status" class="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[130px] focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All</option>
-                    @foreach($statusOptions as $val => $label)
-                        <option value="{{ $val }}" @selected($status === $val)>{{ $label }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button type="submit" class="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-rotate mr-1 text-xs"></i>Load
-                </button>
-                <a href="{{ route('role.report.payroll', ['role' => $role, 'type' => $type]) }}"
-                   class="text-sm text-gray-500 hover:text-gray-700 underline">Clear</a>
-            </div>
-        </div>
-
-        {{-- Quick month ranges — the three period modes, without a separate control --}}
-        <div class="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-gray-100">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Quick range</span>
-            @php
-                $quick = [
-                    'This Month' => [now()->format('Y-m'), now()->format('Y-m')],
-                    'Last Month' => [now()->subMonthNoOverflow()->format('Y-m'), now()->subMonthNoOverflow()->format('Y-m')],
-                    'This Year'  => [now()->startOfYear()->format('Y-m'), now()->format('Y-m')],
-                    'Last Year'  => [now()->subYear()->startOfYear()->format('Y-m'), now()->subYear()->endOfYear()->format('Y-m')],
-                ];
-            @endphp
-            @foreach($quick as $label => [$qf, $qt])
-                @php $on = $from === $qf && $to === $qt; @endphp
-                <a href="{{ route('role.report.payroll', array_merge(['role' => $role], array_filter(request()->only(['company_id','employee_id','status','type','search'])), ['from' => $qf, 'to' => $qt])) }}"
-                   class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors {{ $on ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50' }}">
-                    {{ $label }}
-                </a>
-            @endforeach
-            <a href="{{ route('role.report.payroll', array_merge(['role' => $role], array_filter(request()->only(['company_id','employee_id','status','type','search'])))) }}"
-               class="px-3 py-1 rounded-full text-xs font-semibold border transition-colors {{ !$from && !$to ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-gray-500 border-gray-200 hover:bg-gray-50' }}">
-                All Time
-            </a>
-        </div>
-    </form>
 
     {{-- ── Who this report is about (the Individual tab has no per-row
          employee column, so the id belongs here rather than repeated
@@ -221,6 +125,38 @@
 
     {{-- ── Table ── --}}
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        {{-- Filter bar — the Manage Flights strip, with month ranges in place
+             of day presets (this report is read by month). Company comes from
+             the payroll toolbar's switcher, so it rides as a hidden field. --}}
+        <form method="GET" action="{{ route('role.report.payroll', ['role' => $role]) }}">
+            <input type="hidden" name="type" value="{{ $type }}">
+            @if(request()->filled('company_id'))
+                <input type="hidden" name="company_id" value="{{ request('company_id') }}">
+            @endif
+            {{-- One row. Individual needs an employee picked, so it gets the
+                 Employee select instead of search; own-records users get neither. --}}
+            <x-payroll-filter-bar placeholder="Search employee name or ID…"
+                :searchable="$type !== 'individual' && !$ownRecordsOnly"
+                :segments="[['name' => 'status', 'label' => 'Status', 'options' => $statusOptions]]"
+                :reset="route('role.report.payroll', ['role' => $role])" :keep="['company_id', 'type']"
+                :total="($type === 'individual' && !empty($needsEmployee)) ? null : $rows->count()">
+                @if($type === 'individual' && !$ownRecordsOnly)
+                    <div class="pfb-field">
+                        <label>Employee *</label>
+                        <select name="employee_id">
+                            <option value="">— Select an employee —</option>
+                            @foreach($employees as $emp)
+                                <option value="{{ $emp->id }}" @selected($employeeId == $emp->id)>{{ $emp->name }}{{ $emp->employee_id_no ? ' — ' . $emp->employee_id_no : '' }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
+                <x-slot:range>
+                    <div class="pfb-field pfb-month-field"><label>From month</label><input type="month" name="from" value="{{ $from }}" aria-label="From month"></div>
+                    <div class="pfb-field pfb-month-field"><label>To month</label><input type="month" name="to" value="{{ $to }}" aria-label="To month"></div>
+                </x-slot:range>
+            </x-payroll-filter-bar>
+        </form>
         @if($type === 'individual' && !empty($needsEmployee))
             <div class="text-center py-16 text-gray-400">
                 <i class="fas fa-user-tag text-3xl mb-3 block opacity-40"></i>
@@ -240,35 +176,4 @@
 
 </div>
 
-<script>
-    (function () {
-        var picker = document.getElementById('payrollEmployee');
-        var search = document.getElementById('payrollSearch');
-        if (!picker || !search) return;
-
-        // Picking someone from the list fills their id into the search box, so
-        // the two controls agree instead of silently narrowing on different
-        // people. Clearing the picker clears the box it filled.
-        picker.addEventListener('change', function () {
-            var empId = this.options[this.selectedIndex].getAttribute('data-emp-id') || '';
-
-            if (this.value && empId) {
-                search.value = empId;
-                search.dataset.autofilled = '1';
-                return;
-            }
-
-            // Back to "All Employees" — only wipe the box if we were the ones
-            // who filled it. Someone picked with no id on file leaves whatever
-            // was typed alone rather than blanking it.
-            if (!this.value && search.dataset.autofilled === '1') {
-                search.value = '';
-                search.dataset.autofilled = '0';
-            }
-        });
-
-        // Typing by hand means the box is the user's again, not ours to clear.
-        search.addEventListener('input', function () { this.dataset.autofilled = '0'; });
-    })();
-</script>
 @endsection

@@ -142,6 +142,17 @@ class CompanyController implements HasMiddleware
             }
         }
 
+        if ($request->hasFile('signature')) {
+            $signature = $request->file('signature');
+            $signature_name = 'signature_' . uniqid() . '.' . strtolower($signature->getClientOriginalExtension());
+            if ($signature->move(public_path($upload_path), $signature_name)) {
+                if (!empty($data->signature) && file_exists(public_path($data->signature))) {
+                    unlink(public_path($data->signature));
+                }
+                $data->signature = $upload_path . $signature_name;
+            }
+        }
+
         $data->save();
 
         if ($request->ajax()) {
@@ -218,6 +229,16 @@ class CompanyController implements HasMiddleware
                 $filename = 'icon_' . uniqid() . '.' . $file->getClientOriginalExtension();
                 $file->move(public_path($upload_path), $filename);
                 $company->icon = $upload_path . $filename;
+            }
+
+            if ($request->hasFile('signature')) {
+                if (!empty($company->signature) && file_exists(public_path($company->signature))) {
+                    unlink(public_path($company->signature));
+                }
+                $file = $request->file('signature');
+                $filename = 'signature_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $file->move(public_path($upload_path), $filename);
+                $company->signature = $upload_path . $filename;
             }
 
             // Update basic info

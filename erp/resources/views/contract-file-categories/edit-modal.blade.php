@@ -11,9 +11,9 @@
   <form id="editeForm" method="POST" class="grid gap-4 p-6 sm:grid-cols-2">@csrf @method('PUT')
    <input type="hidden" id="editItemId" name="id">
    <div>
-    <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category (Job) Name <span class="text-red-500">*</span></label>
-    <input id="edit_name" name="name" class="h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100">
-    <p id="edit_name_msg" class="error-message mt-1 hidden text-xs text-red-500">Name is required</p>
+    <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Category (Job) Name</label>
+    <input id="edit_name" name="name" class="h-11 w-full rounded-xl border border-slate-200 px-3.5 text-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100" placeholder="blank = all jobs">
+    <p class="mt-1 text-[11px] text-slate-400">Leave blank for one category that covers every job in this country.</p>
    </div>
    <div>
     <label class="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Country <span class="text-red-500">*</span></label>

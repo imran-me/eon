@@ -16,11 +16,13 @@ class TaskReportExport implements FromCollection, WithHeadings, WithMapping, Sho
 {
     protected $tasksByUser;
     protected $summary;
+    protected $selectedMonth;
 
-    public function __construct($tasksByUser, $summary)
+    public function __construct($tasksByUser, $summary, ?string $selectedMonth = null)
     {
         $this->tasksByUser = $tasksByUser;
         $this->summary = $summary;
+        $this->selectedMonth = $selectedMonth ?: now()->format('Y-m');
     }
 
     public function collection()
@@ -122,27 +124,39 @@ class TaskReportExport implements FromCollection, WithHeadings, WithMapping, Sho
                 $sheet = $event->sheet;
                 
                 // Insert header rows
-                $sheet->insertNewRowBefore(1, 3);
+                $sheet->insertNewRowBefore(1, 4);
                 
                 $sheet->mergeCells('A1:G1');
                 $sheet->mergeCells('A2:G2');
+                $sheet->mergeCells('A3:G3');
                 
-                $sheet->setCellValue('A1', 'TASK REPORT');
-                $sheet->setCellValue('A2', 'Generated on: ' . now()->format('F d, Y h:i A'));
+                $sheet->setCellValue('A1', 'EMPLOYEE TASK REPORT');
+                $sheet->setCellValue('A2', 'Period: ' . Carbon::createFromFormat('Y-m', $this->selectedMonth)->format('F Y'));
+                $sheet->setCellValue('A3', 'Generated: ' . now()->format('d M Y, h:i A'));
                 
                 // Style header
                 $sheet->getStyle('A1')->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 16],
+                    'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => '3730A3']],
                     'alignment' => ['horizontal' => 'center'],
                 ]);
                 
                 $sheet->getStyle('A2')->applyFromArray([
-                    'font' => ['size' => 11],
+                    'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '475569']],
+                    'alignment' => ['horizontal' => 'center'],
+                ]);
+                $sheet->getStyle('A3')->applyFromArray([
+                    'font' => ['size' => 9, 'color' => ['rgb' => '64748B']],
                     'alignment' => ['horizontal' => 'center'],
                 ]);
                 
                 // Auto-filter
-                $sheet->getDelegate()->setAutoFilter('A4:G4');
+                $sheet->getStyle('A5:G5')->applyFromArray([
+                    'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+                    'fill' => ['fillType' => 'solid', 'startColor' => ['rgb' => '564FC8']],
+                ]);
+                $sheet->getDelegate()->setAutoFilter('A5:G5');
+                $sheet->freezePane('A6');
+                $sheet->getPageSetup()->setOrientation('landscape')->setFitToWidth(1)->setFitToHeight(0);
                 
                 // Column widths
                 $sheet->getColumnDimension('A')->setWidth(5);

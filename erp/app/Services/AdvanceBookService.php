@@ -36,7 +36,7 @@ class AdvanceBookService
     {
         $released = round((float) $advances->sum(fn (AdvanceSalary $a) => $a->is_released ? (float) $a->amount : 0), 2);
         $outstanding = round((float) $advances->sum(fn (AdvanceSalary $a) => $a->outstanding), 2);
-        $awaiting = $advances->filter(fn (AdvanceSalary $a) => ! $a->is_released);
+        $awaiting = $advances->filter(fn (AdvanceSalary $a) => ! $a->is_released && !$a->is_reversed);
         $open = $advances->filter(fn (AdvanceSalary $a) => $a->outstanding > 0);
 
         return [

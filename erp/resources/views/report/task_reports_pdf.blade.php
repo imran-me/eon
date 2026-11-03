@@ -3,24 +3,40 @@
 <head>
     <title>Task Report</title>
     <style>
+        /* @page { size: A4 landscape; margin: 8mm 9mm; } */
+        @page { size: A4 portrait; margin: 12mm; }
+        * { box-sizing: border-box; }
         body {
             font-family: 'DejaVu Sans', sans-serif;
-            font-size: 11px;
-            color: #333;
-            margin: 20px;
+            font-size: 8px;
+            color: #1e293b;
+            margin: 0;
         }
+
+        .masthead { width: 100%; margin-bottom: 2px; border-collapse: collapse; }
+        .masthead td { border: 0; padding: 0; vertical-align: middle; }
+        .logo { width:65px; max-width:65px; height:auto; max-height:26px; object-fit:contain; object-position:left center; }
+        .brand { color: #3730a3; font-size: 13px; font-weight: 800; }
+        .company { text-align: right; color: #64748b; font-size: 6.5px; line-height: 1.2; }
+        .company strong { display:block; color:#1e293b; font-size:8px; }
+        .title-bar { margin-bottom:3px; padding:3px; border-top:1.5px solid #3730a3; background:#f5f7ff; color:#3730a3; text-align:center; text-transform:uppercase; letter-spacing:1px; font-size:7px; font-weight:bold; }
+        .report-meta { width:100%; margin-bottom:3px; border-collapse:collapse; }
+        .report-meta td { border:0; padding:0; line-height:1.15; font-size:6.3px; }
+        .report-meta .right { text-align:right; color:#64748b; }
+        .employee-title { color:#3730a3; text-transform:uppercase; letter-spacing:.4px; font-size:5.8px; font-weight:bold; }
+        .employee-name { color:#1e293b; font-size:7.5px; font-weight:bold; }
 
         .header {
             text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 15px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #cbd5e1;
+            padding-bottom: 5px;
         }
 
         .header h1 {
             margin: 0;
-            font-size: 24px;
-            color: #667eea;
+            font-size: 12px;
+            color: #3730a3;
             text-transform: uppercase;
         }
 
@@ -33,7 +49,7 @@
         .summary-grid {
             display: table;
             width: 100%;
-            margin-bottom: 20px;
+            margin-bottom: 8px;
             border-collapse: collapse;
         }
 
@@ -44,35 +60,35 @@
         .summary-card {
             display: table-cell;
             width: 20%;
-            padding: 12px;
+            padding: 5px;
             text-align: center;
             border: 1px solid #e2e8f0;
             background: #f8fafc;
         }
 
         .summary-value {
-            font-size: 20px;
+            font-size: 10px;
             font-weight: bold;
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 1px;
         }
 
         .summary-label {
-            font-size: 9px;
+            font-size: 6px;
             text-transform: uppercase;
             color: #64748b;
         }
 
         .user-section {
-            margin-bottom: 25px;
-            page-break-inside: avoid;
+            margin-bottom: 2px;
+            page-break-inside: auto;
         }
 
         .user-header {
-            background-color: #667eea;
-            color: #ffffff;
-            padding: 10px 15px;
-            font-size: 14px;
+            background-color: #eef2ff;
+            color: #3730a3;
+            padding: 2px 3px;
+            font-size: 7px;
             font-weight: 700;
             margin-bottom: 0;
             font-family: 'DejaVu Sans', sans-serif;
@@ -81,29 +97,33 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 2px;
+            table-layout: fixed;
         }
 
         th {
-            background-color: #f1f5f9;
+            background-color: #564fc8;
+            color: #ffffff;
             font-weight: bold;
             text-transform: uppercase;
-            font-size: 9px;
-            padding: 8px 6px;
-            border: 1px solid #cbd5e1;
+            font-size: 6.2px;
+            padding: 1.3px 2.5px;
+            border: 0;
             text-align: left;
         }
 
         td {
-            padding: 7px 6px;
-            border: 1px solid #e2e8f0;
-            font-size: 10px;
+            padding: .5px 2.5px;
+            border: 0;
+            border-bottom: .5px solid #e2e8f0;
+            font-size: 7px;
+            line-height: 1.05;
         }
 
         .badge {
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 8px;
+            padding: 0 2px;
+            border-radius: 2px;
+            font-size: 7px;
             font-weight: bold;
             text-transform: uppercase;
             display: inline-block;
@@ -130,29 +150,30 @@
         }
 
         .status-summary {
-            margin-top: 20px;
-            padding: 15px;
+            margin-top: 3px;
+            padding: 3px 5px;
             background: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 8px;
+            border-radius: 2px;
         }
 
         .status-summary h3 {
-            margin: 0 0 10px 0;
-            font-size: 14px;
+            margin: 0 0 2px 0;
+            font-size: 6px;
             color: #1e293b;
         }
 
         .status-item {
             display: inline-block;
-            margin-right: 20px;
-            margin-bottom: 5px;
+            margin-right: 8px;
+            margin-bottom: 1px;
+            font-size: 6.3px;
         }
 
         .status-count {
             font-weight: bold;
             color: #667eea;
-            font-size: 16px;
+            font-size: 7px;
         }
 
         .no-data {
@@ -162,43 +183,54 @@
             font-size: 14px;
         }
 
-        @page {
-            margin: 15mm;
-        }
+        tbody tr:nth-child(even) td { background:#f8f9ff; }
+        th:nth-child(4), th:nth-child(5), td:nth-child(4), td:nth-child(5) { text-align:center; }
+        th:nth-child(6), th:nth-child(7), td:nth-child(6), td:nth-child(7) { white-space:nowrap; }
+        tr { page-break-inside: avoid; }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Task Report</h1>
-        <p>Generated on {{ now()->format('F d, Y - h:i A') }}</p>
-    </div>
-
-    <!-- Summary Cards -->
-    <!-- <div class="summary-grid">
-        <div class="summary-row">
-            <div class="summary-card">
-                <span class="summary-value">{{ $summary['total_tasks'] }}</span>
-                <span class="summary-label">Total Tasks</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ $summary['by_priority']['high'] }}</span>
-                <span class="summary-label">High Priority</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ $summary['by_priority']['medium'] }}</span>
-                <span class="summary-label">Medium Priority</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ $summary['by_priority']['low'] }}</span>
-                <span class="summary-label">Low Priority</span>
-            </div>
-            <div class="summary-card">
-                <span class="summary-value">{{ $summary['overdue'] }}</span>
-                <span class="summary-label">Overdue Tasks</span>
-            </div>
-        </div>
-    </div> -->
-
+    @php
+        $firstGroup = $tasksByUser->first();
+        $reportUser = $firstGroup['user'] ?? null;
+        $company = $reportUser?->company ?? Auth::user()?->company;
+        $logoPath = $company?->logo && file_exists(public_path($company->logo)) ? public_path($company->logo) : null;
+        $singleEmployeeReport = $tasksByUser->count() === 1;
+        $employeeId = $reportUser?->employee_id_no ?: ($reportUser ? 'EMP-' . str_pad((string) $reportUser->id, 4, '0', STR_PAD_LEFT) : 'N/A');
+        $period = !empty($filters['month'])
+            ? \Carbon\Carbon::createFromFormat('Y-m', $filters['month'])->format('F Y')
+            : (!empty($filters['start_date'])
+                ? \Carbon\Carbon::parse($filters['start_date'])->format('F Y')
+                : now()->format('F Y'));
+    @endphp
+    <table class="masthead">
+        <tr>
+            <td>
+                @if($logoPath)<img class="logo" src="{{ $logoPath }}" alt="">@else<div class="brand">{{ $company?->name ?? config('app.name') }}</div>@endif
+            </td>
+            <td class="company">
+                <strong>{{ $company?->name ?? config('app.name') }}</strong>
+                @if($company?->address){{ $company->address }}<br>@endif
+                {{ $company?->phone }}{{ $company?->phone && $company?->email ? ' | ' : '' }}{{ $company?->email }}
+            </td>
+        </tr>
+    </table>
+    <div class="title-bar">Employee Task Statement</div>
+    <table class="report-meta">
+        <tr>
+            <td>
+                <div class="employee-title">Employee Details</div>
+                <div class="employee-name">{{ $singleEmployeeReport ? $reportUser?->name : 'All Employees' }}</div>
+                @if($singleEmployeeReport){{ $reportUser?->email }}@endif
+            </td>
+            <td class="right">
+                @if($singleEmployeeReport)<strong>Employee ID:</strong> {{ $employeeId }}<br>@endif
+                <strong>Period:</strong> {{ $period }}<br>
+                <strong>Generated:</strong> {{ now()->format('d M Y') }}<br>
+                <strong>Printed By:</strong> {{ Auth::user()->name }}
+            </td>
+        </tr>
+    </table>
     <!-- Task Report by User -->
     @if($tasksByUser->isEmpty())
         <div class="no-data">
@@ -217,13 +249,13 @@
                 <table>
                     <thead>
                         <tr>
-                            <th style="width: 5%">#</th>
-                            <th style="width: 28%">Task Title</th>
-                            <th style="width: 15%">Project</th>
-                            <th style="width: 12%">Status</th>
-                            <th style="width: 10%">Priority</th>
-                            <th style="width: 10%">Start Date</th>
-                            <th style="width: 10%">Due Date</th>
+                            <th style="width: 2%">#</th>
+                            <th style="width: 57%">Task Title</th>
+                            <th style="width: 13%">Project</th>
+                            <th style="width: 6%">Status</th>
+                            <th style="width: 6%">Priority</th>
+                            <th style="width: 8%">Start Date</th>
+                            <th style="width: 8%">Due Date</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -231,8 +263,10 @@
                             @php
                                 $dueDate = $task->due_date ? \Carbon\Carbon::parse($task->due_date) : null;
                                 $startDate = $task->start_date ? \Carbon\Carbon::parse($task->start_date) : null;
-                                $isOverdue = $dueDate && $dueDate->isPast();
-                                $daysRemaining = $dueDate ? now()->diffInDays($dueDate, false) : null;
+                                $overdueAt = isset($reportAsOf) ? \Carbon\Carbon::parse($reportAsOf) : now();
+                                $doneStatuses = ['done', 'completed', 'complete', 'closed'];
+                                $isDone = in_array(strtolower(trim($task->column->name ?? '')), $doneStatuses, true);
+                                $isOverdue = $dueDate && !$isDone && $dueDate->endOfDay()->lt($overdueAt);
                             @endphp
                             <tr>
                                 <td>{{ $index + 1 }}</td>

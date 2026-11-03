@@ -30,6 +30,9 @@
     .select2-container .select2-selection--single { height:42px; }
     .select2-container--default .select2-selection--single .select2-selection__rendered { line-height:40px; }
     .select2-container--default .select2-selection--single .select2-selection__arrow { height:42px; }
+    .drilldown-context { margin:0 0 14px; padding:11px 14px; border:1px solid #bfdbfe; border-radius:8px; background:#eff6ff; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#1e40af; font-size:13px; }
+    .drilldown-context a { color:#1d4ed8; font-weight:700; text-decoration:none; white-space:nowrap; }
+    .drilldown-context a:hover { text-decoration:underline; }
 
     /* ── Report ── */
     .report-wrapper { margin:16px; }
@@ -51,16 +54,23 @@
     .summary-card.opening  { background:#f8fafc;  border-left:4px solid #94a3b8; }
     .summary-card.debit    { background:#eff6ff;  border-left:4px solid #2563eb; }
     .summary-card.credit   { background:#f0fdf4;  border-left:4px solid #059669; }
+    .summary-card.movement { background:#f5f3ff;  border-left:4px solid #7c3aed; }
     .summary-card.closing  { background:#fef3c7;  border-left:4px solid #d97706; }
     .summary-card .s-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; color:#64748b; }
     .summary-card .s-value { font-size:20px; font-weight:800; font-family:monospace; }
     .summary-card.opening .s-value { color:#475569; }
     .summary-card.debit   .s-value { color:#1d4ed8; }
     .summary-card.credit  .s-value { color:#059669; }
+    .summary-card.movement .s-value { color:#6d28d9; }
     .summary-card.closing .s-value { color:#92400e; }
 
     /* ── Ledger card ── */
     .ledger-card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.08); overflow:hidden; }
+    .ledger-filter-panel { margin-bottom:16px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden; box-shadow:0 2px 12px rgba(15,23,42,.05); }
+    .ledger-filter-panel .lfb-bar { border-bottom:0; }
+    .ledger-per-page { min-width:84px; }
+    .ledger-pagination { padding:14px 16px; border-top:1px solid #e2e8f0; background:#f8fafc; }
+    .ledger-page-meta { padding:10px 16px 0; color:#64748b; font-size:12px; display:flex; justify-content:space-between; gap:12px; }
     .ledger-table { width:100%; border-collapse:collapse; }
     .ledger-table thead th { background:#f8fafc; padding:10px 16px; font-size:12px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.4px; border-bottom:1px solid #e2e8f0; }
     .ledger-table tbody tr { border-bottom:1px solid #f1f5f9; transition:background .15s; }
@@ -88,6 +98,13 @@
     .type-equity    { background:#d1fae5; color:#065f46; }
     .type-income    { background:#dcfce7; color:#15803d; }
     .type-expense   { background:#fef3c7; color:#92400e; }
+    .journal-link {
+        display:inline-flex; align-items:center; justify-content:center;
+        width:30px; height:30px; border:1px solid #bfdbfe; border-radius:6px;
+        background:#eff6ff; color:#2563eb; text-decoration:none;
+        transition:background .15s ease, color .15s ease;
+    }
+    .journal-link:hover { background:#2563eb; color:#fff; }
 
     /* ── No account selected placeholder ── */
     .placeholder-box { text-align:center; padding:60px 20px; color:#94a3b8; background:#f8fafc; border-radius:10px; border:2px dashed #e2e8f0; }
@@ -98,60 +115,90 @@
     .empty-report i { font-size:40px; margin-bottom:10px; }
 
     @media print {
-        .filter-container, .print-btn, .states-table-header { display:none !important; }
+        .filter-container, .print-btn, .states-table-header, .ledger-filter-panel, .ledger-pagination, .ledger-page-meta, .rp-toolbar, .drilldown-context { display:none !important; }
         body { background:#fff; }
+        .states-table, .ledger-card { box-shadow:none !important; }
     }
 </style>
 @endsection
 
 @section('main-content')
 
+@php
+    $accountLedgerResetUrl = route('role.report.account-ledger', array_filter([
+        'role' => request()->route('role') ?: Str::slug(Auth::user()->getRoleNames()->first()),
+        'account_id' => request('account_id'),
+        'scope' => request('scope') === 'all' ? 'all' : null,
+        'from_report' => request('from_report') === 'profit-loss' ? 'profit-loss' : null,
+    ]));
+    $accountLedgerPrintUrl = route('role.report.account-ledger', array_merge(
+        ['role' => request()->route('role') ?: Str::slug(Auth::user()->getRoleNames()->first())],
+        request()->except(['page', 'print']),
+        ['print' => 1]
+    ));
+@endphp
+
 @include('report.partials.account-report-tabs')
+
+@if(request('from_report') === 'profit-loss')
+@php
+    $profitLossReturnUrl = route('role.report.profit-loss', array_filter([
+        'role' => request()->route('role') ?: Str::slug(Auth::user()->getRoleNames()->first()),
+        'date_from' => request('date_from'),
+        'date_to' => request('date_to'),
+    ], fn ($value) => $value !== null && $value !== ''));
+@endphp
+<div class="drilldown-context no-print">
+    <span>
+        <i class="fas fa-circle-info mr-1"></i>
+        P&amp;L drill-down{{ $viewAllCompanies ? ' · all-company scope' : '' }}. Debit and credit activity uses the same reporting period.
+    </span>
+    <a href="{{ $profitLossReturnUrl }}"><i class="fas fa-arrow-left mr-1"></i>Back to Profit &amp; Loss</a>
+</div>
+@endif
 
 <div class="states-table bg-white rounded-lg shadow-md overflow-hidden">
 
     {{-- Filter --}}
-    <form action="" method="GET" id="filterForm">
-        <div class="filter-container" style="margin: 0 0 15px 0 !important;">
-            <div class="filter-header {{ request()->hasAny(['account_id','date_from','date_to']) ? 'active' : '' }}"
-                 id="filterHeader">
-                <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                <i class="fas fa-chevron-down toggle-icon"></i>
-            </div>
-            <div class="filter-content {{ request()->hasAny(['account_id','date_from','date_to']) ? 'active' : '' }}"
-                 id="filterBody">
-                <div class="filter-row">
-                    <div class="filter-group" style="min-width:280px;">
-                        <label>Account <span style="color:#ef4444">*</span></label>
-                        <select name="account_id" class="form-control select2" style="width:100%">
-                            <option value="">— Select Account —</option>
-                            @foreach($allAccounts as $acc)
-                                <option value="{{ $acc->id }}"
-                                    {{ request('account_id') == $acc->id ? 'selected' : '' }}>
-                                    [{{ $acc->code }}] {{ $acc->name }} ({{ ucfirst($acc->type) }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label>Date From</label>
-                        <input type="date" name="date_from" value="{{ request('date_from') }}">
-                    </div>
-                    <div class="filter-group">
-                        <label>Date To</label>
-                        <input type="date" name="date_to" value="{{ request('date_to') }}">
-                    </div>
-                </div>
-                <div class="filter-actions">
-                    <button type="button" class="reset-btn" id="resetBtn">
-                        <i class="fas fa-undo mr-1"></i>Reset
-                    </button>
-                    <button type="submit" class="apply-btn">
-                        <i class="fas fa-search mr-1"></i>Apply
-                    </button>
-                </div>
-            </div>
-        </div>
+    <form action="" method="GET" id="filterForm" class="ledger-filter-panel no-print">
+        @if(request('scope') === 'all')
+            <input type="hidden" name="scope" value="all">
+        @endif
+        @if(request('from_report') === 'profit-loss')
+            <input type="hidden" name="from_report" value="profit-loss">
+        @endif
+        <x-list-filter-bar
+            search="search"
+            placeholder="Search reference, source, description, note, date or amount…"
+            from="date_from"
+            to="date_to"
+            :reset="$accountLedgerResetUrl">
+            <select name="account_id" class="select2" aria-label="Account">
+                <option value="">Select account…</option>
+                @foreach($allAccounts as $acc)
+                    <option value="{{ $acc->id }}" {{ (string) request('account_id') === (string) $acc->id ? 'selected' : '' }}>
+                        [{{ $acc->code }}] {{ $acc->name }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="per_page" class="ledger-per-page" aria-label="Rows per page">
+                @foreach([15, 25, 50, 100] as $size)
+                    <option value="{{ $size }}" {{ $perPage === $size ? 'selected' : '' }}>{{ $size }} rows</option>
+                @endforeach
+            </select>
+            @if($account)
+                <span class="lfb-count {{ $transactionCount === 0 ? 'is-none' : '' }}">
+                    {{ $transactionCount === 0 ? 'No transactions' : number_format($transactionCount) . ' ' . Str::plural('row', $transactionCount) }}
+                </span>
+            @endif
+            <x-slot:actions>
+                @if($account)
+                    <a href="{{ $accountLedgerPrintUrl }}" target="_blank" rel="noopener" class="lfb-action">
+                        <i class="fas fa-print"></i> Print
+                    </a>
+                @endif
+            </x-slot:actions>
+        </x-list-filter-bar>
     </form>
 
     <div class="report-wrapper" id="printArea">
@@ -213,7 +260,7 @@
             @endif
             <div class="acc-info-item">
                 <span class="acc-info-label">Total Transactions</span>
-                <span class="acc-info-value">{{ $rows->count() }}</span>
+                <span class="acc-info-value">{{ number_format($transactionCount) }}</span>
             </div>
         </div>
 
@@ -234,8 +281,14 @@
                 <div class="s-label"><i class="fas fa-arrow-left mr-1"></i>Total Credit</div>
                 <div class="s-value">{{ number_format($totalCredit, 2) }}</div>
             </div>
+            @if(in_array($account->type, ['income', 'expense']))
+            <div class="summary-card movement">
+                <div class="s-label"><i class="fas fa-scale-balanced mr-1"></i>P&amp;L Movement</div>
+                <div class="s-value">{{ number_format($periodMovement, 2) }}</div>
+            </div>
+            @endif
             <div class="summary-card closing">
-                <div class="s-label"><i class="fas fa-flag-checkered mr-1"></i>Closing Balance</div>
+                <div class="s-label"><i class="fas fa-flag-checkered mr-1"></i>{{ request()->filled('search') ? 'Filtered Closing' : 'Closing Balance' }}</div>
                 <div class="s-value">
                     {{ number_format(abs($closingBalance), 2) }}
                     <small style="font-size:12px;">{{ $closingBalance < 0 ? 'Cr' : 'Dr' }}</small>
@@ -251,6 +304,12 @@
                     <p>No transactions found for this account in the selected period.</p>
                 </div>
             @else
+            @if(!$printing && $rows->total() > 0)
+            <div class="ledger-page-meta no-print">
+                <span>Showing {{ number_format($rows->firstItem()) }}–{{ number_format($rows->lastItem()) }} of {{ number_format($rows->total()) }} transactions</span>
+                <span>Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }}</span>
+            </div>
+            @endif
             <div style="overflow-x:auto;">
                 <table class="ledger-table">
                     <thead>
@@ -262,7 +321,10 @@
                             <th>Description / Note</th>
                             <th class="text-right">Debit</th>
                             <th class="text-right">Credit</th>
-                            <th class="text-right">Balance</th>
+                            <th class="text-right">{{ request()->filled('search') ? 'Filtered Balance' : 'Balance' }}</th>
+                            @canany(['view journal', 'view all journal'])
+                                <th class="text-center no-print">Journal</th>
+                            @endcanany
                         </tr>
                     </thead>
                     <tbody>
@@ -277,21 +339,24 @@
                             </td>
                             <td colspan="3">
                                 <i class="fas fa-arrow-right mr-1"></i>
-                                Opening Balance
+                                {{ !$printing && $rows->currentPage() > 1 ? 'Balance brought forward' : 'Opening Balance' }}
                             </td>
                             <td class="text-right">—</td>
                             <td class="text-right">—</td>
                             <td class="text-right">
-                                <span class="{{ $openingBalance >= 0 ? 'bal-dr' : 'bal-cr' }}">
-                                    {{ number_format(abs($openingBalance), 2) }}
-                                    <small>{{ $openingBalance < 0 ? 'Cr' : 'Dr' }}</small>
+                                <span class="{{ $pageOpeningBalance >= 0 ? 'bal-dr' : 'bal-cr' }}">
+                                    {{ number_format(abs($pageOpeningBalance), 2) }}
+                                    <small>{{ $pageOpeningBalance < 0 ? 'Cr' : 'Dr' }}</small>
                                 </span>
                             </td>
+                            @canany(['view journal', 'view all journal'])
+                                <td class="no-print">&mdash;</td>
+                            @endcanany
                         </tr>
 
                         @foreach($rows as $i => $row)
                         <tr>
-                            <td style="color:#94a3b8;">{{ $i + 1 }}</td>
+                            <td style="color:#94a3b8;">{{ $printing ? $i + 1 : $rows->firstItem() + $i }}</td>
                             <td style="white-space:nowrap;">
                                 {{ \Carbon\Carbon::parse($row['date'])->format('d M Y') }}
                             </td>
@@ -335,6 +400,19 @@
                                     <small>{{ $row['balance'] < 0 ? 'Cr' : 'Dr' }}</small>
                                 </span>
                             </td>
+                            @canany(['view journal', 'view all journal'])
+                                <td class="text-center no-print">
+                                    <a href="{{ route('role.journals.index', array_filter([
+                                        'role' => request()->route('role'),
+                                        'reference' => $row['reference'],
+                                    ], fn ($value) => $value !== null && $value !== '')) }}"
+                                       class="journal-link"
+                                       title="Open journal {{ $row['reference'] ?: '' }}"
+                                       aria-label="Open journal {{ $row['reference'] ?: '' }}">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                            @endcanany
                         </tr>
                         @endforeach
 
@@ -352,11 +430,17 @@
                                     <small>{{ $closingBalance < 0 ? 'Cr' : 'Dr' }}</small>
                                 </span>
                             </td>
+                            @canany(['view journal', 'view all journal'])
+                                <td class="no-print">&mdash;</td>
+                            @endcanany
                         </tr>
 
                     </tbody>
                 </table>
             </div>
+            @if(!$printing && $rows->hasPages())
+                <div class="ledger-pagination no-print">{{ $rows->links() }}</div>
+            @endif
             @endif
         </div>
 
@@ -376,24 +460,9 @@
 <script>
 $(document).ready(function () {
     $('.select2').select2();
-
-    const baseUrl = '{{ route("role.report.account-ledger", ["role" => Str::slug(Auth::user()->getRoleNames()->first())]) }}';
-
-    $('#filterHeader').on('click', function () {
-        $(this).toggleClass('active');
-        $('#filterBody').toggleClass('active');
-    });
-
-    // Auto-open filter since account selection is required
-    @if(!request('account_id'))
-        $('#filterHeader').addClass('active');
-        $('#filterBody').addClass('active');
+    @if($printing)
+        window.setTimeout(() => window.print(), 250);
     @endif
-
-    $('#resetBtn').on('click', function (e) {
-        e.preventDefault();
-        window.location.href = baseUrl;
-    });
 });
 </script>
 @endsection

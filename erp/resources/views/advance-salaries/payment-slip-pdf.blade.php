@@ -315,6 +315,13 @@
         </tr>
     </table>
 
+    @if(!empty($paidFrom))
+        <div class="reason-box">
+            <strong class="reason-title">Paid from:</strong>
+            {{ $paidFrom['bank'] }} &middot; {{ $paidFrom['ref'] }}
+        </div>
+    @endif
+
     <div class="reason-box">
         <strong class="reason-title">Reason for Request:</strong>
         {{ $data->reason ?: 'Standard salary advance request.' }}

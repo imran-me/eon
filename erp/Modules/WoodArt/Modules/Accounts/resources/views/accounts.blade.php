@@ -1,402 +1,83 @@
-{{--
-    Wood Art · Accounts — extends the suite shell.
-
-    ── NOT THE ERP'S ACCOUNTS ────────────────────────────────────────────────
-    The host ERP's live Accounts (role.accounts.*, {role}/accounts,
-    Dashboard\AccountController) is a different feature used by every other
-    company, and nothing here touches it. This view lives in the woodart::
-    namespace, is reachable only under {role}/woodart/accounts, and reads no
-    database at all. See AccountsController's header for the full separation.
-
-    ── TRANSCRIPTION ─────────────────────────────────────────────────────────
-    From companies/woodart/modules/accounts/frontend/template.html, with
-    empty-state copy from view.js:584/752/808/848/884/926/981 and the action
-    centre's own empty state from view.js:628-631.
-
-    ZEROS, NOT DASHES. Every other module in this suite prints a dash for an
-    empty money KPI, because those modules format through money() —
-    ui.money(null|0) guards on null and their values arrive null. THIS module
-    formats through ui.compact() directly (view.js:595-599 and throughout), and
-    ui.compact(0) returns the string "0" (platform/core/ui.js:100-106). So an
-    empty Accounts renders 0, not —. The only dashes here are the four values
-    the reference explicitly defaults to '—': Biggest Head on Income and on
-    Expenses (view.js:683/703), Oldest Unpaid (719) and Largest bank (865).
-    Journals' "Balanced" reads Yes, because |0 − 0| < 0.01 (view.js:908).
-
-    Blocks deliberately absent, each removed by the reference's own logic when
-    there is no data:
-      · Payables' STATE B (view.js:724) — STATE A, the all-clear, renders.
-      · Project P&L's "N project(s) over BOQ budget" banner (view.js:778).
-      · Overview's two canvas charts, which need series data (see note below).
---}}
+{{-- Production project-accounting workspace. All figures remain sourced from the ERP ledgers. --}}
 @extends('woodart::layouts.suite')
 
+@php
+    $PC = \Modules\WoodArt\Modules\Accounts\Support\ProjectContext::class;
+    $role = request()->route('role');
+    $mny = fn ($amount) => '৳ ' . number_format((float) $amount, 2);
+    $sectionUrl = fn ($name) => $PC::route('', ['role' => $role, 'section' => $name]);
+@endphp
+
 @section('wa-head-actions')
-    {{-- The reference also carries a ghost "Ledgers" link (template.html:38).
-         Ledgers is not mounted — and unlike Procurement it has no reference
-         module folder to build from — so the action is removed rather than
-         rendered dead, the same grammar used for Materials before Procurement
-         existed. --}}
-    <button type="button" class="wap-btn wap-btn-primary"><i class="bi bi-plus-lg"></i> New Entry</button>
+    @if(in_array($section, ['overview', 'projects', 'expenses'], true))
+        <a class="wap-btn wap-btn-primary" href="{{ $PC::route('bulk', ['role' => $role]) }}"><i class="bi bi-plus-lg"></i> New Expense</a>
+    @endif
 @endsection
 
 @section('wa-view')
+<style>
+.wa-fin-kpis{grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px}.wa-fin-kpis .wap-kpi-card{min-height:88px;padding:14px}.wa-fin-kpis .wap-kpi-label{font-size:9px}.wa-fin-kpis .wap-kpi-value{font-size:19px}.wa-fin-kpis .wap-kpi-foot{font-size:10px}.wa-fin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:14px 0 9px}.wa-fin-toolbar h2{margin:0;color:#0f172a;font-size:16px}.wa-fin-toolbar p{margin:3px 0 0;color:#64748b;font-size:11px}.wa-fin-filter{display:grid;grid-template-columns:minmax(180px,1fr) repeat(4,minmax(120px,180px)) auto;gap:8px;align-items:end;margin-bottom:12px;padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:11px}.wa-fin-filter label{display:block;margin-bottom:4px;color:#64748b;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}.wa-fin-filter .wap-input{width:100%;height:36px;font-size:12px}.wa-fin-filter-actions{display:flex;gap:6px}.wa-fin-table td{vertical-align:middle}.wa-fin-project{display:block;color:#0f172a;font-weight:700;text-decoration:none}.wa-fin-sub{display:block;margin-top:2px;color:#64748b;font-size:10px}.wa-fin-status{display:inline-flex;align-items:center;gap:5px;padding:3px 7px;border-radius:999px;background:#ecfdf5;color:#047857;font-size:10px;font-weight:800}.wa-fin-status.is-pending{background:#fff7ed;color:#b45309}.wa-fin-status.is-due{background:#fff1f2;color:#be123c}.wa-fin-status.is-neutral{background:#f1f5f9;color:#475569}.wa-fin-actions{display:flex;gap:5px;justify-content:flex-end}.wa-fin-actions .wap-btn{padding:6px 8px;font-size:10px}.wa-fin-pagination{margin-top:14px}.wa-fin-metric-bad{color:#be123c!important}.wa-fin-source{white-space:nowrap}.wa-fin-empty{padding:42px 18px}.wa-fin-progress{width:90px;height:6px;margin-top:5px;overflow:hidden;border-radius:999px;background:#e2e8f0}.wa-fin-progress span{display:block;height:100%;border-radius:inherit;background:#0f9488}.wa-fin-context{display:flex;gap:6px;flex-wrap:wrap}.wa-fin-context a{padding:5px 8px;border:1px solid #dbe4ec;border-radius:7px;color:#475569;text-decoration:none;font-size:10px}.wa-fin-context a:hover{border-color:#99f6e4;background:#f0fdfa;color:#0f766e}
+@media(max-width:1250px){.wa-fin-kpis{grid-template-columns:repeat(3,1fr)}.wa-fin-filter{grid-template-columns:repeat(3,minmax(0,1fr))}.wa-fin-filter-actions{grid-column:1/-1}}@media(max-width:720px){.wa-fin-kpis{grid-template-columns:repeat(2,1fr)}.wa-fin-filter{grid-template-columns:1fr}.wa-fin-filter-actions{grid-column:auto}.wa-fin-toolbar{align-items:flex-start;flex-direction:column}.wa-fin-table{min-width:920px}}
+</style>
 
-    @if($section === 'overview')
-        {{-- SCREEN 1 · OVERVIEW — the money at a glance. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Income</span><span class="wap-kpi-ico"><i class="bi bi-graph-up-arrow"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Expenses</span><span class="wap-kpi-ico"><i class="bi bi-graph-down-arrow"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Net Result</span><span class="wap-kpi-ico"><i class="bi bi-calculator"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Cash &amp; Bank</span><span class="wap-kpi-ico"><i class="bi bi-bank"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Payables</span><span class="wap-kpi-ico"><i class="bi bi-hourglass-split"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-                <div class="wap-kpi-foot">0 vendor(s) unpaid</div>
-            </div>
-        </div>
+@if($section === 'overview')
+    @php $totals = $financialTotals ?? []; $rows = $projectRows; @endphp
+    <div class="wap-kpi-grid wa-fin-kpis">
+        @foreach([
+            ['Total Contract Value', $totals['contract'] ?? 0, 'file-earmark-text', 'contracts on file'],
+            ['Client Collections', $totals['received'] ?? 0, 'cash-coin', 'recorded receipts'],
+            ['Approved Project Costs', $totals['cost'] ?? 0, 'receipt', 'approved ERP expenses'],
+            ['Client Receivables', $totals['client_due'] ?? 0, 'person-check', 'contract less collections'],
+            ['Supplier Payables', $totals['supplier_due'] ?? 0, 'truck', 'obligations less payments'],
+            ['Contract Less Approved Costs', $totals['contract_less_cost'] ?? 0, 'calculator', 'not recognized profit'],
+        ] as [$label, $value, $icon, $note])
+            <div class="wap-kpi-card"><div class="wap-kpi-top"><span class="wap-kpi-label">{{ $label }}</span><span class="wap-kpi-ico"><i class="bi bi-{{ $icon }}"></i></span></div><div class="wap-kpi-value {{ $value < 0 ? 'wa-fin-metric-bad' : '' }}">{{ $mny($value) }}</div><div class="wap-kpi-foot">{{ $note }}</div></div>
+        @endforeach
+    </div>
+    <div class="wa-fin-toolbar"><div><h2>Active projects</h2><p>Highest-priority financial context without loading every project.</p></div><a class="wap-btn wap-btn-ghost" href="{{ $sectionUrl('projects') }}">View all projects <i class="bi bi-arrow-right"></i></a></div>
+    @include('woodart::partials.project-finance-table', ['rows' => $rows, 'mny' => $mny, 'compact' => true])
 
-        <div class="wap-caption">ACTION CENTER &mdash; NEEDS ATTENTION</div>
-        <div class="wap-card">
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-check2-circle"></i>
-                    <div class="wap-empty-title">Nothing needs attention</div>
-                    <div class="wap-empty-sub">No overdue payables, no job over its BOQ budget.</div>
-                </div>
-            </div>
-        </div>
+@elseif($section === 'projects')
+    @php $rows = $projectRows; $f = $filters ?? []; @endphp
+    <form method="GET" class="wa-fin-filter" action="{{ $sectionUrl('projects') }}">
+        <div><label>Project or client</label><input class="wap-input" type="search" name="q" value="{{ $f['q'] ?? '' }}"></div>
+        <div><label>Financial status</label><select class="wap-input" name="status"><option value="">All projects</option><option value="active" @selected(($f['status'] ?? '') === 'active')>Active financially</option><option value="settled" @selected(($f['status'] ?? '') === 'settled')>Settled</option><option value="unconfigured" @selected(($f['status'] ?? '') === 'unconfigured')>Contract not set</option></select></div>
+        <div><label>Sort by</label><select class="wap-input" name="sort"><option value="name">Project name</option><option value="contract" @selected(($f['sort'] ?? '') === 'contract')>Contract value</option><option value="received" @selected(($f['sort'] ?? '') === 'received')>Amount received</option><option value="cost" @selected(($f['sort'] ?? '') === 'cost')>Approved cost</option><option value="client_due" @selected(($f['sort'] ?? '') === 'client_due')>Client outstanding</option><option value="supplier_due" @selected(($f['sort'] ?? '') === 'supplier_due')>Supplier payable</option></select></div>
+        <div><label>Direction</label><select class="wap-input" name="direction"><option value="asc">Ascending</option><option value="desc" @selected(($f['direction'] ?? '') === 'desc')>Descending</option></select></div>
+        <div class="wa-fin-filter-actions"><button class="wap-btn wap-btn-primary" type="submit">Apply</button><a class="wap-btn wap-btn-ghost" href="{{ $sectionUrl('projects') }}">Reset</a></div>
+    </form>
+    @include('woodart::partials.project-finance-table', ['rows' => $rows, 'mny' => $mny])
 
-        {{-- The reference's "CASH MOVEMENT" pair follows here — an 8-month
-             income-vs-expense line and an expense-by-head doughnut. Both are
-             canvas charts drawn from series data, so with nothing recorded they
-             would be two empty plot areas. They arrive with the data layer, as
-             on Materials, Clients and Site & Install. --}}
+@elseif($section === 'expenses')
+    @php $rows = $expenseRows; $f = $filters ?? []; @endphp
+    <form method="GET" class="wa-fin-filter" action="{{ $sectionUrl('expenses') }}">
+        <div><label>Search</label><input class="wap-input" type="search" name="q" value="{{ $f['q'] ?? '' }}" placeholder="Description, person, project..."></div>
+        <div><label>Project</label><select class="wap-input" name="project"><option value="">All projects</option>@foreach($projectOptions as $project)<option value="{{ $project->id }}" @selected(($f['project'] ?? null) == $project->id)>{{ $project->name }}</option>@endforeach</select></div>
+        <div><label>Category</label><select class="wap-input" name="category"><option value="">All categories</option>@foreach($categoryOptions as $category)<option value="{{ $category->id }}" @selected(($f['category'] ?? null) == $category->id)>{{ $category->name }}</option>@endforeach</select></div>
+        <div><label>Approval status</label><select class="wap-input" name="status"><option value="">All statuses</option><option value="pending" @selected(($f['status'] ?? '') === 'pending')>Pending</option><option value="approved" @selected(($f['status'] ?? '') === 'approved')>Approved</option><option value="rejected" @selected(($f['status'] ?? '') === 'rejected')>Rejected</option></select></div>
+        <div><label>From</label><input class="wap-input" type="date" name="from" value="{{ $f['from'] ?? '' }}"></div><div><label>To</label><input class="wap-input" type="date" name="to" value="{{ $f['to'] ?? '' }}"></div>
+        <div class="wa-fin-filter-actions"><button class="wap-btn wap-btn-primary" type="submit">Apply</button><a class="wap-btn wap-btn-ghost" href="{{ $sectionUrl('expenses') }}">Reset</a></div>
+    </form>
+    <div class="wap-card"><div class="wap-card-head"><h3><i class="bi bi-receipt-cutoff"></i> Expense Register</h3><span class="wap-card-sub">Approved and pending are shown separately; approval remains in the Expense desk.</span></div><div class="wap-card-body">
+        @if(! $rows || $rows->isEmpty())<div class="wap-empty wa-fin-empty"><i class="bi bi-receipt"></i><div class="wap-empty-title">No expenses match these filters</div><div class="wap-empty-sub">Adjust the filters or create a new project expense.</div></div>@else
+        <div class="wap-table-wrap"><table class="wap-table wa-fin-table"><thead><tr><th>Date</th><th>Project</th><th>Expense head</th><th>Description</th><th>Paid by / source</th><th class="wap-t-num">Amount</th><th>Status</th><th></th></tr></thead><tbody>@foreach($rows as $expense)
+            @php $source = $expense->reimburse_to_user_id ? 'Own pocket' : ($expense->petty_cash_float_id ? 'Company advance' : ($expense->bank_id ? 'Bank' : ucfirst($expense->payment_mode ?: 'Cash'))); @endphp
+            <tr><td>{{ \Carbon\Carbon::parse($expense->expense_date)->format('d M Y') }}</td><td><a class="wa-fin-project" href="{{ $PC::route('project.summary', ['department' => $expense->project_id]) }}">{{ $expense->project ?: '—' }}</a></td><td>{{ $expense->head ?: '—' }}</td><td><strong>{{ \Illuminate\Support\Str::limit($expense->title, 55) }}</strong>@if($expense->description)<span class="wa-fin-sub">{{ \Illuminate\Support\Str::limit($expense->description, 70) }}</span>@endif</td><td class="wa-fin-source">{{ $expense->reference_user_name ?: '—' }}<span class="wa-fin-sub">{{ $source }}</span></td><td class="wap-t-num wap-t-strong">{{ $mny($expense->amount) }}</td><td><span class="wa-fin-status {{ $expense->approval_status === 'approved' ? '' : 'is-pending' }}">{{ ucfirst($expense->approval_status) }}</span></td><td><a class="wap-proj-act" href="{{ $PC::route('project', ['department' => $expense->project_id]) }}?q={{ urlencode($expense->title) }}" aria-label="Open expense in project"><i class="bi bi-arrow-right"></i></a></td></tr>
+        @endforeach</tbody></table></div><div class="wa-fin-pagination">{{ $rows->links() }}</div>@endif
+    </div></div>
 
-    @elseif($section === 'income')
-        {{-- SCREEN 2 · INCOME — what the interiors business earned. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Total Income</span><span class="wap-kpi-ico"><i class="bi bi-graph-up-arrow"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Entries</span><span class="wap-kpi-ico"><i class="bi bi-receipt"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Biggest Head</span><span class="wap-kpi-ico"><i class="bi bi-fire"></i></span></div>
-                <div class="wap-kpi-value">&mdash;</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Billed to Projects</span><span class="wap-kpi-ico"><i class="bi bi-easel2"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
+@elseif($section === 'receivables')
+    @php $rows = $receivableRows; $f = $filters ?? []; @endphp
+    <form method="GET" class="wa-fin-filter" action="{{ $sectionUrl('receivables') }}"><div><label>Project or client</label><input class="wap-input" type="search" name="q" value="{{ $f['q'] ?? '' }}"></div><div><label>Payment status</label><select class="wap-input" name="status"><option value="">All</option><option value="due" @selected(($f['status'] ?? '') === 'due')>Outstanding</option><option value="paid" @selected(($f['status'] ?? '') === 'paid')>Collected</option></select></div><div class="wa-fin-filter-actions"><button class="wap-btn wap-btn-primary">Apply</button><a class="wap-btn wap-btn-ghost" href="{{ $sectionUrl('receivables') }}">Reset</a></div></form>
+    <div class="wap-card"><div class="wap-card-head"><h3><i class="bi bi-person-check"></i> Client Receivables</h3><span class="wap-card-sub">Contract schedule and recorded collections; no invoice is created here.</span></div><div class="wap-card-body">
+        @if(! $rows || $rows->isEmpty())<div class="wap-empty wa-fin-empty"><i class="bi bi-wallet2"></i><div class="wap-empty-title">No client receivables found</div><div class="wap-empty-sub">Set the client and contract terms inside a project workspace.</div></div>@else<div class="wap-table-wrap"><table class="wap-table wa-fin-table"><thead><tr><th>Project</th><th>Client</th><th class="wap-t-num">Contract value</th><th class="wap-t-num">Billed in books</th><th class="wap-t-num">Received</th><th class="wap-t-num">Outstanding</th><th>Status</th><th></th></tr></thead><tbody>@foreach($rows as $row)<tr><td><a class="wa-fin-project" href="{{ $PC::route('project.summary', ['department' => $row->project_id]) }}">{{ $row->project }}</a></td><td>{{ $row->client ?: 'Not assigned' }}</td><td class="wap-t-num">{{ $mny($row->contract_value) }}</td><td class="wap-t-num">{{ $mny($row->billed) }}</td><td class="wap-t-num">{{ $mny($row->received) }}</td><td class="wap-t-num wap-t-strong {{ $row->outstanding > 0 ? 'wap-t-bad' : '' }}">{{ $mny($row->outstanding) }}</td><td><span class="wa-fin-status {{ $row->outstanding > 0 ? 'is-due' : '' }}">{{ $row->outstanding > 0 ? 'Outstanding' : 'Collected' }}</span></td><td><a class="wap-proj-act" href="{{ $PC::route('project.summary', ['department' => $row->project_id]) }}#wa-client"><i class="bi bi-arrow-right"></i></a></td></tr>@endforeach</tbody></table></div><div class="wa-fin-pagination">{{ $rows->links() }}</div>@endif
+    </div></div>
 
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-graph-up-arrow"></i> Income Register</h3>
-                <span class="wap-card-sub">Newest first &mdash; project billings, design fees and everything else</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-journal-text"></i>
-                    <div class="wap-empty-title">Nothing recorded yet</div>
-                    <div class="wap-empty-sub">Record the first entry.</div>
-                </div>
-            </div>
-        </div>
-
-    @elseif($section === 'expenses')
-        {{-- SCREEN 3 · EXPENSES — what it cost to run the workshop. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Total Expenses</span><span class="wap-kpi-ico"><i class="bi bi-graph-down-arrow"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Entries</span><span class="wap-kpi-ico"><i class="bi bi-receipt-cutoff"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Biggest Head</span><span class="wap-kpi-ico"><i class="bi bi-fire"></i></span></div>
-                <div class="wap-kpi-value">&mdash;</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Paid to Vendors</span><span class="wap-kpi-ico"><i class="bi bi-truck"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-graph-down-arrow"></i> Expense Register</h3>
-                <span class="wap-card-sub">Newest first &mdash; every cost, with its project or purchase order</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-journal-text"></i>
-                    <div class="wap-empty-title">Nothing recorded yet</div>
-                    <div class="wap-empty-sub">Record the first entry.</div>
-                </div>
-            </div>
-        </div>
-
-    @elseif($section === 'payables')
-        {{-- SCREEN 4 · VENDOR PAYABLES — what Woodart owes, per order. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Outstanding</span><span class="wap-kpi-ico"><i class="bi bi-hourglass-split"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Vendors Owed</span><span class="wap-kpi-ico"><i class="bi bi-people-fill"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Oldest Unpaid</span><span class="wap-kpi-ico"><i class="bi bi-clock-history"></i></span></div>
-                <div class="wap-kpi-value">&mdash;</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Orders Settled</span><span class="wap-kpi-ico"><i class="bi bi-check2-circle"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
-
-        {{-- STATE A · nothing owed (the current truth). --}}
-        <div class="wap-empty">
-            <i class="bi bi-check2-circle"></i>
-            <div class="wap-empty-title">Every order is settled</div>
-            <div class="wap-empty-sub">No vendor is waiting on Woodart. New goods receipts will raise a payable here.</div>
-        </div>
-
-    @elseif($section === 'pnl')
-        {{-- SCREEN 5 · PROJECT P&L — the screen no other company can show.
-             Variance is BOQ budget minus material actually issued from the
-             stock ledger: negative means the job is eating more material than
-             it was quoted for. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Portfolio Value</span><span class="wap-kpi-ico"><i class="bi bi-easel2"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Committed Cost</span><span class="wap-kpi-ico"><i class="bi bi-briefcase"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Margin</span><span class="wap-kpi-ico"><i class="bi bi-graph-up"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Billed To Date</span><span class="wap-kpi-ico"><i class="bi bi-receipt-cutoff"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Over Budget</span><span class="wap-kpi-ico"><i class="bi bi-fire"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-clipboard-data"></i> Project Profit &amp; Loss</h3>
-                <span class="wap-card-sub">Value vs cost vs the approved bill of quantities</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-clipboard-data"></i>
-                    <div class="wap-empty-title">No projects</div>
-                    <div class="wap-empty-sub">Projects appear here once the portfolio has work.</div>
-                </div>
-            </div>
-        </div>
-
-    @elseif($section === 'payroll' || $section === 'cash')
-        {{-- SCREENS 6 & 9 · PAYROLL and MANAGE CASH.
-
-             In the reference these two mount SHARED desks (EPAL.payrollDesk /
-             EPAL.cashDesk, template.html:415-429) — deliberately the same code
-             other concerns run, "so a fix to the cash book reaches both
-             concerns at once".
-
-             That sharing is exactly what this ERP must not do. Wiring Wood Art
-             into the host's live payroll or cash screens would couple company 6
-             to data and behaviour eleven other companies depend on, which
-             CLAUDE.md forbids outright. So these render an honest placeholder
-             instead of borrowing another company's desk. --}}
-        <div class="wap-empty">
-            <i class="bi bi-{{ $section === 'payroll' ? 'cash-coin' : 'cash-stack' }}"></i>
-            <div class="wap-empty-title">{{ $section === 'payroll' ? 'Payroll' : 'Manage Cash' }} is not wired up yet</div>
-            <div class="wap-empty-sub">
-                The reference mounts a shared desk here &mdash; the same one other concerns run.
-                Wood Art gets its own rather than borrowing it, so that nothing this module does
-                can reach another company's books.
-            </div>
-        </div>
-
-    @elseif($section === 'recurring')
-        {{-- SCREEN 7 · RECURRING — standing costs that repeat every month. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Active</span><span class="wap-kpi-ico"><i class="bi bi-arrow-repeat"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Monthly Commitment</span><span class="wap-kpi-ico"><i class="bi bi-calendar-check"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Due This Month</span><span class="wap-kpi-ico"><i class="bi bi-hourglass-split"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Paused</span><span class="wap-kpi-ico"><i class="bi bi-pause-circle"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-arrow-repeat"></i> Recurring Costs</h3>
-                <span class="wap-card-sub">Workshop rent, utilities, retainers &mdash; the bills that come every month</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-arrow-repeat"></i>
-                    <div class="wap-empty-title">No recurring costs</div>
-                    <div class="wap-empty-sub">Add the workshop rent, utilities or a retainer.</div>
-                </div>
-            </div>
-        </div>
-
-    @elseif($section === 'banks')
-        {{-- SCREEN 8 · BANKS — Woodart's own accounts and what is in them. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Accounts</span><span class="wap-kpi-ico"><i class="bi bi-bank"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Total Balance</span><span class="wap-kpi-ico"><i class="bi bi-wallet2"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Largest</span><span class="wap-kpi-ico"><i class="bi bi-safe2"></i></span></div>
-                <div class="wap-kpi-value">&mdash;</div>
-            </div>
-        </div>
-
-        {{-- The reference prints this banner unconditionally and links "Master
-             Accounts › Manage Banks". That is a GROUP-level screen in the
-             reference's own shell; this ERP has no equivalent route, so the
-             sentence stays (it is the reference's copy) but the link is not
-             rendered rather than pointing nowhere. --}}
-        <div class="wap-banner">
-            <i class="bi bi-info-circle"></i>
-            <div>Accounts are group master data &mdash; added and edited on
-                Master Accounts &rsaquo; Manage Banks. This screen is Woodart's view of the
-                ones that belong to this concern.</div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-bank"></i> Woodart Accounts</h3>
-                <span class="wap-card-sub">Balance and last movement per account</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-bank"></i>
-                    <div class="wap-empty-title">No accounts</div>
-                    <div class="wap-empty-sub">Add one on Master Accounts &rsaquo; Manage Banks.</div>
-                </div>
-            </div>
-        </div>
-
-    @elseif($section === 'journals')
-        {{-- SCREEN 10 · JOURNALS — the double entry behind every screen above. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Journals</span><span class="wap-kpi-ico"><i class="bi bi-journal-text"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Total Debits</span><span class="wap-kpi-ico"><i class="bi bi-arrow-down-left"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Total Credits</span><span class="wap-kpi-ico"><i class="bi bi-arrow-up-right"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            {{-- "Yes" because |debits − credits| < 0.01 holds trivially at zero
-                 (view.js:908). An empty ledger is a balanced ledger. --}}
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Balanced</span><span class="wap-kpi-ico"><i class="bi bi-check2-square"></i></span></div>
-                <div class="wap-kpi-value">Yes</div>
-            </div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-journal-text"></i> Journal Entries</h3>
-                <span class="wap-card-sub">Every posting this concern has made &mdash; newest first</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-journal-text"></i>
-                    <div class="wap-empty-title">No journals yet</div>
-                    <div class="wap-empty-sub">Postings appear here as soon as money moves.</div>
-                </div>
-            </div>
-        </div>
-
-    @else
-        {{-- SCREEN 11 · SCHEDULES — money promised for a future date. --}}
-        <div class="wap-kpi-grid">
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Open</span><span class="wap-kpi-ico"><i class="bi bi-calendar2-week"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Scheduled Out</span><span class="wap-kpi-ico"><i class="bi bi-arrow-up-right"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Overdue</span><span class="wap-kpi-ico"><i class="bi bi-exclamation-diamond"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-            <div class="wap-kpi-card">
-                <div class="wap-kpi-top"><span class="wap-kpi-label">Due in 7 Days</span><span class="wap-kpi-ico"><i class="bi bi-hourglass-split"></i></span></div>
-                <div class="wap-kpi-value">0</div>
-            </div>
-        </div>
-
-        <div class="wap-card">
-            <div class="wap-card-head">
-                <h3><i class="bi bi-calendar2-week"></i> Payment Schedules</h3>
-                <span class="wap-card-sub">What is promised, to whom, and when</span>
-            </div>
-            <div class="wap-card-body">
-                <div class="wap-empty">
-                    <i class="bi bi-calendar2-week"></i>
-                    <div class="wap-empty-title">Nothing scheduled</div>
-                    <div class="wap-empty-sub">Promised payments appear here.</div>
-                </div>
-            </div>
-        </div>
-    @endif
-
+@elseif($section === 'payables')
+    @php $rows = $payableRows; $f = $filters ?? []; @endphp
+    <form method="GET" class="wa-fin-filter" action="{{ $sectionUrl('payables') }}"><div><label>Project or supplier</label><input class="wap-input" type="search" name="q" value="{{ $f['q'] ?? '' }}"></div><div><label>Project</label><select class="wap-input" name="project"><option value="">All projects</option>@foreach($projectOptions as $project)<option value="{{ $project->id }}" @selected(($f['project'] ?? null) == $project->id)>{{ $project->name }}</option>@endforeach</select></div><div class="wa-fin-filter-actions"><button class="wap-btn wap-btn-primary">Apply</button><a class="wap-btn wap-btn-ghost" href="{{ $sectionUrl('payables') }}">Reset</a></div></form>
+    <div class="wap-card"><div class="wap-card-head"><h3><i class="bi bi-truck"></i> Supplier Payables</h3><span class="wap-card-sub">Supplier obligations, payments and outstanding balances from project statements.</span></div><div class="wap-card-body">
+        @if(! $rows || $rows->isEmpty())<div class="wap-empty wa-fin-empty"><i class="bi bi-check2-circle"></i><div class="wap-empty-title">No supplier balance is outstanding</div><div class="wap-empty-sub">Posted obligations and partial payments are calculated supplier by supplier.</div></div>@else<div class="wap-table-wrap"><table class="wap-table wa-fin-table"><thead><tr><th>Project</th><th>Supplier / contractor</th><th class="wap-t-num">Obligations</th><th class="wap-t-num">Payments</th><th class="wap-t-num">Outstanding</th><th>Last transaction</th><th></th></tr></thead><tbody>@foreach($rows as $row)<tr><td><a class="wa-fin-project" href="{{ $PC::route('project.summary', ['department' => $row->project_id]) }}">{{ $row->project }}</a></td><td class="wap-t-strong">{{ $row->party ?: '—' }}</td><td class="wap-t-num">{{ $mny($row->obligations) }}</td><td class="wap-t-num">{{ $mny($row->paid) }}</td><td class="wap-t-num wap-t-strong wap-t-bad">{{ $mny($row->outstanding) }}</td><td>{{ $row->last_transaction_date ? \Carbon\Carbon::parse($row->last_transaction_date)->format('d M Y') : '—' }}</td><td><div class="wa-fin-actions">@if($row->party_id)<a class="wap-btn wap-btn-ghost" href="{{ route('role.party-statement.vendors', ['role' => $role, 'company' => $PC::id(), 'project' => $row->project_id, 'party_id' => $row->party_id]) }}">Ledger</a>@endif<a class="wap-proj-act" href="{{ $PC::route('project.summary', ['department' => $row->project_id]) }}#wa-suppliers"><i class="bi bi-arrow-right"></i></a></div></td></tr>@endforeach</tbody></table></div><div class="wa-fin-pagination">{{ $rows->links() }}</div>@endif
+    </div></div>
+@endif
 @endsection

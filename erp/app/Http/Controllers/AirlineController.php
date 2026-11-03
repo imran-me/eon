@@ -27,6 +27,14 @@ class AirlineController extends Controller
             $query->where('status', $request->status);
         }
 
+        // The list bar's date range: the day the airline was added.
+        if ($request->filled('from_date')) {
+            $query->whereDate('created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('created_at', '<=', $request->to_date);
+        }
+
         $airlines = $query->paginate(20)->withQueryString();
         $role = request()->route('role');
 
@@ -45,12 +53,22 @@ class AirlineController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:airlines,name'],
             'status' => ['nullable', 'boolean'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
-        Airline::create([
+        $airline = Airline::create([
             'name' => $validated['name'],
             'status' => $request->boolean('status'),
         ]);
+        // Ticket Entry's import modal adds a missing airline in place (owner, 2026-10-07);
+        // the Airlines screen itself still posts a form and gets the redirect below
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'airline' => ['id' => $airline->id, 'name' => $airline->name]]);
+        }
+        if ($request->hasFile('logo') && ! $airline->storeLogo($request->file('logo'))) {
+            return redirect()->route('role.airlines.edit', ['role' => request()->route('role'), 'airline' => $airline->id])
+                ->with('error', 'Airline saved, but the logo could not be read — try a PNG or JPG.');
+        }
 
         return redirect()
             ->route('role.airlines.index', ['role' => request()->route('role')])
@@ -67,12 +85,21 @@ class AirlineController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255', 'unique:airlines,name,' . $airline->id],
             'status' => ['nullable', 'boolean'],
+            'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
+            'remove_logo' => ['nullable', 'boolean'],
         ]);
 
         $airline->update([
             'name' => $validated['name'],
             'status' => $request->boolean('status'),
         ]);
+        if ($request->hasFile('logo')) {
+            if (! $airline->storeLogo($request->file('logo'))) {
+                return back()->with('error', 'The logo could not be read — try a PNG or JPG.');
+            }
+        } elseif ($request->boolean('remove_logo')) {
+            $airline->removeLogo();
+        }
 
         return redirect()
             ->route('role.airlines.index', ['role' => $role])

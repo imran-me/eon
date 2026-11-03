@@ -7,6 +7,7 @@
 <style>
     .select2-container .select2-selection--single { height: 42px !important; padding-top: 4px; border-radius: 0.5rem !important; border-color: #e2e8f0 !important; }
     .select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px !important; }
+    .bank-account-table tbody > tr + tr { border-top: 1px solid #b8c4d4; }
 </style>
 @endsection
 @section('main-content')
@@ -87,7 +88,7 @@
 
     {{-- Table --}}
     <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-slate-200">
+        <table class="bank-account-table min-w-full divide-y divide-slate-200">
             <thead class="bg-slate-50">
                 <tr>
                     <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">SL</th>
@@ -129,7 +130,7 @@
                                 <button class="edit-item-btn flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
                                     data-item_id="{{ $value->id }}"
                                     data-name="{{ $value->name }}"
-                                    data-company_id="{{ $value->company_id }}"
+                                    data-company_id="{{ $value->company_id ?? 'shared' }}"
                                     data-branch_name="{{ $value->branch_name }}"
                                     data-account_id="{{ $value->account_id }}"
                                     data-account_name="{{ $value->account_name }}"
@@ -142,7 +143,8 @@
                                     data-swift_code="{{ $value->swift_code }}"
                                     data-currency="{{ $value->currency }}"
                                     data-address="{{ $value->address }}"
-                                    data-balance="{{ $value->balance }}"
+                                    data-balance="{{ $value->opening_balance_amount }}"
+                                    data-opening_balance_date="{{ $value->opening_balance_date }}"
                                     data-status="{{ $value->status }}"
                                     title="Edit">
                                     <i class="fas fa-pencil-alt text-xs"></i>
@@ -224,6 +226,7 @@
                 const currency = $(this).data('currency');
                 const address = $(this).data('address');
                 const balance = $(this).data('balance');
+                const opening_balance_date = $(this).data('opening_balance_date');
                 const status = $(this).data('status');
 
                 // Set values in the edit form
@@ -243,6 +246,7 @@
                 $('#edit_currency').val(currency);
                 $('#edit_address').val(address);
                 $('#edit_balance').val(balance);
+                $('#edit_opening_balance_date').val(opening_balance_date || '');
                 $('#edit_status').prop('checked', status);
                 $('#editForm .error-message').addClass('hidden');
                 $('#editForm input, #editForm select').removeClass('border-red-500');
@@ -409,7 +413,8 @@
 
         function toggleBankTypeFields(prefix) {
             const type = $('#' + prefix + '_type').val();
-            const isBank = type === 'bank' || !type;
+            const isCreditCard = type === 'credit_card';
+            const isBank = type === 'bank' || isCreditCard || !type;
             const isMobile = type === 'mobile_banking' || type === 'digital_wallet';
 
             BANK_ONLY_FIELDS.forEach(function (field) {
@@ -438,6 +443,19 @@
             }
 
             $('#' + prefix + '_mobile_providers').toggleClass('hidden', type !== 'mobile_banking');
+
+            const wantedLedgerType = isCreditCard ? 'liability' : 'asset';
+            const $ledger = $('#' + prefix + '_account_id');
+            $ledger.find('option[data-ledger-type]').each(function () {
+                $(this).prop('disabled', $(this).data('ledger-type') !== wantedLedgerType);
+            });
+            if ($ledger.find('option:selected').prop('disabled')) $ledger.val('');
+            $ledger.trigger('change.select2');
+
+            if (isCreditCard) {
+                $('#' + prefix + '_account_type').val('credit_card').trigger('change.select2');
+                $('#' + prefix + '_account_number_label').html('Card Number <span class="text-red-500">*</span>');
+            }
         }
 
         $(document).on('change', '#create_type, #edit_type', function () {
@@ -461,7 +479,10 @@
             $(form + ' input, ' + form + ' select').removeClass('border-red-500');
 
             let requiredFields = ['name', 'company_id', 'account_name', 'type', 'account_id', 'balance'];
-            if (type === 'bank' || !type) {
+            if (parseFloat($('#' + prefix + '_balance').val() || 0) > 0) {
+                requiredFields.push('opening_balance_date');
+            }
+            if (type === 'bank' || type === 'credit_card' || !type) {
                 requiredFields = requiredFields.concat(['account_type', 'bank_type', 'account_number']);
             }
 

@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Account;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseSubCategory;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ExpenseSubCategoryController extends Controller
 {
@@ -103,8 +105,14 @@ class ExpenseSubCategoryController extends Controller
             // Nullable on purpose: an unmapped sub-category falls back to its
             // category's account, which is a real answer rather than a gap. See
             // ExpenseClassificationService::accountFor().
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => [
+                'nullable',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                    ->where('type', 'expense')->where('status', 1)->whereNull('deleted_at')),
+            ],
         ]);
+
+        $this->addMappingValidation($validator, $request);
 
         // If validation fails
         if ($validator->fails()) {
@@ -126,11 +134,13 @@ class ExpenseSubCategoryController extends Controller
         // company's category by guessing its id.
         $userCompanyId = auth()->user()->company_id;
         $canViewAll = auth()->user()->can('view all expense');
-        $companyId = (!$canViewAll && !empty($userCompanyId)) ? $userCompanyId : $request->company_id;
+        $parentCategory = ExpenseCategory::find($request->expense_category_id);
+        $companyId = (!$canViewAll && !empty($userCompanyId))
+            ? (int) $userCompanyId
+            : ($request->filled('company_id') ? (int) $request->company_id : $parentCategory?->company_id);
 
         if (!$canViewAll && !empty($userCompanyId)) {
-            $parentCategory = ExpenseCategory::find($request->expense_category_id);
-            abort_if(!$parentCategory || (int) $parentCategory->company_id !== (int) $userCompanyId, 403, 'Selected expense category belongs to a different company.');
+            abort_if(!$parentCategory || ($parentCategory->company_id !== null && (int) $parentCategory->company_id !== (int) $userCompanyId), 403, 'Selected expense category belongs to a different company.');
         }
 
         $data = ExpenseSubCategory::create([
@@ -187,17 +197,25 @@ class ExpenseSubCategoryController extends Controller
         $canViewAll = auth()->user()->can('view all expense');
         abort_if(!$canViewAll && !empty($userCompanyId) && (int) $data->company_id !== (int) $userCompanyId, 403, 'This sub-category belongs to a different company.');
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required',
             'expense_category_id' => 'required',
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => [
+                'nullable',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                    ->where('type', 'expense')->where('status', 1)->whereNull('deleted_at')),
+            ],
         ]);
+        $this->addMappingValidation($validator, $request);
+        $validator->validate();
 
-        $companyId = (!$canViewAll && !empty($userCompanyId)) ? $userCompanyId : $request->company_id;
+        $parentCategory = ExpenseCategory::find($request->expense_category_id);
+        $companyId = (!$canViewAll && !empty($userCompanyId))
+            ? (int) $userCompanyId
+            : ($request->filled('company_id') ? (int) $request->company_id : $parentCategory?->company_id);
 
         if (!$canViewAll && !empty($userCompanyId)) {
-            $parentCategory = ExpenseCategory::find($request->expense_category_id);
-            abort_if(!$parentCategory || (int) $parentCategory->company_id !== (int) $userCompanyId, 403, 'Selected expense category belongs to a different company.');
+            abort_if(!$parentCategory || ($parentCategory->company_id !== null && (int) $parentCategory->company_id !== (int) $userCompanyId), 403, 'Selected expense category belongs to a different company.');
         }
 
         $data->update([
@@ -218,6 +236,38 @@ class ExpenseSubCategoryController extends Controller
         }
 
         return redirect('/super-admin/airport')->with('success', 'Data updated successfully.');
+    }
+
+    private function addMappingValidation($validator, Request $request): void
+    {
+        $validator->after(function ($validator) use ($request) {
+            $parent = ExpenseCategory::find($request->expense_category_id);
+            if (! $parent) {
+                $validator->errors()->add('expense_category_id', 'Choose a valid parent category.');
+                return;
+            }
+
+            $userCompanyId = auth()->user()->company_id;
+            $companyId = (! auth()->user()->can('view all expense') && ! empty($userCompanyId))
+                ? (int) $userCompanyId
+                : ($request->filled('company_id') ? (int) $request->company_id : ($parent->company_id ? (int) $parent->company_id : null));
+
+            if ($parent->company_id !== null && (int) $parent->company_id !== (int) $companyId) {
+                $validator->errors()->add('expense_category_id', 'The parent category and sub-category must belong to the same company.');
+            }
+
+            if (! $request->filled('account_id') && ! $parent->account_id) {
+                $validator->errors()->add('account_id', 'Choose an expense account because the parent category has no account to inherit.');
+            }
+
+            if ($request->filled('account_id') && ! Account::query()
+                ->whereKey((int) $request->account_id)
+                ->where('type', 'expense')->where('status', 1)
+                ->where(fn ($q) => $q->whereNull('company_id')->when($companyId, fn ($w) => $w->orWhere('company_id', $companyId)))
+                ->exists()) {
+                $validator->errors()->add('account_id', 'Choose an active expense account available to this company.');
+            }
+        });
     }
 
     /**

@@ -519,9 +519,9 @@
          rather than a permanent third of the screen. The bar stays honest when
          shut — today's spend against today's ceiling is right there, so
          collapsing hides the controls, never the number. --}}
-    <div class="pc-card pc-fundcard" id="pcFundCard">
+    <div class="pc-card pc-fundcard is-collapsed" id="pcFundCard">
         <div class="pc-fundhead" id="pcFundToggle" role="button" tabindex="0"
-             aria-controls="pcFundBody" aria-expanded="true"
+             aria-controls="pcFundBody" aria-expanded="false"
              title="Show or hide the daily limits">
             <div class="pc-fundhead-title">
                 <i class="fas fa-chevron-down pc-fundchev"></i>
@@ -741,7 +741,7 @@
                              appear nowhere in the accounts. --}}
                         <th class="px-4 py-3 text-right">Owed Back</th>
                         <th class="px-4 py-3 text-left">Status</th>
-                        <th class="px-4 py-3 text-center">Actions</th>
+                        <th class="px-2 py-3 text-center" style="width:1%;white-space:nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -799,22 +799,22 @@
                         <td class="px-4 py-3">
                             <span class="pc-pill {{ $pill[0] }}">{{ $pill[1] }}</span>
                         </td>
-                        <td class="px-4 py-3">
-                            <div style="display:flex; gap:6px; justify-content:center;">
+                        <td class="px-2 py-3">
+                            <div style="display:flex; gap:6px; justify-content:center;display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                 <a href="{{ route('role.petty-cash.statement', ['role' => $role, 'float' => $float->id]) }}"
-                                   class="pc-act" title="Statement"><i class="fas fa-list"></i></a>
+                                   class="pc-act" title="Statement" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-list" style="font-size:11px;margin:0"></i></a>
                                 @if($canManage && $float->status)
                                 {{-- Named, not a bare arrow. Issuing is the action that
                                      actually moves money, and an unlabelled icon is not
                                      something you find when you are looking for it. --}}
                                 <button type="button" class="pc-act issue labelled" title="Hand cash to this custodian"
-                                        onclick="pcMove({{ $float->id }}, 'issue', '{{ addslashes($float->custodian->name ?? '') }}', 0, {{ (int) $float->company_id }})">
-                                    <i class="fas fa-arrow-right"></i><span>Issue</span>
+                                        onclick="pcMove({{ $float->id }}, 'issue', '{{ addslashes($float->custodian->name ?? '') }}', 0, {{ (int) $float->company_id }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-arrow-right" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @if($held > 0)
                                 <button type="button" class="pc-act give labelled" title="Take cash back"
-                                        onclick="pcMove({{ $float->id }}, 'return', '{{ addslashes($float->custodian->name ?? '') }}', {{ $held }}, {{ (int) $float->company_id }})">
-                                    <i class="fas fa-arrow-left"></i><span>Take back</span>
+                                        onclick="pcMove({{ $float->id }}, 'return', '{{ addslashes($float->custodian->name ?? '') }}', {{ $held }}, {{ (int) $float->company_id }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-arrow-left" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @endif
                                 @endif
@@ -823,18 +823,18 @@
                                      owed, so the row does not offer a payment of nothing. --}}
                                 @if($canReimburse && $owed > 0.001)
                                 <button type="button" class="pc-act payback labelled" title="Pay back what they are owed"
-                                        onclick="pcPayBack({{ $float->custodian_id }}, '{{ addslashes($float->custodian->name ?? '') }}', {{ (int) $float->company_id }}, '{{ addslashes($float->company->short_name ?: $float->company->name) }}', {{ number_format($owed, 2, '.', '') }})">
-                                    <i class="fas fa-hand-holding-dollar"></i><span>Pay back</span>
+                                        onclick="pcPayBack({{ $float->custodian_id }}, '{{ addslashes($float->custodian->name ?? '') }}', {{ (int) $float->company_id }}, '{{ addslashes($float->company->short_name ?: $float->company->name) }}', {{ number_format($owed, 2, '.', '') }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-hand-holding-dollar" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @endif
                                 @if($canManage)
                                 <button type="button" class="pc-act" title="Edit"
-                                        onclick="pcEdit({{ $float->id }}, '{{ addslashes($float->note ?? '') }}', {{ $float->status ? 1 : 0 }})">
-                                    <i class="fas fa-pen"></i>
+                                        onclick="pcEdit({{ $float->id }}, '{{ addslashes($float->note ?? '') }}', {{ $float->status ? 1 : 0 }})" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-pen" style="font-size:11px;margin:0"></i>
                                 </button>
                                 <button type="button" class="pc-act danger" title="Delete"
-                                        onclick="pcDelete({{ $float->id }}, '{{ addslashes($float->custodian->name ?? '') }}')">
-                                    <i class="fas fa-trash"></i>
+                                        onclick="pcDelete({{ $float->id }}, '{{ addslashes($float->custodian->name ?? '') }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @endif
                             </div>
@@ -1119,9 +1119,7 @@
                              config/accounts.php, and the label must not claim
                              one account while the posting credits another. --}}
                         <option value="">{{ $summary['pot_name'] }} (the pot)</option>
-                                @foreach($banks as $bank)
-                                    <option value="{{ $bank->id }}" data-company="{{ $bank->company_id }}">{{ $bank->name }}</option>
-                                @endforeach
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                             </select>
                             <div class="pc-hint" id="pcOpeningPosting">
                                 Posts <strong>Petty Cash Float</strong> up, <strong>{{ $summary['pot_name'] }}</strong> down.
@@ -1170,9 +1168,7 @@
                              config/accounts.php, and the label must not claim
                              one account while the posting credits another. --}}
                         <option value="">{{ $summary['pot_name'] }} (the pot)</option>
-                        @foreach($banks as $bank)
-                            <option value="{{ $bank->id }}" data-company="{{ $bank->company_id }}">{{ $bank->name }}</option>
-                        @endforeach
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                     </select>
                     <div class="pc-hint">No expense account is touched — the money only changes hands.</div>
                 </div>
@@ -1251,9 +1247,7 @@
                     <label>Money comes from</label>
                     <select name="bank_id" id="pcPayBank" class="pc-select">
                         <option value="">{{ $summary['pot_name'] }} (the pot)</option>
-                        @foreach($banks as $bank)
-                            <option value="{{ $bank->id }}" data-company="{{ $bank->company_id }}">{{ $bank->name }}</option>
-                        @endforeach
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                     </select>
                     <div class="pc-hint">No expense account is touched — this settles a debt that was recorded when the claim was approved.</div>
                 </div>
@@ -1428,9 +1422,9 @@
        it shut every time, and re-opening it on every page load would be the
        screen forgetting what it was told. Kept in localStorage rather than a
        preference column — it is a display state, not data about the business.
-
-       Falls back silently: a browser with storage blocked simply opens the
-       section every time, which is the old behaviour and harms nothing. */
+       Shut by default: limits are set once and stand until changed, so the
+       section earns a click rather than a permanent third of the screen — and
+       the bar still reports today's spend against today's ceiling while shut. */
     (function () {
         const card   = document.getElementById('pcFundCard');
         const toggle = document.getElementById('pcFundToggle');
@@ -1438,7 +1432,11 @@
 
         const KEY = 'pc.dailyFund.collapsed';
 
-        const read = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+        /* Shut unless this browser has been told otherwise. Nothing stored means
+           nobody has opened it here, and the markup already ships collapsed, so
+           the default costs no flash of the section opening and shutting again
+           on load. Storage blocked simply leaves it shut every visit. */
+        const read = () => { try { return localStorage.getItem(KEY) !== '0'; } catch (e) { return true; } };
         const write = (v) => { try { localStorage.setItem(KEY, v ? '1' : '0'); } catch (e) {} };
 
         function apply(collapsed) {

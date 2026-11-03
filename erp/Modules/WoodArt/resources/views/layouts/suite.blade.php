@@ -32,7 +32,7 @@
 @extends('layout.app')
 
 @section('meta-information')
-    <title>Wood Art Interiors — {{ $title }}</title>
+    <title>{{ $waCompanyName ?? 'Wood Art Interiors' }} — {{ $title }}</title>
 @endsection
 
 @section('main-content')
@@ -1008,6 +1008,58 @@
     }
 </style>
 
+{{-- Epal Constructions only: the same screens in the ERP's own look (teal head band, white flat
+     cards, slate table heads) instead of Wood Art's navy/serif theme. Emitted ONLY when the URL is
+     /{role}/construction/*, so Wood Art's pages get none of it; every selector is wap-prefixed. --}}
+@if(class_exists(\Modules\WoodArt\Modules\Accounts\Support\ProjectContext::class) && \Modules\WoodArt\Modules\Accounts\Support\ProjectContext::id() === 3)
+<style>
+    .wap-scene-layer { display: none; }
+    .wap {
+        --wap-accent: #0f766e;
+        --wap-surface-2: #f8fafc;
+        --wap-surface-hi: #f1f5f9;
+        --wap-text: #1e293b;
+        --wap-text-dim: #475569;
+        --wap-text-mute: #64748b;
+        --wap-border: #e2e8f0;
+        --wap-border-strong: #cbd5e1;
+        --wap-shadow-card: 0 2px 16px rgba(0,0,0,.06);
+        font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    }
+    /* head band, like the Expense list's teal header */
+    .wap-head {
+        background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+        border-radius: 14px; padding: 14px 22px; margin: 4px 0 14px; color: #fff;
+    }
+    .wap-title { font-family: 'Inter', system-ui, sans-serif; font-weight: 700; font-size: 22px; color: #fff; }
+    .wap-title i { color: #99f6e4; }
+    .wap-sub { color: rgba(255,255,255,.82); }
+    .wap-head .wap-btn { background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.4); color: #fff; }
+    .wap-head .wap-btn:hover { background: rgba(255,255,255,.24); }
+    .wap-btn-primary { background: linear-gradient(135deg, #0d9488, #0f766e); box-shadow: none; color: #fff; }
+    .wap-head .wap-btn-primary { background: #fff; color: #0f766e; border-color: #fff; }
+    /* tabs */
+    .wap-tabs { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .wap-tab.active { color: #0f766e; border-bottom-color: #0f766e; }
+    .wap-tab:hover { background: #f0fdfa; }
+    /* summary cards: flat white, light-teal icon chip, teal figures */
+    .wap-kpi-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06); min-height: 96px; }
+    .wap-kpi-card::before { display: none; }
+    .wap-kpi-card:hover { transform: none; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+    .wap-kpi-ico { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; box-shadow: none; width: 36px; height: 36px; font-size: 17px; border-radius: 10px; }
+    .wap-kpi-value { font-size: 26px; color: #0f766e; }
+    .wap-kpi-value.wap-t-bad { color: #dc2626; }
+    /* cards + tables */
+    .wap-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 16px rgba(0,0,0,.06); }
+    .wap-card-head { background: #f8fafc; }
+    .wap-card-head h3 { font-family: 'Inter', system-ui, sans-serif; font-size: 15px; }
+    .wap-table th { background: #f1f5f9; color: #475569; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+    .wap-table tbody tr:hover td { background: #f8fafc; }
+    .wap-banner { background: #f0fdfa; border-color: #99f6e4; }
+</style>
+@endif
+
+
 <div class="wap-host">
 
     {{-- Persistent — outside the swapped region on purpose. --}}
@@ -1036,12 +1088,14 @@
         {{-- ── section tabs ── --}}
         {{-- $tabsDense is optional: modules that do not set it render exactly
              as before (?? false), so adding it changed no existing screen. --}}
+        @unless(isset($dept) && ($waModule ?? '') === 'accounts' && \Modules\WoodArt\Modules\Accounts\Support\ProjectContext::key() === 'construction')
         <nav class="wap-tabs {{ ($tabsDense ?? false) ? 'wap-tabs-dense' : '' }}">
             @foreach($sections as $key => $label)
                 <a class="wap-tab {{ $section === $key ? 'active' : '' }}"
                    href="{{ route($waRoute, ['role' => request()->route('role'), 'section' => $key]) }}">{{ $label }}</a>
             @endforeach
         </nav>
+        @endunless
 
         @yield('wa-view')
 
@@ -1058,4 +1112,9 @@
      it would never run again after the first navigation. It acts only on
      [data-wa-board], which only Wood Art's stage board emits. --}}
 <script src="{{ asset('woodart/board/woodart-board.js') }}" defer></script>
+{{-- Page-scoped controller; inert unless the bulk expense form exists. It lives
+     here so it survives Wood Art's view-only navigation. --}}
+@include('woodart::partials.expense-bulk-script')
+@include('woodart::partials.project-expense-print-script')
+@include('woodart::partials.construction-project-create-script')
 @endsection

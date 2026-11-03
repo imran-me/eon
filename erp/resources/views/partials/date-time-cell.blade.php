@@ -9,7 +9,19 @@
     fall on the same day, so a backdated row never displays a time belonging to
     a different date.
 
-    Formats the same way as the bank tables: Y-m-d above, H:i:s below.
+    Y-m-d above, H:i:s below by default. Pass `dtcFormat` for a table that shows
+    its dates another way — the bank transfer list is d/m/Y, and a column that
+    sits beside one should read the same:
+
+        @include('partials.date-time-cell', [
+            'date' => $expense->expense_date,
+            'recordedAt' => $expense->created_at,
+            'dtcFormat' => 'd/m/Y',
+        ])
+
+    The format changes only what is PRINTED. The same-day test that decides
+    whether a time is shown at all still compares real dates, so it cannot be
+    affected by how they are displayed.
 
     Renders in a table cell on many screens, so it must not be able to throw:
     an unparseable value degrades to a dash rather than taking the page down.
@@ -17,6 +29,11 @@
     Params:
       date       - Carbon|string|null  the record's own date
       recordedAt - Carbon|string|null  the row's created_at (optional)
+      dtcFormat  - string              date format for the top line (default 'Y-m-d').
+                   Prefixed like every other name in here on purpose: an
+                   @include inherits the PARENT view's variables, and a page
+                   that happened to have a variable of its own called $format
+                   would otherwise silently reformat every date cell on it.
 --}}
 @php
     $dtcParse = function ($v) {
@@ -36,8 +53,12 @@
     $dtcDate = $dtcParse($date ?? null);
     $dtcRec  = $dtcParse($recordedAt ?? null);
 
-    $dtcDay  = $dtcDate ? $dtcDate->format('Y-m-d') : null;
-    $dtcTime = ($dtcRec && $dtcDay && $dtcRec->format('Y-m-d') === $dtcDay)
+    // Two separate things: the key the same-day test compares on, and the text
+    // that is printed. Keeping the test on Y-m-d means a caller's format can
+    // never change WHETHER a time is shown, only how the date beside it reads.
+    $dtcKey   = $dtcDate ? $dtcDate->format('Y-m-d') : null;
+    $dtcDay   = $dtcDate ? $dtcDate->format($dtcFormat ?? 'Y-m-d') : null;
+    $dtcTime  = ($dtcRec && $dtcKey && $dtcRec->format('Y-m-d') === $dtcKey)
         ? $dtcRec->format('H:i:s')
         : null;
 @endphp

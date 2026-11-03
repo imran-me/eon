@@ -139,7 +139,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated By</th>   
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company Id</th>   
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer Id</th>  
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width:1%;white-space:nowrap">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
@@ -216,12 +216,12 @@
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $value->company->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">{{ $value->customer->name }}</td>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
                                     @canany(['view support ticket', 'edit support ticket', 'delete support ticket'])
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="btn-group btn-group-sm flex space-x-1">
+                                    <td class="px-2 py-4 whitespace-nowrap">
+                                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                             @can('view support ticket')
                                             <a href="{{ route('role.support-tickets.show', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'support_ticket' => $value->id]) }}" 
-                                            class="btn btn-outline-info border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200">
-                                                <i class="fas fa-eye"></i>
+                                            class="btn btn-outline-info border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="View">
+                                                <i class="fas fa-eye" style="font-size:11px;margin:0"></i>
                                             </a>
                                             @endcan
                                             @can('edit support ticket')
@@ -236,13 +236,13 @@
                                                 data-assigned_to="{{ $value->assigned_to }}"
                                                 data-company_id="{{ $value->company_id }}"
                                                 data-customer_id="{{ $value->customer_id }}"
-                                                data-action="{{ route('role.support-tickets.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'support_ticket' => $value->id]) }}" title="Edit Item">
-                                                <i class="fas fa-edit"></i>
+                                                data-action="{{ route('role.support-tickets.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'support_ticket' => $value->id]) }}" title="Edit Item" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-edit" style="font-size:11px;margin:0"></i>
                                             </button>
                                             @endcan
                                             @can('delete support ticket')
-                                            <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->title }}')">
-                                                <i class="fas fa-trash"></i>
+                                            <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->title }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Delete">
+                                                <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                             </button>
                                             @endcan
                                         </div>

@@ -93,6 +93,8 @@ class AttendanceController extends Controller
             // logger('User Lookup:', ['user' => $user]);
             if (!$user) continue;
 
+            $approvedLateIn = Leave::findApprovedLateInForDate($user->id, $date);
+
             // 🔹 Is first punch of the day?
             $isFirstCheckIn = !AttendanceLog::where('user_id', $user->id)
                 ->where('date', $date)
@@ -133,7 +135,7 @@ class AttendanceController extends Controller
                 ]);
 
                 // 🔔 Late notification (ONLY first check-in)
-                if ($isFirstCheckIn && $user->shift && $attendanceSetting) {
+                if ($isFirstCheckIn && !$approvedLateIn && $user->shift && $attendanceSetting) {
 
                     $graceMinutes = (int) $attendanceSetting->time_after_checkin;
 
@@ -173,9 +175,11 @@ class AttendanceController extends Controller
                     'status'                   => 'present',
                     'check_in'                 => $time, // only set on first punch
                     'attendence_setting_id'    => $attendanceSetting->id ?? null,
-                    'note'                     => $approvedEarlyLeave
-                        ? 'Approved Early Leave (until ' . Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')'
-                        : 'Now entered in ' . ($device->company->name ?? null),
+                    'note'                     => $approvedLateIn
+                        ? 'Approved Late In (until ' . Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')'
+                        : ($approvedEarlyLeave
+                            ? 'Approved Early Leave (until ' . Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')'
+                            : 'Now entered in ' . ($device->company->name ?? null)),
                 ]
             );
 
@@ -185,7 +189,9 @@ class AttendanceController extends Controller
                     'check_out' => $time,
                     'note'      => $approvedEarlyLeave
                         ? 'Approved Early Leave (from ' . Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')'
-                        : 'Exited from ' . ($device->company->name ?? null),
+                        : ($approvedLateIn
+                            ? 'Approved Late In (until ' . Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')'
+                            : 'Exited from ' . ($device->company->name ?? null)),
                 ]);
             }
         }

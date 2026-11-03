@@ -118,6 +118,8 @@ class LoanController extends Controller
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    Bank::assertCanCover((int) $bank->account_id, (float) $data->amount, $bank->name);
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,
@@ -147,6 +149,10 @@ class LoanController extends Controller
                 $ledger->syncLoanBalance($data);
             });
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $th->getMessage()
@@ -233,6 +239,8 @@ class LoanController extends Controller
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    Bank::assertCanCover((int) $bank->account_id, (float) $data->amount, $bank->name);
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,
@@ -261,6 +269,10 @@ class LoanController extends Controller
                 $ledger->syncLoanBalance($data);
             });
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Something went wrong! '. $th->getMessage(),

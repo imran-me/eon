@@ -10,6 +10,6 @@ namespace App\Exceptions;
  * exactly this into a message for the person filing the receipt and let every
  * other failure keep its normal handling.
  */
-class PettyCashOverdrawnException extends \RuntimeException
+class PettyCashOverdrawnException extends SettlementSourceOverdrawnException
 {
 }

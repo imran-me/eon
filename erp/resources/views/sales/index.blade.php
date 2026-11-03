@@ -560,7 +560,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Method</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
                                 @canany(['edit sales', 'delete sales', 'create return reference'])
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style="width:1%;white-space:nowrap">Actions</th>
                                 @endcanany
                             </tr>
                         </thead>
@@ -611,48 +611,48 @@
                                         {{ $value->createdBy?->name }}                                                                                                                        
                                     </td>
                                     @canany(['edit sales', 'delete sales', 'create return reference'])                                      
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <div class="btn-group btn-group-sm flex space-x-1">
-                                            <a target="_blank" href="{{ route('role.sales.view-invoice', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'id' => $value->id]) }}" class="btn btn-outline-info edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Invoice">
-                                                <i class="fas fa-print"></i>
+                                    <td class="px-2 py-4 whitespace-nowrap">
+                                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+                                            <a target="_blank" href="{{ route('role.sales.view-invoice', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'id' => $value->id]) }}" class="btn btn-outline-info edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Invoice" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                <i class="fas fa-print" style="font-size:11px;margin:0"></i>
                                             </a>  
                                             @php $hasReturn = $value->returns->isNotEmpty(); @endphp
 
                                             @if ($value->due_amount > 0 && !$hasReturn)
-                                                <button data-id="{{ $value->id }}" data-action="{{ route('role.sales.view.modal', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'id' => $value->id]) }}" class="open_payment_modal btn btn-outline-success edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200 cursor-pointer" title="Receive Payment">
-                                                    <i class="fas fa-dollar-sign"></i>
+                                                <button data-id="{{ $value->id }}" data-action="{{ route('role.sales.view.modal', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'id' => $value->id]) }}" class="open_payment_modal btn btn-outline-success edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200 cursor-pointer" title="Receive Payment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                    <i class="fas fa-dollar-sign" style="font-size:11px;margin:0"></i>
                                                 </button>
                                                 <button onclick="openSaleSchedule({{ $value->id }}, '{{ addslashes($value->invoice_no) }}', {{ $value->due_amount }}, '{{ addslashes($value->customer?->name ?? '') }}')"
                                                         class="btn btn-outline-success edit-item-btn border border-indigo-500 text-indigo-500 hover:bg-indigo-500 hover:text-white px-3 py-1 rounded-md transition duration-200 cursor-pointer"
-                                                        title="Schedule Payment">
-                                                    <i class="fas fa-calendar-alt"></i>
+                                                        title="Schedule Payment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                    <i class="fas fa-calendar-alt" style="font-size:11px;margin:0"></i>
                                                 </button>
                                             @endif
 
                                             @can('edit sales')
                                                 @if (!$hasReturn)
-                                                    <a href="{{ route('role.sales.edit', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'sale' => $value->id]) }}" class="btn btn-outline-primary edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Edit Item">
-                                                        <i class="fas fa-edit"></i>
+                                                    <a href="{{ route('role.sales.edit', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'sale' => $value->id]) }}" class="btn btn-outline-primary edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Edit Item" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                        <i class="fas fa-edit" style="font-size:11px;margin:0"></i>
                                                     </a>
                                                 @endif
                                             @endcan
 
                                             @can('create return reference')
                                                 @if (!$hasReturn)
-                                                    <a href="{{ route('role.return-refs.create', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'sale' => $value->id]) }}" class="btn btn-outline-warning edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Return Item">
-                                                        <i class="fas fa-undo"></i>
+                                                    <a href="{{ route('role.return-refs.create', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'sale' => $value->id]) }}" class="btn btn-outline-warning edit-item-btn border border-blue-500 text-blue-500 hover:bg-blue-500 hover:text-white px-3 py-1 rounded-md transition duration-200" title="Return Item" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                        <i class="fas fa-undo" style="font-size:11px;margin:0"></i>
                                                     </a>
                                                 @else
-                                                    <span class="btn btn-outline-secondary px-3 py-1 rounded-md" title="Already Returned">
-                                                        <i class="fas fa-undo"></i>
+                                                    <span class="btn btn-outline-secondary px-3 py-1 rounded-md" title="Already Returned" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                                        <i class="fas fa-undo" style="font-size:11px;margin:0"></i>
                                                     </span>
                                                 @endif
                                             @endcan
 
                                             @can('delete sales')
                                                 @if (!$hasReturn)
-                                                    <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->invoice_no }}')">
-                                                        <i class="fas fa-trash"></i>
+                                                    <button class="btn btn-outline-danger border border-red-500 text-red-500 hover:bg-red-500 hover:text-white px-3 py-1 rounded-md transition duration-200" onclick="confirmDelete('{{ $value->id }}', '{{ $value->invoice_no }}')" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Delete">
+                                                        <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                                     </button>
                                                 @endif
                                             @endcan

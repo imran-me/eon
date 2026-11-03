@@ -52,4 +52,21 @@ class Leave extends Model
             ->select('leaves.*')
             ->first();
     }
+
+    /**
+     * Find an approved late-in request for this user/date. Its approved time is
+     * informational; the whole late arrival on that date is exempt from payroll.
+     */
+    public static function findApprovedLateInForDate(int $userId, string $dateString): ?self
+    {
+        return static::query()
+            ->join('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->where('leaves.user_id', $userId)
+            ->where('leaves.status', 'approved')
+            ->where('leave_types.exempts_late_deduction', true)
+            ->whereDate('leaves.start_date', '<=', $dateString)
+            ->whereDate('leaves.end_date', '>=', $dateString)
+            ->select('leaves.*')
+            ->first();
+    }
 }

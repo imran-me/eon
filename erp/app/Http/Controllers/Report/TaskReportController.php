@@ -34,6 +34,7 @@ class TaskReportController implements HasMiddleware
         $roleSlug = Str::slug($authUser->getRoleNames()->first());
         $isAdminUser = in_array($roleSlug, ['super admin', 'super-admin', 'admin']);
         $selectedUserId = $isAdminUser ? $request->user_id : $authUser->id;
+        $selectedMonth = $this->selectedMonth($request);
 
         $query = Task::with([
             'users',
@@ -49,6 +50,7 @@ class TaskReportController implements HasMiddleware
         $query->whereHas('users', function ($q) {
             $q->role('employee');
         });
+        $this->applyMonthFilter($query, $selectedMonth);
 
         if (!empty($selectedUserId)) {
             $query->whereHas('users', function($q) use ($selectedUserId) {
@@ -150,6 +152,7 @@ class TaskReportController implements HasMiddleware
             'summary',
             'isAdminUser',
             'selectedUserId',
+            'selectedMonth',
         ));
     }
 
@@ -161,7 +164,7 @@ class TaskReportController implements HasMiddleware
         $fileName = 'Task_Report_' . now()->format('Y-m-d_His') . '.xlsx';
         
         return Excel::download(
-            new TaskReportExport($data['tasksByUser'], $data['summary']), 
+            new TaskReportExport($data['tasksByUser'], $data['summary'], $data['selected_month']),
             $fileName
         );
     }
@@ -181,12 +184,15 @@ class TaskReportController implements HasMiddleware
                 'priority' => $request->priority,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
+                'month' => $data['selected_month'],
             ]
         ])->setPaper('a4', 'landscape');
         
         $fileName = 'Task_Report_' . now()->format('Y-m-d_His') . '.pdf';
         
-        return $pdf->download($fileName);
+        return $request->boolean('preview')
+            ? $pdf->stream($fileName)
+            : $pdf->download($fileName);
     }
 
     private function getFilteredTaskData(Request $request)
@@ -196,6 +202,7 @@ class TaskReportController implements HasMiddleware
         $roleSlug = Str::slug($authUser->getRoleNames()->first());
         $isAdminUser = in_array($roleSlug, ['super admin', 'super-admin', 'admin']);
         $selectedUserId = $isAdminUser ? $request->user_id : $authUser->id;
+        $selectedMonth = $this->selectedMonth($request);
 
         $query = Task::with([
             'users',
@@ -210,6 +217,7 @@ class TaskReportController implements HasMiddleware
         $query->whereHas('users', function ($q) {
             $q->role('employee');
         });
+        $this->applyMonthFilter($query, $selectedMonth);
 
         if (!empty($selectedUserId)) {
             $query->whereHas('users', function($q) use ($selectedUserId) {
@@ -296,6 +304,35 @@ class TaskReportController implements HasMiddleware
             'tasksByUser' => $tasksByUser,
             'summary' => $summary,
             'selected_user_id' => $selectedUserId,
+            'selected_month' => $selectedMonth,
         ];
+    }
+
+    private function selectedMonth(Request $request): string
+    {
+        $month = (string) $request->input('month', now()->format('Y-m'));
+
+        return preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)
+            ? $month
+            : now()->format('Y-m');
+    }
+
+    /**
+     * A task belongs to the month in which it starts. Older tasks without an
+     * explicit start date fall back to their creation date, so they remain
+     * reportable instead of disappearing from every month.
+     */
+    private function applyMonthFilter($query, string $month): void
+    {
+        $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $query->where(function ($monthQuery) use ($start, $end) {
+            $monthQuery->whereBetween('start_date', [$start, $end])
+                ->orWhere(function ($fallback) use ($start, $end) {
+                    $fallback->whereNull('start_date')
+                        ->whereBetween('created_at', [$start, $end]);
+                });
+        });
     }
 }

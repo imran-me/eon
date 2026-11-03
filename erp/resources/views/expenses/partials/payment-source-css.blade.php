@@ -7,6 +7,19 @@
     columns are set inline by the partial; the 1fr 1fr below is only the fallback.
 --}}
 <style>
+    .expense-entry-modal .exp-payment-layout { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; }
+    .expense-entry-modal .exp-payment-layout > div { min-width:0; }
+    .expense-entry-modal .exp-payment-layout > [id$="_bank_branch"]:not(.hidden),
+    .expense-entry-modal .exp-payment-layout .exp-bank-fields { display:contents; }
+    .expense-entry-modal .exp-bank-charge { grid-column:1/-1; }
+    .expense-entry-modal .exp-extra-details { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; padding:16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; }
+    .expense-entry-modal .exp-extra-details > div { min-width:0; }
+    @media(min-width:1024px) {
+        .expense-entry-modal .exp-payment-layout { grid-template-columns:repeat(3,minmax(0,1fr)); }
+        .expense-entry-modal .exp-payment-layout > [id$="_cash_branch"],
+        .expense-entry-modal .exp-payment-layout > [id$="_own_branch"] { grid-column:span 2; }
+        .expense-entry-modal .exp-extra-details { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    }
     .exp-source-cards{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:14px;}
     .exp-source-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
         padding:12px 14px;background:#fff;border:0;cursor:pointer;text-align:center;transition:background .15s,color .15s;}

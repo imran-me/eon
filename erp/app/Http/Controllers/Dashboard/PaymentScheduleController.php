@@ -11,26 +11,32 @@ use App\Models\ContractFileSale;
 use App\Models\ContractFlight;
 use App\Models\ContractFlightBooking;
 use App\Models\EmployeeLedger;
+use App\Models\EmployeePayment;
 use App\Models\EmployeeSalary;
 use App\Models\PartyType;
 use App\Models\Payment;
 use App\Models\PaymentSchedule;
 use App\Models\PaymentScheduleLog;
+use App\Models\ProjectCategory;
 use App\Models\Purchase;
-use App\Models\Sale;
 use App\Models\SalaryReconciliation;
+use App\Models\Sale;
 use App\Models\TicketPurchase;
 use App\Models\TicketSale;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\VisaProcess;
 use App\Models\VisaSale;
+use App\Services\EmployeePaymentService;
 use App\Services\NotificationService;
+use App\Support\TravelCompany;
 use App\Traits\PostsBalancedJournal;
 use App\Traits\PostsEmployeeLedger;
 use App\Traits\PostsPartyLedger;
 use App\Traits\PostsPurchaseJournal;
 use App\Traits\PostsSaleJournal;
+use App\Traits\ResolvesPartyType;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,13 +45,13 @@ use Illuminate\Support\Facades\Log;
 
 class PaymentScheduleController extends Controller
 {
-    use PostsBalancedJournal, PostsEmployeeLedger, PostsPartyLedger, PostsPurchaseJournal, PostsSaleJournal;
+    use PostsBalancedJournal, PostsEmployeeLedger, PostsPartyLedger, PostsPurchaseJournal, PostsSaleJournal, ResolvesPartyType;
 
     public function __construct()
     {
         $this->middleware('can:view payment schedule')->only(['index', 'headlineNotices', 'voucher']);
         $this->middleware('can:create payment schedule')->only(['store', 'storeAdHoc', 'partiesByType', 'partyTypesByCompany', 'projectCategoriesByCompany']);
-        $this->middleware('can:edit payment schedule')->only(['cancel', 'reschedule', 'markPaid', 'setPriority', 'payDueAmount']);
+        $this->middleware('can:edit payment schedule')->only(['cancel', 'reopen', 'reschedule', 'markPaid', 'setPriority', 'payDueAmount', 'reverseEmployeePayment']);
         $this->middleware('can:delete payment schedule')->only(['destroy']);
         $this->middleware('can:approve payment schedule')->only(['approve', 'reject']);
     }
@@ -53,22 +59,22 @@ class PaymentScheduleController extends Controller
     public function index(Request $request)
     {
         $schedules = PaymentSchedule::with(['schedulable' => function (MorphTo $morphTo) {
-                $morphTo->morphWith([
-                    Sale::class           => ['customer'],
-                    Purchase::class       => ['supplier'],
-                    TicketSale::class     => ['client'],
-                    TicketPurchase::class => ['vendor'],
-                    VisaProcess::class    => ['passportHolder'],
-                    EmployeeSalary::class => ['user'],
-                ]);
-            }])
-            ->when($request->schedule_id, fn($q) => $q->where('id', $request->schedule_id))
-            ->when($request->type,      fn($q) => $q->where('type', $request->type))
-            ->when($request->status,    fn($q) => $q->where('status', $request->status))
-            ->when($request->party,     fn($q) => $q->where('party_type', $request->party))
-            ->when($request->priority,  fn($q) => $q->where('priority', $request->priority))
-            ->when($request->date_from, fn($q) => $q->where('scheduled_date', '>=', $request->date_from))
-            ->when($request->date_to,   fn($q) => $q->where('scheduled_date', '<=', $request->date_to))
+            $morphTo->morphWith([
+                Sale::class => ['customer'],
+                Purchase::class => ['supplier'],
+                TicketSale::class => ['client'],
+                TicketPurchase::class => ['vendor'],
+                VisaProcess::class => ['passportHolder'],
+                EmployeeSalary::class => ['user'],
+            ]);
+        }])
+            ->when($request->schedule_id, fn ($q) => $q->where('id', $request->schedule_id))
+            ->when($request->type, fn ($q) => $q->where('type', $request->type))
+            ->when($request->status, fn ($q) => $q->where('status', $request->status))
+            ->when($request->party, fn ($q) => $q->where('party_type', $request->party))
+            ->when($request->priority, fn ($q) => $q->where('priority', $request->priority))
+            ->when($request->date_from, fn ($q) => $q->where('scheduled_date', '>=', $request->date_from))
+            ->when($request->date_to, fn ($q) => $q->where('scheduled_date', '<=', $request->date_to))
             ->tap(function ($q) use ($request) {
                 // Column sorting. The key is matched against this list before any
                 // use, so nothing from the URL reaches the query as SQL. $dir is
@@ -79,7 +85,7 @@ class PaymentScheduleController extends Controller
                 // promotes to an ErrorException — a 500 before the whitelist is
                 // ever consulted.
                 $sortRaw = $request->query('sort');
-                $dirRaw  = $request->query('dir');
+                $dirRaw = $request->query('dir');
                 $sortKey = is_string($sortRaw) ? $sortRaw : '';
                 $sortDir = (is_string($dirRaw) && strtolower($dirRaw) === 'asc') ? 'asc' : 'desc';
 
@@ -90,22 +96,23 @@ class PaymentScheduleController extends Controller
                     // Untouched default: urgency first, then due date — the order
                     // this desk has always used.
                     $q->orderByRaw("CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 ELSE 3 END")
-                      ->orderByRaw("FIELD(status,'overdue','pending','approved','paid','cancelled','rejected') ASC")
-                      ->orderBy('scheduled_date')
+                        ->orderByRaw("FIELD(status,'overdue','pending','approved','paid','cancelled','rejected') ASC")
+                        ->orderBy('scheduled_date')
                       // Tiebreak: none of the three above is unique, so schedules
                       // sharing a priority, status and date had no defined order
                       // and could repeat or vanish across page boundaries.
-                      ->orderBy('id', 'desc');
+                        ->orderBy('id', 'desc');
+
                     return;
                 }
 
                 if ($sortKey === 'priority') {
                     // By urgency, not alphabetically — plain A-Z would read
                     // high, low, medium, which is meaningless here.
-                    $q->orderByRaw("CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 ELSE 3 END " . $sortDir);
+                    $q->orderByRaw("CASE priority WHEN 'high' THEN 0 WHEN 'medium' THEN 1 WHEN 'low' THEN 2 ELSE 3 END ".$sortDir);
                 } elseif ($sortKey === 'status') {
                     // Same reasoning: overdue first, then the natural lifecycle.
-                    $q->orderByRaw("FIELD(status,'overdue','pending','approved','paid','cancelled','rejected') " . $sortDir);
+                    $q->orderByRaw("FIELD(status,'overdue','pending','approved','paid','cancelled','rejected') ".$sortDir);
                 } else {
                     $q->orderBy($sortKey, $sortDir);
                 }
@@ -116,10 +123,10 @@ class PaymentScheduleController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        $todayPayable    = PaymentSchedule::where('scheduled_date', today())->where('type', 'pay')->whereIn('status', ['pending','approved'])->sum('amount');
-        $todayReceivable = PaymentSchedule::where('scheduled_date', today())->where('type', 'receive')->whereIn('status', ['pending','approved'])->sum('amount');
-        $overdueAmt      = PaymentSchedule::where('status', 'overdue')->sum('amount');
-        $upcomingCount   = PaymentSchedule::whereBetween('scheduled_date', [today()->addDay(), today()->addDays(7)])->where('status', 'pending')->count();
+        $todayPayable = PaymentSchedule::where('scheduled_date', today())->where('type', 'pay')->whereIn('status', ['pending', 'approved'])->sum('amount');
+        $todayReceivable = PaymentSchedule::where('scheduled_date', today())->where('type', 'receive')->whereIn('status', ['pending', 'approved'])->sum('amount');
+        $overdueAmt = PaymentSchedule::where('status', 'overdue')->sum('amount');
+        $upcomingCount = PaymentSchedule::whereBetween('scheduled_date', [today()->addDay(), today()->addDays(7)])->where('status', 'pending')->count();
 
         $banks = Bank::where('status', 1)->orderBy('name')->get();
         $companies = Company::orderBy('name')->get();
@@ -166,14 +173,14 @@ class PaymentScheduleController extends Controller
             || ($schedule->scheduled_date && $schedule->scheduled_date->isPast() && ! $schedule->scheduled_date->isToday());
         $due = $this->headlineDueLabel($schedule);
         $party = $schedule->party_name ?: ucfirst((string) $schedule->party_type);
-        $reference = $schedule->source_label ?: ('Schedule #' . $schedule->id);
+        $reference = $schedule->source_label ?: ('Schedule #'.$schedule->id);
         $amount = number_format((float) $schedule->amount, 2);
         $label = $isPayable ? 'Payable' : 'Receivable';
         $action = $isPayable ? 'pay' : 'collect';
         $priority = $isOverdue ? 'critical' : ($schedule->priority ?: 'medium');
 
         return [
-            'id' => 'payment-schedule-' . $schedule->id,
+            'id' => 'payment-schedule-'.$schedule->id,
             'type' => $isOverdue ? 'action' : 'reminder',
             'priority' => $priority,
             'overdue' => $isOverdue,
@@ -183,9 +190,9 @@ class PaymentScheduleController extends Controller
             'target_url' => route('role.payment-schedules.index', [
                 'role' => $role,
                 'schedule_id' => $schedule->id,
-                'headline' => 'payment-schedule-' . $schedule->id,
+                'headline' => 'payment-schedule-'.$schedule->id,
             ]),
-            'target_selector' => '#payment-schedule-' . $schedule->id,
+            'target_selector' => '#payment-schedule-'.$schedule->id,
             'schedule_id' => $schedule->id,
             'payment_type' => $schedule->type,
         ];
@@ -206,7 +213,7 @@ class PaymentScheduleController extends Controller
         }
 
         if ($schedule->scheduled_date->isPast()) {
-            return 'overdue ' . $schedule->scheduled_date->diffInDays(today()) . 'd';
+            return 'overdue '.$schedule->scheduled_date->diffInDays(today()).'d';
         }
 
         $days = today()->diffInDays($schedule->scheduled_date);
@@ -217,24 +224,24 @@ class PaymentScheduleController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'company_id'              => 'nullable|exists:companies,id',
-            'schedulable_type'         => 'required|in:sale,purchase,ticket_sale,ticket_purchase',
-            'schedulable_id'           => 'required|integer',
-            'schedules'                => 'required|array|min:1',
-            'schedules.*.amount'       => 'required|numeric|min:0.01',
-            'schedules.*.date'         => 'required|date',
-            'schedules.*.note'         => 'nullable|string|max:500',
+            'company_id' => 'nullable|exists:companies,id',
+            'schedulable_type' => 'required|in:sale,purchase,ticket_sale,ticket_purchase',
+            'schedulable_id' => 'required|integer',
+            'schedules' => 'required|array|min:1',
+            'schedules.*.amount' => 'required|numeric|min:0.01',
+            'schedules.*.date' => 'required|date',
+            'schedules.*.note' => 'nullable|string|max:500',
         ]);
 
         $modelMap = [
-            'sale'             => \App\Models\Sale::class,
-            'purchase'         => \App\Models\Purchase::class,
-            'ticket_sale'      => \App\Models\TicketSale::class,
-            'ticket_purchase'  => \App\Models\TicketPurchase::class,
+            'sale' => Sale::class,
+            'purchase' => Purchase::class,
+            'ticket_sale' => TicketSale::class,
+            'ticket_purchase' => TicketPurchase::class,
         ];
 
         $modelClass = $modelMap[$request->schedulable_type];
-        $model      = $modelClass::findOrFail($request->schedulable_id);
+        $model = $modelClass::findOrFail($request->schedulable_id);
 
         // Total scheduled must not exceed remaining due_amount
         $alreadyScheduled = PaymentSchedule::where('schedulable_type', $modelClass)
@@ -247,16 +254,16 @@ class PaymentScheduleController extends Controller
         $dueField = $request->schedulable_type === 'ticket_purchase' ? $model->due_amount ?? 0 : $model->due_amount;
 
         if (($alreadyScheduled + $newTotal) > $dueField) {
-            return back()->withErrors(['amount' => 'Schedule total exceeds due amount: ' . $dueField]);
+            return back()->withErrors(['amount' => 'Schedule total exceeds due amount: '.$dueField]);
         }
 
         $type = in_array($request->schedulable_type, ['sale', 'ticket_sale']) ? 'receive' : 'pay';
 
         $partyMap = [
-            'sale'            => ['type' => 'customer', 'id' => $model->customer_id,  'name' => $model->customer?->name],
-            'purchase'        => ['type' => 'vendor',   'id' => $model->supplier_id,  'name' => $model->supplier?->name],
-            'ticket_sale'     => ['type' => 'agent',    'id' => $model->client_id,    'name' => 'Client #' . $model->client_id],
-            'ticket_purchase' => ['type' => 'vendor',   'id' => $model->vendor_id,    'name' => 'Vendor #' . $model->vendor_id],
+            'sale' => ['type' => 'customer', 'id' => $model->customer_id,  'name' => $model->customer?->name],
+            'purchase' => ['type' => 'vendor',   'id' => $model->supplier_id,  'name' => $model->supplier?->name],
+            'ticket_sale' => ['type' => 'agent',    'id' => $model->client_id,    'name' => 'Client #'.$model->client_id],
+            'ticket_purchase' => ['type' => 'vendor',   'id' => $model->vendor_id,    'name' => 'Vendor #'.$model->vendor_id],
         ];
         $party = $partyMap[$request->schedulable_type];
 
@@ -264,22 +271,22 @@ class PaymentScheduleController extends Controller
 
         foreach ($request->schedules as $sched) {
             PaymentSchedule::create([
-                'company_id'       => $companyId,
+                'company_id' => $companyId,
                 'schedulable_type' => $modelClass,
-                'schedulable_id'   => $model->id,
-                'type'             => $type,
-                'party_type'       => $party['type'],
-                'party_id'         => $party['id'],
-                'party_name'       => $party['name'],
-                'amount'           => $sched['amount'],
-                'scheduled_date'   => $sched['date'],
-                'status'           => 'pending',
-                'note'             => $sched['note'] ?? null,
-                'created_by'       => auth()->id(),
+                'schedulable_id' => $model->id,
+                'type' => $type,
+                'party_type' => $party['type'],
+                'party_id' => $party['id'],
+                'party_name' => $party['name'],
+                'amount' => $sched['amount'],
+                'scheduled_date' => $sched['date'],
+                'status' => 'pending',
+                'note' => $sched['note'] ?? null,
+                'created_by' => auth()->id(),
             ]);
         }
 
-        return back()->with('success', count($request->schedules) . ' schedule(s) created.');
+        return back()->with('success', count($request->schedules).' schedule(s) created.');
     }
 
     public function partyTypesByCompany(Request $request)
@@ -290,9 +297,9 @@ class PaymentScheduleController extends Controller
             ->orderBy('id')
             ->get(['id', 'name', 'slug', 'model_class']);
 
-        return response()->json($types->map(fn($pt) => [
-            'id'        => $pt->id,
-            'name'      => $pt->name,
+        return response()->json($types->map(fn ($pt) => [
+            'id' => $pt->id,
+            'name' => $pt->name,
             'has_model' => $pt->model_class ? 1 : 0,
         ]));
     }
@@ -301,7 +308,7 @@ class PaymentScheduleController extends Controller
     {
         $request->validate(['company_id' => 'required|integer']);
 
-        $categories = \App\Models\ProjectCategory::where('company_id', $request->company_id)
+        $categories = ProjectCategory::where('company_id', $request->company_id)
             ->where('is_active', 1)
             ->orderBy('name')
             ->get(['id', 'name']);
@@ -322,27 +329,27 @@ class PaymentScheduleController extends Controller
     public function storeAdHoc(Request $request)
     {
         $request->validate([
-            'type'                => 'required|in:pay,receive',
-            'company_id'          => 'nullable|exists:companies,id',
+            'type' => 'required|in:pay,receive',
+            'company_id' => 'nullable|exists:companies,id',
             'project_category_id' => 'nullable|exists:project_categories,id',
-            'party_type_id'       => 'required|exists:party_types,id',
-            'party_id'        => 'nullable|integer',
-            'party_name'      => 'nullable|string|max:200',
-            'source_label'    => 'required|string|max:200',
-            'amount'          => 'required|numeric|min:0.01',
-            'scheduled_date'  => 'required|date',
-            'note'            => 'nullable|string|max:500',
-            'priority'        => 'nullable|in:high,medium,low',
+            'party_type_id' => 'required|exists:party_types,id',
+            'party_id' => 'nullable|integer',
+            'party_name' => 'nullable|string|max:200',
+            'source_label' => 'required|string|max:200',
+            'amount' => 'required|numeric|min:0.01',
+            'scheduled_date' => 'required|date',
+            'note' => 'nullable|string|max:500',
+            'priority' => 'nullable|in:high,medium,low',
         ]);
 
         $partyTypeModel = PartyType::findOrFail($request->party_type_id);
-        $partySlug      = $partyTypeModel->slug ?? strtolower($partyTypeModel->name);
-        $partyId        = null;
-        $partyName      = $request->party_name;
+        $partySlug = $partyTypeModel->slug ?? strtolower($partyTypeModel->name);
+        $partyId = null;
+        $partyName = $request->party_name;
 
         if ($partyTypeModel->hasModel() && $request->party_id) {
-            $partyId   = (int) $request->party_id;
-            $found     = ($partyTypeModel->model_class)::find($partyId);
+            $partyId = (int) $request->party_id;
+            $found = $partyTypeModel->findParty($partyId);
             $partyName = $found?->name ?? $partyName;
         }
 
@@ -350,39 +357,39 @@ class PaymentScheduleController extends Controller
             return back()->withErrors(['party_name' => 'Party name is required.'])->withInput();
         }
 
-        $userId    = Auth::id();
+        $userId = Auth::id();
         $companyId = $request->company_id ?? Auth::user()?->company_id;
 
         DB::transaction(function () use ($request, $userId, $companyId, $partySlug, $partyId, $partyName) {
             $schedule = PaymentSchedule::create([
-                'company_id'          => $companyId,
+                'company_id' => $companyId,
                 'project_category_id' => $request->project_category_id ?: null,
-                'schedulable_type'    => null,
-                'schedulable_id'      => null,
-                'type'                => $request->type,
-                'party_type'       => $partySlug,
-                'party_id'         => $partyId,
-                'party_name'       => $partyName,
-                'source_label'     => $request->source_label,
-                'amount'           => $request->amount,
-                'scheduled_date'   => $request->scheduled_date,
-                'status'           => 'pending',
-                'priority'         => $request->priority ?? 'medium',
-                'note'             => $request->note,
-                'created_by'       => $userId,
+                'schedulable_type' => null,
+                'schedulable_id' => null,
+                'type' => $request->type,
+                'party_type' => $partySlug,
+                'party_id' => $partyId,
+                'party_name' => $partyName,
+                'source_label' => $request->source_label,
+                'amount' => $request->amount,
+                'scheduled_date' => $request->scheduled_date,
+                'status' => 'pending',
+                'priority' => $request->priority ?? 'medium',
+                'note' => $request->note,
+                'created_by' => $userId,
             ]);
 
             // Journal entries for ad-hoc schedule (accrual basis)
             // pay     → DR General Expense (6000) | CR Accounts Payable (2110)
             // receive → DR Accounts Receivable (1130) | CR Sales Revenue (4100)
             if ($request->type === 'pay') {
-                $debitAccount  = Account::where('code', config('accounts.general_expense'))->firstOrFail();
+                $debitAccount = Account::where('code', config('accounts.general_expense'))->firstOrFail();
                 $creditAccount = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
-                $reference     = 'ADHOC-PAY-' . $schedule->id;
+                $reference = 'ADHOC-PAY-'.$schedule->id;
             } else {
-                $debitAccount  = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
+                $debitAccount = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
                 $creditAccount = Account::where('code', config('accounts.sales_revenue'))->firstOrFail();
-                $reference     = 'ADHOC-RCV-' . $schedule->id;
+                $reference = 'ADHOC-RCV-'.$schedule->id;
             }
 
             $this->postBalancedJournal(
@@ -391,7 +398,7 @@ class PaymentScheduleController extends Controller
                 $companyId,
                 $request->scheduled_date,
                 $reference,
-                $request->source_label . ' — ' . $partyName,
+                $request->source_label.' — '.$partyName,
                 $debitAccount->id,
                 $creditAccount->id,
                 (float) $request->amount,
@@ -412,19 +419,19 @@ class PaymentScheduleController extends Controller
         }
 
         $schedule->update([
-            'status'        => 'approved',
-            'approved_by'   => auth()->id(),
-            'approved_at'   => now(),
+            'status' => 'approved',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
             'approval_note' => $request->approval_note,
         ]);
 
         PaymentScheduleLog::create([
             'payment_schedule_id' => $schedule->id,
-            'action'              => 'approved',
-            'old_date'            => $schedule->scheduled_date,
-            'new_date'            => $schedule->scheduled_date,
-            'reason'              => $request->approval_note,
-            'done_by'             => auth()->id(),
+            'action' => 'approved',
+            'old_date' => $schedule->scheduled_date,
+            'new_date' => $schedule->scheduled_date,
+            'reason' => $request->approval_note,
+            'done_by' => auth()->id(),
         ]);
 
         return back()->with('success', 'Schedule approved successfully.');
@@ -441,17 +448,17 @@ class PaymentScheduleController extends Controller
         }
 
         $schedule->update([
-            'status'        => 'rejected',
+            'status' => 'rejected',
             'approval_note' => $request->approval_note,
         ]);
 
         PaymentScheduleLog::create([
             'payment_schedule_id' => $schedule->id,
-            'action'              => 'rejected',
-            'old_date'            => $schedule->scheduled_date,
-            'new_date'            => $schedule->scheduled_date,
-            'reason'              => $request->approval_note,
-            'done_by'             => auth()->id(),
+            'action' => 'rejected',
+            'old_date' => $schedule->scheduled_date,
+            'new_date' => $schedule->scheduled_date,
+            'reason' => $request->approval_note,
+            'done_by' => auth()->id(),
         ]);
 
         return back()->with('success', 'Schedule rejected.');
@@ -461,7 +468,7 @@ class PaymentScheduleController extends Controller
     {
         $request->validate([
             'new_date' => 'required|date',
-            'reason'   => 'required|string|max:500',
+            'reason' => 'required|string|max:500',
         ]);
 
         if ($schedule->status === 'paid') {
@@ -471,23 +478,23 @@ class PaymentScheduleController extends Controller
         $oldDate = $schedule->scheduled_date;
 
         $schedule->update([
-            'scheduled_date'          => $request->new_date,
+            'scheduled_date' => $request->new_date,
             'original_scheduled_date' => $schedule->original_scheduled_date ?? $oldDate,
-            'reschedule_count'        => $schedule->reschedule_count + 1,
-            'reschedule_reason'       => $request->reason,
-            'status'                  => 'pending',   // reset overdue/rejected back to pending
+            'reschedule_count' => $schedule->reschedule_count + 1,
+            'reschedule_reason' => $request->reason,
+            'status' => 'pending',   // reset overdue/rejected back to pending
         ]);
 
         PaymentScheduleLog::create([
             'payment_schedule_id' => $schedule->id,
-            'action'              => 'rescheduled',
-            'old_date'            => $oldDate,
-            'new_date'            => $request->new_date,
-            'reason'              => $request->reason,
-            'done_by'             => auth()->id(),
+            'action' => 'rescheduled',
+            'old_date' => $oldDate,
+            'new_date' => $request->new_date,
+            'reason' => $request->reason,
+            'done_by' => auth()->id(),
         ]);
 
-        return back()->with('success', 'Schedule moved to ' . \Carbon\Carbon::parse($request->new_date)->format('d M Y') . '.');
+        return back()->with('success', 'Schedule moved to '.Carbon::parse($request->new_date)->format('d M Y').'.');
     }
 
     public function markPaid(string $_role, PaymentSchedule $schedule, Request $request)
@@ -501,11 +508,11 @@ class PaymentScheduleController extends Controller
             // ledger closing balance of 2,190. A payment not yet made is a
             // schedule, not a payment: leave it pending with a future
             // scheduled_date instead.
-            'payment_date'   => 'required|date|before_or_equal:today',
+            'payment_date' => 'required|date|before_or_equal:today',
             'payment_method' => 'nullable|string',
-            'bank_id'        => 'required|exists:banks,id',
-            'note'           => 'nullable|string|max:500',
-            'paid_amount'    => 'nullable|numeric|min:0.01',
+            'bank_id' => 'required|exists:banks,id',
+            'note' => 'nullable|string|max:500',
+            'paid_amount' => 'nullable|numeric|min:0.01',
             'remainder_date' => 'nullable|date',
         ]);
 
@@ -517,380 +524,409 @@ class PaymentScheduleController extends Controller
             return back()->with('error', 'Cannot mark a cancelled schedule as paid.');
         }
 
-        $paidAmt   = $request->filled('paid_amount')
-            ? min((float) $request->paid_amount, (float) $schedule->amount)
-            : (float) $schedule->amount;
-        $isPartial = $paidAmt < ((float) $schedule->amount - 0.001);
+        $paidAmt = 0.0;
+        $isPartial = false;
 
-        DB::transaction(function () use ($schedule, $request, $paidAmt, $isPartial) {
+        try {
+            DB::transaction(function () use ($schedule, $request, &$paidAmt, &$isPartial) {
 
-            $bank = Bank::findOrFail($request->bank_id);
-
-            // Checked on schedulable_type (the stored string), not on the
-            // resolved ->schedulable relation — a schedule whose underlying
-            // record was since (soft-)deleted still has the type string set,
-            // and must still route in here so settleEmployeeSchedule()'s
-            // orphan guard can raise a clear error, instead of silently
-            // falling through to an unrelated branch below.
-            if (in_array($schedule->schedulable_type, [EmployeeSalary::class, SalaryReconciliation::class])) {
-                $this->settleEmployeeSchedule($schedule, $bank, $request, $paidAmt, $isPartial);
-                return;
-            }
-
-            // ── Ad-hoc schedule ──────────────────────────────────────────
-            // pay:     DR Expense / CR AP  →  settlement: DR AP (2110) / CR Bank
-            // receive: DR AR / CR Revenue  →  settlement: DR Bank / CR AR (1130)
-            if (is_null($schedule->schedulable_type)) {
-                if (! $bank->account_id) {
-                    throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+                $schedule = PaymentSchedule::whereKey($schedule->id)->lockForUpdate()->firstOrFail();
+                if (in_array($schedule->status, ['paid', 'cancelled'], true)) {
+                    throw new \RuntimeException('This schedule can no longer be paid. Refresh the page and try again.');
                 }
 
-                if ($schedule->type === 'pay') {
-                    $apAccount       = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
-                    $debitAccountId  = $apAccount->id;
-                    $creditAccountId = $bank->account_id;
-                    $reference       = 'ADHOC-PAY-PAID-' . $schedule->id;
-                } else {
-                    $arAccount       = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
-                    $debitAccountId  = $bank->account_id;
-                    $creditAccountId = $arAccount->id;
-                    $reference       = 'ADHOC-RCV-PAID-' . $schedule->id;
+                $paidAmt = $request->filled('paid_amount')
+                    ? min((float) $request->paid_amount, (float) $schedule->amount)
+                    : (float) $schedule->amount;
+                $isPartial = $paidAmt < ((float) $schedule->amount - 0.001);
+
+                $bank = Bank::findOrFail($request->bank_id);
+
+                // Checked on schedulable_type (the stored string), not on the
+                // resolved ->schedulable relation — a schedule whose underlying
+                // record was since (soft-)deleted still has the type string set,
+                // and must still route in here so settleEmployeeSchedule()'s
+                // orphan guard can raise a clear error, instead of silently
+                // falling through to an unrelated branch below.
+                if (in_array($schedule->schedulable_type, [EmployeeSalary::class, SalaryReconciliation::class])) {
+                    $this->settleEmployeeSchedule($schedule, $bank, $request, $paidAmt, $isPartial);
+
+                    return;
                 }
 
-                $this->postBalancedJournal(
-                    'schedule_payment_settlement',
-                    $schedule->id,
-                    $schedule->company_id,
-                    $request->payment_date,
-                    $reference,
-                    ($schedule->source_label ?? 'Ad-hoc') . ' — ' . $schedule->party_name,
-                    $debitAccountId,
-                    $creditAccountId,
-                    $paidAmt,
-                    $schedule->source_label ?? $schedule->note,
-                    $schedule->source_label ?? $schedule->note,
-                    $schedule->party_type,
-                    null
-                );
+                // ── Ad-hoc schedule ──────────────────────────────────────────
+                // pay:     DR Expense / CR AP  →  settlement: DR AP (2110) / CR Bank
+                // receive: DR AR / CR Revenue  →  settlement: DR Bank / CR AR (1130)
+                if (is_null($schedule->schedulable_type)) {
+                    if (! $bank->account_id) {
+                        throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+                    }
+
+                    if ($schedule->type === 'pay') {
+                        $apAccount = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
+                        $debitAccountId = $apAccount->id;
+                        $creditAccountId = $bank->account_id;
+                        $reference = 'ADHOC-PAY-PAID-'.$schedule->id;
+
+                        // Only the pay leg takes money out; the receive leg below
+                        // debits the bank and never needs a balance.
+                        Bank::assertCanCover((int) $bank->account_id, (float) $paidAmt, $bank->name);
+                    } else {
+                        $arAccount = Account::where('code', config('accounts.accounts_receivable'))->firstOrFail();
+                        $debitAccountId = $bank->account_id;
+                        $creditAccountId = $arAccount->id;
+                        $reference = 'ADHOC-RCV-PAID-'.$schedule->id;
+                    }
+
+                    $this->postBalancedJournal(
+                        'schedule_payment_settlement',
+                        $schedule->id,
+                        $schedule->company_id,
+                        $request->payment_date,
+                        $reference,
+                        ($schedule->source_label ?? 'Ad-hoc').' — '.$schedule->party_name,
+                        $debitAccountId,
+                        $creditAccountId,
+                        $paidAmt,
+                        $schedule->source_label ?? $schedule->note,
+                        $schedule->source_label ?? $schedule->note,
+                        $schedule->party_type,
+                        null
+                    );
+
+                    $schedule->update([
+                        'status' => 'paid',
+                        'paid_amount' => $paidAmt,
+                        'paid_date' => $request->payment_date,
+                        'note' => $request->note ?? $schedule->note,
+                    ]);
+
+                    PaymentScheduleLog::create([
+                        'payment_schedule_id' => $schedule->id,
+                        'action' => $isPartial ? 'partial_paid' : 'paid',
+                        'old_date' => $schedule->scheduled_date,
+                        'new_date' => $request->payment_date,
+                        'reason' => ($isPartial ? 'Partial ৳'.number_format($paidAmt, 2).' of ৳'.number_format($schedule->amount, 2).'. ' : '').'Ad-hoc settled — Bank: '.$bank->name,
+                        'done_by' => auth()->id(),
+                    ]);
+
+                    if ($isPartial) {
+                        $this->createRemainderSchedule($schedule, $paidAmt, $request->remainder_date);
+                    }
+
+                    return;
+                }
+
+                // ── Visa Sale — keep paid/due/status in sync and clear AR ────
+                if ($schedule->schedulable instanceof VisaSale) {
+                    $sale = $schedule->schedulable;
+
+                    $newPaid = min((float) $sale->paid_amount + $paidAmt, (float) $sale->total_amount);
+                    $newDue = max(0, (float) $sale->total_amount - $newPaid);
+
+                    $sale->update([
+                        'paid_amount' => $newPaid,
+                        'due_amount' => $newDue,
+                        'status' => $newDue <= 0 ? 'paid' : ($newPaid > 0 ? 'partial' : 'pending'),
+                    ]);
+
+                    if ($sale->client_id) {
+                        $this->reconcilePartyBankBalance('visa_sale', $sale->id, $bank->id, $newPaid);
+                        $this->reconcilePartyLedgerRow(
+                            $sale->client_id, 'visa_sale', $sale->id, false, $newPaid,
+                            [
+                                'payment_date' => $request->payment_date,
+                                'reference_no' => $request->reference_no ?? $sale->invoice_number,
+                                'remarks' => 'Visa sale payment received (schedule) — '.$sale->invoice_number,
+                                'account_id' => $bank->id,
+                                'payment_method' => $request->payment_method,
+                            ]
+                        );
+                    } else {
+                        $bank->increment('balance', $paidAmt);
+                    }
+
+                    $this->postSaleJournalPayment(
+                        'visa_sale',
+                        $sale->id,
+                        TravelCompany::ID,
+                        $request->payment_date,
+                        $request->reference_no ?? $sale->invoice_number,
+                        'Visa sale payment received (schedule) — '.$sale->invoice_number,
+                        $paidAmt,
+                        $bank->id
+                    );
+                }
+
+                // ── Contract Flight Booking / Contract File Sale — keep
+                // paid/due/status in sync and clear AR, same shape as VisaSale ──
+                if ($schedule->schedulable instanceof ContractFlightBooking || $schedule->schedulable instanceof ContractFileSale) {
+                    $sale = $schedule->schedulable;
+                    $source = $sale instanceof ContractFlightBooking ? 'flight_sale' : 'file_sale';
+                    $reference = $sale instanceof ContractFlightBooking ? $sale->booking_number : $sale->invoice_number;
+
+                    $newPaid = min((float) $sale->paid_amount + $paidAmt, (float) $sale->total_amount);
+                    $newDue = max(0, (float) $sale->total_amount - $newPaid);
+
+                    $sale->update([
+                        'paid_amount' => $newPaid,
+                        'due_amount' => $newDue,
+                        'payment_status' => $newDue <= 0 ? 'paid' : ($newPaid > 0 ? 'partial' : 'due'),
+                    ]);
+
+                    if ($sale->client_id) {
+                        $this->reconcilePartyBankBalance($source, $sale->id, $bank->id, $newPaid);
+                        $this->reconcilePartyLedgerRow(
+                            $sale->client_id, $source, $sale->id, false, $newPaid,
+                            [
+                                'payment_date' => $request->payment_date,
+                                'reference_no' => $request->reference_no ?? $reference,
+                                'remarks' => ucfirst(str_replace('_', ' ', $source)).' payment received (schedule) — '.$reference,
+                                'account_id' => $bank->id,
+                                'payment_method' => $request->payment_method,
+                            ]
+                        );
+                    } else {
+                        $bank->increment('balance', $paidAmt);
+                    }
+
+                    $this->postSaleJournalPayment(
+                        $source,
+                        $sale->id,
+                        TravelCompany::ID,
+                        $request->payment_date,
+                        $request->reference_no ?? $reference,
+                        ucfirst(str_replace('_', ' ', $source)).' payment received (schedule) — '.$reference,
+                        $paidAmt,
+                        $bank->id
+                    );
+                }
+
+                // ── Visa Process / Contract Flight / Contract File — vendor
+                // payable settlement. These have no payment_status column (it's
+                // not a meaningful field for a cost/AP-side record — the formal
+                // journal below is the source of truth), so they get their own
+                // branch instead of falling into the generic one, same shape as
+                // the dedicated payVendor() actions on each controller ─────────
+                if ($schedule->schedulable instanceof VisaProcess
+                    || $schedule->schedulable instanceof ContractFlight
+                    || $schedule->schedulable instanceof ContractFile) {
+                    $model = $schedule->schedulable;
+
+                    $source = match (true) {
+                        $model instanceof VisaProcess => 'visa_process',
+                        $model instanceof ContractFlight => 'contract_flight',
+                        default => 'contract_file',
+                    };
+                    $costAmount = match (true) {
+                        $model instanceof VisaProcess => (float) $model->costing_price,
+                        $model instanceof ContractFlight => (float) $model->cost_price,
+                        default => (float) $model->visa_rate,
+                    };
+                    $reference = match (true) {
+                        $model instanceof VisaProcess => $model->application_id,
+                        $model instanceof ContractFlight => $model->flight_number,
+                        default => $model->file_number,
+                    };
+
+                    if (! $bank->account_id) {
+                        throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+                    }
+
+                    $newCostPaid = min((float) $model->cost_paid_amount + $paidAmt, $costAmount);
+                    $newDue = max(0, $costAmount - $newCostPaid);
+
+                    // Paying the vendor moves money out of this bank.
+                    Bank::assertCanCover((int) $bank->account_id, (float) $paidAmt, $bank->name);
+
+                    $this->reconcileCostPayment($source, $model->id, $bank->id, null, $newCostPaid, $model->vendor_id, $request->payment_date);
+
+                    $this->postPurchaseJournalPayment(
+                        $source,
+                        $model->id,
+                        TravelCompany::ID,
+                        $request->payment_date,
+                        $request->reference_no ?? $reference,
+                        ucfirst(str_replace('_', ' ', $source)).' vendor payment received (schedule) — '.$reference,
+                        $paidAmt,
+                        $bank->account_id
+                    );
+
+                    $model->forceFill(['due_amount' => $newDue, 'cost_paid_amount' => $newCostPaid])->saveQuietly();
+                }
+
+                // ── Ticket Purchase — vendor payable settlement. Its own
+                // dedicated make_payment() action already does this correctly
+                // (additive Transaction row per payment, not a cumulative
+                // reverse-and-reapply row like the trait's reconcileCostPayment),
+                // so mirror that exact shape here instead of falling into the
+                // generic branch below, which never touched the bank or the
+                // party ledger at all ─────────────────────────────────────────
+                if ($schedule->schedulable instanceof TicketPurchase) {
+                    $tp = $schedule->schedulable;
+
+                    if (! $bank->account_id) {
+                        throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+                    }
+
+                    // Settling a ticket purchase pays the vendor out of this bank.
+                    Bank::assertCanCover((int) $bank->account_id, (float) $paidAmt, $bank->name);
+
+                    // `old_balance`/`balance` are the vendor's own running
+                    // party-ledger balance, not the bank's — bank balance is
+                    // tracked separately below.
+                    $partyOldBalance = $tp->vendor_id
+                        ? (float) (Transaction::where('company_id', TravelCompany::ID)->where('user_id', $tp->vendor_id)->orderByDesc('id')->value('balance') ?? 0)
+                        : 0.0;
+                    $partyNewBalance = $partyOldBalance - $paidAmt;
+
+                    Transaction::create([
+                        'company_id' => TravelCompany::ID,
+                        'user_id' => $tp->vendor_id,
+                        'user_type' => 'supplier',
+                        'type' => 'ticket_purchase',
+                        'account_id' => $bank->id,
+                        'payment_date' => $request->payment_date,
+                        'reference_no' => $request->reference_no,
+                        'payment_method' => $request->payment_method,
+                        'invoice_id' => $tp->id,
+                        'old_balance' => $partyOldBalance,
+                        'debit' => 0,
+                        'credit' => $paidAmt,
+                        'balance' => $partyNewBalance,
+                        'remarks' => 'Ticket purchase due payment (schedule).',
+                    ]);
+
+                    $bank->update(['balance' => (float) $bank->balance - $paidAmt]);
+
+                    $newPaid = min((float) $tp->paid_amount + $paidAmt, (float) $tp->amount);
+                    $newDue = max(0, (float) $tp->due_amount - $paidAmt);
+
+                    $tp->update([
+                        'paid_amount' => $newPaid,
+                        'due_amount' => $newDue,
+                        'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
+                    ]);
+
+                    $this->postPurchaseJournalPayment(
+                        'ticket_purchase',
+                        $tp->id,
+                        TravelCompany::ID,
+                        $request->payment_date,
+                        $request->reference_no ?? $tp->ticket_no,
+                        'Ticket purchase payment made (schedule) — '.$tp->ticket_no,
+                        $paidAmt,
+                        $bank->account_id,
+                        'vendor',
+                        $tp->vendor_id
+                    );
+                }
+
+                // ── Ticket Sale — receivable settlement. Its own dedicated
+                // make_payment() action already does this correctly (additive
+                // Transaction row per payment via a locally-defined
+                // postPartyLedger() helper), so mirror that exact shape here
+                // instead of falling into the generic branch below, which never
+                // touched the bank, journal, or party ledger at all ───────────
+                if ($schedule->schedulable instanceof TicketSale) {
+                    $ts = $schedule->schedulable;
+
+                    if (! $bank->account_id) {
+                        throw new \Exception('Bank is not linked to a chart-of-accounts account.');
+                    }
+
+                    $partyOldBalance = $ts->client_id
+                        ? (float) (Transaction::where('company_id', TravelCompany::ID)->where('user_id', $ts->client_id)->orderByDesc('id')->value('balance') ?? 0)
+                        : 0.0;
+                    $partyNewBalance = $partyOldBalance - $paidAmt;
+
+                    Transaction::create([
+                        'company_id' => TravelCompany::ID,
+                        'user_id' => $ts->client_id,
+                        'user_type' => 'customer',
+                        'type' => 'ticket_sale',
+                        'account_id' => $bank->id,
+                        'payment_date' => $request->payment_date,
+                        'reference_no' => $request->reference_no,
+                        'payment_method' => $request->payment_method,
+                        'invoice_id' => $ts->id,
+                        'old_balance' => $partyOldBalance,
+                        'debit' => 0,
+                        'credit' => $paidAmt,
+                        'balance' => $partyNewBalance,
+                        'remarks' => 'Ticket sale due receipt (schedule).',
+                    ]);
+
+                    $bank->increment('balance', $paidAmt);
+
+                    $newPaid = min((float) $ts->paid_amount + $paidAmt, (float) $ts->total_amount);
+                    $newDue = max(0, (float) $ts->due_amount - $paidAmt);
+
+                    $ts->update([
+                        'paid_amount' => $newPaid,
+                        'due_amount' => $newDue,
+                        'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
+                    ]);
+
+                    $this->postSaleJournalPayment(
+                        'ticket_sale',
+                        $ts->id,
+                        TravelCompany::ID,
+                        $request->payment_date,
+                        $request->reference_no ?? $ts->invoice_no,
+                        'Ticket sale payment received (schedule) — '.$ts->invoice_no,
+                        $paidAmt,
+                        $bank->id,
+                        $this->resolvePartyType($ts->client),
+                        $ts->client_id
+                    );
+                }
+
+                // ── Linked document (Sale / Purchase / Ticket) ───────────────
+                $parent = $schedule->schedulable;
+                if ($parent
+                && ! ($parent instanceof VisaSale)
+                && ! ($parent instanceof ContractFlightBooking)
+                && ! ($parent instanceof ContractFileSale)
+                && ! ($parent instanceof VisaProcess)
+                && ! ($parent instanceof ContractFlight)
+                && ! ($parent instanceof ContractFile)
+                && ! ($parent instanceof TicketPurchase)
+                && ! ($parent instanceof TicketSale)
+                    && isset($parent->due_amount)) {
+                    $newDue = max(0, $parent->due_amount - $paidAmt);
+                    $parent->due_amount = $newDue;
+                    $parent->payment_status = $newDue <= 0 ? 'paid' : 'partial';
+                    $parent->save();
+                }
 
                 $schedule->update([
-                    'status'      => 'paid',
+                    'status' => 'paid',
                     'paid_amount' => $paidAmt,
-                    'paid_date'   => $request->payment_date,
-                    'note'        => $request->note ?? $schedule->note,
+                    'paid_date' => $request->payment_date,
+                    'note' => $request->note ?? $schedule->note,
                 ]);
 
                 PaymentScheduleLog::create([
                     'payment_schedule_id' => $schedule->id,
-                    'action'              => $isPartial ? 'partial_paid' : 'paid',
-                    'old_date'            => $schedule->scheduled_date,
-                    'new_date'            => $request->payment_date,
-                    'reason'              => ($isPartial ? 'Partial ৳' . number_format($paidAmt, 2) . ' of ৳' . number_format($schedule->amount, 2) . '. ' : '') . 'Ad-hoc settled — Bank: ' . $bank->name,
-                    'done_by'             => auth()->id(),
+                    'action' => $isPartial ? 'partial_paid' : 'paid',
+                    'old_date' => $schedule->scheduled_date,
+                    'new_date' => $request->payment_date,
+                    'reason' => ($isPartial ? 'Partial ৳'.number_format($paidAmt, 2).' of ৳'.number_format($schedule->amount, 2).'. ' : '').'Paid via '.($request->payment_method ?? 'N/A').' — Bank: '.$bank->name,
+                    'done_by' => auth()->id(),
                 ]);
 
                 if ($isPartial) {
                     $this->createRemainderSchedule($schedule, $paidAmt, $request->remainder_date);
                 }
-
-                return;
-            }
-
-            // ── Visa Sale — keep paid/due/status in sync and clear AR ────
-            if ($schedule->schedulable instanceof VisaSale) {
-                $sale = $schedule->schedulable;
-
-                $newPaid = min((float) $sale->paid_amount + $paidAmt, (float) $sale->total_amount);
-                $newDue  = max(0, (float) $sale->total_amount - $newPaid);
-
-                $sale->update([
-                    'paid_amount' => $newPaid,
-                    'due_amount'  => $newDue,
-                    'status'      => $newDue <= 0 ? 'paid' : ($newPaid > 0 ? 'partial' : 'pending'),
-                ]);
-
-                if ($sale->client_id) {
-                    $this->reconcilePartyBankBalance('visa_sale', $sale->id, $bank->id, $newPaid);
-                    $this->reconcilePartyLedgerRow(
-                        $sale->client_id, 'visa_sale', $sale->id, false, $newPaid,
-                        [
-                            'payment_date'   => $request->payment_date,
-                            'reference_no'   => $request->reference_no ?? $sale->invoice_number,
-                            'remarks'        => 'Visa sale payment received (schedule) — ' . $sale->invoice_number,
-                            'account_id'     => $bank->id,
-                            'payment_method' => $request->payment_method,
-                        ]
-                    );
-                } else {
-                    $bank->increment('balance', $paidAmt);
-                }
-
-                $this->postSaleJournalPayment(
-                    'visa_sale',
-                    $sale->id,
-                    $sale->company_id ?? auth()->user()->company_id ?? 2,
-                    $request->payment_date,
-                    $request->reference_no ?? $sale->invoice_number,
-                    'Visa sale payment received (schedule) — ' . $sale->invoice_number,
-                    $paidAmt,
-                    $bank->id
-                );
-            }
-
-            // ── Contract Flight Booking / Contract File Sale — keep
-            // paid/due/status in sync and clear AR, same shape as VisaSale ──
-            if ($schedule->schedulable instanceof ContractFlightBooking || $schedule->schedulable instanceof ContractFileSale) {
-                $sale = $schedule->schedulable;
-                $source = $sale instanceof ContractFlightBooking ? 'flight_sale' : 'file_sale';
-                $reference = $sale instanceof ContractFlightBooking ? $sale->booking_number : $sale->invoice_number;
-
-                $newPaid = min((float) $sale->paid_amount + $paidAmt, (float) $sale->total_amount);
-                $newDue  = max(0, (float) $sale->total_amount - $newPaid);
-
-                $sale->update([
-                    'paid_amount'    => $newPaid,
-                    'due_amount'     => $newDue,
-                    'payment_status' => $newDue <= 0 ? 'paid' : ($newPaid > 0 ? 'partial' : 'due'),
-                ]);
-
-                if ($sale->client_id) {
-                    $this->reconcilePartyBankBalance($source, $sale->id, $bank->id, $newPaid);
-                    $this->reconcilePartyLedgerRow(
-                        $sale->client_id, $source, $sale->id, false, $newPaid,
-                        [
-                            'payment_date'   => $request->payment_date,
-                            'reference_no'   => $request->reference_no ?? $reference,
-                            'remarks'        => ucfirst(str_replace('_', ' ', $source)) . ' payment received (schedule) — ' . $reference,
-                            'account_id'     => $bank->id,
-                            'payment_method' => $request->payment_method,
-                        ]
-                    );
-                } else {
-                    $bank->increment('balance', $paidAmt);
-                }
-
-                $this->postSaleJournalPayment(
-                    $source,
-                    $sale->id,
-                    auth()->user()->company_id ?? 2,
-                    $request->payment_date,
-                    $request->reference_no ?? $reference,
-                    ucfirst(str_replace('_', ' ', $source)) . ' payment received (schedule) — ' . $reference,
-                    $paidAmt,
-                    $bank->id
-                );
-            }
-
-            // ── Visa Process / Contract Flight / Contract File — vendor
-            // payable settlement. These have no payment_status column (it's
-            // not a meaningful field for a cost/AP-side record — the formal
-            // journal below is the source of truth), so they get their own
-            // branch instead of falling into the generic one, same shape as
-            // the dedicated payVendor() actions on each controller ─────────
-            if ($schedule->schedulable instanceof VisaProcess
-                || $schedule->schedulable instanceof ContractFlight
-                || $schedule->schedulable instanceof ContractFile) {
-                $model = $schedule->schedulable;
-
-                $source = match (true) {
-                    $model instanceof VisaProcess    => 'visa_process',
-                    $model instanceof ContractFlight => 'contract_flight',
-                    default                           => 'contract_file',
-                };
-                $costAmount = match (true) {
-                    $model instanceof VisaProcess    => (float) $model->costing_price,
-                    $model instanceof ContractFlight => (float) $model->cost_price,
-                    default                           => (float) $model->visa_rate,
-                };
-                $reference = match (true) {
-                    $model instanceof VisaProcess    => $model->application_id,
-                    $model instanceof ContractFlight => $model->flight_number,
-                    default                           => $model->file_number,
-                };
-
-                if (! $bank->account_id) {
-                    throw new \Exception('Bank is not linked to a chart-of-accounts account.');
-                }
-
-                $newCostPaid = min((float) $model->cost_paid_amount + $paidAmt, $costAmount);
-                $newDue      = max(0, $costAmount - $newCostPaid);
-
-                $this->reconcileCostPayment($source, $model->id, $bank->id, null, $newCostPaid, $model->vendor_id, $request->payment_date);
-
-                $this->postPurchaseJournalPayment(
-                    $source,
-                    $model->id,
-                    auth()->user()->company_id ?? 2,
-                    $request->payment_date,
-                    $request->reference_no ?? $reference,
-                    ucfirst(str_replace('_', ' ', $source)) . ' vendor payment received (schedule) — ' . $reference,
-                    $paidAmt,
-                    $bank->account_id
-                );
-
-                $model->forceFill(['due_amount' => $newDue, 'cost_paid_amount' => $newCostPaid])->saveQuietly();
-            }
-
-            // ── Ticket Purchase — vendor payable settlement. Its own
-            // dedicated make_payment() action already does this correctly
-            // (additive Transaction row per payment, not a cumulative
-            // reverse-and-reapply row like the trait's reconcileCostPayment),
-            // so mirror that exact shape here instead of falling into the
-            // generic branch below, which never touched the bank or the
-            // party ledger at all ─────────────────────────────────────────
-            if ($schedule->schedulable instanceof TicketPurchase) {
-                $tp = $schedule->schedulable;
-
-                if (! $bank->account_id) {
-                    throw new \Exception('Bank is not linked to a chart-of-accounts account.');
-                }
-
-                // `old_balance`/`balance` are the vendor's own running
-                // party-ledger balance, not the bank's — bank balance is
-                // tracked separately below.
-                $partyOldBalance = $tp->vendor_id
-                    ? (float) (Transaction::where('user_id', $tp->vendor_id)->orderByDesc('id')->value('balance') ?? 0)
-                    : 0.0;
-                $partyNewBalance = $partyOldBalance - $paidAmt;
-
-                Transaction::create([
-                    'user_id'        => $tp->vendor_id,
-                    'user_type'      => 'supplier',
-                    'type'           => 'ticket_purchase',
-                    'account_id'     => $bank->id,
-                    'payment_date'   => $request->payment_date,
-                    'reference_no'   => $request->reference_no,
-                    'payment_method' => $request->payment_method,
-                    'invoice_id'     => $tp->id,
-                    'old_balance'    => $partyOldBalance,
-                    'debit'          => 0,
-                    'credit'         => $paidAmt,
-                    'balance'        => $partyNewBalance,
-                    'remarks'        => 'Ticket purchase due payment (schedule).',
-                ]);
-
-                $bank->update(['balance' => (float) $bank->balance - $paidAmt]);
-
-                $newPaid = min((float) $tp->paid_amount + $paidAmt, (float) $tp->amount);
-                $newDue  = max(0, (float) $tp->due_amount - $paidAmt);
-
-                $tp->update([
-                    'paid_amount'    => $newPaid,
-                    'due_amount'     => $newDue,
-                    'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
-                ]);
-
-                $this->postPurchaseJournalPayment(
-                    'ticket_purchase',
-                    $tp->id,
-                    auth()->user()->company_id ?? 2,
-                    $request->payment_date,
-                    $request->reference_no ?? $tp->ticket_no,
-                    'Ticket purchase payment made (schedule) — ' . $tp->ticket_no,
-                    $paidAmt,
-                    $bank->account_id
-                );
-            }
-
-            // ── Ticket Sale — receivable settlement. Its own dedicated
-            // make_payment() action already does this correctly (additive
-            // Transaction row per payment via a locally-defined
-            // postPartyLedger() helper), so mirror that exact shape here
-            // instead of falling into the generic branch below, which never
-            // touched the bank, journal, or party ledger at all ───────────
-            if ($schedule->schedulable instanceof TicketSale) {
-                $ts = $schedule->schedulable;
-
-                if (! $bank->account_id) {
-                    throw new \Exception('Bank is not linked to a chart-of-accounts account.');
-                }
-
-                $partyOldBalance = $ts->client_id
-                    ? (float) (Transaction::where('user_id', $ts->client_id)->orderByDesc('id')->value('balance') ?? 0)
-                    : 0.0;
-                $partyNewBalance = $partyOldBalance - $paidAmt;
-
-                Transaction::create([
-                    'user_id'        => $ts->client_id,
-                    'user_type'      => 'customer',
-                    'type'           => 'ticket_sale',
-                    'account_id'     => $bank->id,
-                    'payment_date'   => $request->payment_date,
-                    'reference_no'   => $request->reference_no,
-                    'payment_method' => $request->payment_method,
-                    'invoice_id'     => $ts->id,
-                    'old_balance'    => $partyOldBalance,
-                    'debit'          => 0,
-                    'credit'         => $paidAmt,
-                    'balance'        => $partyNewBalance,
-                    'remarks'        => 'Ticket sale due receipt (schedule).',
-                ]);
-
-                $bank->increment('balance', $paidAmt);
-
-                $newPaid = min((float) $ts->paid_amount + $paidAmt, (float) $ts->total_amount);
-                $newDue  = max(0, (float) $ts->due_amount - $paidAmt);
-
-                $ts->update([
-                    'paid_amount'    => $newPaid,
-                    'due_amount'     => $newDue,
-                    'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
-                ]);
-
-                $this->postSaleJournalPayment(
-                    'ticket_sale',
-                    $ts->id,
-                    auth()->user()->company_id ?? 2,
-                    $request->payment_date,
-                    $request->reference_no ?? $ts->invoice_no,
-                    'Ticket sale payment received (schedule) — ' . $ts->invoice_no,
-                    $paidAmt,
-                    $bank->id
-                );
-            }
-
-            // ── Linked document (Sale / Purchase / Ticket) ───────────────
-            $parent = $schedule->schedulable;
-            if ($parent
-                && !($parent instanceof VisaSale)
-                && !($parent instanceof ContractFlightBooking)
-                && !($parent instanceof ContractFileSale)
-                && !($parent instanceof VisaProcess)
-                && !($parent instanceof ContractFlight)
-                && !($parent instanceof ContractFile)
-                && !($parent instanceof TicketPurchase)
-                && !($parent instanceof TicketSale)
-                && isset($parent->due_amount)) {
-                $newDue                 = max(0, $parent->due_amount - $paidAmt);
-                $parent->due_amount     = $newDue;
-                $parent->payment_status = $newDue <= 0 ? 'paid' : 'partial';
-                $parent->save();
-            }
-
-            $schedule->update([
-                'status'      => 'paid',
-                'paid_amount' => $paidAmt,
-                'paid_date'   => $request->payment_date,
-                'note'        => $request->note ?? $schedule->note,
-            ]);
-
-            PaymentScheduleLog::create([
-                'payment_schedule_id' => $schedule->id,
-                'action'              => $isPartial ? 'partial_paid' : 'paid',
-                'old_date'            => $schedule->scheduled_date,
-                'new_date'            => $request->payment_date,
-                'reason'              => ($isPartial ? 'Partial ৳' . number_format($paidAmt, 2) . ' of ৳' . number_format($schedule->amount, 2) . '. ' : '') . 'Paid via ' . ($request->payment_method ?? 'N/A') . ' — Bank: ' . $bank->name,
-                'done_by'             => auth()->id(),
-            ]);
-
-            if ($isPartial) {
-                $this->createRemainderSchedule($schedule, $paidAmt, $request->remainder_date);
-            }
-        });
+            });
+        } catch (\Throwable $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         $msg = $isPartial
-            ? 'Partial payment of ৳ ' . number_format($paidAmt, 2) . ' recorded. Remainder ৳ ' . number_format($schedule->amount - $paidAmt, 2) . ' scheduled as new pending.'
-            : 'Payment of ৳ ' . number_format($schedule->amount, 2) . ' marked as paid successfully.';
+            ? 'Partial payment of ৳ '.number_format($paidAmt, 2).' recorded. Remainder ৳ '.number_format($schedule->amount - $paidAmt, 2).' scheduled as new pending.'
+            : 'Payment of ৳ '.number_format($schedule->amount, 2).' marked as paid successfully.';
 
         return back()->with('success', $msg);
     }
@@ -912,32 +948,52 @@ class PaymentScheduleController extends Controller
         // applied when it actually wasn't (misallocating a lump-sum payment
         // to the next schedule in line instead). Fail loudly so the whole
         // payment transaction rolls back instead.
-        if (!$schedule->schedulable) {
+        if (! $schedule->schedulable) {
             throw new \Exception("Payment schedule #{$schedule->id} points to a deleted {$schedule->schedulable_type} record (#{$schedule->schedulable_id}) — cannot settle automatically, needs manual review.");
         }
 
         // ── Employee Salary ──────────────────────────────────────────
         if ($schedule->schedulable instanceof EmployeeSalary) {
             $salary = $schedule->schedulable;
+            app(EmployeePaymentService::class)->pay($salary->user, [
+                'amount' => $paidAmt, 'payment_date' => $request->payment_date,
+                'payment_method' => $request->payment_method, 'bank_id' => $bank->id,
+                'note' => $request->note, 'employee_salary_id' => $salary->id,
+            ]);
+            $schedule->update(['status' => 'paid', 'paid_amount' => $paidAmt,
+                'paid_date' => $request->payment_date, 'note' => $request->note ?? $schedule->note]);
+            PaymentScheduleLog::create(['payment_schedule_id' => $schedule->id,
+                'action' => $isPartial ? 'partial_paid' : 'paid', 'old_date' => $schedule->scheduled_date,
+                'new_date' => $request->payment_date, 'reason' => 'Allocated through immutable employee payment.',
+                'done_by' => auth()->id()]);
+            if ($isPartial) {
+                $this->createRemainderSchedule($schedule, $paidAmt, $request->remainder_date);
+            }
+
+            return;
+
+            // Pre-allocation implementation intentionally left unreachable
+            // during the transition; legacy records remain readable.
+            $salary = $schedule->schedulable;
 
             Payment::updateOrCreate(
                 [
-                    'user_id'            => $salary->user_id,
+                    'user_id' => $salary->user_id,
                     'employee_salary_id' => $salary->id,
                 ],
                 [
-                    'payment_date'   => $request->payment_date,
-                    'bank_id'        => $bank->id,
+                    'payment_date' => $request->payment_date,
+                    'bank_id' => $bank->id,
                     'payment_method' => $request->payment_method,
-                    'amount'         => $paidAmt,
-                    'transaction_no' => 'SCH-' . $schedule->id,
-                    'notes'          => $request->note,
+                    'amount' => $paidAmt,
+                    'transaction_no' => 'SCH-'.$schedule->id,
+                    'notes' => $request->note,
                 ]
             );
 
             if (! $isPartial) {
                 $salary->update([
-                    'status'         => 'Paid',
+                    'status' => 'Paid',
                     'payment_method' => $request->payment_method,
                     'scheduled_date' => $salary->scheduled_date ?? $schedule->scheduled_date,
                 ]);
@@ -953,31 +1009,31 @@ class PaymentScheduleController extends Controller
                 $schedule->id,
                 auth()->user()->company_id ?? $salary->user?->company_id ?? 2,
                 $request->payment_date,
-                'SALPAY-SCH-' . $schedule->id,
-                'Salary payment - ' . ($salary->user->name ?? 'Employee'),
+                'SALPAY-SCH-'.$schedule->id,
+                'Salary payment - '.($salary->user->name ?? 'Employee'),
                 $salaryPayableAccount->id,
                 $bank->account_id,
                 $paidAmt,
-                'Salary payable settled - ' . ($salary->user->name ?? 'Employee'),
-                'Salary paid via ' . $request->payment_method,
+                'Salary payable settled - '.($salary->user->name ?? 'Employee'),
+                'Salary paid via '.$request->payment_method,
                 'employee',
                 $salary->user_id
             );
 
             $schedule->update([
-                'status'      => 'paid',
+                'status' => 'paid',
                 'paid_amount' => $paidAmt,
-                'paid_date'   => $request->payment_date,
-                'note'        => $request->note ?? $schedule->note,
+                'paid_date' => $request->payment_date,
+                'note' => $request->note ?? $schedule->note,
             ]);
 
             PaymentScheduleLog::create([
                 'payment_schedule_id' => $schedule->id,
-                'action'              => $isPartial ? 'partial_paid' : 'paid',
-                'old_date'            => $schedule->scheduled_date,
-                'new_date'            => $request->payment_date,
-                'reason'              => ($isPartial ? 'Partial ৳' . number_format($paidAmt, 2) . ' of ৳' . number_format($schedule->amount, 2) . '. ' : '') . 'Salary paid via ' . $request->payment_method . ' - Bank: ' . $bank->name,
-                'done_by'             => auth()->id(),
+                'action' => $isPartial ? 'partial_paid' : 'paid',
+                'old_date' => $schedule->scheduled_date,
+                'new_date' => $request->payment_date,
+                'reason' => ($isPartial ? 'Partial ৳'.number_format($paidAmt, 2).' of ৳'.number_format($schedule->amount, 2).'. ' : '').'Salary paid via '.$request->payment_method.' - Bank: '.$bank->name,
+                'done_by' => auth()->id(),
             ]);
 
             if ($isPartial) {
@@ -986,11 +1042,11 @@ class PaymentScheduleController extends Controller
 
             // ── EMPLOYEE LEDGER (auto) ─────────────────────────────────
             $this->postEmployeeLedgerRow($salary->user_id, [
-                'type'       => 'salary_paid',
+                'type' => 'salary_paid',
                 'entry_date' => $request->payment_date,
-                'reference'  => ($isPartial ? 'Partial payment — ' : '') . 'Salary paid via ' . $request->payment_method,
-                'debit'      => 0,
-                'credit'     => $paidAmt,
+                'reference' => ($isPartial ? 'Partial payment — ' : '').'Salary paid via '.$request->payment_method,
+                'debit' => 0,
+                'credit' => $paidAmt,
             ], $salary);
             // ── END EMPLOYEE LEDGER ───────────────────────────────────
 
@@ -1017,31 +1073,31 @@ class PaymentScheduleController extends Controller
                 $schedule->id,
                 auth()->user()->company_id ?? $reconciliation->user?->company_id ?? 2,
                 $request->payment_date,
-                'RECONPAY-SCH-' . $schedule->id,
-                'Leave encashment payment - ' . ($reconciliation->user->name ?? 'Employee'),
+                'RECONPAY-SCH-'.$schedule->id,
+                'Leave encashment payment - '.($reconciliation->user->name ?? 'Employee'),
                 $salaryPayableAccount->id,
                 $bank->account_id,
                 $paidAmt,
-                'Leave encashment payable settled - ' . ($reconciliation->user->name ?? 'Employee'),
-                'Leave encashment paid via ' . $request->payment_method,
+                'Leave encashment payable settled - '.($reconciliation->user->name ?? 'Employee'),
+                'Leave encashment paid via '.$request->payment_method,
                 'employee',
                 $reconciliation->user_id
             );
 
             $schedule->update([
-                'status'      => 'paid',
+                'status' => 'paid',
                 'paid_amount' => $paidAmt,
-                'paid_date'   => $request->payment_date,
-                'note'        => $request->note ?? $schedule->note,
+                'paid_date' => $request->payment_date,
+                'note' => $request->note ?? $schedule->note,
             ]);
 
             PaymentScheduleLog::create([
                 'payment_schedule_id' => $schedule->id,
-                'action'              => $isPartial ? 'partial_paid' : 'paid',
-                'old_date'            => $schedule->scheduled_date,
-                'new_date'            => $request->payment_date,
-                'reason'              => ($isPartial ? 'Partial ৳' . number_format($paidAmt, 2) . ' of ৳' . number_format($schedule->amount, 2) . '. ' : '') . 'Leave encashment paid via ' . $request->payment_method . ' - Bank: ' . $bank->name,
-                'done_by'             => auth()->id(),
+                'action' => $isPartial ? 'partial_paid' : 'paid',
+                'old_date' => $schedule->scheduled_date,
+                'new_date' => $request->payment_date,
+                'reason' => ($isPartial ? 'Partial ৳'.number_format($paidAmt, 2).' of ৳'.number_format($schedule->amount, 2).'. ' : '').'Leave encashment paid via '.$request->payment_method.' - Bank: '.$bank->name,
+                'done_by' => auth()->id(),
             ]);
 
             if ($isPartial) {
@@ -1050,11 +1106,11 @@ class PaymentScheduleController extends Controller
 
             // ── EMPLOYEE LEDGER (auto) ─────────────────────────────────
             $this->postEmployeeLedgerRow($reconciliation->user_id, [
-                'type'       => 'salary_reconciliation_paid',
+                'type' => 'salary_reconciliation_paid',
                 'entry_date' => $request->payment_date,
-                'reference'  => ($isPartial ? 'Partial payment — ' : '') . 'Leave encashment paid via ' . $request->payment_method,
-                'debit'      => 0,
-                'credit'     => $paidAmt,
+                'reference' => ($isPartial ? 'Partial payment — ' : '').'Leave encashment paid via '.$request->payment_method,
+                'debit' => 0,
+                'credit' => $paidAmt,
             ], $reconciliation);
             // ── END EMPLOYEE LEDGER ───────────────────────────────────
 
@@ -1078,16 +1134,31 @@ class PaymentScheduleController extends Controller
     public function payDueAmount(Request $request, string $role, User $user)
     {
         $request->validate([
-            'amount'         => 'required|numeric|min:0.01',
+            'amount' => 'required|numeric|min:0.01',
             // Same rule as markPaid() above — see the note there.
-            'payment_date'   => 'required|date|before_or_equal:today',
+            'payment_date' => 'required|date|before_or_equal:today',
+            'transaction_time' => 'required|date_format:H:i',
             'payment_method' => 'nullable|string',
-            'bank_id'        => 'required|exists:banks,id',
-            'note'           => 'nullable|string|max:500',
+            // Cheque reuses these two fields for "which bank it's drawn on"
+            // and the cheque number itself — see syncPayDueRouteFields() in
+            // the view, which relabels them per method.
+            'recipient_bank' => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:150',
+            'recipient_account' => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:100',
+            'bank_id' => 'required|exists:banks,id',
+            'reference' => 'nullable|string|max:191',
+            'note' => 'nullable|string|max:500',
             'remainder_date' => 'nullable|date',
+            'employee_salary_id' => 'nullable|exists:employee_salaries,id',
         ]);
 
-        $ledgerBalance = (float) (EmployeeLedger::where('user_id', $user->id)->orderByDesc('id')->value('balance') ?? 0);
+        // A legacy payment may be inserted today with an older entry_date.
+        // Its row id is newest, but its stored running balance belongs in the
+        // historical sequence and is not the employee's closing balance.
+        // The closing balance is always the order-independent debit-credit sum.
+        $ledgerTotals = EmployeeLedger::where('user_id', $user->id)
+            ->selectRaw('COALESCE(SUM(debit), 0) AS debit_total, COALESCE(SUM(credit), 0) AS credit_total')
+            ->first();
+        $ledgerBalance = round((float) $ledgerTotals->debit_total - (float) $ledgerTotals->credit_total, 2);
 
         if ($ledgerBalance <= 0.01) {
             return response()->json([
@@ -1099,21 +1170,66 @@ class PaymentScheduleController extends Controller
         if ((float) $request->amount > $ledgerBalance + 0.01) {
             return response()->json([
                 'success' => false,
-                'message' => 'Amount cannot exceed the current due balance of ৳ ' . number_format($ledgerBalance, 2) . '.',
+                'message' => 'Amount cannot exceed the current due balance of ৳ '.number_format($ledgerBalance, 2).'.',
             ]);
         }
 
         $amount = (float) $request->amount;
 
         try {
+            $payment = app(EmployeePaymentService::class)->pay($user, $request->only([
+                'amount', 'payment_date', 'transaction_time', 'payment_method', 'recipient_bank', 'recipient_account', 'bank_id', 'reference', 'note', 'employee_salary_id',
+            ]));
+
+            // EmployeePaymentService::pay() settles the ledger and flips the
+            // EmployeeSalary's own status, but — unlike settleEmployeeSchedule()
+            // below, the schedule-driven Mark Paid path — it never touches
+            // payment_schedules. That row is what the dashboard's "Payment
+            // Schedules" widget actually counts (PaymentSchedule.status, not
+            // EmployeeSalary.status or the ledger), so a month paid off here
+            // kept showing as open/overdue there forever. $payment->allocations
+            // says exactly which salary got how much, so close the matching
+            // open schedule(s) for each the same way settleEmployeeSchedule()
+            // would have.
+            foreach ($payment->allocations as $allocation) {
+                $this->settleSchedulesForSalary(
+                    (int) $allocation->employee_salary_id,
+                    (float) $allocation->amount,
+                    $request->payment_date,
+                    $request->note
+                );
+            }
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment of ৳ '.number_format($amount, 2).' recorded and allocated successfully.',
+            'payment_id' => $payment->id,
+        ]);
+
+        /* Legacy schedule-driven settlement retained temporarily for reference;
+         * new employee payments never enter this branch. */
+
+        try {
             DB::transaction(function () use ($user, $request, $amount) {
                 $bank = Bank::findOrFail($request->bank_id);
                 $remaining = $amount;
 
+                // open(), not status = 'pending'. schedules:mark-overdue runs
+                // nightly and flips every past-due pending row to 'overdue',
+                // and approve() moves a row to 'approved' — so a 'pending'
+                // -only match loses a schedule the morning after its due date
+                // and again the moment anyone approves it. Both then fall
+                // through to the leftover branch below as an unattributed
+                // ledger credit, which is exactly how Azizul Haque's two
+                // ৳50,000 payments left his payslips ৳100,000 out of step
+                // with his ledger.
                 $schedules = PaymentSchedule::where('party_type', 'employee')
                     ->where('party_id', $user->id)
                     ->where('type', 'pay')
-                    ->where('status', 'pending')
+                    ->open()
                     ->whereIn('schedulable_type', [EmployeeSalary::class, SalaryReconciliation::class])
                     ->orderBy('scheduled_date')
                     ->orderBy('id')
@@ -1137,9 +1253,30 @@ class PaymentScheduleController extends Controller
                     $remaining = round($remaining - $payAmt, 2);
                 }
 
-                // Leftover beyond all pending schedules (e.g. a schedule-less
+                // Leftover beyond all open schedules (e.g. a schedule-less
                 // Bonus debit) — settle directly against the ledger.
                 if ($remaining > 0.01) {
+                    // …but only when the leftover really has nowhere to go.
+                    // A payslip that still shows a balance while owning no
+                    // open schedule means its schedule was cancelled,
+                    // rejected or never created — and paying into the ledger
+                    // here would credit the employee without ever marking
+                    // that month paid, leaving the Payslips tab and "Company
+                    // Owes" permanently apart. Refuse instead: the whole
+                    // transaction rolls back and the operator is told which
+                    // months to reopen first.
+                    $orphanMonths = $this->employeeMonthsWithoutOpenSchedule($user);
+
+                    if (! empty($orphanMonths)) {
+                        throw new \Exception(
+                            '৳ '.number_format($remaining, 2).' of this payment has no schedule to settle against, '
+                            .'but '.implode(', ', $orphanMonths).' still shows a balance on the Payslips tab. '
+                            .'Recording it now would put the ledger and the payslips permanently out of step. '
+                            .'Reopen the cancelled schedule for those months (Payment Schedules → Reopen), '
+                            .'or re-save the payslip to re-issue one, then take this payment again.'
+                        );
+                    }
+
                     $salaryPayableAccount = Account::where('code', config('accounts.salary_payable'))->firstOrFail();
                     if (! $bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
@@ -1150,23 +1287,23 @@ class PaymentScheduleController extends Controller
                         $user->id,
                         auth()->user()->company_id ?? $user->company_id ?? 2,
                         $request->payment_date,
-                        'DUEPAY-' . $user->id . '-' . now()->format('YmdHis'),
-                        'Due balance settlement - ' . $user->name,
+                        'DUEPAY-'.$user->id.'-'.now()->format('YmdHis'),
+                        'Due balance settlement - '.$user->name,
                         $salaryPayableAccount->id,
                         $bank->account_id,
                         $remaining,
-                        'Due balance settled - ' . $user->name,
-                        'Due balance paid via ' . $request->payment_method,
+                        'Due balance settled - '.$user->name,
+                        'Due balance paid via '.$request->payment_method,
                         'employee',
                         $user->id
                     );
 
                     $this->postEmployeeLedgerRow($user->id, [
-                        'type'       => 'due_settlement',
+                        'type' => 'due_settlement',
                         'entry_date' => $request->payment_date,
-                        'reference'  => 'Due balance paid via ' . $request->payment_method,
-                        'debit'      => 0,
-                        'credit'     => $remaining,
+                        'reference' => 'Due balance paid via '.$request->payment_method,
+                        'debit' => 0,
+                        'credit' => $remaining,
                     ]);
                 }
             });
@@ -1179,8 +1316,23 @@ class PaymentScheduleController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Payment of ৳ ' . number_format($amount, 2) . ' recorded successfully.',
+            'message' => 'Payment of ৳ '.number_format($amount, 2).' recorded successfully.',
         ]);
+    }
+
+    public function reverseEmployeePayment(Request $request, string $role, EmployeePayment $payment)
+    {
+        $data = $request->validate([
+            'reason' => 'required|string|max:500',
+            'reversal_date' => 'required|date|before_or_equal:today',
+        ]);
+        try {
+            app(EmployeePaymentService::class)->reverse($payment, $data);
+
+            return response()->json(['success' => true, 'message' => 'Payment reversed; original payment and allocations were preserved for audit.']);
+        } catch (\Throwable $th) {
+            return response()->json(['success' => false, 'message' => $th->getMessage()], 422);
+        }
     }
 
     /**
@@ -1195,7 +1347,7 @@ class PaymentScheduleController extends Controller
     private function notifySalaryPayment(EmployeeSalary $salary, float $paidAmt, bool $isPartial, Request $request): void
     {
         $user = $salary->user;
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -1218,7 +1370,7 @@ class PaymentScheduleController extends Controller
             }
         }
 
-        if (!empty($user->phone)) {
+        if (! empty($user->phone)) {
             try {
                 // previousDue = what was owed right before this specific
                 // installment — $remainingDue already nets out this payment,
@@ -1227,20 +1379,20 @@ class PaymentScheduleController extends Controller
                 $previousDue = $remainingDue + $paidAmt;
 
                 $smsMessage = "Dear {$user->name}, your payment summary: "
-                    . 'Previous Due: ' . number_format($previousDue, 0)
-                    . ' Paid: ' . number_format($paidAmt, 0)
-                    . ' Current Due: ' . number_format($remainingDue, 0);
+                    .'Previous Due: '.number_format($previousDue, 0)
+                    .' Paid: '.number_format($paidAmt, 0)
+                    .' Current Due: '.number_format($remainingDue, 0);
 
                 $loanTaken = (float) ($salary->loan_deduction ?? 0);
                 $advanceTaken = (float) ($salary->advance_salary_deduction ?? 0);
                 if ($loanTaken > 0) {
-                    $smsMessage .= ' Loan Taken: ' . number_format($loanTaken, 0);
+                    $smsMessage .= ' Loan Taken: '.number_format($loanTaken, 0);
                 }
                 if ($advanceTaken > 0) {
-                    $smsMessage .= ' Advance Taken: ' . number_format($advanceTaken, 0);
+                    $smsMessage .= ' Advance Taken: '.number_format($advanceTaken, 0);
                 }
 
-                $smsMessage .= ' Date: ' . \Carbon\Carbon::parse($request->payment_date)->format('d-m-Y') . ' Thank you';
+                $smsMessage .= ' Date: '.Carbon::parse($request->payment_date)->format('d-m-Y').' Thank you';
 
                 sendSms($user->phone, $smsMessage);
             } catch (\Throwable $e) {
@@ -1255,45 +1407,102 @@ class PaymentScheduleController extends Controller
      */
     private function sendSalaryPaymentEmail(User $user, EmployeeSalary $salary, float $paidAmt, bool $isPartial, float $remainingDue, string $paymentMethod, string $paymentDate): void
     {
-        $subject = ($isPartial ? 'আংশিক বেতন পরিশোধ' : 'বেতন পরিশোধ') . ' (Salary Payment) - ' . $salary->month . '/' . $salary->year;
+        $subject = ($isPartial ? 'আংশিক বেতন পরিশোধ' : 'বেতন পরিশোধ').' (Salary Payment) - '.$salary->month.'/'.$salary->year;
         $htmlContent = view('emails.salary-payment-notice', [
-            'user'         => $user,
-            'salary'       => $salary,
-            'paidAmt'      => $paidAmt,
-            'isPartial'    => $isPartial,
+            'user' => $user,
+            'salary' => $salary,
+            'paidAmt' => $paidAmt,
+            'isPartial' => $isPartial,
             'remainingDue' => $remainingDue,
             'paymentMethod' => $paymentMethod,
-            'paymentDate'  => $paymentDate,
+            'paymentDate' => $paymentDate,
         ])->render();
 
         $response = sendBrevoMail($user->email, $user->name, $subject, $htmlContent);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             Log::warning('Brevo salary payment email API call failed.', [
                 'user_id' => $user->id,
-                'status'  => $response->status(),
-                'body'    => $response->body(),
+                'status' => $response->status(),
+                'body' => $response->body(),
             ]);
+        }
+    }
+
+    /**
+     * Closes the open payment_schedules row(s) for one salary month after
+     * Pay Due Amount allocated money to it directly — the same bookkeeping
+     * settleEmployeeSchedule() does for the schedule-driven Mark Paid button,
+     * generalized here since Pay Due Amount can spread one payment across
+     * several months in a single call. Usually one schedule per salary, but
+     * loops in case more than one is somehow open at once; a partial covers
+     * the oldest first and spawns a remainder for what's left unpaid, same
+     * as a manual partial Mark Paid would.
+     */
+    private function settleSchedulesForSalary(int $salaryId, float $allocated, string $paymentDate, ?string $note): void
+    {
+        if ($allocated <= 0.01) {
+            return;
+        }
+
+        $remaining = $allocated;
+
+        $schedules = PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
+            ->where('schedulable_id', $salaryId)
+            ->open()
+            ->orderBy('scheduled_date')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($schedules as $schedule) {
+            if ($remaining <= 0.01) {
+                break;
+            }
+
+            $portion = min($remaining, (float) $schedule->amount);
+            $isPartial = $portion < ((float) $schedule->amount - 0.01);
+
+            $schedule->update([
+                'status' => 'paid',
+                'paid_amount' => $portion,
+                'paid_date' => $paymentDate,
+                'note' => $note ?: $schedule->note,
+            ]);
+
+            PaymentScheduleLog::create([
+                'payment_schedule_id' => $schedule->id,
+                'action' => $isPartial ? 'partial_paid' : 'paid',
+                'old_date' => $schedule->scheduled_date,
+                'new_date' => $paymentDate,
+                'reason' => 'Allocated through Pay Due Amount.',
+                'done_by' => auth()->id(),
+            ]);
+
+            if ($isPartial) {
+                $this->createRemainderSchedule($schedule, $portion, null);
+            }
+
+            $remaining = round($remaining - $portion, 2);
         }
     }
 
     private function createRemainderSchedule(PaymentSchedule $schedule, float $paidAmt, ?string $remainderDate): void
     {
         PaymentSchedule::create([
-            'company_id'       => $schedule->company_id,
+            'company_id' => $schedule->company_id,
             'schedulable_type' => $schedule->schedulable_type,
-            'schedulable_id'   => $schedule->schedulable_id,
-            'type'             => $schedule->type,
-            'party_type'       => $schedule->party_type,
-            'party_id'         => $schedule->party_id,
-            'party_name'       => $schedule->party_name,
-            'source_label'     => $schedule->source_label,
-            'amount'           => round($schedule->amount - $paidAmt, 2),
-            'scheduled_date'   => $remainderDate ?? $schedule->scheduled_date,
-            'status'           => 'pending',
-            'priority'         => $schedule->priority,
-            'note'             => 'Remainder from partial payment (SCH-' . $schedule->id . ')',
-            'created_by'       => auth()->id(),
+            'schedulable_id' => $schedule->schedulable_id,
+            'type' => $schedule->type,
+            'party_type' => $schedule->party_type,
+            'party_id' => $schedule->party_id,
+            'party_name' => $schedule->party_name,
+            'source_label' => $schedule->source_label,
+            'amount' => round($schedule->amount - $paidAmt, 2),
+            'scheduled_date' => $remainderDate ?? $schedule->scheduled_date,
+            'status' => 'pending',
+            'priority' => $schedule->priority,
+            'note' => 'Remainder from partial payment (SCH-'.$schedule->id.')',
+            'created_by' => auth()->id(),
         ]);
     }
 
@@ -1307,12 +1516,146 @@ class PaymentScheduleController extends Controller
 
         PaymentScheduleLog::create([
             'payment_schedule_id' => $schedule->id,
-            'action'              => 'cancelled',
-            'old_date'            => $schedule->scheduled_date,
-            'done_by'             => auth()->id(),
+            'action' => 'cancelled',
+            'old_date' => $schedule->scheduled_date,
+            'done_by' => auth()->id(),
         ]);
 
         return back()->with('success', 'Schedule cancelled.');
+    }
+
+    /**
+     * Puts a cancelled schedule back in the payment queue.
+     *
+     * Cancelling used to be a one-way door: the only action left on a
+     * cancelled row was Delete, so a schedule cancelled by mistake could
+     * never be paid again. Worse, cancelled rows are invisible to both
+     * payDueAmount() and the paid/due totals, so the month kept showing
+     * unpaid while any payment for it landed on the ledger unattributed.
+     *
+     * The amount is re-derived from the source document rather than trusted
+     * from the row, because the usual reason a schedule was cancelled is
+     * that it held a wrong figure — three of Azizul Haque's carried
+     * ৳8,064.60 / ৳6,666.58 / ৳6,451.70 against ৳50,000 payslips (the
+     * 2026-08-19 net-salary bug fixed in PayrollService). Reopening one
+     * unchanged would just put the wrong number back in the queue.
+     */
+    public function reopen(string $_role, PaymentSchedule $schedule)
+    {
+        if ($schedule->status !== 'cancelled') {
+            return back()->with('error', 'Only a cancelled schedule can be reopened.');
+        }
+
+        // cancel() refuses a paid schedule, so this should be unreachable —
+        // but a row carrying money must never re-enter the queue, because
+        // its paid_amount would start counting as settled the moment the
+        // status stops being 'cancelled'.
+        if ((float) $schedule->paid_amount > 0.01) {
+            return back()->with('error', 'This schedule already carries a payment and cannot be reopened.');
+        }
+
+        $oldAmount = round((float) $schedule->amount, 2);
+        $amount = $this->outstandingForSchedulable($schedule) ?? $oldAmount;
+        $resynced = $amount !== $oldAmount;
+
+        $schedule->update([
+            'status' => 'pending',
+            'amount' => $amount,
+        ]);
+
+        PaymentScheduleLog::create([
+            'payment_schedule_id' => $schedule->id,
+            'action' => 'reopened',
+            'old_date' => $schedule->scheduled_date,
+            'new_date' => $schedule->scheduled_date,
+            'reason' => $resynced
+                ? 'Reopened as pending. Amount re-synced from ৳'.number_format($oldAmount, 2)
+                    .' to ৳'.number_format($amount, 2).' (outstanding on the source document).'
+                : 'Reopened as pending.',
+            'done_by' => auth()->id(),
+        ]);
+
+        return back()->with('success', $resynced
+            ? 'Schedule reopened as pending, amount corrected to ৳ '.number_format($amount, 2).'.'
+            : 'Schedule reopened as pending.');
+    }
+
+    /**
+     * What the document behind a schedule still owes, ignoring this schedule
+     * itself. Null when there is nothing to re-derive from — a non-employee
+     * schedulable, an ad-hoc schedule with no source, a (soft-)deleted
+     * source, or a document already settled in full — in which case the
+     * caller keeps the amount the row already holds.
+     */
+    private function outstandingForSchedulable(PaymentSchedule $schedule): ?float
+    {
+        if (! in_array($schedule->schedulable_type, [EmployeeSalary::class, SalaryReconciliation::class], true)) {
+            return null;
+        }
+
+        $source = $schedule->schedulable;
+
+        if (! $source) {
+            return null;
+        }
+
+        $total = (float) ($source instanceof EmployeeSalary ? $source->net_salary : $source->total_amount);
+
+        $settled = (float) PaymentSchedule::where('schedulable_type', $schedule->schedulable_type)
+            ->where('schedulable_id', $schedule->schedulable_id)
+            ->where('id', '!=', $schedule->id)
+            ->settled()
+            ->sum('paid_amount');
+
+        $outstanding = round($total - $settled, 2);
+
+        return $outstanding > 0.01 ? $outstanding : null;
+    }
+
+    /**
+     * Months this employee still owes money for that no open schedule can
+     * absorb — the payslip's schedule was cancelled, rejected, or never
+     * created.
+     *
+     * payDueAmount() books whatever it cannot allocate as a plain ledger
+     * credit. That is right for a genuinely schedule-less debit (a Bonus, an
+     * opening balance) and wrong for a payslip that has simply lost its
+     * schedule: the employee is credited, the month still reads unpaid, and
+     * the two figures never agree again. Returned as "F Y" labels so the
+     * refusal can name the months the operator has to fix.
+     */
+    private function employeeMonthsWithoutOpenSchedule(User $user): array
+    {
+        $salaries = EmployeeSalary::where('user_id', $user->id)
+            ->whereNotIn('status', ['Paid', 'paid'])
+            ->get(['id', 'month', 'year', 'net_salary']);
+
+        if ($salaries->isEmpty()) {
+            return [];
+        }
+
+        $ids = $salaries->pluck('id');
+
+        $settled = PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
+            ->whereIn('schedulable_id', $ids)
+            ->settled()
+            ->selectRaw('schedulable_id, SUM(paid_amount) as total')
+            ->groupBy('schedulable_id')
+            ->pluck('total', 'schedulable_id');
+
+        $open = PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
+            ->whereIn('schedulable_id', $ids)
+            ->open()
+            ->selectRaw('schedulable_id, SUM(amount) as total')
+            ->groupBy('schedulable_id')
+            ->pluck('total', 'schedulable_id');
+
+        return $salaries
+            ->filter(fn ($salary) => ((float) $salary->net_salary - (float) ($settled[$salary->id] ?? 0)) > 0.01
+                && (float) ($open[$salary->id] ?? 0) <= 0.01)
+            ->map(fn ($salary) => Carbon::createFromDate((int) $salary->year, (int) $salary->month, 1)->format('F Y'))
+            ->values()
+            ->all();
     }
 
     public function setPriority(string $_role, PaymentSchedule $schedule, Request $request)
@@ -1325,7 +1668,7 @@ class PaymentScheduleController extends Controller
             return response()->json(['success' => true, 'priority' => $schedule->priority]);
         }
 
-        return back()->with('success', 'Priority updated to ' . ucfirst($request->priority) . '.');
+        return back()->with('success', 'Priority updated to '.ucfirst($request->priority).'.');
     }
 
     public function destroy(string $_role, PaymentSchedule $paymentSchedule)

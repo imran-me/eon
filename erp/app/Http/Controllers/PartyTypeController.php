@@ -9,6 +9,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class PartyTypeController implements HasMiddleware
 {
@@ -22,15 +23,24 @@ class PartyTypeController implements HasMiddleware
         ];
     }
 
+    /**
+     * Where a party type's parties are read from. The `role:` entries point at
+     * users holding that Spatie role — the same rosters Party Management →
+     * Manage Vendor / Agent / Customer show — for companies whose parties are
+     * users rather than rows in the `suppliers` / `customers` tables.
+     */
     private array $modelOptions = [
-        ''                      => '— None (Free text / Others) —',
-        'App\Models\Customer'   => 'Customer',
-        'App\Models\Supplier'   => 'Supplier',
+        '' => '— None (Free text / Others) —',
+        'App\Models\Customer' => 'Customer (Customers table)',
+        'App\Models\Supplier' => 'Supplier (Suppliers table)',
+        'role:vendor' => 'Vendor — Party Management (users)',
+        'role:agent' => 'Agent — Party Management (users)',
+        'role:customer' => 'Customer — Party Management (users)',
     ];
 
     public function index(Request $request)
     {
-        $user        = Auth::user();
+        $user = Auth::user();
         $isSuperAdmin = $user?->is_super_admin;
         $userCompanyId = $user?->company_id;
 
@@ -41,13 +51,13 @@ class PartyTypeController implements HasMiddleware
             : $userCompanyId;
 
         $query = PartyType::with('company')
-            ->when($filterCompanyId, fn($q) => $q->where('company_id', $filterCompanyId))
-            ->when($request->filled('search'), fn($q) => $q->where('name', 'like', '%' . $request->search . '%'))
+            ->when($filterCompanyId, fn ($q) => $q->where('company_id', $filterCompanyId))
+            ->when($request->filled('search'), fn ($q) => $q->where('name', 'like', '%'.$request->search.'%'))
             ->orderBy('company_id')
             ->orderBy('id');
 
-        $partyTypes   = $query->paginate(20)->withQueryString();
-        $companies    = Company::orderBy('name')->get();
+        $partyTypes = $query->paginate(20)->withQueryString();
+        $companies = Company::orderBy('name')->get();
         $modelOptions = $this->modelOptions;
 
         return view('party-types.index', compact(
@@ -58,13 +68,13 @@ class PartyTypeController implements HasMiddleware
     public function store(Request $request)
     {
         $request->validate([
-            'name'        => 'required|string|max:100',
-            'model_class' => 'nullable|string|max:200',
-            'company_id'  => 'nullable|exists:companies,id',
+            'name' => 'required|string|max:100',
+            'model_class' => ['nullable', 'string', Rule::in(array_keys($this->modelOptions))],
+            'company_id' => 'nullable|exists:companies,id',
         ]);
 
         $companyId = $request->company_id ?? Auth::user()?->company_id;
-        $slug      = Str::slug($request->name, '_');
+        $slug = Str::slug($request->name, '_');
 
         $exists = PartyType::where('company_id', $companyId)->where('slug', $slug)->exists();
         if ($exists) {
@@ -72,9 +82,9 @@ class PartyTypeController implements HasMiddleware
         }
 
         $data = PartyType::create([
-            'company_id'  => $companyId,
-            'name'        => $request->name,
-            'slug'        => $slug,
+            'company_id' => $companyId,
+            'name' => $request->name,
+            'slug' => $slug,
             'model_class' => $request->model_class ?: null,
         ]);
 
@@ -90,9 +100,9 @@ class PartyTypeController implements HasMiddleware
         $partyType = PartyType::findOrFail($request->id ?? $id);
 
         $request->validate([
-            'name'        => 'required|string|max:100',
-            'model_class' => 'nullable|string|max:200',
-            'company_id'  => 'nullable|exists:companies,id',
+            'name' => 'required|string|max:100',
+            'model_class' => ['nullable', 'string', Rule::in(array_keys($this->modelOptions))],
+            'company_id' => 'nullable|exists:companies,id',
         ]);
 
         $slug = Str::slug($request->name, '_');
@@ -107,8 +117,8 @@ class PartyTypeController implements HasMiddleware
         }
 
         $partyType->update([
-            'name'        => $request->name,
-            'slug'        => $slug,
+            'name' => $request->name,
+            'slug' => $slug,
             'model_class' => $request->model_class ?: null,
         ]);
 
@@ -124,7 +134,7 @@ class PartyTypeController implements HasMiddleware
         try {
             $partyType = PartyType::find($request->item_id ?? $id);
 
-            if (!$partyType) {
+            if (! $partyType) {
                 return response()->json(['success' => false, 'message' => 'Party type not found.']);
             }
 

@@ -146,65 +146,29 @@
             </div>
 
             <div class="states-table-content">
-                {{-- ── Filters ──
-                     One panel for the whole page: all three tables read the same
+                {{-- ── Filters ── the Manage Flights filter strip.
+                     One bar for the whole page: all three tables read the same
                      scoped book, so a filter that narrowed only one of them would
                      leave the three disagreeing about what is on the desk. --}}
-                @if('employee' != $role)
-                    <form action="" method="get">
-                        @if(request('company_id'))
-                            <input type="hidden" name="company_id" value="{{ request('company_id') }}">
-                        @endif
-                        <div class="filter-container">
-                            <div class="filter-header {{ request()->hasAny(['user_id', 'month', 'state', 'search']) ? 'active' : '' }}">
-                                <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                            <div class="filter-content {{ request()->hasAny(['user_id', 'month', 'state', 'search']) ? 'active' : '' }}">
-                                <div class="closest filter-row">
-                                    <div class="filter-group">
-                                        <label for="search">Employee / Reason</label>
-                                        <input type="text" id="search" name="search" class="form-control"
-                                               value="{{ request('search') }}" placeholder="e.g. EG25 109" style="width:100%">
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="user_id">Employee</label>
-                                        <select id="user_id" name="user_id" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            @foreach ($users as $user)
-                                                <option value="{{ $user->id }}" {{ $user->id == request('user_id') ? 'selected' : '' }}>{{ $user->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="state">State</label>
-                                        <select id="state" name="state" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            <option value="awaiting" {{ request('state') === 'awaiting' ? 'selected' : '' }}>Awaiting release</option>
-                                            <option value="outstanding" {{ request('state') === 'outstanding' ? 'selected' : '' }}>Outstanding</option>
-                                            <option value="recovered" {{ request('state') === 'recovered' ? 'selected' : '' }}>Recovered</option>
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="month">Month</label>
-                                        <select id="month" name="month" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            @foreach($periods as $period)
-                                                <option value="{{ $period }}" {{ $period === request('month') ? 'selected' : '' }}>
-                                                    {{ $book->monthLabel($period) }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="filter-actions">
-                                    <button type="button" class="reset-btn">Reset</button>
-                                    <button type="submit" class="apply-btn">Apply Filters</button>
-                                </div>
-                            </div>
+                <form action="{{ route('role.advance-salaries.index', ['role' => $role]) }}" method="get">
+                    @if(request()->filled('company_id'))
+                        <input type="hidden" name="company_id" value="{{ request('company_id') }}">
+                    @endif
+                    <x-payroll-filter-bar placeholder="Search employee, ID or reason…" :dates="false"
+                        :segments="[['name' => 'state', 'label' => 'State', 'options' => ['awaiting' => 'Awaiting', 'outstanding' => 'Outstanding', 'recovered' => 'Recovered']]]"
+                        :reset="route('role.advance-salaries.index', ['role' => $role])" :keep="['company_id']"
+                        :pages="['page', 'emp_page', 'reg_page', 'txn_page']" :total="$register->total()">
+                        <div class="pfb-field">
+                            <label>For month</label>
+                            <select name="month">
+                                <option value="">All months</option>
+                                @foreach($periods as $period)
+                                    <option value="{{ $period }}" {{ $period === request('month') ? 'selected' : '' }}>{{ $book->monthLabel($period) }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                    </form>
-                @endif
+                    </x-payroll-filter-bar>
+                </form>
 
                 <div class="table-responsive overflow-x-auto" style="padding: 15px">
                     <table class="table table-hover min-w-full divide-y divide-gray-200">
@@ -379,7 +343,7 @@
                                 <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:11%">
                                     <i class="fas fa-tag mr-1 text-yellow-400"></i>Status
                                 </th>
-                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:12%">
+                                <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                     <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                 </th>
                             </tr>
@@ -417,6 +381,9 @@
                                     <td class="px-4 py-3 whitespace-nowrap">
                                         @if($value->is_released && $value->paid_at)
                                             <span class="text-sm text-gray-700">{{ \Carbon\Carbon::parse($value->paid_at)->format('d M Y') }}</span>
+                                            @if(!empty($paidFrom[$value->id]))
+                                                <p class="text-[11px] text-blue-600 leading-tight mt-0.5" title="{{ $paidFrom[$value->id]['ref'] }}"><i class="fas fa-building-columns mr-0.5"></i>{{ $paidFrom[$value->id]['bank'] }}</p>
+                                            @endif
                                         @else
                                             <span class="text-sm text-gray-300">not released</span>
                                         @endif
@@ -439,28 +406,38 @@
                                         </span>
                                     </td>
                                     <td class="px-4 py-3 whitespace-nowrap text-center">
+                                        @if($value->status !== 'Approved')
+                                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border {{ $value->status === 'Rejected' ? 'bg-red-100 text-red-700 border-red-200' : 'bg-blue-100 text-blue-700 border-blue-200' }}">
+                                                {{ $value->status }}
+                                            </span>
+                                        @else
                                         <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold border {{ $chipClass }}">
                                             <i class="fas {{ $chipIcon }} text-xs"></i> {{ $chipLabel }}
                                         </span>
+                                        @endif
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <div class="flex items-center justify-center gap-1">
+                                    <td class="px-2 py-3 whitespace-nowrap text-center">
+                                        <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-adv-actions>
                                             <button type="button"
-                                                class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 advance-view-btn"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 advance-view-btn"
                                                 data-advance-id="{{ $value->id }}" title="Open this advance">
-                                                <i class="fas fa-eye"></i><span>View</span>
+                                                <i class="fas fa-eye" style="font-size:11px"></i>
                                             </button>
                                             @can('view advance salary')
                                                 <a href="{{ route('role.advance-salaries.payment-slip', ['role' => $role, 'id' => $value->id]) }}"
                                                    onclick="event.stopPropagation()" target="_blank" rel="noopener"
-                                                   class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-600 hover:text-white transition-colors duration-150"
+                                                   class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-600 hover:text-white transition-colors duration-150"
                                                    title="Payment slip">
-                                                    <i class="fas fa-receipt text-xs"></i>
+                                                    <i class="fas fa-receipt" style="font-size:11px"></i>
                                                 </a>
                                             @endcan
                                             @can('edit advance salary')
+                                                @if($value->status === 'Approved' && !$value->is_released)
+                                                    <button type="button" class="release-advance-btn inline-flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-600 hover:text-white"
+                                                        onclick="event.stopPropagation()" data-id="{{ $value->id }}" data-name="{{ $value->user?->name }}" data-company="{{ $value->user?->company_id }}" data-amount="{{ $value->amount }}" data-month="{{ $value->month }}" data-reason="{{ $value->reason }}" title="Pay / release advance"><i class="fas fa-money-bill-transfer" style="font-size:11px"></i></button>
+                                                @endif
                                                 @if($value->status == 'Pending' && !$value->is_released)
-                                                    <button class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
+                                                    <button class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
                                                         onclick="event.stopPropagation()"
                                                         data-item_id="{{ $value->id }}"
                                                         data-user_id="{{ $value->user_id }}"
@@ -469,17 +446,17 @@
                                                         data-reason="{{ $value->reason }}"
                                                         data-status="{{ $value->status }}"
                                                         title="Edit this advance">
-                                                        <i class="fas fa-edit text-xs"></i>
+                                                        <i class="fas fa-edit" style="font-size:11px"></i>
                                                     </button>
                                                 @endif
                                             @endcan
                                             @can('delete advance salary')
                                                 @if(!$value->is_released)
                                                     <button type="button"
-                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
+                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
                                                         onclick="event.stopPropagation(); confirmDelete('{{ $value->id }}', 'this advance')"
                                                         title="Delete this advance">
-                                                        <i class="fas fa-trash text-xs"></i>
+                                                        <i class="fas fa-trash" style="font-size:11px"></i>
                                                     </button>
                                                 @endif
                                             @endcan
@@ -706,6 +683,41 @@
 @include('advance-salaries.edit-modal')
 @include('advance-salaries.delete-modal')
 
+<div id="releaseAdvanceModal" class="modal fixed inset-0 flex items-center justify-center z-50 hidden">
+    <div class="modal-backdrop fixed inset-0 bg-black opacity-50"></div>
+    <div class="bg-white w-11/12 md:max-w-2xl rounded-xl shadow-xl z-50 p-6 max-h-[92vh] overflow-y-auto">
+        <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-semibold">Give Advance</h3><button type="button" class="modal-close-release text-gray-400"><i class="fas fa-times"></i></button></div>
+        <form id="releaseAdvanceForm" method="POST">@csrf
+            <div class="space-y-4">
+                <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5"><i class="fas fa-sack-dollar mr-1"></i> Advance Details</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Amount</label><input id="release_amount" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm"></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">For Month</label><input id="release_month" type="month" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm"></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Payment Date *</label><input name="transaction_date" type="date" required value="{{ now()->toDateString() }}" max="{{ now()->toDateString() }}" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"></div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Custom Time *</label><input type="hidden" name="transaction_time" id="releaseTransactionTime"><div class="flex gap-1 items-center"><select id="releaseHour" class="w-20 px-2 py-2 border rounded-lg">@for($h=1;$h<=12;$h++)<option value="{{$h}}">{{str_pad($h,2,'0',STR_PAD_LEFT)}}</option>@endfor</select><span>:</span><select id="releaseMinute" class="w-20 px-2 py-2 border rounded-lg">@for($m=0;$m<60;$m++)<option value="{{$m}}">{{str_pad($m,2,'0',STR_PAD_LEFT)}}</option>@endfor</select><select id="releasePeriod" class="w-20 px-2 py-2 border rounded-lg"><option>AM</option><option>PM</option></select></div></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Reason</label><input id="release_reason" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm"></div>
+                    </div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5"><i class="fas fa-money-bill-transfer mr-1"></i> Money Route</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Payment Method *</label><select name="payment_method" id="releasePaymentMethod" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"><option value="">— Select —</option><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="mobile_banking">Mobile Banking</option><option value="cheque">Cheque</option><option value="card">Card</option></select></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Company Account (money out from) *</label><select name="bank_id" id="releaseBankId" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"><option value="">— Select —</option>@include('partials.bank-options', ['banks'=>$advanceBanks,'selected'=>null])</select></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Recorded in</label><select name="contra_account_id" required class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm">@foreach($advanceAccounts as $a)<option value="{{$a->id}}" @selected((int)$a->id===(int)$advanceDefaultId)>{{$a->code}} · {{$a->name}}</option>@endforeach</select></div>
+                        <div><label class="block text-slate-600 text-sm font-semibold mb-1">Reference No. / TRNX ID</label><input name="reference" id="releaseReference" maxlength="191" class="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm"></div>
+                    </div>
+                    <div id="releaseRecipientFields" class="hidden mt-3 rounded-lg border border-amber-100 bg-amber-50/60 p-3"><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label id="releaseRecipientBankLabel" class="block text-xs font-semibold mb-1">Employee Bank Name</label><input name="recipient_bank" id="releaseRecipientBank" placeholder="e.g. Dutch-Bangla Bank" class="w-full px-3 py-2 border rounded-lg text-sm"></div><div><label id="releaseRecipientAccountLabel" class="block text-xs font-semibold mb-1">Account Number</label><input name="recipient_account" id="releaseRecipientAccount" placeholder="Employee account number" class="w-full px-3 py-2 border rounded-lg text-sm"></div></div></div>
+                    <p class="text-xs text-slate-500 mt-3"><i class="fas fa-book mr-1"></i> Journal: Debit Salary Advance, credit the selected company account.</p>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5"><button type="button" class="modal-close-release px-4 py-2 rounded-lg bg-gray-100">Cancel</button><button type="submit" class="px-4 py-2 rounded-lg bg-amber-600 text-white font-semibold">Give Advance</button></div>
+        </form>
+    </div>
+</div>
+
 <div id="advanceDetailModal" class="modal fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="modal-backdrop fixed inset-0 bg-black opacity-50"></div>
     <div class="bg-white w-11/12 md:max-w-4xl mx-auto rounded-2xl shadow-lg z-50 max-h-[90vh] overflow-y-auto">
@@ -742,7 +754,56 @@
 
             // Show create modal
             $('.create-new-btn').click(function() {
+                advPaymentBox('create');
                 $('#createModal').removeClass('hidden');
+            });
+
+            // Approving pays the advance out, so the payment box shows only
+            // while Status is Approved (select2 fires jQuery's change).
+            $('#create_status').on('change', function () { advPaymentBox('create'); });
+            $('#edit_status').on('change', function () { advPaymentBox('edit'); });
+
+            $('.release-advance-btn').click(function () {
+                const id = $(this).data('id');
+                const now = new Date(), pad = n => String(n).padStart(2,'0'), hour = now.getHours();
+                $('#release_amount').val(Number($(this).data('amount')).toFixed(2));
+                $('#release_month').val($(this).data('month'));
+                $('#release_reason').val($(this).data('reason') || '');
+                $('#releaseHour').val(String((hour % 12) || 12)); $('#releaseMinute').val(String(now.getMinutes())); $('#releasePeriod').val(hour < 12 ? 'AM' : 'PM');
+                $('#releaseReference').val('ADV-' + now.getFullYear()+pad(now.getMonth()+1)+pad(now.getDate())+pad(hour)+pad(now.getMinutes())+pad(now.getSeconds()));
+                $('#releasePaymentMethod,#releaseBankId').val('');
+                $('#releaseAdvanceForm').data('company', String($(this).data('company') || ''));
+                $('#releaseAdvanceForm').attr('action', @json(route('role.advance-salaries.release', ['role' => $role, 'id' => '__ID__'])).replace('__ID__', id));
+                syncReleaseRoute();
+                $('#releaseAdvanceModal').removeClass('hidden');
+            });
+            const releaseTypes = {cash:['cash'],bank_transfer:['bank'],cheque:['bank'],card:['bank'],mobile_banking:['mobile_banking','digital_wallet']};
+            function syncReleaseRoute() {
+                const method = $('#releasePaymentMethod').val(), wanted = releaseTypes[method] || null, company = String($('#releaseAdvanceForm').data('company') || '');
+                let first = null;
+                $('#releaseBankId option').each(function(){if(!this.value)return;const owned=!String(this.dataset.company||'')||String(this.dataset.company)===company;this.hidden=this.disabled=!owned||(!!wanted&&!wanted.includes(this.dataset.type||''));if(!this.hidden&&!first)first=this;});
+                $('#releaseBankId optgroup').each(function(){const visible=$(this).find('option').toArray().some(o=>!o.hidden);this.hidden=this.disabled=!visible;});
+                if ($('#releaseBankId option:selected').prop('disabled')) $('#releaseBankId').val('');
+                if(method==='cash'&&first) $('#releaseBankId').val(first.value);
+                const recipient = method==='bank_transfer'||method==='cheque';
+                $('#releaseRecipientFields').toggleClass('hidden',!recipient);
+                $('#releaseRecipientBank,#releaseRecipientAccount').prop('required',recipient).prop('disabled',!recipient);
+                $('#releaseRecipientBankLabel').text(method==='cheque'?'Bank Name (cheque drawn on) *':'Employee Bank Name *');
+                $('#releaseRecipientAccountLabel').text(method==='cheque'?'Cheque No. *':'Account Number *');
+                $('#releaseRecipientBank').attr('placeholder', method==='cheque'?'e.g. Dutch-Bangla Bank':'e.g. Dutch-Bangla Bank');
+                $('#releaseRecipientAccount').attr('placeholder', method==='cheque'?'Enter cheque number':'Employee account number');
+            }
+            $('#releasePaymentMethod').change(syncReleaseRoute);
+            $('.modal-close-release').click(function () { $('#releaseAdvanceModal').addClass('hidden'); });
+            $('#releaseAdvanceForm').submit(function (e) {
+                e.preventDefault();
+                const hour=parseInt($('#releaseHour').val(),10), minute=$('#releaseMinute').val(), period=$('#releasePeriod').val();
+                const hour24=period==='PM'?(hour===12?12:hour+12):(hour===12?0:hour);
+                $('#releaseTransactionTime').val(String(hour24).padStart(2,'0')+':'+String(minute).padStart(2,'0'));
+                $.ajax({url:this.action,method:'POST',data:new FormData(this),processData:false,contentType:false,
+                    success:function(res){ if(res.success){Swal.fire('Done',res.message,'success');setTimeout(()=>location.reload(),700);}else Swal.fire('Error',res.message,'error'); },
+                    error:function(){Swal.fire('Error','Payment could not be released.','error');}
+                });
             });
 
             // Show edit modal
@@ -761,6 +822,9 @@
                 $('#edit_month').val(`${month}`);
                 $('#edit_reason').val(reason);
                 $('#edit_status').val(status).trigger('change'); 
+                $('#edit_transaction_date').val('{{ now()->toDateString() }}');
+                $('#edit_bank_id').val('');
+                advPaymentBox('edit');
                 $('#editModal').removeClass('hidden'); 
             });
 
@@ -948,7 +1012,30 @@
                 isValid = false;
             }                  
                                                                                               
+            if (!advPaymentValid('create')) {
+                isValid = false;
+            }
+
             return isValid;
+        }
+
+        function advPaymentBox(p) {
+            $('#' + p + '_payment_box').toggleClass('hidden', $('#' + p + '_status').val() !== 'Approved');
+        }
+
+        // Paid from, Recorded in and the date are required once Approved.
+        function advPaymentValid(p) {
+            if ($('#' + p + '_status').val() !== 'Approved') return true;
+            let ok = true;
+            ['bank_id', 'contra_account_id', 'transaction_date'].forEach(function (f) {
+                const el = $('#' + p + '_' + f);
+                if (!el.val()) {
+                    el.next('.error-message').removeClass('hidden');
+                    el.addClass('border-red-500');
+                    ok = false;
+                }
+            });
+            return ok;
         }
 
         function validateEditForm() {
@@ -971,8 +1058,10 @@
                 $('#edit_month').next('.error-message').removeClass('hidden');
                 $('#edit_month').addClass('border-red-500');
                 isValid = false;
-            }  
-            
+            }
+            // Approval and payment are separate. The edit form validates only
+            // the request/approval fields; money-route fields belong to the
+            // Pay / Release modal.
             return isValid;
         }
 
@@ -990,35 +1079,6 @@
             $('#deleteModal').removeClass('hidden');
         }
 
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterHeader = document.querySelector('.filter-container .filter-header');
-            const filterContent = document.querySelector('.filter-container .filter-content');
-            
-            filterHeader.addEventListener('click', function() {
-                this.classList.toggle('active');
-                filterContent.classList.toggle('active');
-            });
-            
-            // Reset button functionality
-            document.querySelector('.filter-container .reset-btn').addEventListener('click', function() {
-                const inputs = document.querySelectorAll('.filter-container select, .filter-container input');
-                inputs.forEach(input => {
-                    if (input.type === 'date') {
-                        input.value = '';
-                    } else {
-                        input.selectedIndex = 0;
-                    }
-                });
-            });
-            document.querySelector('.reset-btn').addEventListener('click', function (e) {
-                e.preventDefault();
-                // Company stays: it is a payroll-wide context set by the toolbar,
-                // not one of this page's own filters.
-                window.location = '{{ route('role.advance-salaries.index', array_filter(['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'company_id' => request('company_id')])) }}';
-            });
-        });
     </script>
     <script>
         /* ── One advance's whole history ──

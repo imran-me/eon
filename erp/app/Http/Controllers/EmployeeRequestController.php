@@ -8,6 +8,14 @@ use App\Models\ProjectDepartment;
 use App\Models\RequestDisbursement;
 use App\Models\RequireAssignment;
 use App\Models\User;
+use App\Models\AdvanceSalary;
+use App\Models\Bank;
+use App\Models\Loan;
+use App\Models\Account;
+use App\Models\JournalEntry;
+use App\Models\JournalItem;
+use App\Services\LoanLedgerService;
+use App\Services\AdvancePostingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +68,10 @@ class EmployeeRequestController implements HasMiddleware
         $users = User::orderBy('name')->where('status', 'active')->role('employee')->get();
         $requestTypes = EmployeeRequest::REQUEST_TYPES;
         $requireTypes = ProjectDepartment::where('status', true)->orderBy('name')->get(['id', 'name']);
+        $advancePosting = app(AdvancePostingService::class);
+        $advanceBanks = $advancePosting->banks();
+        $advanceAccounts = $advancePosting->contraAccounts();
+        $advanceDefaultId = optional($advanceAccounts->firstWhere('code', AdvancePostingService::defaultAccountCode()))->id;
 
         $stats = [
             'total'       => EmployeeRequest::count(),
@@ -68,7 +80,10 @@ class EmployeeRequestController implements HasMiddleware
             'fulfilled'   => EmployeeRequest::where('status', 'fulfilled')->count(),
         ];
 
-        return view('employee-requests.index', compact('datas', 'users', 'requestTypes', 'requireTypes', 'stats'));
+        return view('employee-requests.index', compact(
+            'datas', 'users', 'requestTypes', 'requireTypes', 'stats',
+            'advanceBanks', 'advanceAccounts', 'advanceDefaultId'
+        ));
     }
 
     public function create()
@@ -97,6 +112,9 @@ class EmployeeRequestController implements HasMiddleware
 
         if ($request->category === 'request') {
             $request->validate(['amount' => 'required|numeric|min:0']);
+            if ($request->request_type === 'advance_salary') {
+                $request->validate(['amount' => 'required|numeric|min:0.01']);
+            }
         }
 
         try {
@@ -213,6 +231,17 @@ class EmployeeRequestController implements HasMiddleware
                 'requested_at' => now(),
                 'metadata'     => $metadata,
             ]);
+
+            if ($employeeRequest->request_type === 'advance_salary') {
+                AdvanceSalary::create([
+                    'employee_request_id' => $employeeRequest->id,
+                    'user_id' => $employeeRequest->employee_id,
+                    'amount' => $employeeRequest->amount,
+                    'month' => now()->format('Y-m'),
+                    'reason' => $employeeRequest->reason,
+                    'status' => 'Pending',
+                ]);
+            }
 
             if ($request->category === 'require') {
                 RequireAssignment::create([
@@ -368,6 +397,10 @@ class EmployeeRequestController implements HasMiddleware
             'remarks'     => $request->remarks,
         ]);
 
+        if ($item->request_type === 'advance_salary') {
+            AdvanceSalary::where('employee_request_id', $item->id)->update(['status' => 'Approved']);
+        }
+
         return response()->json(['success' => true, 'message' => 'Request approved.']);
     }
 
@@ -388,19 +421,58 @@ class EmployeeRequestController implements HasMiddleware
             'remarks'     => $request->remarks,
         ]);
 
+        if ($item->request_type === 'advance_salary') {
+            AdvanceSalary::where('employee_request_id', $item->id)->update(['status' => 'Rejected']);
+        }
+
         return response()->json(['success' => true, 'message' => 'Request rejected.']);
     }
 
     public function disburse($role,Request $request, $id)
     {
-        $request->validate([
-            'payment_method'   => 'required|in:cash,bank_transfer,cheque,payroll_deduction',
+        $item = EmployeeRequest::with('employee')->findOrFail($id);
+        $isAdvance = $item->request_type === 'advance_salary';
+        $isLoan = $item->request_type === 'loan';
+
+        if ($isAdvance) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Approve this request, then release payment from Payroll → Advance Salary.',
+            ]);
+        }
+
+        $rules = [
+            'payment_method'   => ($isAdvance || $isLoan)
+                ? 'required|in:cash,bank_transfer,mobile_banking,cheque,card'
+                : 'required|in:cash,bank_transfer,cheque,payroll_deduction',
             'disbursed_amount' => 'required|numeric|min:0.01',
             'note'             => 'nullable|string|max:1000',
             'attachment'       => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
-        ]);
+        ];
+        if ($isAdvance || $isLoan) {
+            $rules += [
+                'transaction_date' => 'required|date|before_or_equal:today',
+                'transaction_time' => 'required|date_format:H:i',
+                'bank_id' => 'required|integer|exists:banks,id',
+                'recipient_bank' => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:150',
+                'recipient_account' => 'required_if:payment_method,bank_transfer,cheque|nullable|string|max:100',
+                'reference' => 'nullable|string|max:191',
+            ];
+            if ($isAdvance) {
+                $rules += ['month' => 'required|date_format:Y-m', 'contra_account_id' => 'required|integer|exists:accounts,id'];
+            }
+            if ($isLoan) {
+                $rules += ['monthly_deduction' => 'required|numeric|min:0.01|lte:disbursed_amount'];
+            }
+        }
+        $request->validate($rules);
 
-        $item = EmployeeRequest::findOrFail($id);
+        if (($isAdvance || $isLoan) && abs((float) $request->disbursed_amount - (float) $item->amount) > 0.009) {
+            return response()->json([
+                'success' => false,
+                'message' => ($isLoan ? 'Loan' : 'Advance') . ' disbursement must equal the approved request amount of ৳ ' . number_format((float) $item->amount, 2) . '.',
+            ]);
+        }
 
         if ($item->category !== EmployeeRequest::CATEGORY_REQUEST) {
             return response()->json(['success' => false, 'message' => 'Only request-type records can be disbursed.']);
@@ -422,12 +494,83 @@ class EmployeeRequestController implements HasMiddleware
                 $attachmentPath = $request->file('attachment')->store('request-disbursements', 'public');
             }
 
+            $advance = null;
+            $loan = null;
+            $journal = null;
+            if ($isAdvance) {
+                $advance = AdvanceSalary::create([
+                    'employee_request_id' => $item->id,
+                    'user_id' => $item->employee_id,
+                    'amount' => $request->disbursed_amount,
+                    'month' => $request->month,
+                    'reason' => $item->reason ?: $request->note,
+                    'status' => 'Approved',
+                ]);
+                $journal = app(AdvancePostingService::class)->release(
+                    $advance, (int) $request->bank_id, (int) $request->contra_account_id,
+                    $request->transaction_date, $request->transaction_time,
+                    $request->payment_method, $request->recipient_bank,
+                    $request->recipient_account, $request->reference
+                );
+            }
+
+            if ($isLoan) {
+                $bank = Bank::whereKey($request->bank_id)->whereNotNull('account_id')->firstOrFail();
+                if ($bank->company_id && $item->employee?->company_id
+                    && (int) $bank->company_id !== (int) $item->employee->company_id) {
+                    throw new \RuntimeException('Choose an account owned by the employee company, or a Group / Shared account.');
+                }
+                Bank::assertCanCover((int) $bank->account_id, (float) $request->disbursed_amount, $bank->name);
+                $loanAccount = Account::where('code', config('accounts.loan_receivable'))->firstOrFail();
+                $reference = trim((string) $request->reference) ?: 'LOAN-' . now()->format('YmdHis') . random_int(10, 99);
+                $loan = Loan::create([
+                    'user_id' => $item->employee_id,
+                    'bank_id' => $bank->id,
+                    'amount' => $request->disbursed_amount,
+                    'remaining_amount' => 0,
+                    'monthly_deduction' => $request->monthly_deduction,
+                    'status' => 'Running',
+                    'start_date' => $request->transaction_date,
+                ]);
+                $journal = JournalEntry::create([
+                    'company_id' => $item->employee?->company_id ?? Auth::user()?->company_id,
+                    'created_by' => Auth::id(),
+                    'date' => $request->transaction_date,
+                    'entry_time' => $request->transaction_time . ':00',
+                    'reference' => $reference,
+                    'source' => 'loan',
+                    'source_id' => $loan->id,
+                    'description' => 'Staff loan paid — ' . ($item->employee?->name ?: 'Employee'),
+                    'beneficiary' => $item->employee?->name,
+                    'beneficiary_party_id' => $item->employee_id,
+                    'beneficiary_method' => in_array($request->payment_method, ['cash', 'cheque']) ? $request->payment_method : 'bank',
+                    'beneficiary_bank' => $request->recipient_bank,
+                    'beneficiary_ref' => $request->recipient_account,
+                ]);
+                JournalItem::create([
+                    'journal_entry_id' => $journal->id, 'account_id' => $loanAccount->id,
+                    'debit' => $loan->amount, 'credit' => 0, 'note' => 'Loan issued to employee',
+                    'party_type' => 'employee', 'party_id' => $item->employee_id,
+                ]);
+                JournalItem::create([
+                    'journal_entry_id' => $journal->id, 'account_id' => $bank->account_id,
+                    'debit' => 0, 'credit' => $loan->amount, 'note' => 'Staff loan paid from ' . $bank->name,
+                    'party_type' => 'employee', 'party_id' => $item->employee_id,
+                ]);
+                app(LoanLedgerService::class)->recordDisbursement($loan, $journal->id);
+                app(LoanLedgerService::class)->syncLoanBalance($loan);
+            }
+
             RequestDisbursement::create([
                 'request_id'       => $item->id,
-                'payment_method'   => $request->payment_method,
+                'payment_method'   => in_array($request->payment_method, ['mobile_banking', 'card'], true)
+                    ? 'bank_transfer' : $request->payment_method,
                 'disbursed_amount' => $request->disbursed_amount,
                 'disbursed_by'     => Auth::id(),
-                'disbursed_at'     => now(),
+                'disbursed_at'     => ($isAdvance || $isLoan)
+                    ? \Carbon\Carbon::parse($request->transaction_date . ' ' . $request->transaction_time)
+                    : now(),
+                'journal_entry_id' => $journal?->id,
                 'attachment'       => $attachmentPath,
                 'note'             => $request->note,
             ]);
@@ -440,7 +583,9 @@ class EmployeeRequestController implements HasMiddleware
             return response()->json(['success' => false, 'message' => $th->getMessage()]);
         }
 
-        return response()->json(['success' => true, 'message' => 'Disbursement recorded. Request marked fulfilled.']);
+        return response()->json(['success' => true, 'message' => $isAdvance
+            ? 'Advance approved, paid, journaled and linked to payroll successfully.'
+            : ($isLoan ? 'Loan paid, journaled and scheduled for payroll recovery successfully.' : 'Disbursement recorded. Request marked fulfilled.')]);
     }
 
     public function fastTrack($id)

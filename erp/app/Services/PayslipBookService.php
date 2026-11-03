@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\EmployeePaymentAllocation;
 use App\Models\Payslip;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -34,11 +35,11 @@ class PayslipBookService
             return 'accrued';
         }
 
-        if (strtolower((string) $salary->status) === 'paid') {
+        $paid = EmployeePaymentAllocation::paidForSalary($salary->id);
+
+        if ($paid >= (float) $salary->net_salary - .01) {
             return 'paid';
         }
-
-        $paid = (float) ($salary->schedules?->sum(fn ($s) => (float) ($s->paid_amount ?? 0)) ?? 0);
 
         return $paid > 0 ? 'partial' : 'accrued';
     }
@@ -52,11 +53,7 @@ class PayslipBookService
             return 0.0;
         }
 
-        if (strtolower((string) $salary->status) === 'paid') {
-            return 0.0;
-        }
-
-        $paid = (float) ($salary->schedules?->sum(fn ($s) => (float) ($s->paid_amount ?? 0)) ?? 0);
+        $paid = EmployeePaymentAllocation::paidForSalary($salary->id);
 
         return max(0, round((float) $salary->net_salary - $paid, 2));
     }
@@ -118,18 +115,18 @@ class PayslipBookService
         $byStatus = $slips->countBy(fn (Payslip $s) => $this->status($s));
 
         return [
-            'count'       => $slips->count(),
-            'employees'   => $slips->pluck('user_id')->unique()->count(),
-            'months'      => $slips->map(fn (Payslip $s) => $this->period($s))->filter()->unique()->count(),
-            'gross'       => $gross,
-            'additions'   => $additions,
-            'net'         => $net,
-            'deductions'  => $deductions,
-            'due'         => $due,
-            'paid'        => round($net - $due, 2),
-            'paid_pct'    => $net > 0 ? (int) round(($net - $due) / $net * 100) : 0,
-            'by_status'   => [
-                'paid'    => (int) ($byStatus['paid'] ?? 0),
+            'count' => $slips->count(),
+            'employees' => $slips->pluck('user_id')->unique()->count(),
+            'months' => $slips->map(fn (Payslip $s) => $this->period($s))->filter()->unique()->count(),
+            'gross' => $gross,
+            'additions' => $additions,
+            'net' => $net,
+            'deductions' => $deductions,
+            'due' => $due,
+            'paid' => round($net - $due, 2),
+            'paid_pct' => $net > 0 ? (int) round(($net - $due) / $net * 100) : 0,
+            'by_status' => [
+                'paid' => (int) ($byStatus['paid'] ?? 0),
                 'partial' => (int) ($byStatus['partial'] ?? 0),
                 'accrued' => (int) ($byStatus['accrued'] ?? 0),
             ],
@@ -141,7 +138,7 @@ class PayslipBookService
     {
         return collect($byStatus)
             ->filter(fn (int $n) => $n > 0)
-            ->map(fn (int $n, string $k) => $n . ' ' . $k)
+            ->map(fn (int $n, string $k) => $n.' '.$k)
             ->implode(' · ') ?: 'none';
     }
 
@@ -175,7 +172,7 @@ class PayslipBookService
     private function buildSheet(Collection $slips, bool $withCompany): array
     {
         $byStatus = [
-            'paid'    => 0,
+            'paid' => 0,
             'partial' => 0,
             'accrued' => 0,
         ];
@@ -187,7 +184,7 @@ class PayslipBookService
 
             return array_values(array_filter([
                 $slip->payslip_number ?: '—',
-                $slip->user?->name ?? 'Employee #' . $slip->user_id,
+                $slip->user?->name ?? 'Employee #'.$slip->user_id,
                 $slip->user?->employee_id_no ?: '—',
                 $withCompany ? ($slip->user?->company?->short_name ?: $slip->user?->company?->name ?: '—') : null,
                 $this->periodLabel($this->period($slip)),
@@ -202,8 +199,8 @@ class PayslipBookService
         })->all();
 
         return [
-            'key'      => 'payslips',
-            'title'    => 'Payslip Register',
+            'key' => 'payslips',
+            'title' => 'Payslip Register',
             'subtitle' => 'every payslip issued — month · gross · deductions · net · still due',
             'filename' => 'payslips',
             'headings' => array_values(array_filter([
@@ -226,7 +223,7 @@ class PayslipBookService
              * no total — it counts instead, which is the question the column
              * actually raises. */
             'totals' => array_values(array_filter([
-                $slips->count() . ' ' . Str::plural('payslip', $slips->count()),
+                $slips->count().' '.Str::plural('payslip', $slips->count()),
                 null,
                 null,
                 $withCompany ? null : false,

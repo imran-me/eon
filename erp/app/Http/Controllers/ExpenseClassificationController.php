@@ -47,7 +47,13 @@ class ExpenseClassificationController extends Controller
             'categories'       => $this->categories($companyFilter, $search, $status),
             'subCategories'    => $this->subCategories($companyFilter, $search, $status),
             'companies'        => $locked ? Company::where('id', $userCompanyId)->get() : Company::orderBy('name')->get(),
-            'accounts'         => Account::where('status', 1)->where('type', 'expense')->orderBy('code')->get(['id', 'code', 'name']),
+            'accounts'         => Account::query()
+                ->with('company:id,name,short_name')
+                ->where('status', 1)
+                ->where('type', 'expense')
+                ->when($locked, fn ($q) => $q->where(fn ($w) => $w->whereNull('company_id')->orWhere('company_id', $userCompanyId)))
+                ->orderBy('code')
+                ->get(['id', 'code', 'name', 'company_id']),
             'fallbackAccount'  => Account::where('code', config('accounts.general_expense'))->first(['id', 'code', 'name']),
             'parentCategories' => $this->parentCategoryOptions($locked, $userCompanyId ? (int) $userCompanyId : null),
             'counts'           => $this->counts($companyFilter),
@@ -136,7 +142,9 @@ class ExpenseClassificationController extends Controller
             ->orderBy('expense_sub_categories.name');
 
         if ($companyId) {
-            $query->where('expense_sub_categories.company_id', $companyId);
+            $query->where(fn ($q) => $q
+                ->whereNull('expense_sub_categories.company_id')
+                ->orWhere('expense_sub_categories.company_id', $companyId));
         }
 
         if ($search !== '') {
@@ -162,7 +170,7 @@ class ExpenseClassificationController extends Controller
         // The sub-category controller refuses a parent from another company for a
         // locked user, so offering one would only produce a 403.
         if ($locked) {
-            $query->where('company_id', $userCompanyId);
+            $query->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $userCompanyId));
         }
 
         return $query->get(['id', 'name', 'company_id']);
@@ -182,7 +190,7 @@ class ExpenseClassificationController extends Controller
         if ($companyId) {
             $dept->where('company_id', $companyId);
             $cat->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId));
-            $sub->where('company_id', $companyId);
+            $sub->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $companyId));
         }
 
         return [

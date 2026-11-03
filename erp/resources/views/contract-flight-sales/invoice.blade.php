@@ -195,6 +195,7 @@
             <div class="nb" style="margin-bottom:14px;">
                 {{ ucfirst((new \NumberToWords\NumberToWords())->getNumberTransformer('en')->toWords((int) $booking->total_amount)) }} Taka Only
             </div>
+            @include('partials.payment-instructions', ['document' => $booking])
             <div class="sh">Notes:</div>
             <div class="nb">{{ $booking->notes ?: 'No additional notes for this booking.' }}</div>
         </div>
@@ -211,6 +212,7 @@
     {{-- Signature --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

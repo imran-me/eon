@@ -10,6 +10,7 @@ use App\Models\ContractFlightBookingItem;
 use App\Models\FlightCategory;
 use App\Models\PaymentSchedule;
 use App\Models\User;
+use App\Support\TravelCompany;
 use App\Traits\PostsPartyLedger;
 use App\Traits\PostsSaleJournal;
 use App\Traits\ResolvesPartyType;
@@ -133,7 +134,7 @@ class ContractFlightBookingController implements HasMiddleware
                 $this->syncItems($booking, $items);
                 $this->syncFlightSeats(collect($items)->pluck('contract_flight_id'));
                 $this->reconcileFlightLedger($booking, null);
-                $this->syncFlightJournal($booking, 'Flight sale — ' . $booking->booking_number);
+                $this->syncFlightJournal($booking, 'Flight sale — '.$booking->booking_number);
                 $this->syncFlightBookingReceivableSchedule($booking);
             });
         } catch (\Throwable $th) {
@@ -146,7 +147,7 @@ class ContractFlightBookingController implements HasMiddleware
     public function update(Request $request, $role, string $id)
     {
         $booking = ContractFlightBooking::with('items')->find($id);
-        if (!$booking) {
+        if (! $booking) {
             return response()->json(['success' => false, 'message' => 'Booking not found.']);
         }
 
@@ -158,7 +159,7 @@ class ContractFlightBookingController implements HasMiddleware
         try {
             DB::transaction(function () use ($booking, $request) {
                 $oldFlightIds = $booking->items->pluck('contract_flight_id');
-                $oldClientId  = $booking->client_id;
+                $oldClientId = $booking->client_id;
                 $items = $this->itemPayloads($request);
                 $booking->update($this->bookingPayload($request, $items));
                 $this->syncItems($booking, $items);
@@ -166,7 +167,7 @@ class ContractFlightBookingController implements HasMiddleware
                     collect($items)->pluck('contract_flight_id')
                 )->unique());
                 $this->reconcileFlightLedger($booking, $oldClientId);
-                $this->syncFlightJournal($booking, 'Flight sale (edited) — ' . $booking->booking_number);
+                $this->syncFlightJournal($booking, 'Flight sale (edited) — '.$booking->booking_number);
                 $this->syncFlightBookingReceivableSchedule($booking);
             });
         } catch (\Throwable $th) {
@@ -181,7 +182,7 @@ class ContractFlightBookingController implements HasMiddleware
         try {
             DB::transaction(function () use ($request, $id) {
                 $booking = ContractFlightBooking::with('items')->find($request->item_id ?? $id);
-                if (!$booking) {
+                if (! $booking) {
                     throw new \RuntimeException('Booking not found.');
                 }
 
@@ -215,7 +216,7 @@ class ContractFlightBookingController implements HasMiddleware
             $this->reversePartyLedger('flight_sale', $booking->id);
         }
 
-        if (!$booking->client_id) {
+        if (! $booking->client_id) {
             return;
         }
 
@@ -228,14 +229,14 @@ class ContractFlightBookingController implements HasMiddleware
 
         $this->reconcilePartyLedgerRow(
             $booking->client_id, 'flight_sale', $booking->id, true, (float) $booking->total_amount,
-            $common + ['remarks' => 'Flight sale invoice — ' . $booking->booking_number]
+            $common + ['remarks' => 'Flight sale invoice — '.$booking->booking_number]
         );
 
         $this->reconcilePartyLedgerRow(
             $booking->client_id, 'flight_sale', $booking->id, false, (float) $booking->paid_amount,
             $common + [
-                'remarks'        => 'Flight sale payment received — ' . $booking->booking_number,
-                'account_id'     => $booking->bank_id,
+                'remarks' => 'Flight sale payment received — '.$booking->booking_number,
+                'account_id' => $booking->bank_id,
                 'payment_method' => $booking->payment_method,
             ]
         );
@@ -250,7 +251,7 @@ class ContractFlightBookingController implements HasMiddleware
         $this->updateSaleJournal(
             'flight_sale',
             $booking->id,
-            Auth::user()->company_id ?? 2,
+            TravelCompany::ID,
             now(),
             $booking->booking_number,
             $description,
@@ -279,19 +280,19 @@ class ContractFlightBookingController implements HasMiddleware
         $booking->loadMissing('client');
 
         PaymentSchedule::create([
-            'company_id'       => Auth::user()->company_id ?? null,
+            'company_id' => TravelCompany::ID,
             'schedulable_type' => ContractFlightBooking::class,
-            'schedulable_id'   => $booking->id,
-            'type'             => 'receive',
-            'party_type'       => $this->resolvePartyType($booking->client),
-            'party_id'         => $booking->client_id,
-            'party_name'       => $booking->client?->name,
-            'source_label'     => $booking->booking_number,
-            'amount'           => (float) $booking->due_amount,
-            'paid_amount'      => (float) $booking->paid_amount,
-            'scheduled_date'   => $booking->receivable_date?->toDateString() ?? now()->toDateString(),
-            'status'           => 'pending',
-            'created_by'       => Auth::id(),
+            'schedulable_id' => $booking->id,
+            'type' => 'receive',
+            'party_type' => $this->resolvePartyType($booking->client),
+            'party_id' => $booking->client_id,
+            'party_name' => $booking->client?->name,
+            'source_label' => $booking->booking_number,
+            'amount' => (float) $booking->due_amount,
+            'paid_amount' => (float) $booking->paid_amount,
+            'scheduled_date' => $booking->receivable_date?->toDateString() ?? now()->toDateString(),
+            'status' => 'pending',
+            'created_by' => Auth::id(),
         ]);
     }
 
@@ -305,8 +306,7 @@ class ContractFlightBookingController implements HasMiddleware
             'client',
         ]);
 
-        $company = Company::find(Auth::user()->company_id)
-            ?? Company::find(2)
+        $company = Company::find(TravelCompany::ID)
             ?? Company::first();
 
         return view('contract-flight-sales.invoice', [
@@ -327,13 +327,13 @@ class ContractFlightBookingController implements HasMiddleware
             'receivable_date' => 'nullable|date',
             'payment_method' => 'nullable|string|max:50',
             'bank_id' => 'nullable|exists:banks,id',
+            'payment_instruction_bank_id' => 'nullable|exists:banks,id',
             'notes' => 'nullable|string',
         ]);
 
         $validator->after(function ($validator) use ($request, $bookingId) {
             $items = collect($request->input('items', []));
-            $total = $items->sum(fn ($item) =>
-                ((int) ($item['seats'] ?? 0)) * ((float) ($item['unit_price'] ?? 0))
+            $total = $items->sum(fn ($item) => ((int) ($item['seats'] ?? 0)) * ((float) ($item['unit_price'] ?? 0))
             );
 
             if ((float) $request->input('paid_amount', 0) > $total) {
@@ -342,7 +342,7 @@ class ContractFlightBookingController implements HasMiddleware
 
             foreach ($items as $index => $item) {
                 $flight = ContractFlight::find($item['contract_flight_id'] ?? null);
-                if (!$flight || $flight->total_seats <= 0) {
+                if (! $flight || $flight->total_seats <= 0) {
                     continue;
                 }
 
@@ -404,13 +404,14 @@ class ContractFlightBookingController implements HasMiddleware
                 : ($paid > 0 ? 'partial' : 'due'),
             'payment_method' => $request->payment_method,
             'bank_id' => $request->bank_id,
+            'payment_instruction_bank_id' => $request->payment_instruction_bank_id,
             'notes' => $request->notes,
         ];
 
         if ($bookingNumber) {
             $payload['booking_number'] = $bookingNumber;
             $payload['created_by'] = Auth::id();
-            $payload['company_id'] = Auth::user()->company_id ?? 2;
+            $payload['company_id'] = TravelCompany::ID;
         }
 
         return $payload;
@@ -426,7 +427,7 @@ class ContractFlightBookingController implements HasMiddleware
     {
         foreach (collect($flightIds)->filter()->unique() as $flightId) {
             $flight = ContractFlight::find($flightId);
-            if (!$flight) {
+            if (! $flight) {
                 continue;
             }
 
@@ -435,10 +436,6 @@ class ContractFlightBookingController implements HasMiddleware
                     'contract_flight_id',
                     $flightId
                 )->whereHas('booking')->sum('seats'),
-                'revenue' => ContractFlightBookingItem::where(
-                    'contract_flight_id',
-                    $flightId
-                )->whereHas('booking')->sum('total_amount'),
             ]);
         }
     }

@@ -152,7 +152,7 @@
                 </tr>
                 <tr>
                     <td>Agent</td>
-                    <td>{{ optional($flight->agent)->name ?? 'Direct' }}</td>
+                    <td>{{ $flight->agent_summary }}</td>
                 </tr>
                 <tr>
                     <td>Status</td>
@@ -173,26 +173,24 @@
         <thead>
             <tr>
                 <th width="40%">Description</th>
-                <th class="r" width="20%">Total Seats</th>
-                <th class="r" width="20%">Seats Sold</th>
-                <th class="r" width="20%">Available</th>
+                <th class="r" width="20%">Passengers</th>
+                <th class="r" width="20%">Agent Charge</th>
+                <th class="r" width="20%">Profit</th>
             </tr>
         </thead>
         <tbody>
+            {{-- Seat counts used to sit here (total / sold / available). On an
+                 agent-wise batch they only ever restated the passenger list,
+                 and "sold" counts seat-block bookings — zero on a full flight.
+                 These three come from the passengers themselves. --}}
             <tr>
                 <td>
                     <strong>{{ optional($flight->flightCategory)->name ?? 'Contract Flight' }}</strong>
                     @if($flight->route) — {{ $flight->route }}@endif
                 </td>
-                <td class="r nf">{{ $flight->total_seats }}</td>
-                <td class="r nf">{{ $flight->seats_sold }}</td>
-                <td class="r nf">{{ $flight->seats_available }}</td>
-            </tr>
-            <tr class="total-row">
-                <td>Summary</td>
-                <td class="r nf">{{ $flight->total_seats }}</td>
-                <td class="r nf">{{ $flight->seats_sold }}</td>
-                <td class="r nf">{{ $flight->seats_available }}</td>
+                <td class="r nf">{{ $flight->passengers->count() }}</td>
+                <td class="r nf">{{ number_format($flight->total_agent_charge, 2) }}</td>
+                <td class="r nf">{{ number_format($flight->profit, 2) }}</td>
             </tr>
         </tbody>
     </table>
@@ -204,10 +202,12 @@
         <thead>
             <tr>
                 <th width="5%">#</th>
-                <th width="35%">Passenger Name</th>
-                <th width="20%">Passport No.</th>
-                <th width="20%">Nationality</th>
-                <th width="20%">Status</th>
+                <th width="24%">Passenger Name</th>
+                <th width="16%">Passport No.</th>
+                <th width="14%">Nationality</th>
+                <th width="16%">Agent</th>
+                <th width="13%">Status</th>
+                <th width="12%">PNR</th>
             </tr>
         </thead>
         <tbody>
@@ -215,9 +215,11 @@
             <tr>
                 <td>{{ $i + 1 }}</td>
                 <td>{{ optional($pax->passportHolder)->name ?? '—' }}</td>
-                <td style="font-family:'Space Mono',monospace;font-size:11px;">{{ optional($pax->passportHolder)->passport_number ?? '—' }}</td>
+                <td style="font-family:'Space Mono',monospace;font-size:11px;">{{ optional($pax->passportHolder)->passport_no ?? '—' }}</td>
                 <td>{{ optional($pax->passportHolder)->nationality ?? '—' }}</td>
+                <td>{{ optional($pax->agent)->name ?? 'Direct' }}</td>
                 <td>{{ ucfirst($pax->status ?? 'confirmed') }}</td>
+                <td style="font-family:'Space Mono',monospace;font-size:11px;">{{ $pax->ticketPurchases->pluck('ticket_no')->filter()->implode(', ') ?: '—' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -233,16 +235,18 @@
         <div>
             <div class="sh">Financial Summary:</div>
             <table class="amt-tbl">
-                <tr><td>Cost Price</td><td class="n">৳{{ number_format($flight->cost_price, 2) }}</td></tr>
-                <tr class="revenue"><td>Revenue</td><td class="n">৳{{ number_format($flight->revenue, 2) }}</td></tr>
-                <tr class="profit"><td>Net Profit</td><td class="n">৳{{ number_format($flight->revenue - $flight->cost_price, 2) }}</td></tr>
+                <tr><td>Travel Cost <span style="font-weight:400;">(ticket + manpower + boarding)</span></td><td class="n">৳{{ number_format($flight->total_travel_cost, 2) }}</td></tr>
+                <tr class="revenue"><td>Agent Charge <span style="font-weight:400;">(billed to agent)</span></td><td class="n">৳{{ number_format($flight->total_agent_charge, 2) }}</td></tr>
+                <tr class="profit"><td>Net Profit</td><td class="n">৳{{ number_format($flight->profit, 2) }}</td></tr>
             </table>
+            <p style="font-size:9px;color:#94a3b8;margin-top:4px;">Summed from each passenger's own agent price and travel cost.</p>
         </div>
     </div>
 
     {{-- Signature --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

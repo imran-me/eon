@@ -1,15 +1,47 @@
+<style>
+    #createModal .salary-create-shell{width:min(1040px,calc(100vw - 32px));max-height:94vh;border-radius:16px;box-shadow:0 28px 70px rgba(15,23,42,.3);overflow:hidden;background:#f8fafc}
+    #createModal .salary-create-content{padding:0}
+    #createModal .salary-create-header{padding:15px 20px;background:linear-gradient(120deg,#0759b8,#0b74ed);color:#fff;display:flex;align-items:center;gap:12px}
+    #createModal .salary-create-icon{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+    #createModal .salary-create-heading{font-size:1rem;font-weight:800;line-height:1.2}
+    #createModal .salary-create-subtitle{margin-top:2px;font-size:.7rem;color:#dbeafe}
+    #createModal .modal-close-create{margin-left:auto;width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.14);display:grid;place-items:center;color:#fff}
+    #createModal .modal-close-create:hover{background:rgba(255,255,255,.25)}
+    #createModal .salary-create-body{max-height:calc(94vh - 132px);padding:14px 18px;overflow-y:auto}
+    #createModal #createForm>.grid{padding:14px;border:1px solid #dbe4ef;border-radius:11px;background:#fff;gap:12px}
+    #createModal #createForm>.grid>div{margin-bottom:0}
+    #createModal label{font-size:.7rem;margin-bottom:5px;color:#475569}
+    #createModal .form-input,#createModal .form-select{min-height:36px;border-radius:8px;font-size:.78rem;border-color:#cbd5e1}
+    #createModal #attendance_summary_container,#createModal #fixed_salary_notice,#createModal #deduction_breakdown_container,#createModal #overtime_salary_container{margin-top:12px;border-radius:10px;padding:12px}
+    #createModal #create_notes{min-height:66px;resize:vertical}
+    #createModal .salary-create-footer{padding:11px 18px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:flex-end;gap:8px}
+    #createModal #createSubmit{min-width:150px;background:#0874e6;border-radius:8px;font-size:.75rem;font-weight:750}
+    #createModal #createSubmitLoading.hidden{display:none!important}
+    #createModal #createSubmitLoading:not(.hidden){display:inline-flex;align-items:center}
+    #createModal #createSubmitText.hidden{display:none!important}
+    #createModal #createProcessingNotice{margin:12px 18px 0}
+    @media(max-width:767px){#createModal .salary-create-shell{width:calc(100vw - 14px)}#createModal .salary-create-body{padding:10px}#createModal #createForm>.grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:520px){#createModal #createForm>.grid{grid-template-columns:1fr}}
+</style>
 <div id="createModal" class="modal fixed inset-0 flex items-center justify-center z-50 hidden">
     <div class="modal-backdrop fixed inset-0 bg-black opacity-50"></div>
-    <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto"
-        style="min-width: 1100px !important;">
-        <div class="modal-content py-4 text-left px-6">
-            <div class="modal-header flex justify-between items-center pb-3">
-                <h3 class="text-xl font-semibold">Add New </h3>
-                <button class="modal-close-create z-50">
+    <div class="modal-container salary-create-shell z-50">
+        <div class="modal-content salary-create-content text-left">
+            <div class="modal-header salary-create-header">
+                <div class="salary-create-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+                <div>
+                    <h3 class="salary-create-heading">Generate Employee Salary</h3>
+                    <p class="salary-create-subtitle">Review attendance, deductions and additions before creating the monthly payslip.</p>
+                </div>
+                <button type="button" class="modal-close-create z-50" aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body overflow-y-auto px-1" style="max-height: 70vh;">
+            <div id="createProcessingNotice" class="hidden mb-4 rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
+                <i class="fas fa-spinner fa-spin mr-2"></i>
+                Super admin, your request is being processed. Please wait while the payslip and reports are generated.
+            </div>
+            <div class="modal-body salary-create-body">
                 <form class="closest" id="createForm"
                     action="{{ route('role.employee-salaries.store', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}"
                     method="POST">
@@ -73,7 +105,7 @@
                             <label for="create_payment_date" class="block text-gray-700 text-sm font-bold mb-2">Salary generation
                                 Date</label>
                             <input type="date" id="create_payment_date" name="salary_generation_date"
-                                value="{{ date('Y-m-d') }}"
+                                value="{{ date('Y-m-d') }}" required
                                 class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <p class="text-red-500 text-xs mt-1 hidden error-message">Please select salary generation Date</p>
                         </div>
@@ -222,6 +254,17 @@
                             </div>
                         </div>
                     </div>
+                    <div id="fixed_salary_notice"
+                        class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200 hidden">
+                        <p class="text-sm font-bold text-amber-800 uppercase tracking-wider">Fixed Salary Employee</p>
+                        <p class="text-xs text-amber-700 mt-1 leading-relaxed">
+                            Attendance never changes this employee's pay, so the absent, leave, late and
+                            early-out figures below stay at 0.00 and no leave encashment accrues. Those
+                            zeros are correct &mdash; do not type deductions in by hand, they are cleared
+                            again on save. Loan and advance-salary instalments are still recovered, and
+                            overtime is still paid when the employee is overtime eligible.
+                        </p>
+                    </div>
                     <div id="deduction_breakdown_container"
                         class="mt-4 p-2 bg-red-50 rounded-lg border border-red-200 hidden">
                         <h4 class="text-sm font-bold text-red-800 mb-3 uppercase tracking-wider">Deduction Breakdown
@@ -288,14 +331,17 @@
                     </div>
                 </form>
             </div>
-            <div class="modal-footer flex justify-end pt-2">
+            <div class="modal-footer salary-create-footer">
                 <button type="button"
                     class="btn btn-secondary px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 transition duration-200 mr-2 modal-close-create">
                     Cancel
                 </button>
                 <button id="createSubmit" type="button"
-                    class="btn btn-primary px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200">
-                    Submit
+                    class="btn btn-primary inline-flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200">
+                    <span id="createSubmitText"><i class="fas fa-check mr-1"></i> Generate Salary</span>
+                    <span id="createSubmitLoading" class="hidden items-center gap-2">
+                        <i class="fas fa-spinner fa-spin"></i> Processing...
+                    </span>
                 </button>
             </div>
         </div>

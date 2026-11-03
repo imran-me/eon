@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -15,7 +15,17 @@ class RolePermissionSeeder extends Seeder
     public function run(): void
     {
         // Reset cache
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // Party Types remains an internal Payment Schedule mapping table, not a
+        // user-facing role module. Remove permissions created by older runs.
+        Permission::whereIn('name', [
+            'view party type',
+            'view all party type',
+            'create party type',
+            'edit party type',
+            'delete party type',
+        ])->delete();
 
         // 1. Define the Modules
         $modules = [
@@ -53,7 +63,6 @@ class RolePermissionSeeder extends Seeder
             'flight category',
             'flight schedule',
             'contract flight',
-            'contract flight sale',
             'contract file category',
             'contract file',
             'contract file sale',
@@ -99,6 +108,12 @@ class RolePermissionSeeder extends Seeder
             'journal',
             'ticket direct sale',
             'payment schedule',
+            'payment entry',
+            'financing',
+            'agent',
+            'party statement',
+            'party transaction import',
+            'party invoice import',
             'employee request',
         ];
 
@@ -110,7 +125,7 @@ class RolePermissionSeeder extends Seeder
             foreach ($actions as $action) {
                 Permission::firstOrCreate([
                     'name' => "{$action} {$module}",
-                    'guard_name' => 'web' // Explicitly setting guard is safer
+                    'guard_name' => 'web', // Explicitly setting guard is safer
                 ]);
             }
         }
@@ -151,7 +166,7 @@ class RolePermissionSeeder extends Seeder
         foreach ($modules as $module) {
             Permission::firstOrCreate([
                 'name' => "view all {$module}",
-                'guard_name' => 'web'
+                'guard_name' => 'web',
             ]);
         }
 
@@ -162,7 +177,7 @@ class RolePermissionSeeder extends Seeder
     */
 
         $superAdmin = Role::firstOrCreate(['name' => 'super admin']);
-        $admin      = Role::firstOrCreate(['name' => 'admin']);
+        $admin = Role::firstOrCreate(['name' => 'admin']);
 
         // Super Admin gets everything (including approve/reject payment schedule)
         $superAdmin->syncPermissions(Permission::all());

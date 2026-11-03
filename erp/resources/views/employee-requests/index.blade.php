@@ -191,7 +191,7 @@
                     <th class="text-xs uppercase tracking-wider">Deadline</th>
                     <th class="text-xs uppercase tracking-wider">Submitted</th>
                     <th class="text-xs uppercase tracking-wider">Status</th>
-                    <th class="text-xs uppercase tracking-wider">Actions</th>
+                    <th class="text-xs uppercase tracking-wider" style="width:1%;white-space:nowrap">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -280,7 +280,7 @@
 
                     {{-- Actions --}}
                     <td>
-                        <div class="flex items-center gap-1.5 flex-wrap">
+                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
 
                             {{-- Primary: Review button for pending/under_review --}}
                             @if(in_array($item->status, ['pending','under_review']))
@@ -291,6 +291,9 @@
                                     data-category="{{ $item->category }}"
                                     data-request_type="{{ $item->request_type }}"
                                     data-type="{{ \App\Models\EmployeeRequest::requestTypeLabel($item->request_type) }}"
+                                    data-request-code="{{ $item->request_type }}"
+                                    data-company-id="{{ $item->employee?->company_id }}"
+                                    data-reason="{{ e($item->reason) }}"
                                     data-amount="{{ $item->amount }}"
                                     data-reason="{{ e($item->reason) }}"
                                     data-status="{{ $item->status }}"
@@ -299,23 +302,25 @@
                                     data-remarks="{{ e($item->remarks) }}"
                                     data-image="{{ $item->image ? asset($item->image) : '' }}"
                                     data-metadata='@json($item->metadata ?? [])'
-                                    title="Review & Approve/Reject">
-                                    <i class="fas fa-clipboard-check text-xs"></i> Review
-                                </button>
+                                    title="Review & Approve/Reject" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-clipboard-check text-xs" style="font-size:11px;margin:0"></i></button>
                                 @endcan
                             @endif
 
                             {{-- Disburse --}}
-                            @if($item->category === 'request' && $item->status === 'approved' && !$item->disbursement)
+                            @if($item->category === 'request' && $item->request_type !== 'advance_salary' && $item->status === 'approved' && !$item->disbursement)
                                 @can('disburse employee request')
                                 <button class="ab ab-disburse disburse-btn"
                                     data-id="{{ $item->id }}"
                                     data-amount="{{ $item->amount }}"
                                     data-name="{{ $item->employee?->name ?? '—' }}"
                                     data-type="{{ \App\Models\EmployeeRequest::requestTypeLabel($item->request_type) }}"
-                                    title="Record Disbursement">
-                                    <i class="fas fa-money-bill-wave text-xs"></i> Disburse
-                                </button>
+                                    data-request-code="{{ $item->request_type }}"
+                                    data-company-id="{{ $item->employee?->company_id }}"
+                                    data-reason="{{ e($item->reason) }}"
+                                    data-monthly-deduction="{{ data_get($item->metadata, 'monthly_deduction') }}"
+                                    title="Record Disbursement" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-money-bill-wave text-xs" style="font-size:11px;margin:0"></i></button>
                                 @endcan
                             @endif
 
@@ -337,9 +342,8 @@
                             @if($item->category === 'require' && $item->status === 'approved')
                                 @if(Auth::id() == $item->employee_id || Auth::user()->hasPermissionTo('fulfill employee request'))
                                 <button class="ab ab-fulfill fulfill-btn"
-                                    data-id="{{ $item->id }}" title="Mark Fulfilled">
-                                    <i class="fas fa-check-double text-xs"></i> Fulfill
-                                </button>
+                                    data-id="{{ $item->id }}" title="Mark Fulfilled" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-check-double text-xs" style="font-size:11px;margin:0"></i></button>
                                 @endif
                             @endif
 
@@ -347,9 +351,8 @@
                             @if($item->category === 'require' && $item->status === 'fulfilled' && $item->requireAssignment)
                                 @can('verify require assignment')
                                 <button class="ab ab-verify verify-btn"
-                                    data-id="{{ $item->requireAssignment->id }}" title="Verify Fulfillment">
-                                    <i class="fas fa-clipboard-check text-xs"></i> Verify
-                                </button>
+                                    data-id="{{ $item->requireAssignment->id }}" title="Verify Fulfillment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-clipboard-check text-xs" style="font-size:11px;margin:0"></i></button>
                                 @endcan
                             @endif
 
@@ -357,8 +360,8 @@
                             @if($item->request_type === 'emergency_fund' && $item->status === 'pending')
                                 @can('approve employee request')
                                 <button class="ab ab-fast fast-track-btn"
-                                    data-id="{{ $item->id }}" title="Fast-Track Emergency">
-                                    <i class="fas fa-bolt text-xs"></i>
+                                    data-id="{{ $item->id }}" title="Fast-Track Emergency" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-bolt text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @endcan
                             @endif
@@ -366,8 +369,8 @@
                             {{-- NOC PDF --}}
                             @if($item->request_type === 'noc_certificate' && in_array($item->status, ['approved','fulfilled']))
                                 <a href="{{ route('role.employee-requests.noc-pdf', ['role' => $role, 'id' => $item->id]) }}"
-                                    class="ab ab-pdf" title="Download NOC PDF" target="_blank">
-                                    <i class="fas fa-file-pdf text-xs"></i>
+                                    class="ab ab-pdf" title="Download NOC PDF" target="_blank" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-file-pdf text-xs" style="font-size:11px;margin:0"></i>
                                 </a>
                             @endif
 
@@ -375,8 +378,8 @@
                             @if($item->status === 'fulfilled')
                                 @can('approve employee request')
                                 <button class="ab ab-close close-btn"
-                                    data-id="{{ $item->id }}" title="Close">
-                                    <i class="fas fa-lock text-xs"></i>
+                                    data-id="{{ $item->id }}" title="Close" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-lock text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @endcan
                             @endif
@@ -394,8 +397,8 @@
                                 data-deadline="{{ $item->deadline?->format('Y-m-d') }}"
                                 data-image="{{ $item->image ? asset($item->image) : '' }}"
                                 data-metadata='@json($item->metadata ?? [])'
-                                title="Edit">
-                                <i class="fas fa-edit text-xs"></i>
+                                title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                <i class="fas fa-edit text-xs" style="font-size:11px;margin:0"></i>
                             </button>
                             @endif
                             @endcan
@@ -404,8 +407,8 @@
                             @can('delete employee request')
                             <button class="ab ab-delete"
                                 onclick="confirmDelete('{{ $item->id }}','{{ addslashes($item->employee?->name) }}')"
-                                title="Delete">
-                                <i class="fas fa-trash text-xs"></i>
+                                title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                <i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i>
                             </button>
                             @endcan
 
@@ -940,6 +943,9 @@ $(document).ready(function () {
     // ── Disburse ──
     $(document).on('click', '.disburse-btn', function () {
         const d = $(this).data();
+        const isAdvance = d.requestCode === 'advance_salary';
+        const isLoan = d.requestCode === 'loan';
+        const needsPosting = isAdvance || isLoan;
         $('#disburseRequestId').val(d.id);
         $('#disburse_amount').val(d.amount);
         $('#disburse_requested_amount').text(d.amount ? parseFloat(d.amount).toFixed(2) : '—');
@@ -947,9 +953,59 @@ $(document).ready(function () {
         $('#disburse_request_type').text(d.type || '—');
         $('#disburse_file_label').text('Click to attach file...');
         $('#disburse_attachment').val('');
-        $('textarea[name="note"]').val('');
+        $('#disburseForm textarea[name="note"]').val(d.reason || '');
+        $('#advanceDisbursementFields').toggleClass('hidden', !needsPosting).data('company-id', d.companyId || '');
+        $('#advanceDisbursementFields input, #advanceDisbursementFields select').prop('disabled', !needsPosting);
+        $('#disburseMonthWrap').toggleClass('hidden', !isAdvance).find(':input').prop('disabled', !isAdvance);
+        $('#disburseContraWrap').toggleClass('hidden', !isAdvance).find(':input').prop('disabled', !isAdvance);
+        $('#disburseEmiWrap').toggleClass('hidden', !isLoan).find(':input').prop('disabled', !isLoan);
+        $('#disburse_monthly_deduction').val(isLoan ? (d.monthlyDeduction || '') : '');
+        $('#disbursePostingTitle').html(isLoan ? '<i class="fas fa-hand-holding-dollar me-1"></i> Loan payment posting' : '<i class="fas fa-sack-dollar me-1"></i> Advance salary posting');
+        $('#disburseJournalHelp').text(isLoan ? 'Journal: Dr Employee Loan / Cr selected company account. EMI will be recovered automatically from salary.' : 'Journal: Dr Salary Advance / Cr selected company account, then recover through payroll.');
+        $('#disburse_payment_method option[data-advance-only]').prop('disabled', !needsPosting).prop('hidden', !needsPosting);
+        $('#disburse_payment_method option[value="payroll_deduction"]').prop('disabled', needsPosting).prop('hidden', needsPosting);
+        $('#disburse_payment_method').val('cash');
+        if (needsPosting) {
+            const now = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            $('#disburse_transaction_time').val(pad(now.getHours()) + ':' + pad(now.getMinutes()));
+            $('#disburse_reference').val((isLoan ? 'LOAN-' : 'ADV-') + now.getFullYear() + pad(now.getMonth()+1) + pad(now.getDate()) + pad(now.getHours()) + pad(now.getMinutes()) + pad(now.getSeconds()));
+            syncAdvanceDisbursementRoute();
+        }
         $('#disburseModal').removeClass('hidden');
     });
+
+    const advanceDisbursementBankTypes = {
+        cash: ['cash'], bank_transfer: ['bank'], cheque: ['bank'], card: ['bank'],
+        mobile_banking: ['mobile_banking', 'digital_wallet']
+    };
+    function syncAdvanceDisbursementRoute() {
+        if ($('#advanceDisbursementFields').hasClass('hidden')) return;
+        const method = $('#disburse_payment_method').val();
+        const companyId = String($('#advanceDisbursementFields').data('company-id') || '');
+        const wanted = advanceDisbursementBankTypes[method] || [];
+        let first = null;
+        $('#disburse_bank_id option').each(function () {
+            if (!this.value) return;
+            const sameCompany = !String(this.dataset.company || '') || String(this.dataset.company) === companyId;
+            const rightType = wanted.includes(this.dataset.type || '');
+            this.hidden = this.disabled = !(sameCompany && rightType);
+            if (!this.hidden && !first) first = this;
+        });
+        $('#disburse_bank_id optgroup').each(function () {
+            const visible = $(this).find('option').toArray().some(option => !option.hidden);
+            this.hidden = this.disabled = !visible;
+        });
+        if ($('#disburse_bank_id option:selected').prop('disabled')) $('#disburse_bank_id').val('');
+        if (method === 'cash' && first) $('#disburse_bank_id').val(first.value);
+
+        const needsRecipient = method === 'bank_transfer' || method === 'cheque';
+        $('#disburseRecipientFields').toggleClass('hidden', !needsRecipient);
+        $('#disburse_recipient_bank, #disburse_recipient_account').prop('required', needsRecipient).prop('disabled', !needsRecipient);
+        $('#disburseRecipientBankLabel').text(method === 'cheque' ? 'Bank Name (cheque drawn on) *' : 'Employee Bank Name *');
+        $('#disburseRecipientAccountLabel').text(method === 'cheque' ? 'Cheque No. *' : 'Account Number *');
+    }
+    $('#disburse_payment_method').on('change', syncAdvanceDisbursementRoute);
     $(document).on('click', '.modal-close-disburse', function () { $('#disburseModal').addClass('hidden'); });
     $('#disburseSubmit').click(function () {
         const id   = $('#disburseRequestId').val();

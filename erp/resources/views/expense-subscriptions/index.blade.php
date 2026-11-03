@@ -153,6 +153,13 @@
     .sub-chip.is-muted.is-active { background: #475569; border-color: #475569; color: #fff; border-style: solid; }
 
     /* Reminder-only marker — sits where the Record Expense button would be. */
+    .sub-retry-form { display: inline; margin: 0; }
+    .sub-act .sub-warn {
+        display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+        padding: 6px 11px; border-radius: 8px; font-size: 11.5px; font-weight: 800;
+        background: #fffbeb; color: #92400e; border: 1px solid #fde68a; cursor: pointer;
+    }
+    .sub-act .sub-warn:hover { background: #fef3c7; border-color: #fcd34d; }
     .sub-act .sub-note {
         display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
         padding: 6px 11px; border-radius: 8px; font-size: 11.5px; font-weight: 700;
@@ -547,6 +554,19 @@
                                                title="Open the expense that settled this period">
                                                 <i class="fas fa-circle-check"></i>Paid
                                             </a>
+
+                                            {{-- Paid here, but DM does not know yet. Shown rather than
+                                                 hidden: if DM keeps the old expiry, next year's renewal
+                                                 never appears anywhere and the service lapses. --}}
+                                            @if ($row['dm_synced'] === false && $row['retry_url'])
+                                                <form method="POST" action="{{ $row['retry_url'] }}" class="sub-retry-form">
+                                                    @csrf
+                                                    <button type="submit" class="sub-warn"
+                                                            title="{{ $row['dm_error'] ?: 'DM has not been told about this renewal yet.' }} — click to retry">
+                                                        <i class="fas fa-rotate"></i>DM not updated
+                                                    </button>
+                                                </form>
+                                            @endif
                                         @elseif ($row['record_url'])
                                             <a href="{{ $row['record_url'] }}" class="sub-rec"
                                                title="File the expense for this period, pre-filled from DM">

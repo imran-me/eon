@@ -1,6 +1,21 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# /public/build is deliberately NOT ignored.
+#
+# The compiled front-end lives there, and the production server has no npm to
+# rebuild it — so if git does not carry it, nothing does. It was ignored until
+# 2026-08-30, and every JavaScript change since had to be copied to the server
+# by hand; four deploys in a row went out with a stale bundle because that step
+# was missed, which looks exactly like a broken feature (a clock printed by PHP
+# that never ticks, because the script that ticks it is not there).
+#
+# Cost of this: `npm run build` rewrites these files with new content hashes, so
+# two people building at once conflict in manifest.json. Resolve by taking
+# either side and running `npm run build` again — the output is generated, never
+# hand-edited, so no work can be lost in that conflict.
+#
+# /public/hot stays ignored: it is written by `npm run dev` and points at a
+# localhost address. Committed, it would send production to a dev server.
 /public/hot
 /public/image
 /public/storage
@@ -24,3 +39,12 @@ yarn-error.log
 /.zed
 /public/uploads
 .claude
+.agents
+
+# Flight dashboard marks — kept out of git (1.5MB of PNGs), uploaded to public/ on the server by hand
+/public/airline-logos/
+/public/flags/
+/public/build/
+
+# Larastan result cache
+/storage/framework/phpstan

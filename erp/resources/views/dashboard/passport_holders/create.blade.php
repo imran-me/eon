@@ -18,7 +18,7 @@
 
         <div class="mb-3">
             <label>Passport Number</label>
-            <input type="text" name="passport_no" required class="w-full border px-3 py-2 rounded" value="{{ old('passport_no') }}">
+            <input type="text" name="passport_no" class="w-full border px-3 py-2 rounded" value="{{ old('passport_no') }}">
         </div>
 
         <div class="mb-3">

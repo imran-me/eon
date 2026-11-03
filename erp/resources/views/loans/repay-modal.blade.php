@@ -55,7 +55,7 @@
 
                     <div class="mb-4">
                         <label for="repay_date" class="block text-gray-700 text-sm font-bold mb-2">Paid on</label>
-                        <input type="date" id="repay_date" name="date" value="{{ now()->toDateString() }}"
+                        <input type="date" id="repay_date" name="date" value="{{ now()->toDateString() }}" required
                                class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
@@ -73,9 +73,7 @@
                         <select id="repay_bank_id" name="bank_id"
                                 class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="">Select an account</option>
-                            @foreach($banks as $bank)
-                                <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                     </div>
                 </div>

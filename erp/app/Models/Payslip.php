@@ -26,6 +26,8 @@ class Payslip extends Model
 
     public function employee_salary()
     {
-        return $this->belongsTo(EmployeeSalary::class);
+        // A payslip is a historical payroll document. Keep its salary details
+        // readable even when the source salary has been moved to the trash.
+        return $this->belongsTo(EmployeeSalary::class)->withTrashed();
     }
 }

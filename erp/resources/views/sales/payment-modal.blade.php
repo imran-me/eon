@@ -50,9 +50,7 @@
                     <div class="form-group">
                         <label class="form-label" for="bank_id">Payment Account</label>
                         <select id="bank_id" class="form-control select" name="bank_id" required>
-                            @foreach ($banks as $bank)                                                    
-                            <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                            @endforeach
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                         </select>
                     </div>
                 </div>

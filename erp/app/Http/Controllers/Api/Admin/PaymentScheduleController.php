@@ -345,28 +345,29 @@ class PaymentScheduleController extends Controller
             'remainder_date' => 'nullable|date',
         ]);
 
-        if ($schedule->status !== 'approved') {
-            return response()->json([
-                'success' => false,
-                'message' => 'This schedule is not approved. Please approve the schedule first.',
-            ], 422);
-        }
+        $paidAmt = 0.0;
+        $isPartial = false;
 
-        if ($schedule->status === 'cancelled') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot mark a cancelled schedule as paid.',
-            ], 422);
-        }
+        DB::transaction(function () use ($schedule, $request, &$paidAmt, &$isPartial) {
 
-        $paidAmt   = $request->filled('paid_amount')
-            ? min((float) $request->paid_amount, (float) $schedule->amount)
-            : (float) $schedule->amount;
-        $isPartial = $paidAmt < ((float) $schedule->amount - 0.001);
+            $schedule = PaymentSchedule::query()
+                ->whereKey($schedule->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::transaction(function () use ($schedule, $request, $paidAmt, $isPartial) {
+            if ($schedule->status !== 'approved') {
+                abort(422, 'This schedule is not approved or has already been settled. Refresh and try again.');
+            }
 
-            $bank = Bank::findOrFail($request->bank_id);
+            $paidAmt = $request->filled('paid_amount')
+                ? min((float) $request->paid_amount, (float) $schedule->amount)
+                : (float) $schedule->amount;
+            $isPartial = $paidAmt < ((float) $schedule->amount - 0.001);
+
+            $bank = Bank::query()
+                ->whereKey($request->bank_id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
             // ── Employee Salary ──────────────────────────────────────────
             if ($schedule->schedulable instanceof EmployeeSalary) {
@@ -399,6 +400,7 @@ class PaymentScheduleController extends Controller
                 if (! $bank->account_id) {
                     throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover((int) $bank->account_id, $paidAmt, $bank->name);
 
                 $journal = JournalEntry::create([
                     'company_id'  => auth()->user()->company_id ?? $salary->user?->company_id ?? 2,
@@ -460,6 +462,8 @@ class PaymentScheduleController extends Controller
                 }
 
                 if ($schedule->type === 'pay') {
+                    Bank::assertCanCover((int) $bank->account_id, $paidAmt, $bank->name);
+
                     $apAccount       = Account::where('code', config('accounts.accounts_payable'))->firstOrFail();
                     $debitAccountId  = $apAccount->id;
                     $creditAccountId = $bank->account_id;
@@ -526,12 +530,87 @@ class PaymentScheduleController extends Controller
 
             // ── Linked document (Sale / Purchase / Ticket) ───────────────
             $parent = $schedule->schedulable;
-            if ($parent && isset($parent->due_amount)) {
-                $newDue                 = max(0, $parent->due_amount - $paidAmt);
-                $parent->due_amount     = $newDue;
-                $parent->payment_status = $newDue <= 0 ? 'paid' : 'partial';
-                $parent->save();
+            if (! $parent) {
+                throw new \RuntimeException('The document linked to this schedule no longer exists.');
             }
+
+            $parent = $parent::query()->whereKey($parent->id)->lockForUpdate()->firstOrFail();
+
+            if (! $bank->account_id) {
+                throw new \RuntimeException('Bank is not linked to a chart-of-accounts account.');
+            }
+
+            $isPayment = $schedule->type === 'pay';
+            $controlAccount = Account::where(
+                'code',
+                config($isPayment ? 'accounts.accounts_payable' : 'accounts.accounts_receivable')
+            )->firstOrFail();
+
+            if ($isPayment) {
+                Bank::assertCanCover((int) $bank->account_id, $paidAmt, $bank->name);
+            }
+
+            $journal = JournalEntry::create([
+                'company_id' => $schedule->company_id ?? auth()->user()?->company_id ?? 2,
+                'created_by' => auth()->id(),
+                'date' => $request->payment_date,
+                'reference' => ($isPayment ? 'SCH-PAY-' : 'SCH-RCV-') . $schedule->id,
+                'source' => 'schedule_payment_settlement',
+                'source_id' => $schedule->id,
+                'description' => ($isPayment ? 'Scheduled payment - ' : 'Scheduled receipt - ')
+                    . ($schedule->party_name ?? 'Party'),
+            ]);
+
+            $journalLines = $isPayment
+                ? [[$controlAccount->id, $paidAmt, 0], [$bank->account_id, 0, $paidAmt]]
+                : [[$bank->account_id, $paidAmt, 0], [$controlAccount->id, 0, $paidAmt]];
+
+            foreach ($journalLines as [$accountId, $debit, $credit]) {
+                JournalItem::create([
+                    'journal_entry_id' => $journal->id,
+                    'account_id' => $accountId,
+                    'debit' => $debit,
+                    'credit' => $credit,
+                    'note' => $schedule->source_label ?? $schedule->note,
+                    'party_type' => $schedule->party_type,
+                    'party_id' => $schedule->party_id,
+                ]);
+            }
+
+            $total = (float) ($parent instanceof TicketPurchase ? $parent->amount : $parent->total_amount);
+            $newPaid = min($total, (float) ($parent->paid_amount ?? 0) + $paidAmt);
+            $newDue = max(0, $total - $newPaid);
+            $parent->forceFill([
+                'bank_id' => $bank->id,
+                'paid_amount' => $newPaid,
+                'due_amount' => $newDue,
+                'payment_status' => $newDue <= 0 ? 'paid' : 'partial',
+            ])->save();
+
+            // Keep the legacy register/cache in the same transaction. The
+            // journal remains the source of truth used by assertCanCover().
+            $bank = Bank::query()->whereKey($bank->id)->lockForUpdate()->firstOrFail();
+            $oldBankBalance = (float) $bank->balance;
+            $newBankBalance = round($oldBankBalance + ($isPayment ? -$paidAmt : $paidAmt), 2);
+            $bank->update(['balance' => $newBankBalance]);
+
+            Transaction::create([
+                'user_id' => $schedule->party_id,
+                'user_type' => $schedule->party_type,
+                'type' => $parent instanceof Sale ? 'sale'
+                    : ($parent instanceof Purchase ? 'purchase'
+                    : ($parent instanceof TicketSale ? 'ticket_sale' : 'ticket_purchase')),
+                'account_id' => $bank->id,
+                'payment_date' => $request->payment_date,
+                'reference_no' => 'SCH-' . $schedule->id,
+                'payment_method' => $request->payment_method,
+                'invoice_id' => $parent->id,
+                'old_balance' => $oldBankBalance,
+                'debit' => $isPayment ? $paidAmt : 0,
+                'credit' => $isPayment ? 0 : $paidAmt,
+                'balance' => $newBankBalance,
+                'remarks' => 'Payment schedule settlement.',
+            ]);
 
             $schedule->update([
                 'status'      => 'paid',

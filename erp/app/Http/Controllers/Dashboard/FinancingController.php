@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Models\Account;
 use App\Models\Bank;
+use App\Models\BankTransfer;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\FinancingCapital;
@@ -11,10 +12,15 @@ use App\Models\FinancingCategory;
 use App\Models\FinancingLoan;
 use App\Models\FinancingSchedule;
 use App\Models\FinancingTransaction;
+use App\Models\InterCompanyLiability;
+use App\Models\InterCompanyLiabilityTransaction;
+use App\Models\JournalEntry;
 use App\Models\Loan;
 use App\Models\LoanTransaction;
+use App\Models\User;
 use App\Services\FinancingPostingService;
 use App\Services\FinancingScheduleService;
+use App\Services\InterCompanyLiabilityService;
 use App\Services\LoanBookService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -64,8 +70,8 @@ class FinancingController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view financing|view all financing', only: ['index', 'show']),
-            new Middleware('permission:create financing', only: ['store', 'recordPayment', 'recordDrawdown', 'storeCapital', 'storeCategory']),
+            new Middleware('permission:view financing|view all financing', only: ['index', 'show', 'printCapital', 'sendCapitalStatement', 'printLiability']),
+            new Middleware('permission:create financing', only: ['store', 'recordPayment', 'recordDrawdown', 'recordOpeningBalance', 'storeCapital', 'storeCategory', 'settleLiability']),
             new Middleware('permission:edit financing', only: ['update', 'regenerate', 'updateCategory']),
             new Middleware('permission:delete financing', only: ['destroy', 'destroyCapital', 'destroyCategory']),
         ];
@@ -76,8 +82,11 @@ class FinancingController implements HasMiddleware
      *   borrowed / lent — financing_loans, with a schedule
      *   employee        — the read-only payroll mirror
      *   capital         — owner money in and out, no schedule
+     *   liability       — what one company owes another because its expense was
+     *                     paid from that company's bank account. Tracking only:
+     *                     it posts nothing, exactly like the lent book.
      */
-    private const BOOKS = ['lent', 'borrowed', 'employee', 'capital', 'categories'];
+    private const BOOKS = ['lent', 'borrowed', 'employee', 'capital', 'categories', 'liability'];
 
     public function index(Request $request, LoanBookService $loanBook)
     {
@@ -113,7 +122,28 @@ class FinancingController implements HasMiddleware
         $staffBalances = [];
         $showCompany = false;
         $capital = collect();
+        $capitalPosting = collect();
+        $capitalPeople = collect();
+        $capitalPerson = null;
+        $capitalOwner = null;
+        $capitalOwnerId = null;
+        $capitalLatest = null;
+        $capitalBalanceById = [];
+        $capitalOwnerUsers = collect();
+        $capitalTotals = ['investment' => 0, 'drawings' => 0, 'net' => 0, 'count' => 0];
         $categoryTree = collect();
+        $liabilities = collect();
+        $settledLiabilities = collect();
+        $liabilityTxns = collect();
+        $liabilityTotals = ['count' => 0, 'active' => 0, 'raised' => 0, 'settled' => 0, 'outstanding' => 0, 'pairs' => 0];
+        $liabilityPairs = [];
+        $liabilityReady = false;
+        // Defaulted with the rest, not inside the ready() branch: compact()
+        // silently omits an unset variable, and the view would then throw
+        // "Undefined variable $bankTransfers" on exactly the server where the
+        // migration has not run — the one case the ready() guard exists to
+        // render safely.
+        $bankTransfers = collect();
 
         if ($book === 'categories') {
             // The whole taxonomy in one query, children eager loaded, so the
@@ -126,11 +156,19 @@ class FinancingController implements HasMiddleware
         } elseif ($book === 'capital') {
             // Owner money in and out. No schedule, no interest — a plain
             // register, newest first.
-            $query = $companyFilter(FinancingCapital::query()->with(['company:id,name', 'bank:id,name']));
+            $query = $companyFilter(FinancingCapital::query()->with(['company:id,name', 'bank:id,name', 'owner:id,name,employee_id_no']));
 
-            if (is_string($kind = $request->query('kind')) && in_array($kind, ['investment', 'drawings'], true)) {
-                $query->where('kind', $kind);
-            }
+            $capitalOwnerUsers = User::query()
+                ->select('id', 'name', 'employee_id_no', 'phone', 'email', 'company_id')
+                ->whereIn('name', ['Md Mohsin', 'Md Parvez Hossain', 'Nayeemur Rahman', 'Mohammad Fahim'])
+                ->where(function ($q) {
+                    $q->where('is_super_admin', 0)->orWhereNull('is_super_admin');
+                })
+                ->where(function ($q) {
+                    $q->where('status', 'active')->orWhereNull('status');
+                })
+                ->orderBy('name')
+                ->get();
 
             if (is_string($search = $request->query('q')) && trim($search) !== '') {
                 $term = '%' . trim($search) . '%';
@@ -141,8 +179,88 @@ class FinancingController implements HasMiddleware
                 });
             }
 
+            if ($request->filled('date_from')) {
+                $query->whereDate('date', '>=', $request->query('date_from'));
+            }
+
+            if ($request->filled('date_to')) {
+                $query->whereDate('date', '<=', $request->query('date_to'));
+            }
+
+            $reversedCapitalIds = JournalEntry::query()
+                ->where('source', 'financing_capital')
+                ->whereNull('reversed_journal_entry_id')
+                ->whereHas('reversedBy')
+                ->pluck('source_id')
+                ->filter()
+                ->all();
+
+            $activeCapitalQuery = clone $query;
+
+            if ($reversedCapitalIds) {
+                $activeCapitalQuery->whereNotIn('id', $reversedCapitalIds);
+            }
+
+            $capitalPeople = (clone $activeCapitalQuery)
+                ->select('person_name')
+                ->selectRaw('MAX(party_id) as party_id')
+                ->selectRaw("SUM(CASE WHEN kind = 'investment' THEN amount ELSE 0 END) as investment_total")
+                ->selectRaw("SUM(CASE WHEN kind = 'drawings' THEN amount ELSE 0 END) as drawings_total")
+                ->selectRaw('COUNT(*) as movement_count')
+                ->selectRaw('MAX(date) as last_movement_at')
+                ->groupBy('person_name')
+                ->orderByRaw("SUM(CASE WHEN kind = 'investment' THEN amount ELSE -amount END) DESC")
+                ->get();
+
+            if (is_string($kind = $request->query('kind')) && in_array($kind, ['investment', 'drawings'], true)) {
+                $query->where('kind', $kind);
+                $activeCapitalQuery->where('kind', $kind);
+            }
+
+            if ($request->filled('owner_id')) {
+                $capitalOwnerId = (int) $request->query('owner_id');
+                $capitalOwner = $capitalOwnerUsers->firstWhere('id', $capitalOwnerId);
+                abort_unless($capitalOwner, 404);
+                $capitalPerson = $capitalOwner->name;
+                $ownerScope = function ($ownerQuery) use ($capitalOwnerId, $capitalPerson) {
+                    $ownerQuery->where('party_id', $capitalOwnerId)
+                        ->orWhere(function ($legacy) use ($capitalPerson) {
+                            $legacy->whereNull('party_id')->where('person_name', $capitalPerson);
+                        });
+                };
+                $query->where($ownerScope);
+                $activeCapitalQuery->where($ownerScope);
+            } elseif (is_string($person = $request->query('person')) && trim($person) !== '') {
+                $capitalPerson = trim($person);
+                $query->where('person_name', $capitalPerson);
+                $activeCapitalQuery->where('person_name', $capitalPerson);
+            }
+
+            $capitalTotals = [
+                'investment' => (float) (clone $activeCapitalQuery)->where('kind', 'investment')->sum('amount'),
+                'drawings' => (float) (clone $activeCapitalQuery)->where('kind', 'drawings')->sum('amount'),
+                'count' => (int) (clone $activeCapitalQuery)->count(),
+            ];
+            $capitalTotals['net'] = $capitalTotals['investment'] - $capitalTotals['drawings'];
+            $capitalLatest = (clone $activeCapitalQuery)
+                ->orderByDesc('date')->orderByDesc('transaction_time')->orderByDesc('id')
+                ->first();
+            $runningCapital = (float) $capitalTotals['net'];
+            foreach ((clone $query)->orderByDesc('date')->orderByDesc('transaction_time')->orderByDesc('id')->get(['id', 'kind', 'amount']) as $movement) {
+                $capitalBalanceById[$movement->id] = ['closing' => $runningCapital];
+                if (! in_array($movement->id, $reversedCapitalIds, true)) {
+                    $runningCapital -= $movement->kind === 'investment' ? (float) $movement->amount : -(float) $movement->amount;
+                }
+                $capitalBalanceById[$movement->id]['opening'] = $runningCapital;
+            }
             $capital = $query->orderBy('date', 'desc')->orderBy('id', 'desc')
                              ->paginate(20)->withQueryString();
+            $capitalPosting = JournalEntry::query()
+                ->with('reversedBy:id,reversed_journal_entry_id')
+                ->where('source', 'financing_capital')
+                ->whereIn('source_id', $capital->getCollection()->pluck('id'))
+                ->whereNull('reversed_journal_entry_id')
+                ->get()->keyBy('source_id');
         } elseif ($book === 'employee') {
             // Read-only mirror of the payroll desk, in the same three tables it
             // uses: the fold by person, the full register, and the movement
@@ -186,6 +304,106 @@ class FinancingController implements HasMiddleware
                 ))
                 ->latest('date')->latest('id')
                 ->paginate(15, ['*'], 'txn')->withQueryString();
+        } elseif ($book === 'liability') {
+            /*
+             * What one company owes another because its expense was settled from
+             * that company's bank account. Same three tables as the loan books —
+             * active, register, movements — because it is the same question.
+             *
+             * Nothing here posts. See the create_inter_company_liability_tables
+             * migration for the rule and, more importantly, for what it does not
+             * fix: the ledger still credits the paying company's bank inside an
+             * entry stamped with the spending company's id.
+             *
+             * The service answers ready() false until the migration has run, and
+             * the branch simply renders an empty desk rather than 500ing — the
+             * deploy window must not take Capital & Financing down for the other
+             * eleven companies.
+             */
+            $liabilityService = app(InterCompanyLiabilityService::class);
+            $liabilityReady = $liabilityService->ready();
+
+            if ($liabilityReady) {
+                // Scoped on BOTH sides: a company-locked user is party to a debt
+                // whether they owe it or are owed it, and seeing only one half
+                // would make the desk lie about their position.
+                $scope = function ($query) use ($canViewAll, $userCompanyId, $request) {
+                    if (! $canViewAll && ! empty($userCompanyId)) {
+                        return $query->forCompany($userCompanyId);
+                    }
+
+                    $requested = $request->query('company_id');
+                    if (is_string($requested) && $requested !== '') {
+                        return $query->forCompany($requested);
+                    }
+
+                    return $query;
+                };
+
+                $filtered = function () use ($scope, $request) {
+                    $query = $scope(
+                        InterCompanyLiability::query()
+                            ->with(['debtor:id,name,short_name', 'creditor:id,name,short_name', 'bank:id,name', 'expense:id,title'])
+                    );
+
+                    if (is_string($search = $request->query('q')) && trim($search) !== '') {
+                        $term = '%' . trim($search) . '%';
+                        $query->where(function ($q) use ($term) {
+                            $q->where('title', 'like', $term)
+                              ->orWhere('reference', 'like', $term)
+                              ->orWhere('notes', 'like', $term);
+                        });
+                    }
+
+                    if ($request->filled('date_from')) {
+                        $query->whereDate('incurred_on', '>=', $request->query('date_from'));
+                    }
+
+                    if ($request->filled('date_to')) {
+                        $query->whereDate('incurred_on', '<=', $request->query('date_to'));
+                    }
+
+                    return $query;
+                };
+
+                // 1 · Active — still owed, in whole or in part.
+                $liabilities = $filtered()->active()
+                    ->orderByDesc('incurred_on')->orderByDesc('id')
+                    ->paginate(10, ['*'], 'act')->withQueryString();
+
+                // 2 · Register — settled, written off or cancelled.
+                $settledLiabilities = $filtered()->closed()
+                    ->orderByDesc('incurred_on')->orderByDesc('id')
+                    ->paginate(15, ['*'], 'reg')->withQueryString();
+
+                // 3 · Every movement, newest first.
+                $liabilityTxns = InterCompanyLiabilityTransaction::query()
+                    ->with([
+                        'liability:id,debtor_company_id,creditor_company_id,title,amount',
+                        'liability.debtor:id,name,short_name',
+                        'liability.creditor:id,name,short_name',
+                        'bankTransfer:id,reference_no,amount',
+                    ])
+                    ->whereIn('inter_company_liability_id', $filtered()->select('inter_company_liabilities.id'))
+                    ->orderByDesc('date')->orderByDesc('id')
+                    ->paginate(15, ['*'], 'txn')->withQueryString();
+
+                // Totals and the pair fold read the WHOLE book, never one page —
+                // the same rule the loan books' position strip follows.
+                $wholeBook = $filtered()->get();
+                $liabilityTotals = $liabilityService->totals($wholeBook);
+                $liabilityPairs  = $liabilityService->pairPositions($wholeBook);
+
+                // Offered on the settle form so a payment can point at the
+                // transfer that actually moved the money. Recent ones only —
+                // a settlement is recorded within days of the transfer, and a
+                // picker holding every transfer ever made is not a picker.
+                $bankTransfers = BankTransfer::query()
+                    ->whereNull('deleted_at')
+                    ->orderByDesc('payment_date')->orderByDesc('id')
+                    ->limit(100)
+                    ->get(['id', 'reference_no', 'amount', 'payment_date']);
+            }
         } else {
             /*
              * Three tables on one page, the same shape the employee book uses:
@@ -276,7 +494,14 @@ class FinancingController implements HasMiddleware
             ? Company::orderBy('name')->get(['id', 'name'])
             : Company::where('id', $userCompanyId)->get(['id', 'name']);
 
-        $banks = Bank::where('status', 1)->orderBy('name')->get(['id', 'name']);
+        // company_id and account_number ride along for the Liability book's settle
+        // form, which offers the debtor's accounts to pay FROM and the creditor's to
+        // pay INTO — it cannot split the list without knowing whose each one is.
+        $banks = Bank::where('status', 1)
+            ->with('company:id,name,short_name')
+            ->orderBy('company_id')
+            ->orderBy('name')
+            ->get(['id', 'name', 'company_id', 'account_number', 'type', 'balance']);
         $departments = Department::orderBy('name')->get(['id', 'name']);
 
         // Chart of accounts for the posting hints. Shared accounts only
@@ -304,7 +529,9 @@ class FinancingController implements HasMiddleware
         return view('financing.index', compact(
             'book', 'loans', 'activeLoans', 'loanTxns', 'bookTotals',
             'staffLoans', 'staffFold', 'staffTxns', 'staffBalances', 'showCompany',
-            'capital', 'categoryTree',
+            'capital', 'capitalTotals', 'capitalPosting', 'capitalPeople', 'capitalPerson', 'capitalOwner', 'capitalOwnerId', 'capitalLatest', 'capitalBalanceById', 'capitalOwnerUsers', 'categoryTree',
+            'liabilities', 'settledLiabilities', 'liabilityTxns', 'bankTransfers',
+            'liabilityTotals', 'liabilityPairs', 'liabilityReady',
             'companies', 'banks', 'departments', 'categories', 'glAccounts'
         ));
     }
@@ -409,11 +636,23 @@ class FinancingController implements HasMiddleware
 
         // Where a repayment can be paid from. Scoped to the loan's own company
         // so a repayment cannot be drawn from another company's account, which
-        // would post a credit into books the debit never reaches.
+        // would post a credit into books the debit never reaches. A personal
+        // loan has no company of its own, so it is offered every account.
+        //
+        // company_id, account_number and type are selected because
+        // partials/bank-options reads them to build the label every other money
+        // form in the ERP shows — "1265 · THE CITY BANK- Travels — EPAL GROUP".
+        // Selecting only id and name did not break the picker, it silently
+        // degraded it: with no company_id the company relation resolved to null
+        // and EVERY row read "— No company", and with no account_number the
+        // last four digits vanished — the one thing that tells two accounts at
+        // the same bank apart. The company is eager-loaded for the same reason:
+        // without it the partial falls back to a query per row.
         $banks = Bank::where('status', 1)
             ->when($financing->company_id, fn ($q) => $q->where('company_id', $financing->company_id))
+            ->with('company:id,name,short_name')
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get(['id', 'name', 'company_id', 'account_number', 'type']);
 
         // Whether saving a payment will write a journal entry — the same test
         // the posting service applies, so the form cannot promise what the
@@ -424,9 +663,18 @@ class FinancingController implements HasMiddleware
         // null posts as a company liability. Testing for 'company' here would
         // have shown "desk only" on a payment that posted — the exact mismatch
         // this flag exists to prevent.
-        $postsToBooks = $financing->direction === 'borrowed'
-            && ! $financing->is_personal
-            && ! empty($financing->company_id);
+        //
+        // The lent half is lentPosts(), the SAME call recordPayment() makes to
+        // decide whether bank_id is required. It was missing, and the flag read
+        // false on every loan given: the account field lost its asterisk while
+        // the server still refused a blank one, and the form printed "recorded
+        // on the desk only — posting again would count it twice" over a payment
+        // that was posting. Loan #8's two collections sit in the ledger as
+        // FINRECV-00016 and FINRECV-00020 with the page denying both.
+        $postsToBooks = ($financing->direction === 'borrowed'
+                && ! $financing->is_personal
+                && ! empty($financing->company_id))
+            || $this->posting->lentPosts($financing);
 
         return view('financing.show', [
             'loan'         => $financing,
@@ -757,23 +1005,89 @@ class FinancingController implements HasMiddleware
     }
 
     /**
-     * Record money moving on a loan, apply it to an instalment, and post it.
-     *
-     * The guards below run BEFORE anything is written, and they refuse rather
-     * than save half the story. Every one of them names the single thing to fix,
-     * because "payment recorded" over a ledger that never received it is the
-     * failure that survives longest: the desk looks right, the trial balance
-     * does not, and the two are only compared at month end.
-     *
-     * The entry itself is assembled by FinancingPostingService, never here.
+     * Bring forward the balance of a running loan that predates this ERP.
+     * No cash moves today; the posting is Opening Balance Equity to liability.
      */
+    public function recordOpeningBalance(Request $request, $role, FinancingLoan $financing)
+    {
+        $this->authorizeCompany($financing);
+
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'date'   => ['required', 'date'],
+            'memo'   => ['nullable', 'string', 'max:191'],
+        ]);
+
+        if ($financing->direction !== 'borrowed'
+            || ! $financing->is_running
+            || $financing->is_personal
+            || empty($financing->company_id)) {
+            return back()->withInput()->with('error',
+                'Opening liability is available only for a company running loan.');
+        }
+
+        if ($financing->status !== 'active') {
+            return back()->withInput()->with('error',
+                'This account is closed. Reopen it before recording an opening balance.');
+        }
+
+        if (empty($financing->gl_account_id)) {
+            return back()->withInput()->with('error',
+                'Choose the loan liability under "Posts against - principal" before recording an opening balance.');
+        }
+
+        try {
+            $posted = DB::transaction(function () use ($data, $financing) {
+                $lockedLoan = FinancingLoan::query()->lockForUpdate()->findOrFail($financing->id);
+
+                // An opening balance is a starting point, never a later movement.
+                // Locking the loan makes the check safe against simultaneous submits.
+                if ($lockedLoan->transactions()->exists()) {
+                    throw new \RuntimeException(
+                        'Opening balance must be the first movement on this loan. This loan already has a movement.'
+                    );
+                }
+
+                $txn = FinancingTransaction::create([
+                    'financing_loan_id' => $lockedLoan->id,
+                    'type'              => 'disburse',
+                    'date'              => $data['date'],
+                    'amount'            => $data['amount'],
+                    'principal_part'    => 0,
+                    'interest_part'     => 0,
+                    'fee_part'          => 0,
+                    'tds_amount'        => 0,
+                    'method'            => 'adjustment',
+                    'bank_id'           => null,
+                    'memo'              => $data['memo'] ?? 'Opening liability brought forward',
+                    'created_by'        => Auth::id(),
+                ]);
+
+                $entry = $this->posting->postOpeningBalance($txn);
+                $txn->update(['journal_entry_id' => $entry->id]);
+
+                return $entry;
+            });
+        } catch (\RuntimeException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success',
+            'Opening liability recorded without changing any bank balance. Journal: ' . $posted->reference . '.');
+    }
+
+    /** Record money moving on a loan, apply it to an instalment, and post it. */
     public function recordPayment(Request $request, $role, FinancingLoan $financing)
     {
         $this->authorizeCompany($financing);
 
         $data = $request->validate([
+            // Required on a term loan, because a payment there always settles
+            // an instalment — and left blank it posted to the ledger while every
+            // row stayed "Due" and the split into principal and interest never
+            // happened. A running account has no schedule, so it stays optional.
             'financing_schedule_id' => [
-                'nullable',
+                $financing->is_running ? 'nullable' : 'required',
                 Rule::exists('financing_schedules', 'id')->where('financing_loan_id', $financing->id),
             ],
             'amount' => ['required', 'numeric', 'min:0.01'],
@@ -795,6 +1109,8 @@ class FinancingController implements HasMiddleware
             // bank is amount minus this; the difference is held for the NBR.
             'tds_amount' => ['nullable', 'numeric', 'min:0', 'lt:amount'],
             'memo'   => ['nullable', 'string', 'max:191'],
+        ], [
+            'financing_schedule_id.required' => 'Choose which instalment this payment settles — on a fixed loan every payment settles one, and that is also what splits it into principal and interest.',
         ]);
 
         /*
@@ -883,15 +1199,113 @@ class FinancingController implements HasMiddleware
                 $feePart = round((float) ($data['fee_part'] ?? 0), 2);
                 $applied = round((float) $data['amount'] - $feePart, 2);
 
-                // What is left is split into principal and interest in the same
-                // proportion the instalment carries, so the two columns stay
-                // meaningful on a partial payment.
+                /*
+                 * A running account takes whatever arrives: there is no schedule
+                 * and no agreed sum, so nothing can be "too much" — paying back
+                 * more than was taken simply turns the balance the other way and
+                 * the company owes him instead. Everything below is about the
+                 * fixed-term case, where both of those things exist.
+                 */
                 $principalPart = $applied;
                 $interestPart  = 0.0;
+                $plan          = [];
 
-                if ($schedule && (float) $schedule->total_amount > 0) {
-                    $ratio = (float) $schedule->interest_component / (float) $schedule->total_amount;
-                    $interestPart  = round($applied * $ratio, 2);
+                if ($schedule) {
+                    /*
+                     * ── ONE PAYMENT, SETTLED IN ORDER ─────────────────────────
+                     * The chosen instalment is where the money starts, not where
+                     * it stops. Anything left over runs on to the next open one,
+                     * and the one after that, which is what the form has always
+                     * promised ("Settles in order") and what paying two months at
+                     * a counter actually does.
+                     *
+                     * Before this, the whole payment was dropped on the single
+                     * chosen row with nothing compared against it: 25,000 against
+                     * a 10,000 instalment left paid_amount at 25,000 on a
+                     * total_amount of 10,000, the next row untouched at "Due",
+                     * and the loan unable to close because closing reads statuses
+                     * while the balance reads money.
+                     *
+                     * The split is the worse half. It was one ratio taken off the
+                     * WHOLE payment, so a 50,000 payment on an instalment
+                     * carrying 833.33 of interest booked 4,545.45 of interest
+                     * income — five times what the loan had earned, invented by
+                     * arithmetic. Here each instalment is split by what IT
+                     * carries, so the interest booked is the interest those
+                     * instalments were built with and nothing else.
+                     */
+                    $open = $financing->schedules()
+                        ->whereIn('status', ['due', 'partial'])
+                        ->orderBy('instalment_no')
+                        ->lockForUpdate()
+                        ->get();
+
+                    // Instalments BEFORE the chosen one are deliberately left
+                    // alone. Picking #3 while #2 is open is a decision, not a
+                    // mistake — the desk sometimes settles out of order — and
+                    // silently reaching backwards would overrule it.
+                    $queue = $open->where('instalment_no', '>=', $schedule->instalment_no)->values();
+
+                    if ($queue->isEmpty()) {
+                        throw new \RuntimeException(
+                            'Instalment #' . $schedule->instalment_no . ' is already settled, and there is'
+                            . ' nothing after it left to pay. Choose an open instalment, or record this as'
+                            . ' an adjustment if it is a correction.'
+                        );
+                    }
+
+                    $owedFromHere = round($queue->sum(fn ($s) => max(0, (float) $s->total_amount - (float) $s->paid_amount)), 2);
+
+                    // Refused rather than absorbed. Money with nothing left to
+                    // settle is not a payment on this loan — it is a wrong figure,
+                    // a wrong loan, or a refund, and each of those is somebody's
+                    // decision to make rather than something to round away here.
+                    if ($applied > $owedFromHere + 0.004) {
+                        throw new \RuntimeException(
+                            'Only ' . number_format($owedFromHere, 2) . ' is still owed from instalment #'
+                            . $queue->first()->instalment_no . ' onward, so '
+                            . number_format($applied, 2)
+                            . ($feePart > 0 ? ' (what is left after the ' . number_format($feePart, 2) . ' fee)' : '')
+                            . ' leaves ' . number_format($applied - $owedFromHere, 2)
+                            . ' with nothing to settle. Reduce the amount, or start from an earlier instalment.'
+                        );
+                    }
+
+                    // Worked out in full before a single row is written, so the
+                    // transaction below can be created with the totals its journal
+                    // entry needs — the entry is built from principal_part and
+                    // interest_part, not from the schedule.
+                    $left = $applied;
+
+                    foreach ($queue as $s) {
+                        if ($left <= 0) {
+                            break;
+                        }
+
+                        $owed = round((float) $s->total_amount - (float) $s->paid_amount, 2);
+
+                        if ($owed <= 0) {
+                            continue;
+                        }
+
+                        $take     = min($left, $owed);
+                        $ratio    = (float) $s->total_amount > 0
+                            ? (float) $s->interest_component / (float) $s->total_amount
+                            : 0.0;
+                        $interest = round($take * $ratio, 2);
+
+                        $plan[] = ['schedule' => $s, 'take' => $take, 'interest' => $interest];
+
+                        $interestPart += $interest;
+                        $left = round($left - $take, 2);
+                    }
+
+                    // Principal is the residual, not a second accumulation: the
+                    // two parts are what the bank leg is built from, so they have
+                    // to add back to the payment exactly. Summing both separately
+                    // lets a paisa of per-instalment rounding drift between them
+                    // and leaves the entry a paisa out of balance.
+                    $interestPart  = round($interestPart, 2);
                     $principalPart = round($applied - $interestPart, 2);
                 }
 
@@ -914,15 +1328,18 @@ class FinancingController implements HasMiddleware
                     'created_by'            => Auth::id(),
                 ]);
 
-                if ($schedule) {
-                    // Credited with what actually settled the instalment, not the
-                    // gross payment — a closure fee does not pay down what is owed.
-                    $paid = round((float) $schedule->paid_amount + $applied, 2);
+                // Credited with what actually settled each instalment, not the
+                // gross payment — a closure fee does not pay down what is owed,
+                // and neither does the part of the payment that ran on to the
+                // next row.
+                foreach ($plan as $step) {
+                    $s    = $step['schedule'];
+                    $paid = round((float) $s->paid_amount + $step['take'], 2);
 
-                    $schedule->update([
+                    $s->update([
                         'paid_amount' => $paid,
-                        'paid_date'   => $paid >= (float) $schedule->total_amount ? $data['date'] : $schedule->paid_date,
-                        'status'      => $paid >= (float) $schedule->total_amount ? 'paid' : 'partial',
+                        'paid_date'   => $paid >= (float) $s->total_amount ? $data['date'] : $s->paid_date,
+                        'status'      => $paid >= (float) $s->total_amount ? 'paid' : 'partial',
                     ]);
                 }
 
@@ -998,23 +1415,236 @@ class FinancingController implements HasMiddleware
      * withdrawal nobody booked overstates what the owner still has in the
      * business. Investment credits equity; drawings debit it — never an expense.
      */
+    public function printCapital(Request $request)
+    {
+        $user = Auth::user();
+        $query = FinancingCapital::query()->with(['company:id,name', 'bank:id,name']);
+
+        if (! $user->can('view all financing') && ! empty($user->company_id)) {
+            $query->where('company_id', $user->company_id);
+        } elseif ($request->filled('company_id')) {
+            $query->where('company_id', $request->query('company_id'));
+        }
+
+        if ($request->filled('ids')) {
+            $ids = collect(explode(',', (string) $request->query('ids')))
+                ->filter(fn ($id) => ctype_digit(trim($id)))
+                ->map(fn ($id) => (int) trim($id))->unique()->values();
+            abort_if($ids->isEmpty(), 422, 'No valid transactions were selected.');
+            $query->whereIn('id', $ids);
+        }
+
+        if (is_string($search = $request->query('q')) && trim($search) !== '') {
+            $term = '%' . trim($search) . '%';
+            $query->where(function ($q) use ($term) {
+                $q->where('person_name', 'like', $term)
+                  ->orWhere('reason', 'like', $term)
+                  ->orWhere('reference', 'like', $term);
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('date', '>=', $request->query('date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('date', '<=', $request->query('date_to'));
+        }
+
+        $reversedCapitalIds = JournalEntry::query()
+            ->where('source', 'financing_capital')
+            ->whereNull('reversed_journal_entry_id')
+            ->whereHas('reversedBy')
+            ->pluck('source_id')
+            ->filter()
+            ->all();
+
+        $activeCapitalQuery = clone $query;
+
+        if ($reversedCapitalIds) {
+            $activeCapitalQuery->whereNotIn('id', $reversedCapitalIds);
+        }
+
+        $peopleQuery = clone $activeCapitalQuery;
+
+        if (is_string($kind = $request->query('kind')) && in_array($kind, ['investment', 'drawings'], true)) {
+            $query->where('kind', $kind);
+            $activeCapitalQuery->where('kind', $kind);
+        }
+
+        if ($request->filled('owner_id')) {
+            $owner = User::withTrashed()->findOrFail((int) $request->query('owner_id'));
+            $ownerScope = function ($ownerQuery) use ($owner) {
+                $ownerQuery->where('party_id', $owner->id)
+                    ->orWhere(function ($legacy) use ($owner) {
+                        $legacy->whereNull('party_id')->where('person_name', $owner->name);
+                    });
+            };
+            $query->where($ownerScope);
+            $activeCapitalQuery->where($ownerScope);
+            $peopleQuery->where($ownerScope);
+        } elseif (is_string($person = $request->query('person')) && trim($person) !== '') {
+            $query->where('person_name', trim($person));
+            $activeCapitalQuery->where('person_name', trim($person));
+            $peopleQuery->where('person_name', trim($person));
+        }
+
+        $capitalTotals = [
+            'investment' => (float) (clone $activeCapitalQuery)->where('kind', 'investment')->sum('amount'),
+            'drawings'   => (float) (clone $activeCapitalQuery)->where('kind', 'drawings')->sum('amount'),
+            'count'      => (int) (clone $activeCapitalQuery)->count(),
+        ];
+        $capitalTotals['net'] = $capitalTotals['investment'] - $capitalTotals['drawings'];
+
+        $capitalPeople = $peopleQuery
+            ->select('person_name')
+            ->selectRaw('MAX(party_id) as party_id')
+            ->selectRaw("SUM(CASE WHEN kind = 'investment' THEN amount ELSE 0 END) as investment_total")
+            ->selectRaw("SUM(CASE WHEN kind = 'drawings' THEN amount ELSE 0 END) as drawings_total")
+            ->selectRaw('COUNT(*) as movement_count')
+            ->selectRaw('MAX(date) as last_movement_at')
+            ->groupBy('person_name')
+            ->orderByRaw("SUM(CASE WHEN kind = 'investment' THEN amount ELSE -amount END) DESC")
+            ->get();
+
+        $capital = $query->orderBy('date', 'desc')->orderBy('id', 'desc')->get();
+
+        $capitalPosting = JournalEntry::query()
+            ->with('reversedBy:id,reversed_journal_entry_id')
+            ->where('source', 'financing_capital')
+            ->whereIn('source_id', $capital->pluck('id'))
+            ->whereNull('reversed_journal_entry_id')
+            ->get()
+            ->keyBy('source_id');
+
+        $company = $request->filled('company_id')
+            ? Company::find($request->query('company_id'))
+            : ($user->company_id ? Company::find($user->company_id) : Company::first());
+
+        return view('financing.print-capital', [
+            'capital'        => $capital,
+            'capitalTotals'  => $capitalTotals,
+            'capitalPeople'  => $capitalPeople,
+            'capitalPosting' => $capitalPosting,
+            'company'        => $company,
+            'dateFrom'       => $request->query('date_from'),
+            'dateTo'         => $request->query('date_to'),
+            'kind'           => $request->query('kind'),
+            'person'         => $request->query('person'),
+            'search'         => $request->query('q'),
+        ]);
+    }
+
+    public function printLiability(Request $request)
+    {
+        $service = app(InterCompanyLiabilityService::class);
+        abort_unless($service->ready(), 404);
+
+        $user = Auth::user();
+        $scope = function ($query) use ($user, $request) {
+            if (! $user->can('view all financing') && ! empty($user->company_id)) {
+                return $query->forCompany($user->company_id);
+            }
+
+            if ($request->filled('company_id')) {
+                return $query->forCompany($request->query('company_id'));
+            }
+
+            return $query;
+        };
+
+        $filtered = function () use ($scope, $request) {
+            $query = $scope(
+                InterCompanyLiability::query()
+                    ->with(['debtor:id,name,short_name', 'creditor:id,name,short_name', 'bank:id,name', 'expense:id,title'])
+            );
+
+            if (is_string($search = $request->query('q')) && trim($search) !== '') {
+                $term = '%' . trim($search) . '%';
+                $query->where(function ($q) use ($term) {
+                    $q->where('title', 'like', $term)
+                      ->orWhere('reference', 'like', $term)
+                      ->orWhere('notes', 'like', $term);
+                });
+            }
+
+            if ($request->filled('date_from')) {
+                $query->whereDate('incurred_on', '>=', $request->query('date_from'));
+            }
+
+            if ($request->filled('date_to')) {
+                $query->whereDate('incurred_on', '<=', $request->query('date_to'));
+            }
+
+            return $query;
+        };
+
+        $activeLiabilities = $filtered()->active()->orderByDesc('incurred_on')->orderByDesc('id')->get();
+        $settledLiabilities = $filtered()->closed()->orderByDesc('incurred_on')->orderByDesc('id')->get();
+        $wholeBook = $filtered()->get();
+        $liabilityTotals = $service->totals($wholeBook);
+        $liabilityPairs = $service->pairPositions($wholeBook);
+        $liabilityTxns = InterCompanyLiabilityTransaction::query()
+            ->with([
+                'liability:id,debtor_company_id,creditor_company_id,title,amount',
+                'liability.debtor:id,name,short_name',
+                'liability.creditor:id,name,short_name',
+                'bankTransfer:id,reference_no,amount',
+            ])
+            ->whereIn('inter_company_liability_id', $filtered()->select('inter_company_liabilities.id'))
+            ->orderByDesc('date')->orderByDesc('id')
+            ->get();
+
+        $company = $request->filled('company_id')
+            ? Company::find($request->query('company_id'))
+            : ($user->company_id ? Company::find($user->company_id) : Company::first());
+
+        return view('financing.print-liability', [
+            'activeLiabilities'  => $activeLiabilities,
+            'settledLiabilities' => $settledLiabilities,
+            'liabilityTxns'      => $liabilityTxns,
+            'liabilityTotals'    => $liabilityTotals,
+            'liabilityPairs'     => $liabilityPairs,
+            'company'            => $company,
+            'dateFrom'           => $request->query('date_from'),
+            'dateTo'             => $request->query('date_to'),
+            'search'             => $request->query('q'),
+        ]);
+    }
+
     public function storeCapital(Request $request)
     {
         $data = $request->validate([
             'company_id'  => ['required', 'exists:companies,id'],
             'kind'        => ['required', Rule::in(['investment', 'drawings'])],
-            'person_name' => ['required', 'string', 'max:191'],
-            'reason'      => ['nullable', 'string', 'max:191'],
+            'owner_user_id' => ['required', 'exists:users,id'],
+            'reason'      => ['required', 'string', 'max:191'],
             'amount'      => ['required', 'numeric', 'min:0.01'],
             'date'        => ['required', 'date'],
+            'transaction_time' => ['required', 'date_format:H:i'],
             'method'      => ['required', Rule::in(['cash', 'bank', 'adjustment'])],
-            'bank_id'     => ['nullable', 'exists:banks,id'],
+            'bank_id'     => ['nullable', 'required_if:method,bank', 'exists:banks,id'],
+            'counterparty_method' => [Rule::requiredIf($request->method !== 'adjustment'), 'nullable', Rule::in(['cash', 'bank', 'cheque'])],
+            'counterparty_bank' => [Rule::requiredIf(in_array($request->counterparty_method, ['bank', 'cheque'], true)), 'nullable', 'string', 'max:150'],
+            'counterparty_ref' => [Rule::requiredIf(in_array($request->counterparty_method, ['bank', 'cheque'], true)), 'nullable', 'string', 'max:100'],
             'gl_account_id' => ['nullable', 'exists:accounts,id'],
             'reference'   => ['nullable', 'string', 'max:191'],
             'notes'       => ['nullable', 'string'],
         ]);
 
+        if ($data['method'] !== 'bank') $data['bank_id'] = null;
+        if (($data['counterparty_method'] ?? null) === 'cash' || $data['method'] === 'adjustment') {
+            $data['counterparty_bank'] = null;
+            $data['counterparty_ref'] = null;
+        }
         try {
+            $owner = User::findOrFail($data['owner_user_id']);
+            if (! in_array($owner->name, ['Md Mohsin', 'Md Parvez Hossain', 'Nayeemur Rahman', 'Mohammad Fahim'], true)) throw new \RuntimeException('Please choose Md Mohsin, Parvez, Nayeem, or Mohammad Fahim as the capital person.');
+            $data['person_name'] = $owner->name;
+            $data['party_type'] = 'user';
+            $data['party_id'] = $owner->id;
+            unset($data['owner_user_id']);
+            if ($data['method'] === 'bank' && (int) Bank::findOrFail($data['bank_id'])->company_id !== (int) $data['company_id']) throw new \RuntimeException('The selected account belongs to another company.');
             $posted = DB::transaction(function () use ($data) {
                 $capital = FinancingCapital::create($data + ['created_by' => Auth::id()]);
 
@@ -1029,11 +1659,41 @@ class FinancingController implements HasMiddleware
 
         $what = $data['kind'] === 'investment' ? 'Investment' : 'Drawing';
 
+        // A saved owner movement is a money transaction, so notify the owner
+        // through the same Brevo/SMS helpers used elsewhere. Delivery is
+        // intentionally best-effort: a gateway outage must never roll back a
+        // correctly posted journal and bank movement.
+        $direction = $data['kind'] === 'investment' ? 'investment received' : 'drawing recorded';
+        $reference = $posted?->reference ?: ($data['reference'] ?? 'Capital ledger');
+        $notice = "Dear {$owner->name}, BDT " . number_format((float) $data['amount'], 2, '.', ',')
+            . " {$direction} on " . \Carbon\Carbon::parse($data['date'])->format('d/m/Y')
+            . ". Ref {$reference}.";
+        if ($owner->email) {
+            try {
+                $response = sendBrevoMail($owner->email, $owner->name, "Owner {$what} - {$reference}",
+                    '<p>' . e($notice) . '</p><p>Purpose: <strong>' . e($data['reason']) . '</strong></p>');
+                if (! $response->successful()) {
+                    \Illuminate\Support\Facades\Log::warning('Owner capital email failed.', ['owner_id' => $owner->id, 'status' => $response->status(), 'body' => $response->body()]);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Owner capital email failed.', ['owner_id' => $owner->id, 'error' => $e->getMessage()]);
+            }
+        }
+        if ($owner->phone) {
+            try {
+                if (sendSms($owner->phone, $notice) === false) {
+                    \Illuminate\Support\Facades\Log::warning('Owner capital SMS failed.', ['owner_id' => $owner->id, 'error' => app()->bound('sms.last_error') ? app('sms.last_error') : null]);
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Owner capital SMS failed.', ['owner_id' => $owner->id, 'error' => $e->getMessage()]);
+            }
+        }
+
         return redirect()
             ->route('role.financing.index', ['role' => $request->route('role'), 'book' => 'capital'])
             ->with('success', $posted
                 ? $what . ' recorded and posted as ' . $posted->reference . '.'
-                : $what . ' recorded. No bank was named, so nothing was posted — record the movement in Manage Banks.');
+                : $what . ' recorded as a non-cash adjustment; no cash or bank ledger was changed.');
     }
 
     public function destroyCapital(Request $request, $role, FinancingCapital $capital)
@@ -1047,11 +1707,81 @@ class FinancingController implements HasMiddleware
             );
         }
 
-        $capital->delete();
+        $message = 'Entry removed.';
+
+        try { DB::transaction(function () use ($capital, &$message) {
+            $postedEntry = $this->posting
+                ->entriesFor('financing_capital', $capital->id)
+                ->first(fn ($j) => ! $j->reversed_journal_entry_id);
+
+            if ($postedEntry && $postedEntry->reversedBy()->exists()) {
+                $message = 'Entry was already reversed; no further action was taken.';
+                return;
+            }
+
+            if ($postedEntry) {
+                if (! $this->posting->reverse($postedEntry, 'Capital movement reversed')) {
+                    throw new \RuntimeException('The linked ledger posting could not be reversed.');
+                }
+
+                $message = 'Entry reversed. The original row stays visible for audit, and totals now exclude it.';
+                return;
+            }
+
+            $capital->delete();
+            $message = 'Non-posted entry removed.';
+        }); } catch (\RuntimeException $e) { return back()->with('error', $e->getMessage()); }
 
         return redirect()
             ->route('role.financing.index', ['role' => $request->route('role'), 'book' => 'capital'])
-            ->with('success', 'Entry removed.');
+            ->with('success', $message);
+    }
+
+    public function sendCapitalStatement(Request $request)
+    {
+        $data = $request->validate([
+            'owner_id' => ['required', 'exists:users,id'],
+            'channel' => ['required', Rule::in(['email', 'sms'])],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+        ]);
+        $owner = User::findOrFail($data['owner_id']);
+        $query = FinancingCapital::query()->where(function ($q) use ($owner) {
+            $q->where('party_id', $owner->id)
+                ->orWhere(fn ($legacy) => $legacy->whereNull('party_id')->where('person_name', $owner->name));
+        });
+        if (! Auth::user()->can('view all financing') && Auth::user()->company_id) {
+            $query->where('company_id', Auth::user()->company_id);
+        }
+        if (! empty($data['date_from'])) $query->whereDate('date', '>=', $data['date_from']);
+        if (! empty($data['date_to'])) $query->whereDate('date', '<=', $data['date_to']);
+        $invested = (float) (clone $query)->where('kind', 'investment')->sum('amount');
+        $drawn = (float) (clone $query)->where('kind', 'drawings')->sum('amount');
+        $net = $invested - $drawn;
+        $code = $owner->employee_id_no ?: 'USER-' . str_pad((string) $owner->id, 3, '0', STR_PAD_LEFT);
+        $asOf = ! empty($data['date_to']) ? \Carbon\Carbon::parse($data['date_to'])->format('d/m/Y') : now()->format('d/m/Y');
+        $text = "Dear {$owner->name}, owner capital statement as of {$asOf}: invested BDT "
+            . number_format($invested, 2, '.', ',') . ', drawn BDT ' . number_format($drawn, 2, '.', ',')
+            . ', net BDT ' . number_format($net, 2, '.', ',') . ". Ref {$code}.";
+
+        if ($data['channel'] === 'email') {
+            if (! $owner->email) return response()->json(['success' => false, 'message' => 'This owner has no email address.'], 422);
+            try {
+                $response = sendBrevoMail($owner->email, $owner->name, "Owner Capital Statement - {$code}",
+                    '<h2>Owner Capital Statement</h2><p>' . e($text) . '</p>');
+                return response()->json(['success' => $response->successful(), 'message' => $response->successful() ? "Email sent to {$owner->email}." : 'Brevo email failed: HTTP ' . $response->status()]);
+            } catch (\Throwable $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            }
+        }
+
+        if (! $owner->phone) return response()->json(['success' => false, 'message' => 'This owner has no phone number.'], 422);
+        try {
+            $sent = sendSms($owner->phone, $text) !== false;
+            return response()->json(['success' => $sent, 'message' => $sent ? "SMS sent to {$owner->phone}." : (app()->bound('sms.last_error') ? app('sms.last_error') : 'SMS failed.')]);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 
     /* ── Categories and sub-categories ──────────────────────────────────
@@ -1142,6 +1872,161 @@ class FinancingController implements HasMiddleware
         return redirect()
             ->route('role.financing.index', ['role' => $request->route('role'), 'book' => $financing->direction])
             ->with('success', 'Loan removed.');
+    }
+
+    /**
+     * Settle some or all of an inter-company liability.
+     *
+     * Records the payment on the Liability book and nothing else — no journal,
+     * no balance moved. If real money changed hands it went through Manage
+     * Banks as a transfer, and the optional link below points at it rather than
+     * describing it a second time here.
+     */
+    public function settleLiability(Request $request, $role, InterCompanyLiability $liability)
+    {
+        $service = app(InterCompanyLiabilityService::class);
+
+        if (! $service->ready()) {
+            return back()->with('error', 'The Liability book is not installed on this server yet.');
+        }
+
+        $this->authorizeLiability($liability);
+
+        $data = $request->validate([
+            'amount'           => ['required', 'numeric', 'min:0.01'],
+            'date'             => ['required', 'date'],
+            'bank_transfer_id' => ['nullable', 'exists:bank_transfers,id'],
+            'memo'             => ['nullable', 'string', 'max:255'],
+            'type'             => ['nullable', Rule::in(['settlement', 'write_off', 'adjustment'])],
+            // 'record' just notes that it was paid. 'bank' actually pays it:
+            // it raises a real transfer from the debtor's account to the
+            // creditor's and links it, so nobody has to go to Manage Banks,
+            // make the transfer and come back to point at it.
+            'settle_via'       => ['nullable', Rule::in(['record', 'bank'])],
+            'from_bank_id'     => ['nullable', 'exists:banks,id'],
+            'to_bank_id'       => ['nullable', 'exists:banks,id', 'different:from_bank_id'],
+        ], [
+            'to_bank_id.different' => 'The money has to go from one account to a different one.',
+        ]);
+
+        $payByBank = ($data['settle_via'] ?? 'record') === 'bank';
+
+        // Paying it off is a settlement by definition — a write-off is money
+        // forgiven, not money sent, so the two cannot be combined.
+        if ($payByBank && ($data['type'] ?? 'settlement') !== 'settlement') {
+            return back()->withInput()->with('error', 'A write-off or adjustment is not a payment — it cannot be sent by bank transfer.');
+        }
+
+        if ($payByBank && (empty($data['from_bank_id']) || empty($data['to_bank_id']))) {
+            return back()->withInput()->with('error', 'Choose which account pays and which account receives.');
+        }
+
+        try {
+            // One transaction around both halves. A transfer that posts while
+            // the settlement it exists for fails would move real money and
+            // leave the debt still standing — the worst of the two outcomes.
+            DB::transaction(function () use ($service, $liability, $data, $payByBank) {
+                $transferId = $data['bank_transfer_id'] ?? null;
+
+                if ($payByBank) {
+                    $transferId = $this->raiseSettlementTransfer($liability, $data);
+                }
+
+                $service->settle(
+                    $liability,
+                    (float) $data['amount'],
+                    $data['date'],
+                    $transferId,
+                    $data['memo'] ?? null,
+                    $data['type'] ?? 'settlement'
+                );
+            });
+        } catch (\Throwable $e) {
+            // The service refuses rather than write a wrong figure — an
+            // over-settlement is an answer, not a 500. Same for a source
+            // account that cannot cover the payment.
+            return back()->withInput()->with('error', $e->getMessage());
+        }
+
+        $fresh = $liability->fresh();
+
+        return redirect()
+            ->route('role.financing.index', ['role' => $role, 'book' => 'liability'])
+            ->with('success', $fresh->outstanding > 0
+                ? 'Recorded. ৳' . number_format($fresh->outstanding, 2) . ' is still owed.'
+                : 'Settled in full — moved to the register.');
+    }
+
+    /**
+     * Pay a liability off with a real bank transfer, raised from this desk.
+     *
+     * The transfer is a genuine movement — it debits, credits and moves both
+     * bank balances, exactly as one raised from Manage Banks does, because it
+     * runs that desk's own code (App\Services\BankTransferService). The
+     * liability row still posts nothing; the transfer alongside it is what
+     * touches the ledger, and it would have touched it either way.
+     *
+     * Returns the new transfer's id so the settlement can point at it.
+     *
+     * @throws \RuntimeException when the paying account cannot cover it
+     */
+    private function raiseSettlementTransfer(InterCompanyLiability $liability, array $data): int
+    {
+        $from = Bank::findOrFail($data['from_bank_id']);
+        $to   = Bank::findOrFail($data['to_bank_id']);
+        $amount = round((float) $data['amount'], 2);
+
+        // The same ledger-derived figure the bank desk checks against — never
+        // the `balance` column, which has drifted from the ledger before.
+        $available = $from->availableBalance();
+
+        if ($available < $amount) {
+            throw new \RuntimeException(
+                $from->name . ' does not hold enough to send this. Available: ৳'
+                . number_format($available, 2) . ', needed: ৳' . number_format($amount, 2) . '.'
+            );
+        }
+
+        $transferService = app(\App\Services\BankTransferService::class);
+
+        $transfer = BankTransfer::create([
+            'from_bank_id'   => $from->id,
+            'to_bank_id'     => $to->id,
+            'amount'         => $amount,
+            'payment_date'   => $data['date'],
+            'reference_no'   => $transferService->settlementReference($liability->id),
+            'payment_method' => 'bank_transfer',
+            'status'         => 'completed',
+            'remarks'        => trim('Inter-company settlement — '
+                . ($liability->debtor?->short_name ?: $liability->debtor?->name) . ' to '
+                . ($liability->creditor?->short_name ?: $liability->creditor?->name)
+                . ($data['memo'] ?? '' ? ' · ' . $data['memo'] : '')),
+            'created_by'     => Auth::id(),
+        ]);
+
+        $transferService->post($transfer, $from);
+
+        return $transfer->id;
+    }
+
+    /**
+     * A company-locked user may open a liability only if their company is one of
+     * the two parties to it. Either side counts: being owed is as much your
+     * business as owing.
+     */
+    private function authorizeLiability(InterCompanyLiability $liability): void
+    {
+        $user = Auth::user();
+
+        if ($user->can('view all financing') || empty($user->company_id)) {
+            return;
+        }
+
+        abort_unless(
+            (int) $liability->debtor_company_id === (int) $user->company_id
+                || (int) $liability->creditor_company_id === (int) $user->company_id,
+            404
+        );
     }
 
     /**

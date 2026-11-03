@@ -23,29 +23,45 @@
     .vsd-table td { font-size:12px;color:#374151;padding:9px 10px;border-bottom:1px solid #f3f4f6;vertical-align:top; }
     .vsd-table tr:last-child td { border-bottom:none; }
     .vsd-table tr:hover td { background:#f8fafc; }
+    #vsCreateModal .vs-create-shell { max-height:calc(100vh - 2rem); }
+    #vsCreateModal .vs-create-body { scrollbar-width:thin; scrollbar-color:#94a3b8 #f1f5f9; }
+    #vsCreateModal .vs-create-section { margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid #e2e8f0; }
+    #vsCreateModal .vs-create-section:first-of-type { margin-top:0; padding-top:0; border-top:0; }
+    #vsCreateModal input:not([type="checkbox"]), #vsCreateModal select, #vsCreateModal textarea { min-height:42px; border-radius:10px; transition:border-color .15s,box-shadow .15s,background .15s; }
+    #vsCreateModal input:not([type="checkbox"]):focus, #vsCreateModal select:focus, #vsCreateModal textarea:focus { border-color:#14b8a6 !important; box-shadow:0 0 0 3px rgba(20,184,166,.12); }
+    #vsCreateModal label { line-height:1.25rem; }
+    #vsCreateModal .select2-container .select2-selection--single { height:42px;border-radius:10px;border-color:#cbd5e1;display:flex;align-items:center; }
+    #vsCreateModal .select2-container .select2-selection--single .select2-selection__rendered { padding-left:12px;line-height:40px; }
+    #vsCreateModal .select2-container .select2-selection--single .select2-selection__arrow { height:40px; }
+    #vseModal .vs-edit-shell { max-height:calc(100vh - 2rem); }
+    #vseModal .vs-edit-body { scrollbar-width:thin; scrollbar-color:#94a3b8 #f1f5f9; }
+    #vseModal .vs-edit-section { margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid #e2e8f0; }
+    #vseModal .vs-edit-section:first-of-type { margin-top:0; padding-top:0; border-top:0; }
+    #vseModal input:not([type="checkbox"]), #vseModal select, #vseModal textarea { min-height:42px; border-radius:10px; transition:border-color .15s,box-shadow .15s,background .15s; }
+    #vseModal input:not([type="checkbox"]):focus, #vseModal select:focus, #vseModal textarea:focus { border-color:#8b5cf6 !important; box-shadow:0 0 0 3px rgba(139,92,246,.12); }
+    #vseModal label { line-height:1.25rem; }
+    #vseModal .select2-container .select2-selection--single { height:42px;border-radius:10px;border-color:#cbd5e1;display:flex;align-items:center; }
+    #vseModal .select2-container .select2-selection--single .select2-selection__rendered { padding-left:12px;line-height:40px; }
+    #vseModal .select2-container .select2-selection--single .select2-selection__arrow { height:40px; }
 </style>
 @endsection
 
 @section('main-content')
+@include('layout.visa-processing-tabs')
 @php
     use Illuminate\Support\Str;
     $role = Str::slug(auth()->user()->getRoleNames()->first());
     $taka = '৳';
-    function fmtMoney($n) { return number_format($n, 0); }
-    function fmtL($n) { if($n >= 100000) return number_format($n/100000, 1).'L'; if($n >= 1000) return number_format($n/1000, 1).'K'; return number_format($n, 0); }
+    // Guarded: a top-level function in a view fatals ("Cannot redeclare") the
+    // moment the compiled file is evaluated twice in one process — which the
+    // view engine does when it retries after a lost compile race.
+    if (! function_exists('fmtMoney')) {
+        function fmtMoney($n) { return number_format($n, 0); }
+    }
+    if (! function_exists('fmtL')) {
+        function fmtL($n) { if($n >= 100000) return number_format($n/100000, 1).'L'; if($n >= 1000) return number_format($n/1000, 1).'K'; return number_format($n, 0); }
+    }
 @endphp
-
-{{-- Page header --}}
-<header class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm mb-4">
-    <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-teal-600 flex-shrink-0"><i class="fas fa-file-invoice-dollar"></i></span>
-    <div class="flex-1">
-        <h1 class="text-lg font-bold text-slate-900">Manage Visa Sales</h1>
-        <p class="text-xs text-slate-500">Client-wise consolidated vouchers — bundle multiple applications into one invoice</p>
-    </div>
-    <button type="button" class="vs-create-btn rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-        <i class="fas fa-plus mr-1"></i> Create Sale
-    </button>
-</header>
 
 @if(session('success'))
 <div class="mb-4 flex gap-3 items-center rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -53,48 +69,24 @@
 </div>
 @endif
 
-{{-- Stat cards --}}
-<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-    <div class="rounded-xl p-5 flex flex-col gap-2 bg-gradient-to-br from-blue-50 to-blue-100">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white">
-            <i class="fas fa-clipboard-list"></i>
-        </div>
-        <div class="text-3xl font-black text-blue-800">{{ $stats['total_sales_mtd'] }}</div>
-        <div class="text-xs font-bold text-blue-600 uppercase tracking-wide">Total Sales (MTD)</div>
-        <div class="text-xs text-blue-400">{{ $sales->total() }} applications bundled</div>
-    </div>
-    <div class="rounded-xl p-5 flex flex-col gap-2 bg-gradient-to-br from-emerald-50 to-emerald-100">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white">
-            <i class="fas fa-money-bill-wave"></i>
-        </div>
-        <div class="text-3xl font-black text-emerald-800">{{ $taka }} {{ fmtL($stats['revenue_mtd']) }}</div>
-        <div class="text-xs font-bold text-emerald-600 uppercase tracking-wide">Revenue</div>
-        <div class="text-xs text-emerald-400">This month total</div>
-    </div>
-    <div class="rounded-xl p-5 flex flex-col gap-2 bg-gradient-to-br from-amber-50 to-amber-100">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white">
-            <i class="fas fa-hourglass-half"></i>
-        </div>
-        <div class="text-3xl font-black text-amber-800">{{ $taka }} {{ fmtL($stats['total_due']) }}</div>
-        <div class="text-xs font-bold text-amber-600 uppercase tracking-wide">Due / Pending</div>
-        <div class="text-xs text-amber-400">Across all invoices</div>
-    </div>
-    <div class="rounded-xl p-5 flex flex-col gap-2 bg-gradient-to-br from-rose-50 to-rose-100">
-        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-rose-400 to-rose-600 flex items-center justify-center text-white">
-            <i class="fas fa-chart-line"></i>
-        </div>
-        <div class="text-3xl font-black text-rose-800">{{ $taka }} {{ fmtL(max(0, $stats['commission'])) }}</div>
-        <div class="text-xs font-bold text-rose-600 uppercase tracking-wide">Commission Earned</div>
-        <div class="text-xs text-rose-400">Net profit</div>
-    </div>
-</div>
+@include('visa-processing.partials.page-top', [
+    'vxTiles' => [
+        ['Sales (MTD)', $stats['total_sales_mtd'], $sales->total() . ' applications bundled', 'fa-clipboard-list', 'blue', null],
+        ['Revenue', $taka . ' ' . fmtL($stats['revenue_mtd']), 'This month', 'fa-money-bill-wave', 'green', null],
+        ['Due / Pending', $taka . ' ' . fmtL($stats['total_due']), 'Across all invoices', 'fa-hourglass-half', 'amber', null],
+        ['Commission', $taka . ' ' . fmtL(max(0, $stats['commission'])), 'Net profit', 'fa-chart-line', 'violet', null],
+    ],
+    'vxIcon' => 'fa-file-invoice-dollar', 'vxTitle' => 'Manage Visa Sales',
+    'vxSub' => 'Client-wise consolidated vouchers — bundle multiple applications into one invoice',
+    'vxAction' => '<button type="button" class="vs-create-btn vx-btn"><i class="fas fa-plus"></i> Create Sale</button>',
+])
 
 {{-- Table card with integrated filter --}}
 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
     {{-- Integrated filter --}}
     <form method="GET" action="{{ route('role.visa-sales.index', ['role' => $role]) }}">
-        <div class="flex flex-wrap items-center gap-2 bg-slate-50 px-4 py-3">
+        <div class="vx-filter flex flex-wrap items-center gap-2 bg-slate-50 px-4 py-3">
             <div class="relative flex-1 min-w-[180px]">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                 <input type="text" name="search" value="{{ request('search') }}"
@@ -129,7 +121,7 @@
                     <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Paid</th>
                     <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Due</th>
                     <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">Status</th>
-                    <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">Action</th>
+                    <th class="px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500" style="width:1%;white-space:nowrap">Action</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -140,6 +132,12 @@
                 $visaType     = optional($firstProcess)->visa_type ?? optional(optional($firstProcess)->visaCategory)->name;
                 $appIds       = $sale->items->take(3)->map(fn($i) => optional($i->visaProcess)->application_id)->filter()->implode(', ');
                 $extra        = max(0, $sale->items->count() - 3);
+                $saleVendors  = $sale->items->map(fn($i) => optional($i->visaProcess)->vendor)->filter()->unique('id')->values();
+                $partyLedgerUrl = route('role.party-statement.index', ['role' => $role]);
+                $clientIsAgent = $sale->client?->roles?->contains('name', 'agent') ?? false;
+                $clientPartyCode = $sale->client
+                    ? ($clientIsAgent ? 'EP-AG-' : 'EP-CU-').str_pad((string) $sale->client->id, 3, '0', STR_PAD_LEFT)
+                    : null;
                 $pBadgeClass  = ['paid' => 'bg-emerald-100 text-emerald-700', 'partial' => 'bg-amber-100 text-amber-700', 'pending' => 'bg-red-100 text-red-700'][$sale->status] ?? 'bg-slate-100 text-slate-600';
             @endphp
             <tr class="hover:bg-slate-50">
@@ -147,8 +145,18 @@
                     <span class="font-bold text-teal-700 text-sm">{{ $sale->invoice_number }}</span>
                 </td>
                 <td class="px-4 py-3">
-                    <div class="text-sm font-semibold text-slate-800">{{ $sale->client?->name ?? '—' }}</div>
-                    <div class="text-xs text-slate-400">{{ $sale->client?->phone }}</div>
+                    @if($sale->client)
+                        <div class="text-sm font-semibold text-slate-800">{{ $sale->client->name }}</div>
+                        <div class="text-xs text-slate-400">{{ $sale->client->phone }}</div>
+                        <div class="mt-0.5 text-[10px] text-slate-400">
+                            {{ $clientIsAgent ? 'Agent' : 'Customer' }} ID:
+                            <a href="{{ $partyLedgerUrl }}?party_id={{ $sale->client->id }}"
+                                class="font-semibold text-blue-700 hover:underline"
+                                title="Open {{ $sale->client->name }}'s ledger">{{ $clientPartyCode }}</a>
+                        </div>
+                    @else
+                        <div class="text-sm font-semibold text-slate-800">—</div>
+                    @endif
                 </td>
                 <td class="px-4 py-3">
                     <span class="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-[10px] font-bold text-teal-700">
@@ -160,6 +168,22 @@
                 <td class="px-4 py-3">
                     @if($country)<div class="text-sm font-medium text-slate-700">{{ $country->name }}</div>@endif
                     <div class="text-xs text-slate-400">{{ $visaType }}{{ $sale->bundle_label ? ' ('.$sale->bundle_label.')' : '' }}</div>
+                    @if($saleVendors->isNotEmpty())
+                        <div class="mt-1 text-[11px] text-slate-500">
+                            <i class="fas fa-building mr-1 text-slate-400"></i>Vendor:
+                            @foreach($saleVendors as $vendor)
+                                <span class="font-semibold text-slate-700">{{ $vendor->name }}</span>{{ !$loop->last ? ', ' : '' }}
+                            @endforeach
+                        </div>
+                        <div class="text-[10px] text-slate-400">
+                            @foreach($saleVendors as $vendor)
+                                Vendor ID:
+                                <a href="{{ $partyLedgerUrl }}?party_id={{ $vendor->id }}"
+                                    class="font-semibold text-violet-700 hover:underline"
+                                    title="Open {{ $vendor->name }}'s ledger">EP-VN-{{ str_pad((string) $vendor->id, 3, '0', STR_PAD_LEFT) }}</a>{{ !$loop->last ? ' · ' : '' }}
+                            @endforeach
+                        </div>
+                    @endif
                 </td>
                 <td class="px-4 py-3 text-xs text-slate-500">{{ $sale->voucher_date->format('d M Y') }}</td>
                 <td class="px-4 py-3 text-right text-sm font-semibold text-slate-700">{{ number_format($sale->total_amount) }}</td>
@@ -172,15 +196,15 @@
                         {{ ucfirst($sale->status) }}
                     </span>
                 </td>
-                <td class="px-4 py-3">
-                    <div class="flex items-center justify-center gap-1">
+                <td class="px-2 py-3">
+                    <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                         <button type="button" class="vs-view-btn flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                            data-id="{{ $sale->id }}" title="View Details">
-                            <i class="fas fa-eye text-xs"></i>
+                            data-id="{{ $sale->id }}" title="View Details" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-eye text-xs" style="font-size:11px;margin:0"></i>
                         </button>
                         <button type="button" class="vs-edit-btn flex h-8 w-8 items-center justify-center rounded-lg border border-violet-200 bg-violet-50 text-violet-600 hover:bg-violet-100"
-                            data-id="{{ $sale->id }}" title="Edit Sale">
-                            <i class="fas fa-pencil-alt text-xs"></i>
+                            data-id="{{ $sale->id }}" title="Edit Sale" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-pencil-alt text-xs" style="font-size:11px;margin:0"></i>
                         </button>
                         @if($sale->status !== 'paid')
                         <button type="button" class="vs-pay-btn flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
@@ -188,23 +212,23 @@
                             data-invoice="{{ $sale->invoice_number }}"
                             data-due="{{ $sale->due_amount }}"
                             data-total="{{ $sale->total_amount }}"
-                            title="Make Payment">
-                            <i class="fas fa-plus text-xs"></i>
+                            title="Make Payment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-plus text-xs" style="font-size:11px;margin:0"></i>
                         </button>
                         @else
-                        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300">
-                            <i class="fas fa-check text-xs"></i>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-check text-xs" style="font-size:11px;margin:0"></i>
                         </span>
                         @endif
                         <a href="{{ route('role.visa-sales.voucher', ['role' => $role, 'visaSale' => $sale->id]) }}"
                             target="_blank"
-                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-600 hover:bg-teal-100" title="Download Voucher">
-                            <i class="fas fa-download text-xs"></i>
+                            class="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-600 hover:bg-teal-100" title="Download Voucher" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-download text-xs" style="font-size:11px;margin:0"></i>
                         </a>
                         <button type="button" onclick="vsConfirmDelete('{{ $sale->id }}', '{{ addslashes($sale->invoice_number) }}')"
                             class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-500 hover:bg-red-100"
-                            title="Delete">
-                            <i class="fas fa-trash text-xs"></i>
+                            title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                            <i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i>
                         </button>
                     </div>
                 </td>
@@ -231,47 +255,48 @@
 @include('visa-sales.delete-modal')
 
 {{-- Payment Modal --}}
-<div id="pmtModal" class="fixed inset-0 z-[10000] bg-black/50 hidden [&:not(.hidden)]:flex items-center justify-center p-6">
-    <div class="w-full max-w-sm bg-white rounded-2xl p-7 shadow-2xl">
+<div id="pmtModal" class="fixed inset-0 z-[10000] bg-black/50 hidden [&:not(.hidden)]:flex items-center justify-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-2xl p-6 shadow-2xl">
         <div class="flex items-center gap-3 mb-5">
             <div class="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                <i class="fas fa-plus"></i>
+                <i class="fas fa-money-bill-transfer"></i>
             </div>
             <div>
-                <h3 class="text-sm font-bold text-slate-900">Make Payment</h3>
+                <h3 class="text-base font-bold text-slate-900">Receive Visa Payment</h3>
                 <p id="pmtInvoiceLabel" class="text-xs text-slate-400"></p>
             </div>
         </div>
-        <div class="rounded-xl bg-slate-50 px-4 py-3 mb-4 flex justify-between text-sm">
-            <span class="text-slate-500">Due Amount</span>
+        <div class="rounded-xl border border-red-100 bg-red-50 px-4 py-3 mb-4 flex justify-between text-sm">
+            <span class="text-slate-600 font-medium">Current Due</span>
             <span class="font-bold text-red-600">{{ $taka }} <span id="pmtDueDisplay">0</span></span>
         </div>
         <form id="pmtForm" method="POST">
             @csrf @method('PATCH')
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Amount ({{ $taka }}) <sup class="text-red-500">*</sup></label>
-            <input type="number" name="payment_amount" id="pmtAmountInput"
-                min="0.01" step="0.01" placeholder="0.00" required
-                class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 mb-4">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Method</label>
-            <select name="payment_method" id="pmtPaymentMethod" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500 mb-4" onchange="toggleVisaSaleBankField('pmt')">
-                <option value="cash">Cash</option>
-                <option value="card">Card</option>
-                <option value="advance">Advance</option>
-                <option value="checque">Cheque</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="mobile_banking">Mobile Banking</option>
-                <option value="other">Other</option>
-            </select>
-            <div id="pmt_bank_field" class="mb-4">
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Account (Bank)</label>
-                <select name="bank_id" id="pmtBankId" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-teal-500">
-                    <option value="">— Select bank —</option>
-                    @foreach($banks as $bank)
-                        <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                    @endforeach
-                </select>
+            <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500"><i class="fas fa-sack-dollar mr-1"></i> Payment Details</p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Amount <span class="text-red-500">*</span></label><input type="number" name="payment_amount" id="pmtAmountInput" min="0.01" step="0.01" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Payment Date <span class="text-red-500">*</span></label><input type="date" name="payment_date" id="pmtPaymentDate" value="{{ now()->format('Y-m-d') }}" max="{{ now()->format('Y-m-d') }}" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Custom Time <span class="text-red-500">*</span></label><input type="hidden" name="transaction_time" id="pmtTransactionTime"><div class="flex items-center gap-1"><select id="pmtHour" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-1 py-2 text-sm">@for($h=1;$h<=12;$h++)<option value="{{ $h }}">{{ str_pad($h,2,'0',STR_PAD_LEFT) }}</option>@endfor</select><b>:</b><select id="pmtMinute" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-1 py-2 text-sm">@for($m=0;$m<60;$m++)<option value="{{ $m }}">{{ str_pad($m,2,'0',STR_PAD_LEFT) }}</option>@endfor</select><select id="pmtPeriod" class="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-1 py-2 text-sm"><option>AM</option><option>PM</option></select></div></div>
+                </div>
             </div>
-            <div class="flex gap-3 justify-end">
+            <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500"><i class="fas fa-building-columns mr-1"></i> Money Route</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Received Via <span class="text-red-500">*</span></label><select name="payment_method" id="pmtPaymentMethod" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="mobile_banking">Mobile Banking</option><option value="cheque">Cheque</option><option value="card">Card</option><option value="other">Other</option></select></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Company Account (money received into) <span class="text-red-500">*</span></label><select name="bank_id" id="pmtBankId" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"><option value="">— Select account —</option>@include('partials.bank-options', ['banks' => $banks, 'selected' => null])</select></div>
+                    <div id="pmtPayerFields" class="hidden sm:col-span-2 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
+                        <p id="pmtPayerTitle" class="mb-2 text-[11px] font-bold uppercase tracking-wide text-blue-700"></p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label id="pmtPayerBankLabel" class="block text-xs font-semibold text-slate-600 mb-1"></label><input type="text" name="payer_bank" id="pmtPayerBank" maxlength="150" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                            <div><label id="pmtPayerReferenceLabel" class="block text-xs font-semibold text-slate-600 mb-1"></label><input type="text" name="payer_reference" id="pmtPayerReference" maxlength="100" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                        </div>
+                    </div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Reference No. / TRNX ID</label><input type="text" name="reference" id="pmtReference" maxlength="191" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                    <div><label class="block text-xs font-semibold text-slate-600 mb-1">Note (optional)</label><input type="text" name="notes" maxlength="500" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"></div>
+                </div>
+            </div>
+            <div class="flex gap-3 justify-end mt-5">
                 <button type="button" onclick="vsClosePmt()"
                     class="rounded-xl border border-slate-200 text-slate-700 font-semibold text-sm px-4 py-2 hover:bg-slate-50">Cancel</button>
                 <button type="submit"
@@ -355,6 +380,7 @@ function vsOpenCreate() {
     $('#create_select_agent').val('').prop('disabled', false).trigger('change.select2');
     $('#create_payment_method').val('cash');
     $('#create_bank_id').val('');
+    $('#create_payment_instruction_bank_id').val('');
     toggleVisaSaleBankField('create');
     vsLoadApplications();
     vsLoadOtherServices();
@@ -534,19 +560,112 @@ function vsToggleUnpaid() {
 }
 
 // ─── Payment modal ────────────────────────────────────────────────────────────
+const visaPaymentAccountTypes = {
+    cash: ['cash'],
+    bank_transfer: ['bank'],
+    cheque: ['bank'],
+    card: ['bank'],
+    mobile_banking: ['mobile_banking', 'digital_wallet'],
+};
+
+const visaPaymentPayerCopy = {
+    bank_transfer: {
+        title: '<i class="fas fa-building-columns mr-1"></i> Customer / Agent paid from',
+        bankLabel: 'Bank Name', bankPlaceholder: 'e.g. Dutch-Bangla Bank',
+        referenceLabel: 'Account Number', referencePlaceholder: 'Customer/agent account number',
+    },
+    cheque: {
+        title: '<i class="fas fa-money-check mr-1"></i> Cheque details',
+        bankLabel: 'Bank Name (cheque drawn on)', bankPlaceholder: 'e.g. Dutch-Bangla Bank',
+        referenceLabel: 'Cheque No.', referencePlaceholder: 'Cheque number',
+    },
+    mobile_banking: {
+        title: '<i class="fas fa-mobile-screen-button mr-1"></i> Customer / Agent paid from',
+        bankLabel: 'Provider / Service', bankPlaceholder: 'e.g. bKash, Nagad or Rocket',
+        referenceLabel: 'Mobile Account Number', referencePlaceholder: 'Customer/agent mobile account number',
+    },
+};
+
+function filterVisaPaymentAccounts() {
+    const method = document.getElementById('pmtPaymentMethod')?.value;
+    const accountSelect = document.getElementById('pmtBankId');
+    if (!accountSelect) return;
+    const wantedTypes = visaPaymentAccountTypes[method] || null;
+    let firstVisible = null;
+    [...accountSelect.options].forEach(function(option) {
+        if (!option.value) return;
+        const hidden = !!wantedTypes && !wantedTypes.includes(option.dataset.type || '');
+        option.hidden = hidden;
+        option.disabled = hidden;
+        if (!hidden && !firstVisible) firstVisible = option;
+    });
+    accountSelect.querySelectorAll('optgroup').forEach(function(group) {
+        const visible = [...group.querySelectorAll('option')].some(option => !option.hidden);
+        group.hidden = !visible;
+        group.disabled = !visible;
+    });
+    if (accountSelect.selectedOptions[0]?.hidden || accountSelect.selectedOptions[0]?.disabled) accountSelect.value = '';
+    if (method === 'cash' && firstVisible) {
+        const officeCash = [...accountSelect.options].find(option => !option.hidden && /office\s*cash/i.test(option.textContent));
+        accountSelect.value = (officeCash || firstVisible).value;
+    }
+}
+
+function syncVisaPaymentRouteFields() {
+    const method = document.getElementById('pmtPaymentMethod')?.value;
+    const copy = visaPaymentPayerCopy[method];
+    const wrapper = document.getElementById('pmtPayerFields');
+    const bank = document.getElementById('pmtPayerBank');
+    const reference = document.getElementById('pmtPayerReference');
+    wrapper?.classList.toggle('hidden', !copy);
+    if (copy) {
+        document.getElementById('pmtPayerTitle').innerHTML = copy.title;
+        document.getElementById('pmtPayerBankLabel').innerHTML = copy.bankLabel + ' <span class="text-red-500">*</span>';
+        document.getElementById('pmtPayerReferenceLabel').innerHTML = copy.referenceLabel + ' <span class="text-red-500">*</span>';
+        bank.placeholder = copy.bankPlaceholder;
+        reference.placeholder = copy.referencePlaceholder;
+    }
+    [bank, reference].forEach(function(field) {
+        if (!field) return;
+        field.required = !!copy;
+        field.disabled = !copy;
+        if (!copy) field.value = '';
+    });
+    filterVisaPaymentAccounts();
+}
+
+document.getElementById('pmtPaymentMethod')?.addEventListener('change', syncVisaPaymentRouteFields);
+
 function vsOpenPayment(id, invoice, due, total) {
     $('#pmtInvoiceLabel').text(invoice);
     $('#pmtDueDisplay').text(Number(due).toLocaleString());
-    $('#pmtAmountInput').attr('max', due).val('');
+    $('#pmtAmountInput').attr('max', due).val(Number(due).toFixed(2).replace(/\.00$/, ''));
     $('#pmtPaymentMethod').val('cash');
     $('#pmtBankId').val('');
-    toggleVisaSaleBankField('pmt');
+    $('#pmtPayerBank, #pmtPayerReference').val('');
+    syncVisaPaymentRouteFields();
+    const now = new Date();
+    const hour24 = now.getHours();
+    $('#pmtHour').val(hour24 % 12 || 12);
+    $('#pmtMinute').val(now.getMinutes());
+    $('#pmtPeriod').val(hour24 >= 12 ? 'PM' : 'AM');
+    $('#pmtPaymentDate').val([now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-'));
+    $('#pmtReference').val(invoice + '-PAY-' + now.toISOString().replace(/\D/g, '').slice(0, 14));
     $('#pmtForm').attr('action', VS_PMT_BASE + '/' + id + '/payment');
     $('#pmtModal').removeClass('hidden');
 }
 function vsClosePmt() {
     $('#pmtModal').addClass('hidden');
 }
+
+$('#pmtForm').on('submit', function () {
+    let hour = Number($('#pmtHour').val()) || 12;
+    const minute = String($('#pmtMinute').val()).padStart(2, '0');
+    const period = $('#pmtPeriod').val();
+    if (period === 'PM' && hour !== 12) hour += 12;
+    if (period === 'AM' && hour === 12) hour = 0;
+    $('#pmtTransactionTime').val(String(hour).padStart(2, '0') + ':' + minute);
+});
 
 // ─── Edit sale modal ──────────────────────────────────────────────────────────
 let vseCurrentId    = null;
@@ -592,6 +711,7 @@ function vseOpen(id) {
             $('#vsePaidInput').val(d.paid_amount);
             $('#vsePaymentMethod').val(d.payment_method || 'cash');
             $('#vseBankId').val(d.bank_id || '');
+            $('#vsePaymentInstructionBankId').val(d.payment_instruction_bank_id || '');
             toggleVisaSaleBankField('vse');
             $('#vseNotes').val(d.notes);
             $('#vseSubmit').data('action', VS_SHOW_BASE + '/' + id);

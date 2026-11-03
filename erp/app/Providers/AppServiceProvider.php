@@ -30,6 +30,11 @@ class AppServiceProvider extends ServiceProvider
         // interpreting it as an undefined Blade variable before JS runs.
         View::share('row', '${row}');
 
+        // Email + SMS to the agent/customer/vendor after every entry on their
+        // ledger. The observer only queues a job and swallows its own errors,
+        // so it cannot fail the save that triggered it.
+        \App\Models\Transaction::observe(\App\Observers\TransactionObserver::class);
+
         // Superadmin/Admin bypasses all permission checks
         Gate::before(function ($user, $ability) {
             if ($user->hasRole(['super admin', 'superadmin', 'admin'])) {

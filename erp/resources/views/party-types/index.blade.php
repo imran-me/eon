@@ -88,10 +88,16 @@
                                 <code class="text-xs bg-gray-100 px-2 py-1 rounded">{{ $pt->slug }}</code>
                             </td>
                             <td class="px-4 py-3 text-sm">
-                                @if($pt->model_class)
+                                @if($pt->partyRole())
+                                    <span class="inline-flex items-center gap-1 bg-emerald-100 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-full"
+                                          title="Lists the users held in Party Management">
+                                        <i class="fas fa-users text-xs"></i>
+                                        {{ $pt->sourceLabel() }}
+                                    </span>
+                                @elseif($pt->model_class)
                                     <span class="inline-flex items-center gap-1 bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded-full">
                                         <i class="fas fa-database text-xs"></i>
-                                        {{ class_basename($pt->model_class) }}
+                                        {{ $pt->sourceLabel() }}
                                     </span>
                                 @else
                                     <span class="inline-flex items-center gap-1 bg-gray-100 text-gray-500 text-xs font-semibold px-2 py-1 rounded-full">

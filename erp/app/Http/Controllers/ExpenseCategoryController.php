@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Company;
+use App\Models\Account;
 use App\Models\ExpenseCategory;
 use App\Models\SalaryTemplate;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ExpenseCategoryController extends Controller
 {
@@ -122,8 +124,21 @@ class ExpenseCategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => [
+                'required',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                    ->where('type', 'expense')
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
+
+        $validator->after(function ($validator) use ($request) {
+            $companyId = $this->targetCompanyId($request);
+            if ($request->filled('account_id') && ! $this->accountBelongsToScope((int) $request->account_id, $companyId)) {
+                $validator->errors()->add('account_id', 'Choose an active expense account available to this company. Shared categories must use a shared account.');
+            }
+        });
 
         // If validation fails
         if ($validator->fails()) {
@@ -145,18 +160,12 @@ class ExpenseCategoryController extends Controller
         // to every company. `?: null` is what makes that work: the select posts an
         // empty string, and an empty string in a nullable bigint lands as 0, a
         // company id that matches nothing and would hide the category everywhere.
-        $userCompanyId = auth()->user()->company_id;
-        $companyId = (!auth()->user()->can('view all expense') && !empty($userCompanyId))
-            ? $userCompanyId
-            : ($request->company_id ?: null);
+        $companyId = $this->targetCompanyId($request);
 
         $data = ExpenseCategory::create([
             'user_id' => auth()->id(),
             'company_id' => $companyId,
-            // Which chart-of-accounts expense account this category posts to.
-            // Left blank, the posting falls back to the general expense account,
-            // which is why an unmapped category shows a warning in the list.
-            'account_id' => $request->account_id ?: null,
+            'account_id' => $request->account_id,
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status ? 1 : 0
@@ -223,23 +232,32 @@ class ExpenseCategoryController extends Controller
             );
         }
 
-        $validated = $request->validate([
+        $validator = Validator::make($request->all(), [
             'name' => 'required',
-            'account_id' => 'nullable|exists:accounts,id',
+            'account_id' => [
+                'required',
+                Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                    ->where('type', 'expense')
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')),
+            ],
         ]);
 
+        $validator->after(function ($validator) use ($request) {
+            $companyId = $this->targetCompanyId($request);
+            if ($request->filled('account_id') && ! $this->accountBelongsToScope((int) $request->account_id, $companyId)) {
+                $validator->errors()->add('account_id', 'Choose an active expense account available to this company. Shared categories must use a shared account.');
+            }
+        });
+        $validator->validate();
+
         // Blank means SHARED, not company 0 — see the note in store().
-        $companyId = (!$canViewAll && !empty($userCompanyId))
-            ? $userCompanyId
-            : ($request->company_id ?: null);
+        $companyId = $this->targetCompanyId($request);
 
         $data->update([
             // 'user_id' => $request->user_id,
             'company_id' => $companyId,
-            // Which chart-of-accounts expense account this category posts to.
-            // Left blank, the posting falls back to the general expense account,
-            // which is why an unmapped category shows a warning in the list.
-            'account_id' => $request->account_id ?: null,
+            'account_id' => $request->account_id,
             'name' => $request->name,
             'description' => $request->description,
             'status' => $request->status ? 1 : 0
@@ -321,5 +339,31 @@ class ExpenseCategoryController extends Controller
             'success' => true,
             'message' => 'Data Found Successfully.'
         ]);
+    }
+
+    /** Company-locked users cannot forge another company through the request. */
+    private function targetCompanyId(Request $request): ?int
+    {
+        $userCompanyId = auth()->user()->company_id;
+
+        return (! auth()->user()->can('view all expense') && ! empty($userCompanyId))
+            ? (int) $userCompanyId
+            : ($request->filled('company_id') ? (int) $request->company_id : null);
+    }
+
+    /** Global accounts are valid everywhere; a company account only inside that company. */
+    private function accountBelongsToScope(int $accountId, ?int $companyId): bool
+    {
+        return Account::query()
+            ->whereKey($accountId)
+            ->where('type', 'expense')
+            ->where('status', 1)
+            ->where(function ($q) use ($companyId) {
+                $q->whereNull('company_id');
+                if ($companyId) {
+                    $q->orWhere('company_id', $companyId);
+                }
+            })
+            ->exists();
     }
 }

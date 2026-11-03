@@ -256,6 +256,7 @@
 
     $quickTaskUsers = \App\Models\User::query()
         ->whereIn('id', $quickTaskAssigneeIds)
+        ->where('status', '!=', 'resigned')
         ->select('id', 'name')
         ->orderBy('name')
         ->get();

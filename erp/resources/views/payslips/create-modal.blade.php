@@ -71,9 +71,7 @@
                             <select id="create_payment_method" name="bank_id" style="width: 100%"
                                 class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2">
                                 <option value="" disabled selected>Select Payment Account</option>
-                                @foreach ($paymentMethods as $method)
-                                    <option value="{{ $method->id }}">{{ $method->name }}</option>
-                                @endforeach
+                                @include('partials.bank-options', ['banks' => $paymentMethods, 'selected' => null])
 
                             </select>
                         </div>

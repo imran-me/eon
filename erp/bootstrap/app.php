@@ -5,6 +5,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use App\Exceptions\SettlementSourceOverdrawnException;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Spatie\Permission\Middleware\RoleOrPermissionMiddleware;
@@ -36,6 +37,20 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json([
                     'message' => 'Unauthenticated.',
                 ], 401);
+            }
+        });
+
+        // Every money-posting API uses the same domain exception. Returning it
+        // here keeps controllers consistent and, because the exception escapes
+        // the DB::transaction callback, guarantees the whole posting is rolled
+        // back before the client receives the validation-style response.
+        $exceptions->render(function (SettlementSourceOverdrawnException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'errors' => ['amount' => [$e->getMessage()]],
+                ], 422);
             }
         });
     })->create();

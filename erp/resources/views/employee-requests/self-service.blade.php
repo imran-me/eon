@@ -135,7 +135,7 @@
                     <th class="px-5 py-3 font-semibold text-left">Status</th>
                     <th class="px-5 py-3 font-semibold text-left">Deadline</th>
                     <th class="px-5 py-3 font-semibold text-left">Submitted</th>
-                    <th class="px-5 py-3 font-semibold text-left">Actions</th>
+                    <th class="px-2 py-3 font-semibold text-left" style="width:1%;white-space:nowrap">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
@@ -227,15 +227,14 @@
                     </td>
 
                     {{-- Actions --}}
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-1.5 flex-wrap">
+                    <td class="px-2 py-3.5">
+                        <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                             @if($item->category === 'require' && $item->status === 'approved')
                                 @if(Auth::id() == $item->employee_id || Auth::user()->hasPermissionTo('fulfill employee request'))
                                 <button class="fulfill-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg
                                                bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors"
-                                    data-id="{{ $item->id }}" title="Submit Fulfillment">
-                                    <i class="fas fa-check-double text-xs"></i> Fulfill
-                                </button>
+                                    data-id="{{ $item->id }}" title="Submit Fulfillment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-check-double text-xs" style="font-size:11px;margin:0"></i></button>
                                 @endif
                             @endif
 
@@ -243,17 +242,16 @@
                                 <a href="{{ route('role.employee-requests.noc-pdf', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'id' => $item->id]) }}"
                                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-300
                                            text-gray-600 hover:bg-gray-50 text-xs font-semibold transition-colors"
-                                    target="_blank" title="Download Document">
-                                    <i class="fas fa-file-pdf text-xs"></i> Download
-                                </a>
+                                    target="_blank" title="Download Document" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-file-pdf text-xs" style="font-size:11px;margin:0"></i></a>
                             @endif
 
                             @if($item->status === 'rejected' && $item->remarks)
                                 <button class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200
                                                text-red-600 hover:bg-red-50 text-xs font-semibold transition-colors"
                                     onclick="alert('Rejection reason:\n{{ addslashes($item->remarks) }}')"
-                                    title="View rejection reason">
-                                    <i class="fas fa-info-circle text-xs"></i>
+                                    title="View rejection reason" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-info-circle text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                             @endif
                         </div>

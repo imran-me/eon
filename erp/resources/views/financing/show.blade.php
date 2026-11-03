@@ -96,7 +96,7 @@
     @include('payroll.partials.kpi', [
         'label'    => $loan->is_running ? 'Takings' : 'Instalment',
         'value'    => $loan->is_running
-            ? number_format($loan->transactions->where('type', 'disburse')->count())
+            ? number_format($loan->transactions->where('type', 'disburse')->where('method', '!=', 'adjustment')->count())
             : '৳ ' . $taka($loan->instalment_amount ?? 0),
         'icon'     => $loan->is_running ? 'fa-arrows-rotate' : 'fa-calendar-check',
         'iconBg'   => '#ede9fe',
@@ -119,6 +119,35 @@
             : '৳ ' . $taka($totalInterest) . ' interest over the term',
     ])
 </div>
+
+{{-- The balance has run past zero and now points the other way.
+     "Still To Collect" is clamped at zero — it has to be, the ring and the
+     register are built on it — so without this line the desk reads 0.00 and
+     the overshoot is visible nowhere on the page, while the ledger has it
+     recorded correctly. That silence is the whole problem: the money is real
+     and only this number knows about it.
+
+     Ordinary on a running account, which swings both ways by nature. On a
+     fixed loan recordPayment() refuses a payment bigger than what is left, so
+     this can only be a row written before that refusal existed — said plainly
+     rather than dressed up as normal. --}}
+@if($loan->overpaid > 0)
+    <div class="fin-hint" style="margin:-0.4rem 0 1.25rem;padding:.7rem .9rem;background:#fffbeb;border:1px solid #fde68a;border-radius:.5rem;color:#92400e;">
+        <i class="fas fa-arrow-right-arrow-left" style="color:#d97706;"></i>
+        <span>
+            <strong>৳ {{ $taka($loan->overpaid) }} more has come back than went out.</strong>
+            @if($loan->is_running)
+                A running account can sit either way round — past zero it simply means
+                {{ $isBorrowed ? 'the company has paid ' . ($loan->personal_of ?: $loan->counterparty_name) . ' more than it ever took, so he owes the company now' : 'the company holds ' . $loan->counterparty_name . '\'s money now, not the other way round' }}.
+                The ledger carries it; <em>Still To Collect</em> stops at zero and cannot show it.
+            @else
+                On a fixed loan that should not be possible — every instalment was already
+                settled. Check the payments below against the schedule; one of them is
+                likely on the wrong loan.
+            @endif
+        </span>
+    </div>
+@endif
 
 <div class="fin-card" style="margin-bottom:1rem;">
     <div style="padding:1.1rem 1.25rem;display:flex;align-items:center;gap:1.6rem;flex-wrap:wrap;">
@@ -278,38 +307,116 @@
 {{-- ── Record a taking (running accounts only) ────────────────────────── --}}
 @can('create financing')
 @if($loan->is_running && $loan->status === 'active')
+@if($isBorrowed && ! $loan->is_personal && $loan->company_id)
+@php
+    $openingTxn = $loan->transactions->first(
+        fn ($txn) => $txn->type === 'disburse' && $txn->method === 'adjustment'
+    );
+@endphp
+@if($openingTxn)
+<div class="fin-note" style="margin-bottom:1rem;background:#ecfdf5;border-color:#a7f3d0;color:#065f46;">
+    <i class="fas fa-circle-check" style="color:#059669;"></i>
+    <span>
+        <strong>Opening liability already recorded: ৳{{ number_format((float) $openingTxn->amount, 2) }}</strong>
+        on {{ $openingTxn->date?->format('d M Y') }}.
+        No bank or cash balance was changed.
+        @if($openingTxn->journal_entry_id)
+            Journal #{{ $openingTxn->journal_entry_id }}.
+        @endif
+    </span>
+</div>
+@elseif($loan->transactions->isEmpty())
+<div class="fin-card" id="opening-balance" style="margin-bottom:1rem;scroll-margin-top:5rem;border-color:#fde68a;">
+    <form method="POST" action="{{ route('role.financing.opening-balance', ['role' => $role, 'financing' => $loan->id]) }}">
+        @csrf
+        <div style="padding:.85rem 1rem;border-bottom:1px solid #fef3c7;background:#fffbeb;">
+            <strong style="font-size:.85rem;color:#92400e;">
+                <i class="fas fa-flag"></i> Record opening liability
+            </strong>
+            <div class="fin-sub" style="color:#a16207;">
+                already owed before this ERP started - no bank or cash balance changes
+            </div>
+        </div>
+        <div style="padding:1rem;">
+            <div class="fin-grid">
+                <div class="fin-field">
+                    <label>Outstanding amount (৳) <span>*</span></label>
+                    <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00" value="{{ old('amount') }}">
+                </div>
+                <div class="fin-field">
+                    <label>Opening date <span>*</span></label>
+                    <input type="date" name="date" required value="{{ old('date', date('Y-m-d')) }}">
+                </div>
+                <div class="fin-field" style="grid-column:span 2;">
+                    <label>Note</label>
+                    <input type="text" name="memo" placeholder="e.g. Balance outstanding when ERP started" value="{{ old('memo') }}">
+                </div>
+            </div>
+
+            <p class="fin-hint" style="margin-bottom:.9rem;background:#fffbeb;border-color:#fde68a;color:#92400e;">
+                <i class="fas fa-circle-info"></i>
+                <span>
+                    Saving posts <strong>Dr {{ config('accounts.opening_balance_equity') }} Opening Balance Equity</strong>
+                    and <strong>Cr {{ $loan->glAccount?->code }} {{ $loan->glAccount?->name ?: 'the selected loan liability' }}</strong>.
+                    Use this once as the first movement. Use <em>Record drawing</em> below only for new money received later.
+                </span>
+            </p>
+
+            <button type="submit" class="fin-btn-primary" style="background:#d97706;">
+                <i class="fas fa-flag"></i> Record opening liability
+            </button>
+        </div>
+    </form>
+</div>
+@else
+<div class="fin-note" style="margin-bottom:1rem;background:#fffbeb;border-color:#fde68a;color:#92400e;">
+    <i class="fas fa-triangle-exclamation" style="color:#d97706;"></i>
+    Opening liability is unavailable because this account already has movements. It can only be its first movement.
+</div>
+@endif
+@endif
 {{-- id="take" is the anchor the register's Take button targets. Nothing is
      written by arriving here: the amount, the date and the account are all typed
      before the button does anything. --}}
+@php
+    // Every label in this block depends on which way the money moves, and the
+    // whole thing used to be written for a LENT account only. On a borrowing the
+    // cash arrives instead of leaving, so "Taken from" named the wrong side of
+    // the transfer and the posting note stated the entry upside down.
+    $isBorrowing = $loan->direction === 'borrowed';
+@endphp
 <div class="fin-card" id="take" style="margin-bottom:1rem;scroll-margin-top:5rem;">
     <form method="POST" action="{{ route('role.financing.drawdown', ['role' => $role, 'financing' => $loan->id]) }}">
         @csrf
         <div style="padding:.85rem 1rem;border-bottom:1px solid #f1f5f9;">
             <strong style="font-size:.85rem;color:#1e293b;">
-                <i class="fas fa-arrow-up-from-bracket"></i> Record a taking
+                <i class="fas fa-arrow-{{ $isBorrowing ? 'down-to-bracket' : 'up-from-bracket' }}"></i>
+                {{ $isBorrowing ? 'Record a drawing' : 'Record a taking' }}
             </strong>
-            <div class="fin-sub">money going out on this account — the balance goes up</div>
+            <div class="fin-sub">
+                {{ $isBorrowing
+                    ? 'money coming in on this facility — what you owe goes up'
+                    : 'money going out on this account — the balance goes up' }}
+            </div>
         </div>
         <div style="padding:1rem;">
             <div class="fin-grid">
                 <div class="fin-field">
-                    <label>Amount taken (৳) <span>*</span></label>
+                    <label>{{ $isBorrowing ? 'Amount drawn' : 'Amount taken' }} (৳) <span>*</span></label>
                     <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00" value="{{ old('amount') }}">
                 </div>
                 <div class="fin-field">
                     <label>Date <span>*</span></label>
                     <input type="date" name="date" required value="{{ old('date', date('Y-m-d')) }}">
                 </div>
-                {{-- Required, not optional. A taking with no account named cannot
-                     be posted, and an unposted taking is cash gone from the bank
-                     that the books never heard about. --}}
+                {{-- Required, not optional. A movement with no account named cannot
+                     be posted, and an unposted movement is cash the books never
+                     heard about — in or out. --}}
                 <div class="fin-field">
-                    <label>Taken from <span>*</span></label>
-                    <select name="bank_id" required>
+                    <label>{{ $isBorrowing ? 'Received into' : 'Taken from' }} <span>*</span></label>
+                    <select name="bank_id" required class="fin-search">
                         <option value="">— select account —</option>
-                        @foreach($banks as $b)
-                            <option value="{{ $b->id }}" @selected(old('bank_id') == $b->id)>{{ $b->name }}</option>
-                        @endforeach
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => old('bank_id')])
                     </select>
                 </div>
                 <div class="fin-field">
@@ -319,7 +426,21 @@
             </div>
 
             <p class="fin-hint" style="margin-bottom:.9rem;">
-                @if($loan->glAccount)
+                @if($loan->taken_for === 'personal')
+                    <i class="fas fa-circle-info" style="color:#b45309;"></i>
+                    <span>
+                        This facility is in a person's own name, so <strong>nothing reaches the
+                        company's books</strong> — the drawing is kept on this desk as a record only.
+                    </span>
+                @elseif($loan->glAccount && $isBorrowing)
+                    <i class="fas fa-circle-check" style="color:#16a34a;"></i>
+                    <span>
+                        Saving posts <strong>Dr</strong> the account you choose above for the cash that
+                        arrived, and <strong>Cr {{ $loan->glAccount->code }} {{ $loan->glAccount->name }}</strong>
+                        for what the company now owes. No interest is charged today —
+                        it is settled on repayment.
+                    </span>
+                @elseif($loan->glAccount)
                     <i class="fas fa-circle-check" style="color:#16a34a;"></i>
                     <span>
                         Saving posts <strong>Dr {{ $loan->glAccount->code }} {{ $loan->glAccount->name }}</strong>
@@ -329,14 +450,16 @@
                 @else
                     <i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i>
                     <span>
-                        This account has no posting account set, so a taking will be refused.
+                        This account has no posting account set, so the movement will be refused.
                         Set <strong>Posts against — principal</strong> on it first — for the boss's
                         own account that is {{ config('accounts.director_current_account') }} Director's Current Account.
                     </span>
                 @endif
             </p>
 
-            <button type="submit" class="fin-btn-primary"><i class="fas fa-plus"></i> Record taking</button>
+            <button type="submit" class="fin-btn-primary">
+                <i class="fas fa-plus"></i> {{ $isBorrowing ? 'Record drawing' : 'Record taking' }}
+            </button>
         </div>
     </form>
 </div>
@@ -358,20 +481,42 @@
         </div>
         <div style="padding:1rem;">
             <div class="fin-grid">
-                {{-- A running account has no schedule to apply anything to, so
-                     the picker is not merely empty here — it is meaningless, and
-                     an empty dropdown reads as data that failed to load. --}}
                 @if(! $loan->is_running)
+                    @php
+                        // A payment on a term loan always settles some instalment —
+                        // there is nothing else for it to settle. Leaving the picker
+                        // blank looked harmless and was not: the money posted to the
+                        // ledger while every row stayed "Due" and the page kept
+                        // reporting 0% settled, and principal/interest were not split
+                        // because that split is read off the instalment.
+                        //
+                        // So the oldest unsettled one is preselected and the field is
+                        // required. Oldest first is not a guess — instalments settle
+                        // in order, and any other choice is the exception.
+                        $openInstalments = $loan->schedules->whereIn('status', ['due', 'partial'])->sortBy('instalment_no');
+                        $nextInstalment  = $openInstalments->first();
+                    @endphp
                     <div class="fin-field">
-                        <label>Apply to instalment</label>
-                        <select name="financing_schedule_id">
-                            <option value="">— not against a scheduled instalment —</option>
-                            @foreach($loan->schedules->whereIn('status', ['due', 'partial']) as $s)
-                                <option value="{{ $s->id }}">
-                                    #{{ $s->instalment_no }} · due {{ $s->due_date?->format('Y-m-d') }} · ৳{{ number_format($s->balance, 2) }} left
-                                </option>
-                            @endforeach
+                        <label>Apply to instalment @if($nextInstalment)<span>*</span>@endif</label>
+                        <select name="financing_schedule_id" class="fin-search" @required((bool) $nextInstalment)>
+                            @if($nextInstalment)
+                                @foreach($openInstalments as $s)
+                                    <option value="{{ $s->id }}" @selected(old('financing_schedule_id', $nextInstalment->id) == $s->id)>
+                                        #{{ $s->instalment_no }} · due {{ $s->due_date?->format('Y-m-d') }} · ৳{{ number_format($s->balance, 2) }} left
+                                    </option>
+                                @endforeach
+                            @else
+                                {{-- Every instalment is settled, so there is nothing left
+                                     to apply a payment to. Saying so beats an empty list. --}}
+                                <option value="">— every instalment is settled —</option>
+                            @endif
                         </select>
+                        @if($nextInstalment)
+                            <p class="fin-hint" style="margin-top:.3rem;">
+                                Settles in order. The amount is split into principal and interest
+                                the way this instalment carries them.
+                            </p>
+                        @endif
                     </div>
                 @endif
                 <div class="fin-field">
@@ -390,21 +535,25 @@
                         <option value="adjustment" @selected(old('method') === 'adjustment')>Adjustment — no money moved</option>
                     </select>
                 </div>
-                {{-- Where the money actually came from. The bank list already
-                     includes cash and mobile-banking accounts, so one picker
-                     covers all of them, and each carries the ledger account the
-                     credit is posted against.
+                {{-- Which account the money actually moved through. The bank list
+                     already includes cash and mobile-banking accounts, so one
+                     picker covers all of them, and each carries the ledger
+                     account the entry is posted against.
+
+                     The label follows the direction, because the same field
+                     means opposite things on the two books: a borrowing pays
+                     OUT of the account (credit), a loan given is collected INTO
+                     it (debit). "Paid from" over a collection described the leg
+                     backwards on every lent loan.
 
                      ONE field, never two: a second <select name="bank_id"> in
                      the same form silently overwrites this one on submit, so
                      whatever was chosen here would never reach the server. --}}
                 <div class="fin-field">
-                    <label>Paid from @if($postsToBooks)<span>*</span>@endif</label>
+                    <label>{{ $isBorrowed ? 'Paid from' : 'Received into' }} @if($postsToBooks)<span>*</span>@endif</label>
                     <select name="bank_id">
                         <option value="">— select account —</option>
-                        @foreach($banks as $b)
-                            <option value="{{ $b->id }}" @selected(old('bank_id') == $b->id)>{{ $b->name }}</option>
-                        @endforeach
+                        @include('partials.bank-options', ['banks' => $banks, 'selected' => old('bank_id')])
                     </select>
                 </div>
                 @if($isBorrowed && ! $loan->is_personal)
@@ -458,9 +607,35 @@
                 <p class="fin-hint" style="margin-bottom:.9rem;">
                     <i class="fas fa-triangle-exclamation" style="color:#dc2626;"></i>
                     <span>
-                        This loan has no posting account set, so a repayment cannot reach the books
+                        This loan has no posting account set, so
+                        {{ $isBorrowed ? 'a repayment' : 'a collection' }} cannot reach the books
                         and will be refused. Set <strong>Posts against — principal</strong> on the
                         loan first.
+                    </span>
+                </p>
+            @elseif($postsToBooks && ! $isBorrowed)
+                {{-- The mirror of the borrowed branch below, and the wording has
+                     to mirror it too: on a loan given the money ARRIVES, so the
+                     account chosen above is debited and the borrower's debt to
+                     us comes down. The borrowed sentence printed over a
+                     collection named the debit and the credit the wrong way
+                     round — see postLentReceipt() for the legs it describes.
+
+                     Interest is read from config, not from glInterestAccount:
+                     postLentReceipt() credits accounts.loan_interest_income and
+                     never looks at the loan's own interest account, because
+                     interest earned is income and that field points at the
+                     expense side. Naming it here would promise an account the
+                     entry does not touch. --}}
+                <p class="fin-hint" style="margin-bottom:.9rem;">
+                    <i class="fas fa-circle-check" style="color:#16a34a;"></i>
+                    <span>
+                        Saving posts to the ledger:
+                        <strong>Dr the account you choose above</strong> for what arrives, credited to
+                        <strong>{{ $loan->glAccount->code }} {{ $loan->glAccount->name }}</strong> for the principal
+                        and <strong>{{ config('accounts.loan_interest_income') }} Interest Income</strong>
+                        for the interest part, when the instalment carries one.
+                        No second entry in Manage Banks.
                     </span>
                 </p>
             @elseif($postsToBooks)
@@ -492,7 +667,13 @@
                     <i class="fas fa-circle-info"></i>
                     <span>
                         This one is recorded on the desk only —
-                        @if($loan->direction === 'lent')
+                        @if($loan->direction === 'lent' && empty($loan->gl_account_id))
+                            {{-- A setup gap, not a decision. Saying "already on the books
+                                 through the sale" here would explain away a missing field
+                                 as though it were intended, and nobody would go and set it. --}}
+                            this loan has no <strong>Posts against — principal</strong> account, so there is
+                            nothing for a collection to be credited to.
+                        @elseif($loan->direction === 'lent')
                             money lent is already on the books through the sale it came from, so posting again would count it twice.
                         @else
                             this loan is not set up to post.
@@ -604,10 +785,10 @@
             @forelse($loan->transactions->sortByDesc('date') as $t)
                 <tr>
                     <td>@include('partials.date-time-cell', ['date' => $t->date, 'recordedAt' => $t->created_at])</td>
-                    <td><span class="fin-chip">{{ str_replace('_', ' ', $t->type) }}</span></td>
+                    <td><span class="fin-chip">{{ $t->type === 'disburse' && $t->method === 'adjustment' ? 'opening balance' : str_replace('_', ' ', $t->type) }}</span></td>
                     <td>{{ $t->financing_schedule_id ? '#' . ($t->schedule->instalment_no ?? '—') : '—' }}</td>
                     <td>
-                        {{ ucfirst($t->method) }}
+                        {{ $t->type === 'disburse' && $t->method === 'adjustment' ? 'Opening balance' : ucfirst($t->method) }}
                         @if($t->bank)<div class="fin-sub">{{ $t->bank->name }}</div>@endif
                         {{-- Whether this one reached the books, and under which
                              entry — so a figure on the desk can always be traced

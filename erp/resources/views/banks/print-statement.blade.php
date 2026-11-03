@@ -4,126 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bank Statement — {{ $bank->name }}</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-    @page { size: A4 portrait; margin: 12mm; }
-
-    :root {
-        --tc:  #4338ca;
-        --tbg: #eef2ff;
-        --thd: #4f46e5;
-        --bdr: #e2e8f0;
-        --txt: #1e293b;
-        --tf:  "Montserrat", sans-serif;
-        --ff:  "Inter", sans-serif;
-        --nf:  "Space Mono", monospace;
-    }
-
-    *, *::before, *::after {
-        box-sizing: border-box; margin: 0; padding: 0;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-
-    body { font-family: var(--ff); padding: 28px; background: #f0f2f5; color: var(--txt); font-size: 12px; }
-
-    /* ── Card ── */
-    .card { max-width: 794px; margin: auto; background: #fff; padding: 40px; border-radius: 4px; box-shadow: 0 4px 20px rgba(0,0,0,.06); }
-
-    /* ── Header ── */
-    .hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-    .co-info { text-align: right; font-size: 12px; line-height: 1.7; }
-    .co-info strong { font-family: var(--tf); font-size: 16px; display: block; }
-    .logo-txt { font-family: var(--tf); color: var(--tc); font-size: 26px; font-weight: 800; }
-
-    /* ── Label bar ── */
-    .label-bar {
-        text-align: center; background: var(--tbg); color: var(--tc);
-        text-transform: uppercase; letter-spacing: 2px; font-weight: 700;
-        font-family: var(--tf); font-size: 11px; padding: 10px;
-        border-top: 2px solid var(--tc); margin-bottom: 24px;
-    }
-
-    /* ── Account info / Meta ── */
-    .meta-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-bottom: 20px; }
-    .bill-to h4 { font-family: var(--tf); color: var(--tc); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
-    .bill-to p { font-size: 13px; line-height: 1.7; margin: 1px 0; }
-    .role-badge { display: inline-block; padding: 1px 8px; border-radius: 9px; font-size: 10px; font-weight: 600; background: #e0e7ff; color: #3730a3; margin-right: 3px; margin-top: 4px; }
-    .meta-tbl td { padding: 2px 0 2px 18px; font-weight: 600; font-size: 12px; }
-    .meta-tbl .nf { font-family: var(--nf); font-size: 11px; }
-
-    /* ── Summary strip ── */
-    .summary-strip { display: flex; gap: 0; border: 1px solid var(--bdr); border-radius: 6px; overflow: hidden; margin-bottom: 20px; }
-    .sum-card { flex: 1; padding: 10px 14px; border-right: 1px solid var(--bdr); }
-    .sum-card:last-child { border-right: none; background: var(--thd); }
-    .sum-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; font-weight: 600; margin-bottom: 3px; }
-    .sum-card:last-child .sum-label { color: #c7d2fe; }
-    .sum-value { font-family: var(--nf); font-size: 12px; font-weight: 700; color: var(--txt); }
-    .sum-card:last-child .sum-value { color: #fff; font-size: 13px; }
-
-    /* ── Ledger table ── */
-    .ledger { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 11px; }
-    .ledger th {
-        background: var(--thd); color: #fff;
-        padding: 8px 10px; text-align: left;
-        font-family: var(--tf); font-size: 9px;
-        text-transform: uppercase; letter-spacing: .04em;
-    }
-    .ledger th.r { text-align: right; }
-    .ledger td { padding: 7px 10px; border-bottom: 1px solid var(--bdr); vertical-align: middle; }
-    .ledger td.r    { text-align: right; }
-    .ledger td.mono { font-family: var(--nf); font-size: 10px; }
-    .ledger tbody tr:nth-child(even) td { background: #f8f9ff; }
-    .ledger .opening-row td { font-style: italic; color: #64748b; }
-    .ledger tfoot tr { background: var(--thd); color: #fff; }
-    .ledger tfoot td { padding: 8px 10px; font-weight: 700; border-bottom: none; font-family: var(--tf); font-size: 10px; }
-    .ledger tfoot td.r { text-align: right; font-family: var(--nf); }
-
-    /* ── Badges ── */
-    .badge { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 9px; font-weight: 600; }
-    .badge-expense       { background: #fef3c7; color: #92400e; }
-    .badge-sale          { background: #dcfce7; color: #166534; }
-    .badge-bank_transfer { background: #dbeafe; color: #1e40af; }
-    .badge-bank_transaction { background: #ede9fe; color: #5b21b6; }
-    .badge-default       { background: #f1f5f9; color: #475569; }
-
-    .debit      { color: #dc2626; font-weight: 600; }
-    .credit     { color: #16a34a; font-weight: 600; }
-    .balance-dr { color: #dc2626; font-weight: 700; }
-    .balance-cr { color: #16a34a; font-weight: 700; }
-
-    /* ── Sub-header bar ── */
-    .sh { background: var(--thd); color: #fff; padding: 5px 12px; font-family: var(--tf); font-size: 10px; font-weight: 600; margin-bottom: 8px; letter-spacing: .03em; }
-
-    /* ── Bottom grid ── */
-    .bot { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 30px; }
-    .nb { font-size: 12px; line-height: 1.8; color: #475569; margin-bottom: 14px; }
-    .amt-tbl { width: 100%; border-collapse: collapse; }
-    .amt-tbl td { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 12px; }
-    .amt-tbl td.n { font-family: var(--nf); font-size: 11px; text-align: right; }
-    .amt-tbl .grand td { font-weight: 700; color: var(--tc); font-size: 13px; border-bottom: 2px solid var(--thd); }
-    .amt-tbl .dr-row td { color: #dc2626; font-weight: 600; }
-    .amt-tbl .cr-row td { color: #16a34a; font-weight: 600; }
-
-    /* ── Signature ── */
-    .sig { margin-top: 36px; display: flex; justify-content: flex-end; }
-    .sig-c { text-align: center; width: 200px; }
-    .sig-l { border-top: 1px solid #333; margin-top: 6px; padding-top: 4px; font-size: 10px; font-weight: 700; font-family: var(--tf); }
-
-    /* ── Print ── */
-    @media print {
-        body       { background: #fff !important; padding: 0 !important; }
-        .btn-row   { display: none !important; }
-        .card      { box-shadow: none !important; padding: 0 !important; max-width: 100% !important; }
-        .label-bar { padding: 7px; margin-bottom: 14px; }
-        .ledger    { font-size: 10px; }
-        .ledger td { padding: 5px 8px; }
-        .ledger th { padding: 6px 8px; }
-        .sig       { margin-top: 24px; }
-    }
-</style>
+@include('print.statement-styles')
 </head>
 <body>
 
@@ -137,24 +18,11 @@
 <div class="card">
 
     {{-- Header ── --}}
-    <div class="hdr">
-        <div>
-            @if(optional($company)->logo)
-            @php $logoSrc = file_exists(public_path($company->logo)) ? asset($company->logo) : asset('logo.png'); @endphp
-            <img src="{{ $logoSrc }}" alt="" style="max-width:80px;">
-            @else
-            <div class="logo-txt">{{ optional($company)->name ?? config('app.name') }}</div>
-            @endif
-        </div>
-        <div class="co-info">
-            <strong>{{ optional($company)->name ?? config('app.name') }}</strong>
-            @if(optional($company)->address){{ $company->address }}<br>@endif
-            {{ optional($company)->phone }}{{ optional($company)->phone && optional($company)->email ? ' | ' : '' }}{{ optional($company)->email }}
-        </div>
-    </div>
+    @include('print.statement-header')
 
     {{-- Label bar ── --}}
-    <div class="label-bar">Bank Account Statement</div>
+    @php $selection = (int) ($selection ?? 0); @endphp
+    <div class="label-bar">Bank Account Statement{{ $selection ? " — Selected Entries" : "" }}</div>
 
     {{-- Account info / Meta ── --}}
     <div class="meta-row">
@@ -173,9 +41,11 @@
             <table class="meta-tbl">
                 <tr><td>Account No.</td><td class="nf">{{ $bank->account_number }}</td></tr>
                 <tr>
-                    <td>Period</td>
+                    <td>{{ $selection ? "Showing" : "Period" }}</td>
                     <td class="nf">
-                        @if($dateFrom)
+                        @if($selection)
+                            {{ $selection }} selected transaction{{ $selection === 1 ? "" : "s" }}
+                        @elseif($dateFrom)
                             {{ \Carbon\Carbon::parse($dateFrom)->format('d M Y') }} → {{ $dateTo ? \Carbon\Carbon::parse($dateTo)->format('d M Y') : now()->format('d M Y') }}
                         @else
                             All Time
@@ -216,20 +86,21 @@
         <thead>
             <tr>
                 <th width="10%">Date</th>
-                <th width="14%">Reference</th>
-                <th width="33%">Description</th>
-                <th width="9%">Source</th>
+                <th width="12%">Reference</th>
+                <th width="20%">Description</th>
+                <th width="14%">Beneficiary</th>
+                <th width="10%">Source</th>
                 <th class="r" width="11%">Debit (৳)</th>
                 <th class="r" width="11%">Credit (৳)</th>
                 <th class="r" width="12%">Balance (৳)</th>
             </tr>
         </thead>
         <tbody>
-            @if($openingBalance != 0)
+            @if($openingBalance != 0 && !$selection)
             <tr class="opening-row">
                 <td>{{ $dateFrom ? \Carbon\Carbon::parse($dateFrom)->format('d M y') : '' }}</td>
                 <td>—</td>
-                <td colspan="2">Opening Balance Brought Forward</td>
+                <td colspan="3">Opening Balance Brought Forward</td>
                 <td class="r">—</td>
                 <td class="r">—</td>
                 <td class="r mono">{{ number_format(abs($openingBalance), 2) }} Dr</td>
@@ -245,7 +116,31 @@
             <tr>
                 <td>{{ \Carbon\Carbon::parse($row['date'])->format('d M y') }}</td>
                 <td class="mono">{{ $row['reference'] ?? '—' }}</td>
-                <td>{{ Str::limit($row['description'], 55) }}</td>
+                <td>
+                    <span{{ !empty($row['description_muted']) ? ' style=color:#94a3b8' : '' }}>{{ Str::limit($row['description_brief'] ?? $row['description_head'] ?? $row['description'], 55) }}</span>
+                    @if(!empty($row['txn_no']))<span style="display:block;font-family:var(--nf);font-size:8.5px;color:#a3adbb;margin-top:2px;">{{ $row['txn_no'] }}</span>@endif
+                </td>
+                <td>
+                    @if(($row['beneficiary_name'] ?? '') !== '')
+                        @php
+                            $m = $row['beneficiary_method'] ?? null;
+                            $pill = ['cash' => ['Cash', '#dcfce7', '#15803d'], 'bank' => ['Bank', '#dbeafe', '#1e40af'], 'cheque' => ['Cheque', '#fef3c7', '#92400e']][$m] ?? null;
+                            $kindLabel = match ($row['beneficiary_kind'] ?? null) {
+                                'customer' => 'Customer', 'supplier' => 'Supplier', 'agent' => 'Agent',
+                                'vendor' => 'Vendor', 'employee' => 'Employee', 'others' => 'Party', default => null,
+                            };
+                        @endphp
+                        <strong>{{ Str::limit($row['beneficiary_name'], 40) }}</strong>@if($pill)<span class="badge" style="margin-left:4px;background:{{ $pill[1] }};color:{{ $pill[2] }};">{{ $pill[0] }}</span>@endif
+                        @if($pill)
+                            @php $via = implode(': ', array_filter([$row['beneficiary_bank'] ?? null, !empty($row['beneficiary_ref']) ? ($m === 'cheque' ? 'Cheque No. ' : '') . $row['beneficiary_ref'] : null])); @endphp
+                            @if($via !== '')<span style="display:block;font-size:9px;color:#94a3b8;white-space:nowrap;">{{ $via }}</span>@endif
+                        @elseif($kindLabel)
+                            <span style="display:block;font-size:9px;color:#94a3b8;">{{ $kindLabel }}</span>
+                        @endif
+                    @else
+                        —
+                    @endif
+                </td>
                 <td><span class="badge {{ $badgeCls }}">{{ ucfirst(str_replace('_', ' ', $row['source'])) }}</span></td>
                 <td class="r {{ $row['debit']  > 0 ? 'debit'  : '' }}">{{ $row['debit']  > 0 ? number_format($row['debit'],  2) : '—' }}</td>
                 <td class="r {{ $row['credit'] > 0 ? 'credit' : '' }}">{{ $row['credit'] > 0 ? number_format($row['credit'], 2) : '—' }}</td>
@@ -255,13 +150,13 @@
             </tr>
             @empty
             <tr>
-                <td colspan="7" style="text-align:center;padding:20px;color:#94a3b8;">No transactions found for this period.</td>
+                <td colspan="8" style="text-align:center;padding:20px;color:#94a3b8;">No transactions found for this period.</td>
             </tr>
             @endforelse
         </tbody>
         <tfoot>
             <tr>
-                <td colspan="4">
+                <td colspan="5">
                     Closing Balance — {{ $dateTo ? \Carbon\Carbon::parse($dateTo)->format('d M Y') : now()->format('d M Y') }}
                 </td>
                 <td class="r">৳{{ number_format($totalDebit, 2) }}</td>
@@ -315,12 +210,7 @@
     </div>
 
     {{-- Signature ── --}}
-    <div class="sig">
-        <div class="sig-c">
-            <div class="sig-l">Authorized Signatory</div>
-            <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
-        </div>
-    </div>
+    @include('print.statement-signature')
 
 </div>
 

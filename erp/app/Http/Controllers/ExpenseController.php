@@ -2,23 +2,40 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PettyCashOverdrawnException;
+use App\Exceptions\SettlementSourceOverdrawnException;
 use App\Models\Account;
 use App\Models\Bank;
 use App\Models\Company;
+use App\Models\DmRenewalPayment;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\ExpenseDepartment;
 use App\Models\ExpenseItem;
 use App\Models\ExpenseSubCategory;
-use App\Services\ExpenseClassificationService;
+use App\Models\JournalEntry;
+use App\Models\JournalItem;
+use App\Models\PettyCashFloat;
 use App\Models\User;
+use App\Services\DailyFundService;
+use App\Services\DmApiService;
+use App\Services\EmployeeReimbursementService;
+use App\Services\ExpenseClassificationService;
+use App\Services\InterCompanyLiabilityService;
+use App\Services\PettyCashService;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ExpenseController implements HasMiddleware
 {
@@ -39,7 +56,7 @@ class ExpenseController implements HasMiddleware
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -91,13 +108,13 @@ class ExpenseController implements HasMiddleware
         // four things it can say — and it never had a User column at all, so both
         // keys offered to order the list by something nobody could see.
         $sortable = [
-            'title'      => ['expenses.title', null],
-            'category'   => ['expense_categories.name', ['expense_categories', 'expense_categories.id', 'expenses.expense_category_id']],
-            'company'    => ['companies.name', ['companies', 'companies.id', 'expenses.company_id']],
+            'title' => ['expenses.title', null],
+            'category' => ['expense_categories.name', ['expense_categories', 'expense_categories.id', 'expenses.expense_category_id']],
+            'company' => ['companies.name', ['companies', 'companies.id', 'expenses.company_id']],
             'department' => ['expense_departments.name', ['expense_departments', 'expense_departments.id', 'expenses.expense_department_id']],
-            'date'       => ['expenses.expense_date', null],
-            'amount'     => ['expenses.amount', null],
-            'status'     => ['expenses.status', null],
+            'date' => ['expenses.expense_date', null],
+            'amount' => ['expenses.amount', null],
+            'status' => ['expenses.status', null],
         ];
 
         // is_string before any cast: ?sort[]=title arrives as an array, and
@@ -105,7 +122,7 @@ class ExpenseController implements HasMiddleware
         // an ErrorException — a 500 before the whitelist is ever consulted.
         // Anything that is not a plain string is treated as "no sort requested".
         $sortRaw = $request->query('sort');
-        $dirRaw  = $request->query('dir');
+        $dirRaw = $request->query('dir');
         $sortKey = is_string($sortRaw) ? $sortRaw : '';
         $sortDir = (is_string($dirRaw) && strtolower($dirRaw) === 'asc') ? 'asc' : 'desc';
 
@@ -143,8 +160,16 @@ class ExpenseController implements HasMiddleware
             ->selectRaw('COUNT(*) as rows_count, COALESCE(SUM(expenses.amount), 0) as amount_total')
             ->first();
         $users = User::orderBy('name')->where('is_super_admin', 0)->get();
+        $referenceUsers = User::where('status', 'active')
+            ->where(function ($query) {
+                $query->where('is_super_admin', 1)
+                    ->orWhere('id', 39) // Md Mohsin — expense reference user
+                    ->orWhereHas('roles', fn ($roleQuery) => $roleQuery->where('name', 'employee'));
+            })
+            ->orderBy('name')
+            ->get();
 
-        if (!$canViewAll && !empty($userCompanyId)) {
+        if (! $canViewAll && ! empty($userCompanyId)) {
             $companies = Company::where('id', $userCompanyId)->get();
             // Shared categories included — a category names a company only when it
             // is that company's own, and nearly all of them are shared. Matching
@@ -152,18 +177,18 @@ class ExpenseController implements HasMiddleware
             $expense_categories = ExpenseCategory::orderBy('name')->where('status', 1)
                 ->where(fn ($q) => $q->whereNull('company_id')->orWhere('company_id', $userCompanyId))
                 ->get();
-            $banks = Bank::orderBy('name')->where('status', 1)->where('company_id', $userCompanyId)->get();
+            $banks = Bank::with('company:id,name,short_name')->orderBy('name')->where('status', 1)->where('company_id', $userCompanyId)->get();
         } else {
             $companies = Company::orderBy('name')->get();
             $expense_categories = ExpenseCategory::orderBy('name')->where('status', 1)->get();
-            $banks = Bank::orderBy('name')->where('status', 1)->get();
+            $banks = Bank::with('company:id,name,short_name')->orderBy('name')->where('status', 1)->get();
         }
 
         // Nothing to offer someone who may not spend from a company account. The
         // Bank card is hidden from them in the view, but an empty list is what
         // makes that a rule rather than a decoration — a hand-posted bank_id has
         // nothing to match, and store() refuses it outright besides.
-        if (!auth()->user()->can('pay expense from bank')) {
+        if (! auth()->user()->can('pay expense from bank')) {
             $banks = collect();
         }
 
@@ -178,11 +203,11 @@ class ExpenseController implements HasMiddleware
         // and that colleague's balance would fall for a purchase they never made.
         // Settling from someone else's float is an administrative act, so it stays
         // with the people who already oversee the company's spending.
-        $pettyCashFloats = \App\Models\PettyCashFloat::with('custodian:id,name')
+        $pettyCashFloats = PettyCashFloat::with('custodian:id,name')
             ->where('status', 1)
-            ->when(!$canViewAll && !empty($userCompanyId), fn ($q) => $q->where('company_id', $userCompanyId))
+            ->when(! $canViewAll && ! empty($userCompanyId), fn ($q) => $q->where('company_id', $userCompanyId))
             ->when(
-                !auth()->user()->can('view company expense') && !$canViewAll,
+                ! auth()->user()->can('view company expense') && ! $canViewAll,
                 fn ($q) => $q->where('custodian_id', auth()->id())
             )
             ->get();
@@ -191,7 +216,7 @@ class ExpenseController implements HasMiddleware
         // the receipt is filed instead of refusing it afterwards. One batched
         // query for the lot — balancesFor() exists so this is not one aggregate
         // per float.
-        $floatBalances = app(\App\Services\PettyCashService::class)->balancesFor($pettyCashFloats);
+        $floatBalances = app(PettyCashService::class)->balancesFor($pettyCashFloats);
 
         // Today's spend per float, for the panel on the form. One grouped query.
         $floatSpentToday = Expense::whereIn('petty_cash_float_id', $pettyCashFloats->pluck('id'))
@@ -204,20 +229,23 @@ class ExpenseController implements HasMiddleware
             $float->held = $floatBalances[$float->id] ?? 0;
             $float->spent_today = (float) ($floatSpentToday[$float->id] ?? 0);
         });
-        $accounts = Account::orderBy('name')->where('status', 1)->where('type', 'expense')->get();
+        $mainExpenseAccountIds = app(ExpenseClassificationService::class)->mainExpenseAccountIds();
+        $accounts = Account::orderBy('name')
+            ->whereIn('id', $mainExpenseAccountIds)
+            ->get();
 
         // Everything the classification picker needs, in one payload — the whole
         // Company/Department/Category/Sub-category graph, so the form can resolve
         // any level from any other without a round trip per keystroke.
         $classification = app(ExpenseClassificationService::class)
-            ->payload(!$canViewAll && !empty($userCompanyId) ? $userCompanyId : null);
+            ->payload(! $canViewAll && ! empty($userCompanyId) ? $userCompanyId : null);
 
         // Today's cash ceiling per company, so the form can say "this company has
         // ৳150 of today's allowance left" while the amount is being typed instead
         // of after the click. A CEILING, not a pot: it changes no account, blocks
         // no save and is never posted — see DailyFundService. The figures the
         // float panel shows above are real cash and stay untouched by it.
-        $dailyFundToday = app(\App\Services\DailyFundService::class)
+        $dailyFundToday = app(DailyFundService::class)
             ->summaryOn(now()->toDateString(), $companies);
 
         // The pot a cash expense will actually be credited to. Read rather than
@@ -233,17 +261,18 @@ class ExpenseController implements HasMiddleware
         // on this form that showed nothing. Someone picking it had no way to know
         // it was empty until the save was refused.
         try {
-            $pettyCash        = app(\App\Services\PettyCashService::class);
-            $cashPotName      = $pettyCash->cashPotAccount()->name;
-            $cashPotBalance   = $pettyCash->cashPotBalance();
+            $pettyCash = app(PettyCashService::class);
+            $cashPotName = $pettyCash->cashPotAccount()->name;
+            $cashPotBalance = $pettyCash->cashPotBalance();
         } catch (\Throwable $e) {
-            $cashPotName    = 'Office Cash';
+            $cashPotName = 'Office Cash';
             $cashPotBalance = null;   // null = "unknown", which the form shows as no figure
         }
 
         return view('expenses.index', compact(
             'datas',
             'users',
+            'referenceUsers',
             'banks',
             'companies',
             'req_subdatas',
@@ -258,7 +287,6 @@ class ExpenseController implements HasMiddleware
             'pendingSummary'
         ));
     }
-
 
     /**
      * Every filter the expense list offers, applied to a fresh query.
@@ -287,7 +315,11 @@ class ExpenseController implements HasMiddleware
 
         foreach (['user_id', 'bank_id', 'expense_category_id', 'expense_sub_category_id'] as $column) {
             if ($request->filled($column)) {
-                $query->where('expenses.' . $column, $request->input($column));
+                if (in_array($column, ['expense_category_id', 'expense_sub_category_id'], true)) {
+                    $this->filterLineClassification($query, $column, $request->input($column));
+                } else {
+                    $query->where('expenses.'.$column, $request->input($column));
+                }
             }
         }
 
@@ -296,7 +328,42 @@ class ExpenseController implements HasMiddleware
         // and only "Item 01" worked. Escaped, because _ and % in a title would
         // otherwise be read as wildcards.
         if ($request->filled('title')) {
-            $query->where('expenses.title', 'like', '%' . addcslashes($request->title, '%_\\') . '%');
+            $term = trim((string) $request->title);
+            $like = '%'.addcslashes($term, '%_\\').'%';
+            $lower = mb_strtolower($term);
+
+            $query->where(function ($search) use ($like, $lower) {
+                $search->where('expenses.title', 'like', $like)
+                    ->orWhere('expenses.description', 'like', $like)
+                    ->orWhere('expenses.reference', 'like', $like)
+                    ->orWhere('expenses.other_note', 'like', $like)
+                    ->orWhere('expenses.reference_user_name', 'like', $like)
+                    ->orWhere('expenses.payment_mode', 'like', $like)
+                    ->orWhere('expenses.approval_status', 'like', $like)
+                    ->orWhereHas('user', fn ($relation) => $relation->where('name', 'like', $like))
+                    ->orWhereHas('company', fn ($relation) => $relation->where('name', 'like', $like)->orWhere('short_name', 'like', $like))
+                    ->orWhereHas('bank', fn ($relation) => $relation->where('name', 'like', $like))
+                    ->orWhereHas('expense_category', fn ($relation) => $relation->where('name', 'like', $like))
+                    ->orWhereHas('expense_sub_category', fn ($relation) => $relation->where('name', 'like', $like))
+                    ->orWhereHas('items', function ($items) use ($like) {
+                        $items->where('description', 'like', $like)
+                            ->orWhereHas('category', fn ($relation) => $relation->where('name', 'like', $like))
+                            ->orWhereHas('subCategory', fn ($relation) => $relation->where('name', 'like', $like));
+                    });
+
+                if (str_contains($lower, 'active') && ! str_contains($lower, 'inactive')) {
+                    $search->orWhere('expenses.status', 1);
+                }
+                if (str_contains($lower, 'inactive')) {
+                    $search->orWhere('expenses.status', 0);
+                }
+                if (str_contains($lower, 'petty')) {
+                    $search->orWhereNotNull('expenses.petty_cash_float_id');
+                }
+                if (str_contains($lower, 'cash')) {
+                    $search->orWhere(fn ($source) => $source->whereNull('expenses.petty_cash_float_id')->whereNull('expenses.bank_id'));
+                }
+            });
         }
 
         // `status` is a 0/1 flag. whereDate() cast it to a date before comparing,
@@ -305,10 +372,24 @@ class ExpenseController implements HasMiddleware
             $query->where('expenses.status', (int) $request->status);
         }
 
-        // The filter form has posted this input all along and the query never
-        // read it, so picking a date silently returned the unfiltered list.
-        if ($request->filled('expense_date')) {
-            $query->whereDate('expenses.expense_date', $request->expense_date);
+        // Bank-ledger style range: one bound means that single day; two bounds
+        // form an inclusive range. Keep expense_date as a legacy fallback for
+        // old bookmarked filter URLs.
+        $dateFrom = $request->input('date_from') ?: $request->input('expense_date');
+        $dateTo = $request->input('date_to') ?: $request->input('expense_date');
+        if ($dateFrom && ! $dateTo) {
+            $dateTo = $dateFrom;
+        } elseif ($dateTo && ! $dateFrom) {
+            $dateFrom = $dateTo;
+        }
+        if ($dateFrom && $dateTo && $dateFrom > $dateTo) {
+            [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
+        }
+        if ($dateFrom) {
+            $query->whereDate('expenses.expense_date', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->whereDate('expenses.expense_date', '<=', $dateTo);
         }
 
         // Mirrors REPORT_SOURCE_SQL — same precedence, and the same parameter
@@ -360,16 +441,16 @@ class ExpenseController implements HasMiddleware
             ->get();
 
         $filterLabels = [
-            'user'        => $request->filled('user_id')                 ? optional(\App\Models\User::find($request->user_id))->name : null,
-            'company'     => $request->filled('company_id')              ? optional(\App\Models\Company::find($request->company_id))->name : null,
-            'bank'        => $request->filled('bank_id')                 ? optional(\App\Models\Bank::find($request->bank_id))->name : null,
-            'category'    => $request->filled('expense_category_id')     ? optional(\App\Models\ExpenseCategory::find($request->expense_category_id))->name : null,
-            'subcategory' => $request->filled('expense_sub_category_id') ? optional(\App\Models\ExpenseSubCategory::find($request->expense_sub_category_id))->name : null,
+            'user' => $request->filled('user_id') ? optional(User::find($request->user_id))->name : null,
+            'company' => $request->filled('company_id') ? optional(Company::find($request->company_id))->name : null,
+            'bank' => $request->filled('bank_id') ? optional(Bank::find($request->bank_id))->name : null,
+            'category' => $request->filled('expense_category_id') ? optional(ExpenseCategory::find($request->expense_category_id))->name : null,
+            'subcategory' => $request->filled('expense_sub_category_id') ? optional(ExpenseSubCategory::find($request->expense_sub_category_id))->name : null,
             // Both are filters the list has offered for a while and the printed
             // copy never named, so a report narrowed to one department printed
             // looking like the whole company's spending.
-            'department'  => $request->filled('expense_department_id')    ? optional(\App\Models\ExpenseDepartment::find($request->expense_department_id))->name : null,
-            'source'      => $request->filled('payment_source')
+            'department' => $request->filled('expense_department_id') ? optional(ExpenseDepartment::find($request->expense_department_id))->name : null,
+            'source' => $request->filled('payment_source')
                 ? (['petty' => 'Petty Cash', 'bank' => 'Bank', 'cash' => 'Cash in Hand'][$request->input('payment_source')] ?? null)
                 : null,
         ];
@@ -382,9 +463,9 @@ class ExpenseController implements HasMiddleware
         // printSlip() already does it. Resolved by id rather than through a
         // relation so a user with no company set cannot make this throw on a page
         // whose entire job is to render.
-        $company = ($request->filled('company_id') ? \App\Models\Company::find($request->company_id) : null)
-            ?: (!empty(auth()->user()->company_id) ? \App\Models\Company::find(auth()->user()->company_id) : null)
-            ?: \App\Models\Company::first();
+        $company = ($request->filled('company_id') ? Company::find($request->company_id) : null)
+            ?: (! empty(auth()->user()->company_id) ? Company::find(auth()->user()->company_id) : null)
+            ?: Company::first();
 
         return view('expenses.print', compact('datas', 'filterLabels', 'company'));
     }
@@ -427,11 +508,11 @@ class ExpenseController implements HasMiddleware
      * money came from" is derived (REPORT_SOURCE_SQL) rather than stored.
      */
     private const REPORT_GROUPS = [
-        'company'     => ['label' => 'Company',            'table' => 'companies',              'fk' => 'expenses.company_id',              'drill' => 'company_id'],
-        'department'  => ['label' => 'Department / Project','table' => 'expense_departments',   'fk' => 'expenses.expense_department_id',   'drill' => 'expense_department_id'],
-        'category'    => ['label' => 'Category',            'table' => 'expense_categories',     'fk' => 'expenses.expense_category_id',     'drill' => 'expense_category_id'],
+        'company' => ['label' => 'Company',            'table' => 'companies',              'fk' => 'expenses.company_id',              'drill' => 'company_id'],
+        'department' => ['label' => 'Department / Project', 'table' => 'expense_departments',   'fk' => 'expenses.expense_department_id',   'drill' => 'expense_department_id'],
+        'category' => ['label' => 'Category',            'table' => 'expense_categories',     'fk' => 'expenses.expense_category_id',     'drill' => 'expense_category_id'],
         'subcategory' => ['label' => 'Sub-Category',        'table' => 'expense_sub_categories', 'fk' => 'expenses.expense_sub_category_id', 'drill' => 'expense_sub_category_id'],
-        'source'      => ['label' => 'Money Source',        'table' => null,                     'fk' => null,                               'drill' => 'payment_source'],
+        'source' => ['label' => 'Money Source',        'table' => null,                     'fk' => null,                               'drill' => 'payment_source'],
     ];
 
     /**
@@ -476,7 +557,7 @@ class ExpenseController implements HasMiddleware
         // `company` is whose letterhead the paper carries, which can never be
         // nothing. Same resolution printList() uses.
         $data['company'] = $data['scopeCompany']
-            ?: (!empty(auth()->user()->company_id) ? Company::find(auth()->user()->company_id) : null)
+            ?: (! empty(auth()->user()->company_id) ? Company::find(auth()->user()->company_id) : null)
             ?: Company::first();
 
         return view('expenses.report-print', $data);
@@ -510,12 +591,12 @@ class ExpenseController implements HasMiddleware
             $date = now()->toDateString();
         }
 
-        $companies = (!$canViewAll && !empty($userCompanyId))
+        $companies = (! $canViewAll && ! empty($userCompanyId))
             ? Company::where('id', $userCompanyId)->get()
             : Company::orderBy('name')->get();
 
         return response()->json(
-            app(\App\Services\DailyFundService::class)->summaryOn($date, $companies)
+            app(DailyFundService::class)->summaryOn($date, $companies)
         );
     }
 
@@ -528,29 +609,64 @@ class ExpenseController implements HasMiddleware
      * Derived rather than dropped. `expenses.title` is NOT NULL and is read by
      * the expense list, the delete confirmation, the print slip, the printed
      * list and both expense reports — making it nullable would have meant a
-     * migration plus a blank column on five screens. So the first cost line
-     * that says something becomes the title, which is what a person would have
-     * typed anyway.
+     * migration plus a blank column on five screens. The first payable line
+     * becomes the title and additional payable lines are summarized as
+     * "+ N more", keeping the list compact without hiding that it is a split
+     * expense.
      *
-     * A title that DOES arrive is kept untouched: editing an expense recorded
-     * before this change must not silently rewrite its title.
+     * Cost lines are checked BEFORE the posted title, not after. Neither modal
+     * gives a person a real title field to type into — #create_title is always
+     * blank, and #edit_title is only ever the row's current (already-derived)
+     * title, echoed back by the "edit" button's data-title. So on every edit
+     * the posted title is stale by construction: it is whatever this same
+     * function returned last time, not something a person typed just now. If
+     * it won first, adding a description to a line that was blank at creation
+     * (so the title had fallen back to the sub-category name) could never
+     * reach the list — the stale sub-category name would keep re-winning
+     * forever. Checking the lines first means the title tracks them exactly
+     * the way it does on create.
+     *
+     * The posted title still has ONE job: an expense whose title predates this
+     * derivation (typed by hand, back when the form had a real title field)
+     * keeps that title across an edit where every line is left blank — the
+     * case the fallback below cannot answer from the lines alone.
      */
     private function resolveExpenseTitle(Request $request): string
     {
+        $items = collect((array) $request->input('items', []))
+            ->filter(function ($item) {
+                if (! is_array($item)) {
+                    return false;
+                }
+
+                $quantity = (float) ($item['quantity'] ?? 1);
+                $unitPrice = (float) ($item['unit_price'] ?? $item['amount'] ?? 0);
+
+                return round($quantity * $unitPrice, 2) > 0;
+            })
+            ->values();
+
+        if ($items->isNotEmpty()) {
+            $first = $items->first();
+            $base = filled($first['description'] ?? null)
+                ? trim($first['description'])
+                : (ExpenseSubCategory::whereKey($first['expense_sub_category_id'] ?? null)->value('name')
+                    ?: ExpenseCategory::whereKey($first['expense_category_id'] ?? null)->value('name')
+                    ?: 'Expense');
+
+            $suffix = $items->count() > 1 ? ' + '.($items->count() - 1).' more' : '';
+            $baseLimit = max(1, 250 - mb_strlen($suffix));
+
+            return Str::limit($base, $baseLimit, '').$suffix;
+        }
+
         if (filled($request->input('title'))) {
-            return \Illuminate\Support\Str::limit(trim($request->input('title')), 250, '');
+            return Str::limit(trim($request->input('title')), 250, '');
         }
 
-        foreach ((array) $request->input('items', []) as $item) {
-            $description = is_array($item) ? ($item['description'] ?? null) : null;
-
-            if (filled($description)) {
-                return \Illuminate\Support\Str::limit(trim($description), 250, '');
-            }
-        }
-
-        // Every line was left blank. The classification is required, so it can
-        // always answer — better a category name than an empty column.
+        // Every line was left blank and there was no title to fall back on.
+        // The classification is required, so it can always answer — better a
+        // category name than an empty column.
         $name = ExpenseSubCategory::whereKey($request->expense_sub_category_id)->value('name')
             ?: ExpenseCategory::whereKey($request->expense_category_id)->value('name');
 
@@ -599,6 +715,30 @@ class ExpenseController implements HasMiddleware
         }
     }
 
+    /**
+     * Keep the legacy expense header classification in sync with the first
+     * breakdown line. Line classifications are the source of truth.
+     */
+    private function promoteFirstLineClassification(Request $request): void
+    {
+        $firstLine = collect($request->input('items', []))
+            ->first(fn ($item) => ! empty($item['expense_category_id']));
+
+        if (! $firstLine) {
+            return;
+        }
+
+        $subCategoryId = $firstLine['expense_sub_category_id'] ?? null;
+        if (is_string($subCategoryId) && in_array(trim($subCategoryId), ['', '__other'], true)) {
+            $subCategoryId = null;
+        }
+
+        $request->merge([
+            'expense_category_id' => $firstLine['expense_category_id'],
+            'expense_sub_category_id' => $subCategoryId,
+        ]);
+    }
+
     /** Everything both the screen and the printable copy need. */
     private function buildReportData(Request $request, int $ledgerLimit): array
     {
@@ -609,7 +749,7 @@ class ExpenseController implements HasMiddleware
         extract($window); // period, from, to, periodLabel, selectedMonth, selectedYear, customFrom, customTo, prevFrom, prevTo
 
         $groupKey = $request->input('group_by', 'category');
-        if (!array_key_exists($groupKey, self::REPORT_GROUPS)) {
+        if (! array_key_exists($groupKey, self::REPORT_GROUPS)) {
             $groupKey = 'category';
         }
         $groupMeta = self::REPORT_GROUPS[$groupKey];
@@ -663,22 +803,22 @@ class ExpenseController implements HasMiddleware
             ->get();
 
         // --- Filter option lists, scoped to what this user may see at all.
-        if (!$canViewAll && !empty($userCompanyId)) {
+        if (! $canViewAll && ! empty($userCompanyId)) {
             $companies = Company::where('id', $userCompanyId)->get();
             $expenseDepartments = ExpenseDepartment::orderBy('name')->where('company_id', $userCompanyId)->get();
             $expenseCategories = ExpenseCategory::orderBy('name')->where('company_id', $userCompanyId)->get();
-            $banks = Bank::orderBy('name')->where('status', 1)->where('company_id', $userCompanyId)->get();
+            $banks = Bank::with('company:id,name,short_name')->orderBy('name')->where('status', 1)->where('company_id', $userCompanyId)->get();
         } else {
             $companies = Company::orderBy('name')->get();
             $expenseDepartments = ExpenseDepartment::orderBy('name')->get();
             $expenseCategories = ExpenseCategory::orderBy('name')->get();
-            $banks = Bank::orderBy('name')->where('status', 1)->get();
+            $banks = Bank::with('company:id,name,short_name')->orderBy('name')->where('status', 1)->get();
         }
 
         // Sub-categories follow the chosen category — an unfiltered list of every
         // sub-category in the group is unusable once there are a few hundred.
         $subCategoryQuery = ExpenseSubCategory::orderBy('name');
-        if (!$canViewAll && !empty($userCompanyId)) {
+        if (! $canViewAll && ! empty($userCompanyId)) {
             $subCategoryQuery->where('company_id', $userCompanyId);
         }
         if ($request->filled('expense_category_id')) {
@@ -730,7 +870,7 @@ class ExpenseController implements HasMiddleware
         extract($window);
 
         $groupKey = $request->input('group_by', 'category');
-        if (!array_key_exists($groupKey, self::REPORT_GROUPS)) {
+        if (! array_key_exists($groupKey, self::REPORT_GROUPS)) {
             $groupKey = 'category';
         }
 
@@ -738,7 +878,7 @@ class ExpenseController implements HasMiddleware
         $rows = $this->reportGrouping($request, $from, $to, $groupKey);
         $totalAmount = (float) $rows->sum('amount');
 
-        $filename = 'expense-report-' . $groupKey . '-' . $from->format('Ymd') . '-' . $to->format('Ymd') . '.csv';
+        $filename = 'expense-report-'.$groupKey.'-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
 
         return response()->streamDownload(function () use ($rows, $groupMeta, $periodLabel, $totalAmount) {
             $handle = fopen('php://output', 'w');
@@ -747,7 +887,7 @@ class ExpenseController implements HasMiddleware
             // every Bengali company name into mojibake.
             fwrite($handle, "\xEF\xBB\xBF");
 
-            fputcsv($handle, ['Expense Report — ' . $periodLabel]);
+            fputcsv($handle, ['Expense Report — '.$periodLabel]);
             fputcsv($handle, []);
             fputcsv($handle, [$groupMeta['label'], 'Transactions', 'Amount', '% of Total']);
 
@@ -777,7 +917,7 @@ class ExpenseController implements HasMiddleware
     {
         $period = strtolower($request->input('period', 'daily'));
 
-        if (!in_array($period, ['daily', 'weekly', 'monthly', 'custom'], true)) {
+        if (! in_array($period, ['daily', 'weekly', 'monthly', 'custom'], true)) {
             $period = 'daily';
         }
 
@@ -793,7 +933,7 @@ class ExpenseController implements HasMiddleware
         if ($period === 'weekly') {
             $from = $anchorDate->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
             $to = $from->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay();
-            $periodLabel = $from->format('d M Y') . ' to ' . $to->format('d M Y');
+            $periodLabel = $from->format('d M Y').' to '.$to->format('d M Y');
         } elseif ($period === 'monthly') {
             $selectedMonth = (int) $request->input('month', now()->month);
             $selectedYear = (int) $request->input('year', now()->year);
@@ -814,7 +954,7 @@ class ExpenseController implements HasMiddleware
 
             $customFrom = $from->toDateString();
             $customTo = $to->toDateString();
-            $periodLabel = $from->format('d M Y') . ' to ' . $to->format('d M Y');
+            $periodLabel = $from->format('d M Y').' to '.$to->format('d M Y');
         }
 
         if ($period === 'monthly') {
@@ -859,7 +999,11 @@ class ExpenseController implements HasMiddleware
 
         foreach (['expense_department_id', 'expense_category_id', 'expense_sub_category_id', 'bank_id'] as $column) {
             if ($request->filled($column)) {
-                $query->where('expenses.' . $column, $request->input($column));
+                if (in_array($column, ['expense_category_id', 'expense_sub_category_id'], true)) {
+                    $this->filterLineClassification($query, $column, $request->input($column));
+                } else {
+                    $query->where('expenses.'.$column, $request->input($column));
+                }
             }
         }
 
@@ -890,7 +1034,7 @@ class ExpenseController implements HasMiddleware
     /** Count, total, and the money-source split, in one round trip. */
     private function reportTotals($query): array
     {
-        $row = $query->selectRaw("
+        $row = $query->selectRaw('
             COUNT(*) as txn_count,
             COALESCE(SUM(expenses.amount), 0) as total_amount,
             COALESCE(SUM(CASE WHEN expenses.petty_cash_float_id IS NOT NULL THEN expenses.amount ELSE 0 END), 0) as petty_amount,
@@ -898,15 +1042,15 @@ class ExpenseController implements HasMiddleware
             COALESCE(SUM(CASE WHEN expenses.petty_cash_float_id IS NULL AND expenses.bank_id IS NULL THEN expenses.amount ELSE 0 END), 0) as cash_amount,
             COALESCE(MAX(expenses.amount), 0) as largest_amount,
             COALESCE(SUM(CASE WHEN expenses.status = 1 THEN 1 ELSE 0 END), 0) as active_count
-        ")->first();
+        ')->first();
 
         return [
-            'total_expenses'  => (int) ($row->txn_count ?? 0),
-            'total_amount'    => (float) ($row->total_amount ?? 0),
-            'petty_amount'    => (float) ($row->petty_amount ?? 0),
-            'bank_amount'     => (float) ($row->bank_amount ?? 0),
-            'cash_amount'     => (float) ($row->cash_amount ?? 0),
-            'largest_amount'  => (float) ($row->largest_amount ?? 0),
+            'total_expenses' => (int) ($row->txn_count ?? 0),
+            'total_amount' => (float) ($row->total_amount ?? 0),
+            'petty_amount' => (float) ($row->petty_amount ?? 0),
+            'bank_amount' => (float) ($row->bank_amount ?? 0),
+            'cash_amount' => (float) ($row->cash_amount ?? 0),
+            'largest_amount' => (float) ($row->largest_amount ?? 0),
             'active_expenses' => (int) ($row->active_count ?? 0),
         ];
     }
@@ -918,6 +1062,19 @@ class ExpenseController implements HasMiddleware
      * drill-down link back into this same report. A row with no id (nothing was
      * classified) stays plain text — there is no id to filter by.
      */
+    private function filterLineClassification($query, string $column, $value): void
+    {
+        $query->where(function ($matching) use ($column, $value) {
+            $matching->whereExists(function ($lines) use ($column, $value) {
+                $lines->selectRaw('1')->from('expense_items as matching_line')
+                    ->whereColumn('matching_line.expense_id', 'expenses.id')
+                    ->whereRaw("CASE WHEN matching_line.expense_category_id IS NULL THEN expenses.{$column} ELSE matching_line.{$column} END = ?", [$value]);
+            })->orWhere(function ($legacy) use ($column, $value) {
+                $legacy->where('expenses.'.$column, $value)->whereDoesntHave('items');
+            });
+        });
+    }
+
     private function reportGrouping(Request $request, Carbon $from, Carbon $to, string $groupKey)
     {
         $meta = self::REPORT_GROUPS[$groupKey];
@@ -932,9 +1089,9 @@ class ExpenseController implements HasMiddleware
                 ->orderByDesc('amount')
                 ->get()
                 ->map(fn ($row) => (object) [
-                    'id'     => ['Petty Cash' => 'petty', 'Bank' => 'bank', 'Cash in Hand' => 'cash'][$row->group_name] ?? null,
-                    'name'   => $row->group_name,
-                    'count'  => (int) $row->txn_count,
+                    'id' => ['Petty Cash' => 'petty', 'Bank' => 'bank', 'Cash in Hand' => 'cash'][$row->group_name] ?? null,
+                    'name' => $row->group_name,
+                    'count' => (int) $row->txn_count,
                     'amount' => (float) $row->amount,
                 ]);
         }
@@ -942,16 +1099,34 @@ class ExpenseController implements HasMiddleware
         $table = $meta['table'];
         $fk = $meta['fk'];
 
+        // Allocate a multi-category payment by its lines, not its header default.
+        if (in_array($groupKey, ['category', 'subcategory'], true)) {
+            $column = $groupKey === 'category' ? 'expense_category_id' : 'expense_sub_category_id';
+            $effective = "CASE WHEN classification_line.expense_category_id IS NULL THEN expenses.{$column} ELSE classification_line.{$column} END";
+            $query->leftJoin('expense_items as classification_line', 'classification_line.expense_id', '=', 'expenses.id');
+            foreach (['expense_category_id', 'expense_sub_category_id'] as $filter) {
+                if ($request->filled($filter)) {
+                    $query->whereRaw("CASE WHEN classification_line.expense_category_id IS NULL THEN expenses.{$filter} ELSE classification_line.{$filter} END = ?", [$request->input($filter)]);
+                }
+            }
+
+            return $query
+                ->leftJoin($table, fn ($join) => $join->on($table.'.id', '=', DB::raw($effective)))
+                ->selectRaw("{$effective} as group_id, {$table}.name as group_name, COUNT(DISTINCT expenses.id) as txn_count, COALESCE(SUM(CASE WHEN classification_line.id IS NULL THEN expenses.amount ELSE classification_line.amount END), 0) as amount")
+                ->groupBy(DB::raw($effective), DB::raw($table.'.name'))->orderByDesc('amount')->get()
+                ->map(fn ($row) => (object) ['id' => $row->group_id, 'name' => $row->group_name ?: 'Unassigned', 'count' => (int) $row->txn_count, 'amount' => (float) $row->amount]);
+        }
+
         return $query
-            ->leftJoin($table, $table . '.id', '=', $fk)
+            ->leftJoin($table, $table.'.id', '=', $fk)
             ->selectRaw("{$fk} as group_id, {$table}.name as group_name, COUNT(*) as txn_count, COALESCE(SUM(expenses.amount), 0) as amount")
-            ->groupBy(DB::raw($fk), DB::raw($table . '.name'))
+            ->groupBy(DB::raw($fk), DB::raw($table.'.name'))
             ->orderByDesc('amount')
             ->get()
             ->map(fn ($row) => (object) [
-                'id'     => $row->group_id,
-                'name'   => $row->group_name ?: 'Unassigned',
-                'count'  => (int) $row->txn_count,
+                'id' => $row->group_id,
+                'name' => $row->group_name ?: 'Unassigned',
+                'count' => (int) $row->txn_count,
                 'amount' => (float) $row->amount,
             ]);
     }
@@ -967,21 +1142,21 @@ class ExpenseController implements HasMiddleware
         $chips = [];
 
         $lookups = [
-            'company_id'              => ['Company', \App\Models\Company::class],
-            'expense_department_id'   => ['Department', ExpenseDepartment::class],
-            'expense_category_id'     => ['Category', ExpenseCategory::class],
+            'company_id' => ['Company', Company::class],
+            'expense_department_id' => ['Department', ExpenseDepartment::class],
+            'expense_category_id' => ['Category', ExpenseCategory::class],
             'expense_sub_category_id' => ['Sub-Category', ExpenseSubCategory::class],
-            'bank_id'                 => ['Bank', Bank::class],
+            'bank_id' => ['Bank', Bank::class],
         ];
 
         foreach ($lookups as $key => [$label, $model]) {
-            if ($key === 'company_id' && !$canViewAll) {
+            if ($key === 'company_id' && ! $canViewAll) {
                 continue; // Pinned, not chosen — a chip implies it can be removed.
             }
 
             if ($request->filled($key)) {
                 $name = optional($model::find($request->input($key)))->name;
-                $chips[] = ['key' => $key, 'label' => $label, 'value' => $name ?: ('#' . $request->input($key))];
+                $chips[] = ['key' => $key, 'label' => $label, 'value' => $name ?: ('#'.$request->input($key))];
             }
         }
 
@@ -1011,7 +1186,8 @@ class ExpenseController implements HasMiddleware
 
         $this->authoriseExpense($expense);
 
-        $company = $expense->company ?? \App\Models\Company::first();
+        $company = $expense->company ?? Company::first();
+
         return view('expenses.print-slip', compact('expense', 'company'));
     }
 
@@ -1027,7 +1203,7 @@ class ExpenseController implements HasMiddleware
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -1037,8 +1213,7 @@ class ExpenseController implements HasMiddleware
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -1051,13 +1226,16 @@ class ExpenseController implements HasMiddleware
         // Before validation as well, so "Others…" is already null by the time the
         // required / exists rules judge it — and can never reach an id column.
         $this->normaliseClassification($request);
+        $this->promoteFirstLineClassification($request);
 
         $validator = Validator::make($request->all(), [
             // Optional now — the form no longer asks. resolveExpenseTitle() fills
             // it from the first cost line, because the column is NOT NULL and
             // seven screens read it.
             'title' => 'nullable|string|max:255',
-            'expense_date' => 'required',
+            'expense_date' => 'required|date',
+            'transaction_time' => 'required|date_format:H:i',
+            'reference_user_name' => 'nullable|string|max:255',
             // exists, not just required: the column is a NOT NULL foreign key, so
             // anything that is not a real category id fails at the insert with a
             // 500 rather than a sentence. See normaliseClassification().
@@ -1078,9 +1256,17 @@ class ExpenseController implements HasMiddleware
             // ALLOWED to name that person is decided by
             // assertSettlementSourceAllowed() before validation runs.
             'reimburse_to_user_id' => 'nullable|exists:users,id',
+            'bank_charge_amount' => 'nullable|numeric|min:0',
+            'bank_charge_account_id' => 'nullable|exists:accounts,id',
             'other_note' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
+            'items.*.account_id' => ['nullable', 'integer', Rule::in(app(ExpenseClassificationService::class)->mainExpenseAccountIds()->all())],
+            'items.*.expense_category_id' => 'required|integer|exists:expense_categories,id',
+            'items.*.expense_sub_category_id' => 'nullable|integer|exists:expense_sub_categories,id',
+            'items.*.description' => 'nullable|string|max:255',
             'items.*.amount' => 'required|numeric|min:0',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'required|numeric|min:0',
             // Set only when this form was opened from the Subscriptions desk
             // (ExpenseSubscriptionController::recordUrl). All nullable, so a
             // hand-filed expense validates exactly as it always did — but a
@@ -1090,6 +1276,10 @@ class ExpenseController implements HasMiddleware
             'dm_id' => 'nullable|integer|min:1',
             'dm_group_id' => 'nullable|integer|min:1',
             'dm_due_date' => 'nullable|date',
+            'dm_cycle' => 'nullable|string|max:20',
+            'dm_type_id' => 'nullable|integer|min:1',
+            'dm_category_id' => 'nullable|integer|min:1',
+            'dm_next_expiry' => 'nullable|date',
         ], [
             'company_id.required' => 'Choose the company this expense belongs to — an expense always leaves the books of exactly one company.',
             'expense_department_id.required' => 'Choose the department this cost belongs to — it is what tells a company\'s own costs apart from the ones it paid on everyone\'s behalf.',
@@ -1103,12 +1293,14 @@ class ExpenseController implements HasMiddleware
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ]);
             }
 
             return redirect()->back()->withErrors($validator)->withInput();
         }
+
+        $this->validateExpenseBankCharge($request);
 
         // Company-locked users can only create expenses for their own
         // company, regardless of what's posted; only "view all expense"
@@ -1118,12 +1310,12 @@ class ExpenseController implements HasMiddleware
         // chart of accounts is global by design).
         $userCompanyId = auth()->user()->company_id;
         $canViewAll = auth()->user()->can('view all expense');
-        $companyId = (!$canViewAll && !empty($userCompanyId)) ? $userCompanyId : $request->company_id;
+        $companyId = (! $canViewAll && ! empty($userCompanyId)) ? $userCompanyId : $request->company_id;
 
-        if (!$canViewAll && !empty($userCompanyId)) {
+        if (! $canViewAll && ! empty($userCompanyId)) {
             if ($request->filled('bank_id')) {
-                $selectedBank = \App\Models\Bank::find($request->bank_id);
-                abort_if(!$selectedBank || (int) $selectedBank->company_id !== (int) $userCompanyId, 403, 'Selected bank belongs to a different company.');
+                $selectedBank = Bank::find($request->bank_id);
+                abort_if(! $selectedBank || (int) $selectedBank->company_id !== (int) $userCompanyId, 403, 'Selected bank belongs to a different company.');
             }
 
             // A category with no company is shared by the whole group and every
@@ -1132,7 +1324,7 @@ class ExpenseController implements HasMiddleware
             // company-locked user could not file ANY expense; only a category
             // naming a DIFFERENT company is actually out of bounds.
             $selectedCategory = ExpenseCategory::find($request->expense_category_id);
-            abort_if(!$selectedCategory, 403, 'Selected expense category no longer exists.');
+            abort_if(! $selectedCategory, 403, 'Selected expense category no longer exists.');
             abort_if(
                 $selectedCategory->company_id !== null
                     && (int) $selectedCategory->company_id !== (int) $userCompanyId,
@@ -1142,7 +1334,7 @@ class ExpenseController implements HasMiddleware
 
             if ($request->filled('expense_sub_category_id')) {
                 $selectedSubCategory = ExpenseSubCategory::find($request->expense_sub_category_id);
-                abort_if(!$selectedSubCategory, 403, 'Selected expense sub-category no longer exists.');
+                abort_if(! $selectedSubCategory, 403, 'Selected expense sub-category no longer exists.');
                 abort_if(
                     $selectedSubCategory->company_id !== null
                         && (int) $selectedSubCategory->company_id !== (int) $userCompanyId,
@@ -1157,12 +1349,19 @@ class ExpenseController implements HasMiddleware
         // step; this makes sure a request that did not come from the form cannot
         // file an expense under one company and a department of another.
         if ($request->filled('expense_department_id')) {
-            $dept = \App\Models\ExpenseDepartment::find($request->expense_department_id);
+            $dept = ExpenseDepartment::find($request->expense_department_id);
+            $trustedWoodArtProject = $request->attributes->get('woodart_project_expense') === true
+                && in_array((int) $companyId, [3, 6], true)
+                && $dept
+                && Schema::hasTable('project_terms')
+                && DB::table('project_terms')->where('expense_department_id', $dept->id)->exists();
 
             abort_if(
-                !$dept || (int) $dept->company_id !== (int) $companyId,
+                ! $dept
+                    || (! $trustedWoodArtProject && ! app(ExpenseClassificationService::class)->isOperatingCostDepartment($dept))
+                    || (int) $dept->company_id !== (int) $companyId,
                 422,
-                'That department belongs to a different company than the one this expense is filed under.'
+                'Choose an operating-cost department belonging to the company this expense is filed under.'
             );
         }
 
@@ -1171,19 +1370,34 @@ class ExpenseController implements HasMiddleware
         // expense against another company's float would move cash between two sets
         // of books without either of them recording a transfer.
         if ($request->filled('petty_cash_float_id')) {
-            $float = \App\Models\PettyCashFloat::find($request->petty_cash_float_id);
+            $float = PettyCashFloat::find($request->petty_cash_float_id);
 
             abort_if(
-                !$float || (int) $float->company_id !== (int) $companyId,
+                ! $float || (int) $float->company_id !== (int) $companyId,
                 422,
                 'That petty cash float belongs to a different company than the one this expense is filed under.'
             );
 
-            abort_if(!$float->status, 422, 'That petty cash float is closed.');
+            abort_if(! $float->status, 422, 'That petty cash float is closed.');
         }
 
         $items = collect($request->input('items', []))
-            ->filter(fn($i) => isset($i['amount']) && $i['amount'] > 0);
+            ->map(function ($item) use ($companyId) {
+                $classification = app(ExpenseClassificationService::class)->resolveLine($item, (int) $companyId, null, null);
+                $quantity = max(0, (float) ($item['quantity'] ?? 1));
+                $unitPrice = max(0, (float) ($item['unit_price'] ?? $item['amount'] ?? 0));
+
+                return [
+                    'account_id' => $classification['account_id'],
+                    'expense_category_id' => $classification['expense_category_id'],
+                    'expense_sub_category_id' => $classification['expense_sub_category_id'],
+                    'description' => $item['description'] ?? null,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'amount' => round($quantity * $unitPrice, 2),
+                ];
+            })
+            ->filter(fn ($item) => $item['amount'] > 0);
 
         $total = $items->sum('amount');
 
@@ -1202,84 +1416,91 @@ class ExpenseController implements HasMiddleware
         $data = null;
 
         try {
-        DB::transaction(function () use ($request, $items, $total, &$data, $companyId) {
-            $bank = \App\Models\Bank::find($request->bank_id);
+            DB::transaction(function () use ($request, $items, $total, &$data, $companyId) {
+                $bank = Bank::find($request->bank_id);
 
-            $data = Expense::create([
-                'user_id' => auth()->id(),
-                // The taxonomy knows which expense account it posts to, so the
-                // form no longer asks anyone to pick a chart code by hand. The
-                // sub-category is passed as well as the category because it is the
-                // narrower answer — snacks land on 8101 Tea & Snacks rather than
-                // the whole of 8100. An explicitly posted account_id still wins,
-                // for the accountant reclassifying something by exception.
-                'account_id' => $request->account_id
-                    ?: app(ExpenseClassificationService::class)->accountFor(
-                        $request->expense_category_id,
-                        $request->expense_sub_category_id
-                    ),
-                'company_id' => $companyId,
-                'expense_department_id' => $request->expense_department_id,
-                'expense_category_id' => $request->expense_category_id,
-                'expense_sub_category_id' => $request->expense_sub_category_id,
-                'other_note' => $request->other_note,
-                'title' => $this->resolveExpenseTitle($request),
-                'description' => $request->description,
-                'amount' => $total,
-                'bank_id' => $request->bank_id,
-                'petty_cash_float_id' => $request->petty_cash_float_id ?: null,
-                'reimburse_to_user_id' => $request->reimburse_to_user_id ?: null,
-                'payment_mode' => $request->payment_mode ?: 'cash',
-                'reference' => $request->reference,
-                'expense_date' => $request->expense_date,
-                'status' => $request->status ? 1 : 0
-            ]);
-
-            foreach ($items as $item) {
-                ExpenseItem::create([
-                    'expense_id'  => $data->id,
-                    'description' => $item['description'] ?? null,
-                    'amount'      => $item['amount'],
+                $data = Expense::create([
+                    'user_id' => auth()->id(),
+                    // The taxonomy knows which expense account it posts to, so the
+                    // form no longer asks anyone to pick a chart code by hand. The
+                    // sub-category is passed as well as the category because it is the
+                    // narrower answer — snacks land on 8101 Tea & Snacks rather than
+                    // the whole of 8100. An explicitly posted account_id still wins,
+                    // for the accountant reclassifying something by exception.
+                    'account_id' => $items->first()['account_id'],
+                    'company_id' => $companyId,
+                    'expense_department_id' => $request->expense_department_id,
+                    'expense_category_id' => $items->first()['expense_category_id'],
+                    'expense_sub_category_id' => $items->first()['expense_sub_category_id'],
+                    'other_note' => $request->other_note,
+                    'title' => $this->resolveExpenseTitle($request),
+                    'description' => $request->description,
+                    'amount' => $total,
+                    'bank_id' => $request->bank_id,
+                    'bank_charge_amount' => round((float) $request->input('bank_charge_amount', 0), 2),
+                    'bank_charge_account_id' => (float) $request->input('bank_charge_amount', 0) > 0
+                        ? $request->bank_charge_account_id : null,
+                    'petty_cash_float_id' => $request->petty_cash_float_id ?: null,
+                    'reimburse_to_user_id' => $request->reimburse_to_user_id ?: null,
+                    'payment_mode' => $request->payment_mode ?: 'cash',
+                    'reference' => $request->reference,
+                    'reference_user_name' => $request->reference_user_name,
+                    'expense_date' => $request->expense_date,
+                    'transaction_time' => $request->transaction_time,
+                    // Status is operational state, not expense-entry data. New
+                    // expenses always start active; the entry form no longer asks.
+                    'status' => 1,
                 ]);
-            }
-    
-    
-            $attachment = $request->file('attachment');
-            if ($attachment) {
-                $attachment_name = uniqid() . '.' . strtolower($attachment->getClientOriginalExtension());
-                $upload_path = 'image/expense/';
-                if (!file_exists(public_path($upload_path))) {
-                    mkdir(public_path($upload_path), 0777, true);
+
+                foreach ($items as $item) {
+                    ExpenseItem::create([
+                        'expense_id' => $data->id,
+                        'account_id' => $item['account_id'],
+                        'expense_category_id' => $item['expense_category_id'],
+                        'expense_sub_category_id' => $item['expense_sub_category_id'],
+                        'description' => $item['description'] ?? null,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'amount' => $item['amount'],
+                    ]);
                 }
-                $success = $attachment->move(public_path($upload_path), $attachment_name);
-                if ($success) {
-                    if (!empty($data->attachment) && file_exists(public_path($data->attachment))) {
-                        unlink(public_path($data->attachment));
+
+                $attachment = $request->file('attachment');
+                if ($attachment) {
+                    $attachment_name = uniqid().'.'.strtolower($attachment->getClientOriginalExtension());
+                    $upload_path = 'image/expense/';
+                    if (! file_exists(public_path($upload_path))) {
+                        mkdir(public_path($upload_path), 0777, true);
                     }
-                    $data->attachment = $upload_path . $attachment_name;
+                    $success = $attachment->move(public_path($upload_path), $attachment_name);
+                    if ($success) {
+                        if (! empty($data->attachment) && file_exists(public_path($data->attachment))) {
+                            unlink(public_path($data->attachment));
+                        }
+                        $data->attachment = $upload_path.$attachment_name;
+                    }
                 }
-            }
 
-            $data->save();
+                $data->save();
 
-            // Ties this expense to the DM renewal period it settles, when the
-            // form was opened from that desk. Inside the transaction on purpose:
-            // if the period is already recorded the unique index throws and the
-            // expense rolls back with it, so an attempted double payment cannot
-            // leave a stray expense behind.
-            $this->linkDmRenewal($request, $data);
+                // Ties this expense to the DM renewal period it settles, when the
+                // form was opened from that desk. Inside the transaction on purpose:
+                // if the period is already recorded the unique index throws and the
+                // expense rolls back with it, so an attempted double payment cannot
+                // leave a stray expense behind.
+                $this->linkDmRenewal($request, $data);
 
-            // NO JOURNAL HERE. Filing an expense records a claim; it does not
-            // move money. postJournal() runs from approve() instead, so the one
-            // thing that reaches the accounts is the one thing that needed
-            // somebody's say-so. See the 2026_08_13 approval migration.
-        });
-        } catch (\App\Exceptions\PettyCashOverdrawnException $e) {
+                // NO JOURNAL HERE. Filing an expense records a claim; it does not
+                // move money. postJournal() runs from approve() instead, so the one
+                // thing that reaches the accounts is the one thing that needed
+                // somebody's say-so. See the 2026_08_13 approval migration.
+            });
+        } catch (SettlementSourceOverdrawnException $e) {
             // A refusal the person filing can act on, not a 500.
             return $request->ajax()
                 ? response()->json(['success' => false, 'message' => $e->getMessage()])
                 : redirect()->back()->withInput()->with('error', $e->getMessage());
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             // dm_renewal_period_unique fired: this renewal period was already
             // recorded. Preventing the SECOND payment is the whole reason that
             // index exists, so it is answered as a sentence rather than a 500.
@@ -1289,8 +1510,8 @@ class ExpenseController implements HasMiddleware
             }
 
             $message = 'That renewal period has already been recorded against another expense. '
-                . 'Open the Subscriptions tab and use the Paid link to see which one — '
-                . 'if that expense is wrong, reverse it rather than filing a second.';
+                .'Open the Subscriptions tab and use the Paid link to see which one — '
+                .'if that expense is wrong, reverse it rather than filing a second.';
 
             return $request->ajax()
                 ? response()->json(['success' => false, 'message' => $message])
@@ -1305,7 +1526,7 @@ class ExpenseController implements HasMiddleware
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'data' => $data
+                'data' => $data,
             ]);
         }
 
@@ -1329,7 +1550,7 @@ class ExpenseController implements HasMiddleware
             return $this->respond($request, false, 'That expense is already approved.');
         }
 
-        if (!$expense->status) {
+        if (! $expense->status) {
             return $this->respond($request, false, 'That expense is inactive. Make it active before approving it.');
         }
 
@@ -1339,15 +1560,27 @@ class ExpenseController implements HasMiddleware
 
                 $expense->update([
                     'approval_status' => Expense::APPROVED,
-                    'approved_by'     => auth()->id(),
-                    'approved_at'     => now(),
+                    'approved_by' => auth()->id(),
+                    'approved_at' => now(),
                 ]);
             });
-        } catch (\App\Exceptions\PettyCashOverdrawnException $e) {
+        } catch (SettlementSourceOverdrawnException $e) {
             return $this->respond($request, false, $e->getMessage());
         } catch (\Throwable $e) {
             return $this->respond($request, false, $e->getMessage());
         }
+
+        // OUTSIDE the transaction, deliberately. The journal is committed and the
+        // money is on the books; a second system being unreachable must not undo
+        // that. Failures are recorded on the payment row for the desk to retry.
+        $this->pushDmRenewal($expense);
+
+        // Same reasoning, same side of the commit: if this expense was paid from
+        // another company's bank account, record the debt on the Liability book.
+        // It writes no journal and moves no balance — it only remembers that,
+        // say, Interiors owes Travels for this. Raised here rather than at filing
+        // because a claim that is never approved must not leave a debt behind.
+        $this->recordInterCompanyLiability($expense);
 
         return $this->respond($request, true, 'Expense approved and posted to the ledger.');
     }
@@ -1362,6 +1595,10 @@ class ExpenseController implements HasMiddleware
      */
     public function reverse(Request $request, $role, $id)
     {
+        $validated = $request->validate([
+            'reversal_date' => 'required|date',
+        ]);
+
         $expense = Expense::findOrFail($id);
 
         $this->authoriseExpense($expense);
@@ -1370,13 +1607,13 @@ class ExpenseController implements HasMiddleware
             return $this->respond($request, false, 'That expense is not approved, so there is nothing to reverse.');
         }
 
-        $journal = \App\Models\JournalEntry::where('source', 'expense')
+        $journal = JournalEntry::where('source', 'expense')
             ->where('source_id', $expense->id)
             ->whereNull('reversed_journal_entry_id')
             ->with('items')
             ->first();
 
-        if (!$journal) {
+        if (! $journal) {
             // No posting to undo — put the expense back to pending so it can be
             // corrected and approved again, rather than leaving it stuck.
             $expense->update(['approval_status' => Expense::PENDING, 'approved_by' => null, 'approved_at' => null]);
@@ -1384,40 +1621,55 @@ class ExpenseController implements HasMiddleware
             return $this->respond($request, true, 'No ledger posting was found, so the expense has been returned to pending.');
         }
 
-        if (\App\Models\JournalEntry::where('reversed_journal_entry_id', $journal->id)->exists()) {
+        if (JournalEntry::where('reversed_journal_entry_id', $journal->id)->exists()) {
             return $this->respond($request, false, 'That posting has already been reversed.');
         }
 
         DB::transaction(function () use ($expense, $journal) {
-            $reversal = \App\Models\JournalEntry::create([
-                'company_id'                => $journal->company_id,
-                'created_by'                => auth()->id(),
-                'date'                      => now()->toDateString(),
-                'reference'                 => 'REV-' . ($journal->reference ?: $journal->id),
-                'source'                    => 'expense',
-                'source_id'                 => $expense->id,
-                'description'               => 'Reversal of: ' . $journal->description,
+            $reversal = JournalEntry::create([
+                'company_id' => $journal->company_id,
+                'created_by' => auth()->id(),
+                // Historical corrections belong immediately beside the entry
+                // they cancel. Match the bank reversal workspace: preserve the
+                // original posting date and clock time instead of using the
+                // day/time on which the operator clicked Reverse.
+                'date' => $journal->date,
+                'entry_time' => $journal->entry_time
+                    ?: optional($journal->created_at)->format('H:i:s'),
+                'reference' => 'REV-'.($journal->reference ?: $journal->id),
+                'source' => 'expense',
+                'source_id' => $expense->id,
+                'description' => 'Reversal of: '.$journal->description,
                 'reversed_journal_entry_id' => $journal->id,
             ]);
 
             foreach ($journal->items as $item) {
-                \App\Models\JournalItem::create([
+                JournalItem::create([
                     'journal_entry_id' => $reversal->id,
-                    'account_id'       => $item->account_id,
-                    'debit'            => $item->credit,
-                    'credit'           => $item->debit,
-                    'note'             => 'Reversal — ' . ($item->note ?: $journal->description),
-                    'party_type'       => $item->party_type,
-                    'party_id'         => $item->party_id,
+                    'account_id' => $item->account_id,
+                    'debit' => $item->credit,
+                    'credit' => $item->debit,
+                    'note' => 'Reversal — '.($item->note ?: $journal->description),
+                    'party_type' => $item->party_type,
+                    'party_id' => $item->party_id,
                 ]);
             }
 
             $expense->update([
                 'approval_status' => Expense::PENDING,
-                'approved_by'     => null,
-                'approved_at'     => null,
+                'approved_by' => null,
+                'approved_at' => null,
             ]);
         });
+
+        // A reversed expense no longer settles anything, so the renewal must go
+        // back to unpaid on the desk and back onto the dashboard.
+        $this->unlinkDmRenewal($expense);
+
+        // It is a claim again, so any inter-company debt it raised is no longer
+        // owed. Cancelled rather than deleted, and left standing if part of it
+        // has already been settled — that money really did move.
+        $this->cancelInterCompanyLiability($expense);
 
         return $this->respond($request, true, 'Expense reversed. The ledger now carries both the original entry and its reversal.');
     }
@@ -1430,11 +1682,11 @@ class ExpenseController implements HasMiddleware
      * between the two paths — which is exactly how a cash expense once ended up
      * postable from one screen and not the other.
      */
-    private function postJournal(Expense $data): \App\Models\JournalEntry
+    private function postJournal(Expense $data): JournalEntry
     {
-        $expenseAccount = \App\Models\Account::find($data->account_id);
+        $expenseAccount = Account::find($data->account_id);
 
-        if (!$expenseAccount) {
+        if (! $expenseAccount) {
             throw new \Exception('Expense account not found.');
         }
 
@@ -1443,36 +1695,69 @@ class ExpenseController implements HasMiddleware
         // chart or a missing float stops the posting rather than half-writing it.
         $creditLines = $this->settlementLines($data);
 
-        $journal = \App\Models\JournalEntry::create([
-            'company_id'  => $data->company_id,
-            'created_by'  => auth()->id(),
-            'date'        => $data->expense_date,
-            'reference'   => $data->reference,
-            'source'      => 'expense',
-            'source_id'   => $data->id,
-            'description' => 'Expense — ' . $data->title,
+        $journal = JournalEntry::create([
+            'company_id' => $data->company_id,
+            'created_by' => auth()->id(),
+            'date' => $data->expense_date,
+            'entry_time' => $data->transaction_time ? substr((string) $data->transaction_time, 0, 5).':00' : null,
+            'reference' => $data->reference,
+            'source' => 'expense',
+            'source_id' => $data->id,
+            'description' => 'Expense — '.$data->title,
+            'beneficiary' => $data->reference_user_name ?: $data->title,
+            'beneficiary_method' => $data->payment_mode === 'bank_transfer' ? 'bank' : ($data->payment_mode === 'cash' ? 'cash' : null),
         ]);
 
-        // Debit: Expense account — money spent
-        \App\Models\JournalItem::create([
-            'journal_entry_id' => $journal->id,
-            'account_id'       => $expenseAccount->id,
-            'debit'            => $data->amount,
-            'credit'           => 0,
-            'note'             => $data->title,
-        ]);
+        // Explicit line heads split the debit; legacy lines retain the original head.
+        $data->loadMissing('items');
+        $debitLines = $data->items->isEmpty()
+            ? collect([['account_id' => $expenseAccount->id, 'amount' => $data->amount]])
+            : $data->items->map(fn ($item) => [
+                'account_id' => $item->account_id ?: $expenseAccount->id,
+                'amount' => $item->amount,
+            ]);
+        if (abs(round($debitLines->sum('amount'), 2) - round($data->amount, 2)) > 0.001) {
+            throw new \Exception('Expense lines do not match the payment total.');
+        }
+        foreach ($debitLines->groupBy('account_id') as $accountId => $lines) {
+            if (! Account::whereKey($accountId)->where('type', 'expense')->where('status', 1)->exists()) {
+                throw new \Exception('An expense head is missing or inactive. Review it before approving.');
+            }
+            JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id' => $accountId,
+                'debit' => round($lines->sum('amount'), 2),
+                'credit' => 0,
+                'note' => $data->title,
+            ]);
+        }
+
+        $bankCharge = $data->bank_id ? round((float) $data->bank_charge_amount, 2) : 0.0;
+        if ($bankCharge > 0) {
+            if (! $data->bank_charge_account_id) {
+                throw new \Exception('Bank charge needs an expense account to post to.');
+            }
+
+            JournalItem::create([
+                'journal_entry_id' => $journal->id,
+                'account_id' => $data->bank_charge_account_id,
+                'debit' => $bankCharge,
+                'credit' => 0,
+                'note' => 'Bank charge — '.$data->title,
+            ]);
+        }
 
         // Credit: cash, bank, float, or what the company now owes someone —
         // usually one line, two when the float ran short.
         foreach ($creditLines as $line) {
-            \App\Models\JournalItem::create([
+            JournalItem::create([
                 'journal_entry_id' => $journal->id,
-                'account_id'       => $line['account_id'],
-                'debit'            => 0,
-                'credit'           => $line['amount'],
-                'note'             => $line['note'],
-                'party_type'       => $line['party_type'] ?? null,
-                'party_id'         => $line['party_id'] ?? null,
+                'account_id' => $line['account_id'],
+                'debit' => 0,
+                'credit' => $line['amount'],
+                'note' => $line['note'],
+                'party_type' => $line['party_type'] ?? null,
+                'party_id' => $line['party_id'] ?? null,
             ]);
         }
 
@@ -1485,6 +1770,8 @@ class ExpenseController implements HasMiddleware
         // no longer fire on a normal path — it stays as a guard against a future
         // change that reintroduces the overdraw.
         $this->assertFloatNotOverdrawn($data);
+        $this->assertBankNotOverdrawn($data);
+        $this->assertCashPotNotOverdrawn($data);
 
         return $journal;
     }
@@ -1520,7 +1807,7 @@ class ExpenseController implements HasMiddleware
         }
 
         if ($user->can('view company expense')) {
-            if (!empty($user->company_id)) {
+            if (! empty($user->company_id)) {
                 $query->where('expenses.company_id', $user->company_id);
             }
 
@@ -1548,7 +1835,7 @@ class ExpenseController implements HasMiddleware
         }
 
         if ($user->can('view company expense')) {
-            return (!empty($user->company_id) && (int) $expense->company_id !== (int) $user->company_id)
+            return (! empty($user->company_id) && (int) $expense->company_id !== (int) $user->company_id)
                 ? 'That expense belongs to a different company.'
                 : null;
         }
@@ -1599,7 +1886,7 @@ class ExpenseController implements HasMiddleware
         );
 
         abort_if(
-            $request->filled('bank_id') && !$user->can('pay expense from bank'),
+            $request->filled('bank_id') && ! $user->can('pay expense from bank'),
             403,
             'You are not allowed to record an expense paid from a company bank account.'
         );
@@ -1607,8 +1894,8 @@ class ExpenseController implements HasMiddleware
         // Spending from a float you do not hold is an administrative act, so it
         // stays with the people who already oversee the company's expenses.
         // Everyone else gets their own pocket and no one else's.
-        if ($request->filled('petty_cash_float_id') && !$oversees) {
-            $custodianId = \App\Models\PettyCashFloat::whereKey($request->petty_cash_float_id)
+        if ($request->filled('petty_cash_float_id') && ! $oversees) {
+            $custodianId = PettyCashFloat::whereKey($request->petty_cash_float_id)
                 ->value('custodian_id');
 
             abort_if(
@@ -1622,7 +1909,7 @@ class ExpenseController implements HasMiddleware
         // becomes a way to pay a person. Only the desk may do it.
         abort_if(
             $request->filled('reimburse_to_user_id')
-                && !$oversees
+                && ! $oversees
                 && (int) $request->reimburse_to_user_id !== (int) $user->id,
             403,
             'You may only claim money back for yourself.'
@@ -1636,10 +1923,10 @@ class ExpenseController implements HasMiddleware
         // So for them the drawer is not an option. Their own float and their own
         // pocket are, and both say something true about where the money was.
         abort_if(
-            $named->isEmpty() && !$oversees,
+            $named->isEmpty() && ! $oversees,
             422,
             'Say where the money came from: your own petty cash float, or your own pocket to be paid back. '
-                . 'The office cash pot can only be spent by the people who keep it.'
+                .'The office cash pot can only be spent by the people who keep it.'
         );
     }
 
@@ -1656,7 +1943,7 @@ class ExpenseController implements HasMiddleware
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -1666,9 +1953,8 @@ class ExpenseController implements HasMiddleware
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -1677,7 +1963,7 @@ class ExpenseController implements HasMiddleware
         if (empty($data)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data Info Not Found!'
+                'message' => 'Data Info Not Found!',
             ]);
         }
 
@@ -1707,13 +1993,16 @@ class ExpenseController implements HasMiddleware
         // is an answer, not an id, and every level it can be picked at is an id
         // column. See normaliseClassification().
         $this->normaliseClassification($request);
+        $this->promoteFirstLineClassification($request);
 
         $request->validate([
             // Optional now — the form no longer asks. resolveExpenseTitle() fills
             // it from the first cost line, because the column is NOT NULL and
             // seven screens read it.
             'title' => 'nullable|string|max:255',
-            'expense_date' => 'required',
+            'expense_date' => 'required|date',
+            'transaction_time' => 'required|date_format:H:i',
+            'reference_user_name' => 'nullable|string|max:255',
             'expense_category_id' => 'required|exists:expense_categories,id',
             'expense_sub_category_id' => 'nullable|exists:expense_sub_categories,id',
             // An expense always leaves ONE company's books. A category may belong
@@ -1731,9 +2020,17 @@ class ExpenseController implements HasMiddleware
             // ALLOWED to name that person is decided by
             // assertSettlementSourceAllowed() before validation runs.
             'reimburse_to_user_id' => 'nullable|exists:users,id',
+            'bank_charge_amount' => 'nullable|numeric|min:0',
+            'bank_charge_account_id' => 'nullable|exists:accounts,id',
             'other_note' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
+            'items.*.account_id' => ['nullable', 'integer', Rule::in(app(ExpenseClassificationService::class)->mainExpenseAccountIds()->all())],
+            'items.*.expense_category_id' => 'required|integer|exists:expense_categories,id',
+            'items.*.expense_sub_category_id' => 'nullable|integer|exists:expense_sub_categories,id',
+            'items.*.description' => 'nullable|string|max:255',
             'items.*.amount' => 'required|numeric|min:0',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'required|numeric|min:0',
         ], [
             'company_id.required' => 'Choose the company this expense belongs to — an expense always leaves the books of exactly one company.',
             'expense_department_id.required' => 'Choose the department this cost belongs to — it is what tells a company\'s own costs apart from the ones it paid on everyone\'s behalf.',
@@ -1742,12 +2039,14 @@ class ExpenseController implements HasMiddleware
             'expense_sub_category_id.exists' => 'That sub-category is not one on the list — choose “Others…” and type what it was instead.',
         ]);
 
-        $companyId = (!$canViewAll && !empty($userCompanyId)) ? $userCompanyId : $request->company_id;
+        $this->validateExpenseBankCharge($request);
 
-        if (!$canViewAll && !empty($userCompanyId)) {
+        $companyId = (! $canViewAll && ! empty($userCompanyId)) ? $userCompanyId : $request->company_id;
+
+        if (! $canViewAll && ! empty($userCompanyId)) {
             if ($request->filled('bank_id')) {
-                $selectedBank = \App\Models\Bank::find($request->bank_id);
-                abort_if(!$selectedBank || (int) $selectedBank->company_id !== (int) $userCompanyId, 403, 'Selected bank belongs to a different company.');
+                $selectedBank = Bank::find($request->bank_id);
+                abort_if(! $selectedBank || (int) $selectedBank->company_id !== (int) $userCompanyId, 403, 'Selected bank belongs to a different company.');
             }
 
             // A category with no company is shared by the whole group and every
@@ -1756,7 +2055,7 @@ class ExpenseController implements HasMiddleware
             // company-locked user could not file ANY expense; only a category
             // naming a DIFFERENT company is actually out of bounds.
             $selectedCategory = ExpenseCategory::find($request->expense_category_id);
-            abort_if(!$selectedCategory, 403, 'Selected expense category no longer exists.');
+            abort_if(! $selectedCategory, 403, 'Selected expense category no longer exists.');
             abort_if(
                 $selectedCategory->company_id !== null
                     && (int) $selectedCategory->company_id !== (int) $userCompanyId,
@@ -1766,7 +2065,7 @@ class ExpenseController implements HasMiddleware
 
             if ($request->filled('expense_sub_category_id')) {
                 $selectedSubCategory = ExpenseSubCategory::find($request->expense_sub_category_id);
-                abort_if(!$selectedSubCategory, 403, 'Selected expense sub-category no longer exists.');
+                abort_if(! $selectedSubCategory, 403, 'Selected expense sub-category no longer exists.');
                 abort_if(
                     $selectedSubCategory->company_id !== null
                         && (int) $selectedSubCategory->company_id !== (int) $userCompanyId,
@@ -1781,12 +2080,14 @@ class ExpenseController implements HasMiddleware
         // step; this makes sure a request that did not come from the form cannot
         // file an expense under one company and a department of another.
         if ($request->filled('expense_department_id')) {
-            $dept = \App\Models\ExpenseDepartment::find($request->expense_department_id);
+            $dept = ExpenseDepartment::find($request->expense_department_id);
 
             abort_if(
-                !$dept || (int) $dept->company_id !== (int) $companyId,
+                ! $dept
+                    || ! app(ExpenseClassificationService::class)->isOperatingCostDepartment($dept)
+                    || (int) $dept->company_id !== (int) $companyId,
                 422,
-                'That department belongs to a different company than the one this expense is filed under.'
+                'Choose an operating-cost department belonging to the company this expense is filed under.'
             );
         }
 
@@ -1795,19 +2096,34 @@ class ExpenseController implements HasMiddleware
         // expense against another company's float would move cash between two sets
         // of books without either of them recording a transfer.
         if ($request->filled('petty_cash_float_id')) {
-            $float = \App\Models\PettyCashFloat::find($request->petty_cash_float_id);
+            $float = PettyCashFloat::find($request->petty_cash_float_id);
 
             abort_if(
-                !$float || (int) $float->company_id !== (int) $companyId,
+                ! $float || (int) $float->company_id !== (int) $companyId,
                 422,
                 'That petty cash float belongs to a different company than the one this expense is filed under.'
             );
 
-            abort_if(!$float->status, 422, 'That petty cash float is closed.');
+            abort_if(! $float->status, 422, 'That petty cash float is closed.');
         }
 
         $items = collect($request->input('items', []))
-            ->filter(fn($i) => isset($i['amount']) && $i['amount'] > 0);
+            ->map(function ($item) use ($companyId) {
+                $classification = app(ExpenseClassificationService::class)->resolveLine($item, (int) $companyId, null, null);
+                $quantity = max(0, (float) ($item['quantity'] ?? 1));
+                $unitPrice = max(0, (float) ($item['unit_price'] ?? $item['amount'] ?? 0));
+
+                return [
+                    'account_id' => $classification['account_id'],
+                    'expense_category_id' => $classification['expense_category_id'],
+                    'expense_sub_category_id' => $classification['expense_sub_category_id'],
+                    'description' => $item['description'] ?? null,
+                    'quantity' => $quantity,
+                    'unit_price' => $unitPrice,
+                    'amount' => round($quantity * $unitPrice, 2),
+                ];
+            })
+            ->filter(fn ($item) => $item['amount'] > 0);
 
         $total = $items->sum('amount');
 
@@ -1824,70 +2140,77 @@ class ExpenseController implements HasMiddleware
         }
 
         try {
-        DB::transaction(function () use ($request, $data, $items, $total, $companyId) {
+            DB::transaction(function () use ($request, $data, $items, $total, $companyId) {
 
-            // Handle attachment upload
-            if ($request->hasFile('attachment')) {
-                $upload_path = 'image/expense/';
-                if (!file_exists(public_path($upload_path))) {
-                    mkdir(public_path($upload_path), 0777, true);
+                // Handle attachment upload
+                if ($request->hasFile('attachment')) {
+                    $upload_path = 'image/expense/';
+                    if (! file_exists(public_path($upload_path))) {
+                        mkdir(public_path($upload_path), 0777, true);
+                    }
+
+                    if (! empty($data->attachment) && file_exists(public_path($data->attachment))) {
+                        unlink(public_path($data->attachment));
+                    }
+
+                    $file = $request->file('attachment');
+                    $filename = uniqid().'.'.$file->getClientOriginalExtension();
+                    $file->move(public_path($upload_path), $filename);
+                    $data->attachment = $upload_path.$filename;
                 }
 
-                if (!empty($data->attachment) && file_exists(public_path($data->attachment))) {
-                    unlink(public_path($data->attachment));
-                }
-
-                $file = $request->file('attachment');
-                $filename = uniqid() . '.' . $file->getClientOriginalExtension();
-                $file->move(public_path($upload_path), $filename);
-                $data->attachment = $upload_path . $filename;
-            }
-
-            $bank = \App\Models\Bank::find($request->bank_id);
-            $data->update([
-                'company_id' => $companyId,
-                // Sub-category first, exactly as store() resolves it. Passing the
-                // category alone re-derived the account one level too coarse on
-                // every edit, so an expense filed to 8101 Tea & Snacks moved to
-                // 8100 Food & Beverage the first time anyone touched it.
-                'account_id' => $request->account_id
-                    ?: app(ExpenseClassificationService::class)->accountFor(
-                        $request->expense_category_id,
-                        $request->expense_sub_category_id
-                    ),
-                'expense_department_id' => $request->expense_department_id,
-                'expense_category_id' => $request->expense_category_id,
-                'expense_sub_category_id' => $request->expense_sub_category_id,
-                'other_note' => $request->other_note,
-                'title' => $this->resolveExpenseTitle($request),
-                'description' => $request->description,
-                'amount' => $total,
-                'bank_id' => $request->bank_id,
-                'petty_cash_float_id' => $request->petty_cash_float_id ?: null,
-                'reimburse_to_user_id' => $request->reimburse_to_user_id ?: null,
-                'payment_mode' => $request->payment_mode ?: 'cash',
-                'reference' => $request->reference,
-                'expense_date' => $request->expense_date,
-                'status' => $request->status ? 1 : 0
-            ]);
-
-            // Replace old items with new ones
-            $data->items()->delete();
-            foreach ($items as $item) {
-                ExpenseItem::create([
-                    'expense_id'  => $data->id,
-                    'description' => $item['description'] ?? null,
-                    'amount'      => $item['amount'],
+                $bank = Bank::find($request->bank_id);
+                $data->update([
+                    'company_id' => $companyId,
+                    // Sub-category first, exactly as store() resolves it. Passing the
+                    // category alone re-derived the account one level too coarse on
+                    // every edit, so an expense filed to 8101 Tea & Snacks moved to
+                    // 8100 Food & Beverage the first time anyone touched it.
+                    'account_id' => $items->first()['account_id'],
+                    'expense_department_id' => $request->expense_department_id,
+                    'expense_category_id' => $items->first()['expense_category_id'],
+                    'expense_sub_category_id' => $items->first()['expense_sub_category_id'],
+                    'other_note' => $request->other_note,
+                    'title' => $this->resolveExpenseTitle($request),
+                    'description' => $request->description,
+                    'amount' => $total,
+                    'bank_id' => $request->bank_id,
+                    'bank_charge_amount' => round((float) $request->input('bank_charge_amount', 0), 2),
+                    'bank_charge_account_id' => (float) $request->input('bank_charge_amount', 0) > 0
+                        ? $request->bank_charge_account_id : null,
+                    'petty_cash_float_id' => $request->petty_cash_float_id ?: null,
+                    'reimburse_to_user_id' => $request->reimburse_to_user_id ?: null,
+                    'payment_mode' => $request->payment_mode ?: 'cash',
+                    'reference' => $request->reference,
+                    'reference_user_name' => $request->reference_user_name,
+                    'expense_date' => $request->expense_date,
+                    'transaction_time' => $request->transaction_time,
+                    // Editing the expense must not silently activate/deactivate it.
+                    'status' => $data->status,
                 ]);
-            }
 
-            // NO JOURNAL HERE. Only a PENDING expense reaches this method —
-            // update() refuses an approved one above — and a pending expense has
-            // no posting yet. It gets exactly one, written by approve(), from the
-            // values as they stand at that moment. That is what stops an edit
-            // from silently rewriting a posting that has already been reported.
-        });
-        } catch (\App\Exceptions\PettyCashOverdrawnException $e) {
+                // Replace old items with new ones
+                $data->items()->delete();
+                foreach ($items as $item) {
+                    ExpenseItem::create([
+                        'expense_id' => $data->id,
+                        'account_id' => $item['account_id'],
+                        'expense_category_id' => $item['expense_category_id'],
+                        'expense_sub_category_id' => $item['expense_sub_category_id'],
+                        'description' => $item['description'] ?? null,
+                        'quantity' => $item['quantity'],
+                        'unit_price' => $item['unit_price'],
+                        'amount' => $item['amount'],
+                    ]);
+                }
+
+                // NO JOURNAL HERE. Only a PENDING expense reaches this method —
+                // update() refuses an approved one above — and a pending expense has
+                // no posting yet. It gets exactly one, written by approve(), from the
+                // values as they stand at that moment. That is what stops an edit
+                // from silently rewriting a posting that has already been reported.
+            });
+        } catch (SettlementSourceOverdrawnException $e) {
             // Raising an edited expense above what the custodian holds is refused
             // the same way a new one is — and the transaction has already put the
             // old posting back.
@@ -1900,7 +2223,7 @@ class ExpenseController implements HasMiddleware
             return response()->json([
                 'success' => true,
                 'message' => 'Data updated successfully.',
-                'data' => $data
+                'data' => $data,
             ]);
         }
 
@@ -1911,7 +2234,7 @@ class ExpenseController implements HasMiddleware
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Request $request, $id)
     {
@@ -1921,7 +2244,7 @@ class ExpenseController implements HasMiddleware
                 if ($message = $this->expenseVisibilityError($item)) {
                     return response()->json([
                         'success' => false,
-                        'message' => $message
+                        'message' => $message,
                     ]);
                 }
 
@@ -1937,7 +2260,7 @@ class ExpenseController implements HasMiddleware
                     ]);
                 }
 
-                DB::transaction(function () use ($request, $item) {
+                DB::transaction(function () use ($item) {
                     // A pending expense has no posting of its own, but it may
                     // still carry a reversed pair from an earlier approval. Those
                     // are left exactly where they are: they are the record of what
@@ -1948,19 +2271,19 @@ class ExpenseController implements HasMiddleware
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Info Not Found!'
+                    'message' => 'Data Info Not Found!',
                 ]);
             }
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Data deleted successfully.'
+            'message' => 'Data deleted successfully.',
         ]);
     }
 
@@ -1993,7 +2316,7 @@ class ExpenseController implements HasMiddleware
      *
      * A bank or the drawer needs none — the account itself is the answer.
      */
-    private function settlementParty(\App\Models\Expense $expense): array
+    private function settlementParty(Expense $expense): array
     {
         // One payable account carries what is owed to everyone, exactly as one
         // float account carries what every custodian holds. Without the party the
@@ -2004,11 +2327,11 @@ class ExpenseController implements HasMiddleware
             return ['party_type' => 'employee', 'party_id' => $expense->reimburse_to_user_id];
         }
 
-        if (!$expense->petty_cash_float_id) {
+        if (! $expense->petty_cash_float_id) {
             return [];
         }
 
-        $custodianId = \App\Models\PettyCashFloat::whereKey($expense->petty_cash_float_id)
+        $custodianId = PettyCashFloat::whereKey($expense->petty_cash_float_id)
             ->value('custodian_id');
 
         return $custodianId
@@ -2029,19 +2352,108 @@ class ExpenseController implements HasMiddleware
      * back more than you hold. A negative float means either the receipt belongs to
      * a different pocket, or cash was handed over and never recorded.
      */
-    private function assertFloatNotOverdrawn(\App\Models\Expense $expense): void
+    /**
+     * Refuse an expense that would take a bank account below zero.
+     *
+     * ── WHY THIS EXISTS ───────────────────────────────────────────────────────
+     * A bank is an asset account, so a credit balance on one is the ledger saying
+     * money left an account that never held it. It is not a cosmetic problem: the
+     * account feeds Total Bank Balance on every company's dashboard and the
+     * balance sheet, so one overdrawn bank makes both wrong and nothing on any
+     * screen says so.
+     *
+     * Custodians' floats have been guarded against exactly this since floats were
+     * built (assertFloatNotOverdrawn, just above). Banks were not — which is the
+     * wrong way round, because a float holds a few thousand taka and a bank holds
+     * the company's money. Incident that prompted this: a 23,500 subscription was
+     * settled from an account holding 5,813.06 and the desk accepted it without a
+     * word, leaving the bank 17,686.94 overdrawn.
+     *
+     * ── WHERE IT RUNS ─────────────────────────────────────────────────────────
+     * At the end of postJournal(), inside the transaction and AFTER the lines are
+     * written — the same place and the same shape as the float guard. That means
+     * the balance read here already includes this expense, so a negative result
+     * is exactly "this one tipped it over", and throwing rolls the whole posting
+     * back rather than leaving half of it behind.
+     *
+     * ── WHAT IT DOES NOT COVER ────────────────────────────────────────────────
+     * A bank with a real overdraft facility would be wrongly refused. None has one
+     * today, and the chart already carries 2420 Bank Overdraft for when one does —
+     * at that point this needs a per-bank allowance rather than a blanket rule.
+     * Left as a hard refusal until then, because silently allowing it is how the
+     * balance sheet went wrong in the first place.
+     */
+    /**
+     * Refuse an expense that would take its bank below zero.
+     *
+     * All this decides is WHICH source is paying — the precedence question that
+     * belongs to the expense desk. The balance rule itself lives in
+     * Bank::assertCanCover(), shared with salaries, supplier payments, transfers
+     * and every other way money leaves an account, so there is one definition of
+     * "this account cannot cover that" and one wording for the refusal.
+     *
+     * Runs at the end of postJournal(), so the credit line for this expense is
+     * already written — hence `already: $expense->amount`, which takes it back
+     * out to report what the account held BEFORE this expense touched it.
+     */
+    private function assertBankNotOverdrawn(Expense $expense): void
     {
-        if (!$expense->petty_cash_float_id) {
+        // Follows settlementAccountId()'s order of precedence: a claim against a
+        // person, or a custodian's float, means the bank was never the source —
+        // and the float has its own guard, which checks that ONE custodian's
+        // holding rather than the whole account.
+        if ($expense->reimburse_to_user_id || $expense->petty_cash_float_id || ! $expense->bank_id) {
             return;
         }
 
-        $float = \App\Models\PettyCashFloat::with('custodian:id,name')->find($expense->petty_cash_float_id);
+        $bank = Bank::find($expense->bank_id);
 
-        if (!$float) {
+        if (! $bank || ! $bank->account_id) {
             return;
         }
 
-        $balance = round(app(\App\Services\PettyCashService::class)->balanceOf($float), 2);
+        Bank::assertCanCover(
+            (int) $bank->account_id,
+            round((float) $expense->amount + (float) $expense->bank_charge_amount, 2),
+            $bank->name,
+            already: round((float) $expense->amount + (float) $expense->bank_charge_amount, 2)
+        );
+    }
+
+    private function assertCashPotNotOverdrawn(Expense $expense): void
+    {
+        // Bank payments are guarded by assertBankNotOverdrawn(), selected petty
+        // cash floats are guarded/split by settlementLines(), and reimbursement
+        // claims credit a payable rather than a money pot. The remaining path is
+        // the plain cash-pot expense: no bank, no float, no claim. That pot is
+        // still real money, so it must follow Bank::assertCanCover() too.
+        if ($expense->reimburse_to_user_id || $expense->petty_cash_float_id || $expense->bank_id) {
+            return;
+        }
+
+        $account = app(PettyCashService::class)->cashPotAccount();
+
+        Bank::assertCanCover(
+            (int) $account->id,
+            (float) $expense->amount,
+            $account->name,
+            already: (float) $expense->amount
+        );
+    }
+
+    private function assertFloatNotOverdrawn(Expense $expense): void
+    {
+        if (! $expense->petty_cash_float_id) {
+            return;
+        }
+
+        $float = PettyCashFloat::with('custodian:id,name')->find($expense->petty_cash_float_id);
+
+        if (! $float) {
+            return;
+        }
+
+        $balance = round(app(PettyCashService::class)->balanceOf($float), 2);
 
         if ($balance >= 0) {
             return;
@@ -2050,11 +2462,11 @@ class ExpenseController implements HasMiddleware
         // What they had before this expense landed.
         $available = round($balance + (float) $expense->amount, 2);
 
-        throw new \App\Exceptions\PettyCashOverdrawnException(
-            ($float->custodian->name ?? 'That custodian') . ' is holding only '
-            . number_format($available, 2) . ', so an expense of '
-            . number_format((float) $expense->amount, 2) . ' cannot be settled from that float. '
-            . 'Issue the cash first, or pay this from office cash.'
+        throw new PettyCashOverdrawnException(
+            ($float->custodian->name ?? 'That custodian').' is holding only '
+            .number_format($available, 2).', so an expense of '
+            .number_format((float) $expense->amount, 2).' cannot be settled from that float. '
+            .'Issue the cash first, or pay this from office cash.'
         );
     }
 
@@ -2084,27 +2496,31 @@ class ExpenseController implements HasMiddleware
      * Two receipts filed against the same float on the same morning therefore
      * split against what was actually left when each of them was approved.
      */
-    private function settlementLines(\App\Models\Expense $expense): array
+    private function settlementLines(Expense $expense): array
     {
-        $amount = round((float) $expense->amount, 2);
+        $amount = round(
+            (float) $expense->amount
+                + ($expense->bank_id ? (float) $expense->bank_charge_amount : 0),
+            2
+        );
 
         // A float is the only source that can run short, so it is the only one
         // that splits. Checked first for that reason — on an overspend the ledger
         // already records what is owed, and re-posting after a reversal must
         // re-split rather than treat the whole amount as a claim.
         if ($expense->petty_cash_float_id) {
-            $float = \App\Models\PettyCashFloat::with('custodian:id,name')
+            $float = PettyCashFloat::with('custodian:id,name')
                 ->find($expense->petty_cash_float_id);
 
-            if (!$float) {
+            if (! $float) {
                 throw new \Exception('That petty cash float no longer exists.');
             }
 
-            $who  = $float->custodian->name ?? 'custodian';
-            $held = round(app(\App\Services\PettyCashService::class)->balanceOf($float), 2);
+            $who = $float->custodian->name ?? 'custodian';
+            $held = round(app(PettyCashService::class)->balanceOf($float), 2);
 
             // An empty or already-overdrawn pocket covers nothing, so max(0, …).
-            $fromFloat  = max(0, min($held, $amount));
+            $fromFloat = max(0, min($held, $amount));
             $fromPocket = round($amount - $fromFloat, 2);
 
             $lines = [];
@@ -2112,21 +2528,21 @@ class ExpenseController implements HasMiddleware
             if ($fromFloat > 0) {
                 $lines[] = [
                     'account_id' => (int) $float->account_id,
-                    'amount'     => $fromFloat,
-                    'note'       => 'Expense paid — ' . $expense->title,
+                    'amount' => $fromFloat,
+                    'note' => 'Expense paid — '.$expense->title,
                     'party_type' => 'employee',
-                    'party_id'   => $float->custodian_id,
+                    'party_id' => $float->custodian_id,
                 ];
             }
 
             if ($fromPocket > 0) {
                 $lines[] = [
-                    'account_id' => app(\App\Services\EmployeeReimbursementService::class)->payableAccount()->id,
-                    'amount'     => $fromPocket,
-                    'note'       => 'Paid by ' . $who . ' beyond their float — ' . $expense->title,
+                    'account_id' => app(EmployeeReimbursementService::class)->payableAccount()->id,
+                    'amount' => $fromPocket,
+                    'note' => 'Paid by '.$who.' beyond their float — '.$expense->title,
                     'party_type' => 'employee',
-                    'party_id'   => $float->custodian_id,
-                    'is_debt'    => true,
+                    'party_id' => $float->custodian_id,
+                    'is_debt' => true,
                 ];
             }
 
@@ -2137,9 +2553,9 @@ class ExpenseController implements HasMiddleware
         return [array_merge(
             [
                 'account_id' => $this->settlementAccountId($expense),
-                'amount'     => $amount,
-                'note'       => 'Expense paid — ' . $expense->title,
-                'is_debt'    => (bool) $expense->reimburse_to_user_id,
+                'amount' => $amount,
+                'note' => 'Expense paid — '.$expense->title,
+                'is_debt' => (bool) $expense->reimburse_to_user_id,
             ],
             $this->settlementParty($expense)
         )];
@@ -2158,30 +2574,40 @@ class ExpenseController implements HasMiddleware
      * only figure that exists at all: DM carries no cost for those, so this is
      * what pre-fills the same licence next year.
      */
-    private function linkDmRenewal(Request $request, \App\Models\Expense $expense): void
+    private function linkDmRenewal(Request $request, Expense $expense): void
     {
         if (! $request->filled(['dm_source_type', 'dm_id', 'dm_due_date'])) {
             return;
         }
 
-        \App\Models\DmRenewalPayment::create([
+        DmRenewalPayment::create([
             'source_type' => $request->input('dm_source_type'),
-            'dm_id'       => (int) $request->input('dm_id'),
+            'dm_id' => (int) $request->input('dm_id'),
             // Falls back to dm_id so the column is never null for a subscription,
             // where the DM row and the commitment are the same thing.
             'dm_group_id' => (int) ($request->input('dm_group_id') ?: $request->input('dm_id')),
-            'due_date'    => $request->input('dm_due_date'),
+            'due_date' => $request->input('dm_due_date'),
             // Captured now because DM rows get deleted, and a payment whose
             // subject cannot be named is useless as a record.
-            'title'       => (string) ($request->input('dm_title') ?: $expense->title),
+            'title' => (string) ($request->input('dm_title') ?: $expense->title),
             // The expense total, in taka. NOT the DM figure: a subscription billed
             // at USD 65.00 leaves the bank as several thousand taka, and it is the
             // taka that the ledger and next year's estimate both need.
-            'amount'      => $expense->amount,
-            'currency'    => 'BDT',
-            'expense_id'  => $expense->id,
+            'amount' => $expense->amount,
+            'currency' => 'BDT',
+            // What DM said the cycle is, captured now. Stored rather than
+            // re-read later: a cycle edited in DM afterwards must not change
+            // what this payment is recorded as having settled.
+            'cycle' => $request->input('dm_cycle'),
+            // Narrow the folder to the actual paper — see DmRenewalPayment::paperKey().
+            'dm_type_id' => $request->input('dm_type_id'),
+            'dm_category_id' => $request->input('dm_category_id'),
+            // The term this renewal buys, as confirmed on the form. For a
+            // document it is the ONLY source of that date; DM states no cycle.
+            'next_expiry' => $request->input('dm_next_expiry'),
+            'expense_id' => $expense->id,
             'recorded_by' => auth()->id(),
-            'paid_at'     => now(),
+            'paid_at' => now(),
         ]);
     }
 
@@ -2192,13 +2618,224 @@ class ExpenseController implements HasMiddleware
      * be reported as "already paid" — that would turn a real fault into a
      * reassuring message and hide it.
      */
-    private function isDuplicateRenewalPayment(\Illuminate\Database\QueryException $e): bool
+    /**
+     * Tell DM the renewal happened, now that the money is on the books.
+     *
+     * ── WHY THIS RUNS AFTER THE COMMIT, NEVER INSIDE IT ───────────────────────
+     * The journal is already written and committed by the time this is called,
+     * and that is deliberate. Approving an expense records a fact about money
+     * that has left the company; DM being unreachable does not un-spend it. If
+     * this ran inside the transaction, a timeout on another server would roll
+     * back a correct posting — trading a real accounting record for a reminder
+     * date, which is the wrong way round.
+     *
+     * So the worst case here is a payment row carrying dm_sync_error. The desk
+     * shows those as "DM not updated" with a retry, which is a visible, fixable
+     * state. Silence would be the actual failure.
+     *
+     * ── THE TWO KINDS RENEW DIFFERENTLY ───────────────────────────────────────
+     * A SUBSCRIPTION is one DM row whose expired_date moves forward. A DOCUMENT
+     * is one row per term, so renewing ADDS a row and leaves the expired one as
+     * history — moving its date would erase the term that just ended.
+     *
+     * They also differ on where the new date comes from. DM states a cycle for
+     * a subscription, so it can be derived. It states none for a document, and
+     * its dates cannot imply one (that table holds same-day terms, exact
+     * duplicates, a term ending 2050 and one beginning in the year 0025) — so
+     * the person filing the expense confirms it on the form and it is stored on
+     * the payment row as next_expiry.
+     *
+     * ── WHY IT CANNOT THROW ───────────────────────────────────────────────────
+     * approve() has already returned its work to the ledger. A stray exception
+     * here would show the user a failure for something that succeeded, so the
+     * whole body is guarded and the worst outcome is a logged warning.
+     */
+    private function pushDmRenewal(Expense $expense): void
+    {
+        try {
+            $payment = DmRenewalPayment::where('expense_id', $expense->id)
+                ->whereNull('dm_synced_at')
+                ->first();
+
+            if (! $payment) {
+                return;
+            }
+
+            // The term this renewal buys. Confirmed on the form for a document,
+            // where DM states no cycle and its dates cannot imply one; derived
+            // from the cycle for a subscription, where DM does state it.
+            $newExpiry = $payment->next_expiry?->toDateString()
+                ?: DmRenewalPayment::nextExpiryFor($payment->due_date->toDateString(), $payment->cycle);
+
+            // Nothing usable. Recorded as an instruction rather than left blank,
+            // so the desk can show it and somebody can set the date in DM.
+            if (! $newExpiry) {
+                $payment->update([
+                    'dm_sync_error' => 'No new expiry was recorded and DM states no cycle for this one, '
+                        .'so the next term cannot be worked out. Set it in DM by hand.',
+                ]);
+
+                return;
+            }
+
+            $dm = app(DmApiService::class);
+
+            $result = $payment->source_type === DmRenewalPayment::SUBSCRIPTION
+                // One row, date moved forward.
+                ? $dm->renewSubscription(
+                    $payment->dm_id,
+                    $newExpiry,
+                    // The term that just ended is where the new one starts.
+                    $payment->due_date->toDateString(),
+                    'Renewed from ERP expense #'.$expense->id.' ('.$expense->title.')'
+                )
+                // A NEW row per term, so the expired one stays as history.
+                : $dm->renewDocument(
+                    $payment->dm_id,
+                    $newExpiry,
+                    $payment->due_date->toDateString()
+                );
+
+            $payment->update($result['ok']
+                ? ['dm_synced_at' => now(), 'dm_sync_error' => null]
+                : ['dm_sync_error' => $result['message']]);
+        } catch (\Throwable $e) {
+            // The expense is approved and posted. This is the only thing that
+            // failed, and it is recoverable from the desk.
+            logger()->warning('Could not push renewal to DM: '.$e->getMessage(), [
+                'expense_id' => $expense->id,
+            ]);
+        }
+    }
+
+    /**
+     * Take back the "paid" mark when an approved expense is reversed.
+     *
+     * Without this the Subscriptions desk keeps showing the period as settled by
+     * an expense that is no longer in the accounts — and the dashboard Renewal
+     * Center keeps hiding it, so a renewal nobody has paid for stops being
+     * chased anywhere.
+     *
+     * The DM date is NOT wound back. DM refuses to move a term backwards on
+     * purpose, and rightly: the subscription may genuinely have been renewed
+     * with the vendor even if the expense was booked wrongly. The row is deleted
+     * and the fact is logged, so the period reappears as unpaid and whoever
+     * reverses the expense can decide what DM should say.
+     */
+    private function unlinkDmRenewal(Expense $expense): void
+    {
+        try {
+            $payments = DmRenewalPayment::where('expense_id', $expense->id)->get();
+
+            foreach ($payments as $payment) {
+                logger()->info('Renewal un-linked after expense reversal', [
+                    'expense_id' => $expense->id,
+                    'source_type' => $payment->source_type,
+                    'dm_id' => $payment->dm_id,
+                    'due_date' => $payment->due_date->toDateString(),
+                    'dm_was_synced' => $payment->dm_synced_at !== null,
+                ]);
+
+                $payment->delete();
+            }
+        } catch (\Throwable $e) {
+            logger()->warning('Could not un-link a DM renewal on reversal: '.$e->getMessage(), [
+                'expense_id' => $expense->id,
+            ]);
+        }
+    }
+
+    /**
+     * Raise the inter-company debt for an expense paid from another company's
+     * bank account. A no-op for the ordinary same-company case, which is very
+     * nearly every expense in the system.
+     *
+     * ── WHY IT CANNOT THROW ───────────────────────────────────────────────────
+     * Same reasoning as pushDmRenewal above, and one addition. This runs on
+     * approve(), a path all twelve companies share, after the ledger has
+     * already been written. class_exists() is checked before the container is
+     * asked for anything: on a server whose autoloader has not been dumped
+     * since deploy the service is simply absent, and resolving it would fatal
+     * rather than degrade — the exact shape of the 2026-08-10 outage, where a
+     * class Laravel could not load took every superadmin page down. The service
+     * then guards itself again (Schema::hasTable + try/catch) for the other
+     * window: class present, migration not yet run.
+     *
+     * Worst case is "the liability was not recorded", never "the expense could
+     * not be approved". raiseFor() is idempotent, so anything missed during a
+     * deploy window is recovered by approving again.
+     */
+    private function recordInterCompanyLiability(Expense $expense): void
+    {
+        if (! class_exists(InterCompanyLiabilityService::class)) {
+            return;
+        }
+
+        try {
+            app(InterCompanyLiabilityService::class)->raiseFor($expense);
+        } catch (\Throwable $e) {
+            logger()->warning('Could not record an inter-company liability on approval: '.$e->getMessage(), [
+                'expense_id' => $expense->id,
+            ]);
+        }
+    }
+
+    /** The mirror of the above, for a reversal. Guarded for the same reasons. */
+    private function cancelInterCompanyLiability(Expense $expense): void
+    {
+        if (! class_exists(InterCompanyLiabilityService::class)) {
+            return;
+        }
+
+        try {
+            app(InterCompanyLiabilityService::class)->cancelFor($expense);
+        } catch (\Throwable $e) {
+            logger()->warning('Could not cancel an inter-company liability on reversal: '.$e->getMessage(), [
+                'expense_id' => $expense->id,
+            ]);
+        }
+    }
+
+    private function isDuplicateRenewalPayment(QueryException $e): bool
     {
         return ($e->errorInfo[1] ?? null) === 1062
             && str_contains((string) $e->getMessage(), 'dm_renewal_period_unique');
     }
 
-    private function settlementAccountId(\App\Models\Expense $expense): int
+    private function validateExpenseBankCharge(Request $request): void
+    {
+        $amount = round((float) $request->input('bank_charge_amount', 0), 2);
+
+        if ($amount <= 0) {
+            $request->merge([
+                'bank_charge_amount' => 0,
+                'bank_charge_account_id' => null,
+            ]);
+
+            return;
+        }
+
+        if (! $request->filled('bank_id')) {
+            throw ValidationException::withMessages([
+                'bank_charge_amount' => 'Bank charge can only be added when the expense is paid from a bank account.',
+            ]);
+        }
+
+        if (! $request->filled('bank_charge_account_id')) {
+            throw ValidationException::withMessages([
+                'bank_charge_account_id' => 'Choose the account where the bank charge will be posted.',
+            ]);
+        }
+
+        $bank = Bank::find($request->bank_id);
+        if ($bank && (int) $bank->account_id === (int) $request->bank_charge_account_id) {
+            throw ValidationException::withMessages([
+                'bank_charge_account_id' => 'Bank charge cannot post to the selected bank account itself.',
+            ]);
+        }
+    }
+
+    private function settlementAccountId(Expense $expense): int
     {
         // Their money, not the company's. Outranks every source below because it
         // is the one case where no company cash moved at all: nothing left the
@@ -2211,12 +2848,12 @@ class ExpenseController implements HasMiddleware
         if ($expense->reimburse_to_user_id) {
             $code = config('accounts.employee_reimbursement_payable');
 
-            $account = \App\Models\Account::where('code', $code)->where('status', 1)->first();
+            $account = Account::where('code', $code)->where('status', 1)->first();
 
-            if (!$account) {
+            if (! $account) {
                 throw new \Exception(
-                    'The employee reimbursement account (' . $code . ') is missing from the chart of '
-                    . 'accounts, so a claim cannot be posted. Run php artisan accounts:check.'
+                    'The employee reimbursement account ('.$code.') is missing from the chart of '
+                    .'accounts, so a claim cannot be posted. Run php artisan accounts:check.'
                 );
             }
 
@@ -2224,9 +2861,9 @@ class ExpenseController implements HasMiddleware
         }
 
         if ($expense->petty_cash_float_id) {
-            $float = \App\Models\PettyCashFloat::find($expense->petty_cash_float_id);
+            $float = PettyCashFloat::find($expense->petty_cash_float_id);
 
-            if (!$float) {
+            if (! $float) {
                 throw new \Exception('That petty cash float no longer exists.');
             }
 
@@ -2234,9 +2871,9 @@ class ExpenseController implements HasMiddleware
         }
 
         if ($expense->bank_id) {
-            $bank = \App\Models\Bank::find($expense->bank_id);
+            $bank = Bank::find($expense->bank_id);
 
-            if (!$bank || !$bank->account_id) {
+            if (! $bank || ! $bank->account_id) {
                 throw new \Exception('That bank is not linked to a chart-of-accounts account.');
             }
 
@@ -2248,7 +2885,6 @@ class ExpenseController implements HasMiddleware
         // otherwise — which is what this branch did before the pool existed.
         // Resolved through PettyCashService so an expense and a petty cash issue
         // filed the same minute cannot credit two different accounts.
-        return (int) app(\App\Services\PettyCashService::class)->cashPotAccount()->id;
+        return (int) app(PettyCashService::class)->cashPotAccount()->id;
     }
-
 }

@@ -28,17 +28,17 @@
 
 <div class="md:col-span-2 rounded-xl border border-gray-200 bg-gray-50/60 p-4" data-classification="{{ $prefix }}">
 
-    <div class="flex items-center justify-between gap-3 mb-3">
+    <div class="hidden flex items-center justify-between gap-3 mb-3">
         <label class="block text-sm font-semibold text-gray-700">
-            What was this for? <span class="text-red-500">*</span>
+            Expense ownership <span class="text-red-500">*</span>
         </label>
         <span class="text-[11px] text-gray-400 hidden sm:block">
-            pick any level — the rest fills in
+            choose the department and paying company
         </span>
     </div>
 
     {{-- ── The fast path ── --}}
-    <div class="relative mb-3">
+    <div class="hidden relative mb-3">
         <i class="fas fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
         <input type="text" id="{{ $prefix }}_cls_search" autocomplete="off"
                class="w-full pl-9 pr-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -121,6 +121,38 @@
         </div>
 
         <div>
+            <label for="{{ $prefix }}_expense_date" class="block text-xs font-semibold text-gray-500 mb-1">
+                Date <span class="text-red-500">*</span>
+            </label>
+            <input type="date" id="{{ $prefix }}_expense_date" name="expense_date"
+                   @if($prefix === 'create') value="{{ date('Y-m-d') }}" @endif required
+                   class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+            <p class="text-red-500 text-xs mt-1 hidden error-message">Please enter a date</p>
+        </div>
+
+        @include('expenses.partials.transaction-time', ['prefix' => $prefix])
+
+        <div class="expense-reference-user">
+            <label for="{{ $prefix }}_reference_user" class="block text-xs font-semibold text-gray-500 mb-1">Reference User</label>
+            <select id="{{ $prefix }}_reference_user" name="reference_user_name"
+                    class="form-select w-full px-3 py-2 border border-gray-300 rounded-lg select2 text-sm" style="width:100%">
+                <option value="">Select user</option>
+                @foreach ($referenceUsers as $user)
+                    <option value="{{ $user->name }}">
+                        {{ $user->name }} - User ID: {{ $user->id }}{{ $user->employee_id_no ? ' - Employee ID: ' . $user->employee_id_no : '' }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div class="expense-reference-number">
+            <label for="{{ $prefix }}_reference" class="block text-xs font-semibold text-gray-500 mb-1">Reference No.</label>
+            <input type="text" id="{{ $prefix }}_reference" name="reference"
+                   class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                   placeholder="Auto-generated / optional">
+        </div>
+
+        <div class="hidden">
             <label for="{{ $prefix }}_expense_category_id" class="block text-xs font-semibold text-gray-500 mb-1">
                 <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold mr-1">3</span>Category <span class="text-red-500">*</span>
             </label>
@@ -130,7 +162,7 @@
             </select>
         </div>
 
-        <div>
+        <div class="hidden">
             <label for="{{ $prefix }}_expense_sub_category_id" class="block text-xs font-semibold text-gray-500 mb-1">
                 <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold mr-1">4</span>Sub-category
             </label>

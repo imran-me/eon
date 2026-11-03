@@ -89,6 +89,7 @@
 @endsection
 @section('main-content')
 @php($role = Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->first()))
+@include('layout.contract-file-tabs')
 @include('contract-file-sales.content')
 @include('contract-file-sales.create-modal')
 @include('contract-file-sales.edit-modal')
@@ -170,6 +171,7 @@
         $('#create_paid_amount').val(0);
         $('#create_payment_method').val('cash');
         $('#create_bank_id').val('');
+        $('#create_payment_instruction_bank_id').val('');
         toggleFileSaleBankField('create');
         renderFileBundle('create');
         $('#createModal').removeClass('hidden');
@@ -208,6 +210,7 @@
             $('#edit_payment_status').val(s.payment_status);
             $('#edit_payment_method').val(s.payment_method || 'cash');
             $('#edit_bank_id').val(s.bank_id || '');
+            $('#edit_payment_instruction_bank_id').val(s.payment_instruction_bank_id || '');
             toggleFileSaleBankField('edit');
             $('#edit_notes').val(s.notes);
             renderFileBundle('edit');

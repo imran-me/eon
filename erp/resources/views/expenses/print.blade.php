@@ -233,7 +233,7 @@
                 <tr>
                     <td>Date</td>
                     <td class="nf">
-                        {{ request('expense_date') ? \Carbon\Carbon::parse(request('expense_date'))->format('d M Y') : 'All dates' }}
+                        {{ $printDateLabel ?? (request('expense_date') ? \Carbon\Carbon::parse(request('expense_date'))->format('d M Y') : 'All dates') }}
                     </td>
                 </tr>
                 <tr><td>Generated</td><td class="nf">{{ now()->format('d M Y, h:i A') }}</td></tr>
@@ -384,6 +384,7 @@
     {{-- Signature ── --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

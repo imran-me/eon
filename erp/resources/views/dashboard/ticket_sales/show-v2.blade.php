@@ -85,6 +85,9 @@
     /* ── Bottom grid ── */
     .bot { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 30px; }
     .nb { font-size: 12px; line-height: 1.8; color: #475569; margin-bottom: 14px; }
+    .pay-instructions { margin-top: 14px; border: 1px solid #f59e0b; background: #fffbeb; padding: 10px 12px; border-radius: 4px; }
+    .pay-instructions strong { display: block; color: #92400e; font-family: var(--tf); font-size: 11px; margin-bottom: 5px; text-transform: uppercase; }
+    .pay-instructions div { color: #451a03; font-size: 11px; line-height: 1.55; }
     .amt-tbl { width: 100%; border-collapse: collapse; }
     .amt-tbl td { padding: 6px 0; border-bottom: 1px solid #eee; font-size: 12px; }
     .amt-tbl td.n { font-family: var(--nf); font-size: 11px; text-align: right; }
@@ -217,6 +220,19 @@
                 {{ $words }}
             </div>
 
+            @if(($data->due_amount ?? 0) > 0 && $data->paymentInstructionBank)
+            @php $payBank = $data->paymentInstructionBank; @endphp
+            <div class="pay-instructions">
+                <strong>Payment Instructions</strong>
+                <div>Please pay the outstanding balance to:</div>
+                <div><b>{{ $payBank->name }}</b>@if($payBank->branch_name) — {{ $payBank->branch_name }}@endif</div>
+                @if($payBank->account_name)<div>Account Name: {{ $payBank->account_name }}</div>@endif
+                @if($payBank->account_number)<div>Account Number: {{ $payBank->account_number }}</div>@endif
+                @if($payBank->routing_number)<div>Routing Number: {{ $payBank->routing_number }}</div>@endif
+                @if($payBank->swift_code)<div>SWIFT: {{ $payBank->swift_code }}</div>@endif
+            </div>
+            @endif
+
             @foreach($fields ?? [] as $field)
             <div class="sh" style="text-transform:capitalize;">{{ $field->label }}:</div>
             <div class="nb">{{ $field->key }}</div>
@@ -240,6 +256,7 @@
     {{-- Signature ── --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ $company->name }}</div>
         </div>

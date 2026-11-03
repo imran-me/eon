@@ -375,6 +375,7 @@
             <div style="height: 40px;">
                 <i style="font-family: cursive; color: var(--text-color);">Omit</i>
             </div>
+            <x-signature :company="$company" />
             <div class="signature-line">Authorized Signatory</div>
         </div>
     </div>

@@ -8,6 +8,7 @@
 
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
     @include('airport.content')
     @if (false)
     <!-- Stats Overview -->
@@ -202,7 +203,7 @@
             });
 
             // Show edit modal
-            $('.edit-state-btn').click(function() {
+            $(document).on('click', '.edit-state-btn', function() {
                 const itemId = $(this).data('item_id');
                 const stateId = $(this).data('state_id');
                 const countryId = $(this).data('country_id');

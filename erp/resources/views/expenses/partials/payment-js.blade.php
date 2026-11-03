@@ -101,6 +101,32 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
         digital_wallet: 'digital wallet',
     };
 
+    /* May this user pay one company's expense from another company's account?
+       Super admin only (owner, 2026-08-22): an Interiors site cost is sometimes
+       settled from a Travels account, and only the person who owns all twelve
+       companies may decide that. For everyone else the bank list stays narrowed
+       to their own company exactly as before — the rendered picker, and the
+       server guard behind it at ExpenseController::store(), are both unchanged.
+
+       Doing it here rather than by widening the server's $banks query keeps the
+       change to one branch: the list already contains every bank for anyone who
+       can see all companies, and it was only ever this filter that hid them.
+
+       Resolved defensively. This partial renders inside two shared modals, so a
+       null user or an unavailable role table must degrade to "not super admin",
+       never to a 500 on the expense desk. */
+    @php
+        $expIsSuperAdmin = false;
+        try {
+            $expUser = auth()->user();
+            $expIsSuperAdmin = (bool) ($expUser?->is_super_admin)
+                || (bool) ($expUser && $expUser->hasRole('super admin'));
+        } catch (\Throwable $e) {
+            $expIsSuperAdmin = false;
+        }
+    @endphp
+    const CROSS_COMPANY_BANKS = {{ $expIsSuperAdmin ? 'true' : 'false' }};
+
     function wire(prefix) {
         const mode = document.getElementById(prefix + '_payment_mode');
         const wrap = document.getElementById(prefix + '_bank_wrap');
@@ -120,10 +146,12 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
         const cardCash   = document.getElementById(prefix + '_source_cash');
         const cardBank   = document.getElementById(prefix + '_source_bank');
         const cardOwn    = document.getElementById(prefix + '_source_own');
+        const sourcePicker = document.getElementById(prefix + '_source_picker');
         const cashBranch = document.getElementById(prefix + '_cash_branch');
         const bankBranch = document.getElementById(prefix + '_bank_branch');
         const ownBranch  = document.getElementById(prefix + '_own_branch');
         const method     = document.getElementById(prefix + '_method');
+        const bankCharge = document.getElementById(prefix + '_bank_charge_amount');
 
         // Whose money it was. Empty = the company's. Carries the claimant's id
         // when it was theirs, and that value is the own-pocket state itself.
@@ -227,6 +255,9 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
                apart — it is the state, not a copy of it. */
             const onOwn = !onBank && !!(reimburse && reimburse.value);
             const onPot = !onBank && !onOwn;
+            if (sourcePicker) sourcePicker.value = onBank ? 'bank' : (onOwn ? 'own' : 'cash');
+            const chargeDetails = document.getElementById(prefix + '_bank_charge_details');
+            if (chargeDetails && bankCharge && Number(bankCharge.value) > 0) chargeDetails.open = true;
 
             if (cardCash) cardCash.classList.toggle('is-active', onPot);
             if (cardOwn)  cardOwn.classList.toggle('is-active', onOwn);
@@ -244,6 +275,7 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
             // "Cash". settlementAccountId() reads the bank, not the mode.
             if (!onBank) {
                 bank.value = '';
+                if (bankCharge) bankCharge.value = '0.00';
                 const msg = document.getElementById(prefix + '_bank_msg');
                 if (msg) msg.classList.add('hidden');
             } else if (float) {
@@ -283,7 +315,13 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
            With no company chosen yet, everything is offered: picking a float is
            then what ANSWERS the company question, which is the whole point of the
            cascade. */
-        function narrow(select, wantCompany, extraKeep) {
+        /* groupBy (optional, 4th arg) turns the flat list into <optgroup>s:
+             { key: 'company-name', first: '<company id>' }
+           `key` is the data-* attribute the label comes from, `first` is the
+           company whose group is pinned to the top. Used only by the bank
+           picker; the float picker still renders flat, because a float list is
+           short and already belongs to one company. */
+        function narrow(select, wantCompany, extraKeep, groupBy) {
             if (!select) return 0;
 
             let all = select._pcAllOptions;
@@ -309,22 +347,96 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
             select.innerHTML = '';
             let kept = 0;
 
+            // Survivors are collected rather than appended straight away: with
+            // grouping on, an option cannot be placed until every option is
+            // known, because the groups have to be built and ordered first.
+            const survivors = [];
+
             all.forEach((o) => {
-                if (o.value) {
+                /* Whatever is already chosen always survives the filter. Without
+                   this, reopening an expense that was paid from another company's
+                   account blanked the Bank field the moment the company select
+                   was populated — the value was filtered out, `survived` went
+                   false, and the field silently reset to "— Select Bank —".
+                   Saving from there would have changed how the expense was paid
+                   without anyone touching that field.
+
+                   Safe for the ordinary case: a company-locked user has exactly
+                   one company to choose from (ExpenseController builds
+                   $companies as a single row for them), so there is no company
+                   switch that could strand a stale bank here. */
+                const isChosen = o.value && o.value === previous;
+
+                if (o.value && !isChosen) {
                     if (wantCompany && String(o.data.company) !== String(wantCompany)) return;
                     if (extraKeep && !extraKeep(o)) return;
                 }
 
+                survivors.push(o);
+                if (o.value) kept++;
+            });
+
+            const makeOption = (o) => {
                 const el = document.createElement('option');
                 el.value = o.value;
                 el.textContent = o.label;
                 o.attrs.forEach(([n, v]) => el.setAttribute(n, v));
-                select.appendChild(el);
+                return el;
+            };
 
-                if (o.value) kept++;
-            });
+            // The placeholder is never grouped — it is the "nothing chosen"
+            // state, not a member of any company.
+            const placeholders = survivors.filter(o => !o.value);
+            const real = survivors.filter(o => o.value);
 
-            const survived = Array.prototype.some.call(select.options, o => o.value === previous);
+            placeholders.forEach(o => select.appendChild(makeOption(o)));
+
+            // One company in the list means grouping would draw a single box
+            // around everything and say nothing. Only group when it separates.
+            const distinct = new Set(real.map(o => o.data.company)).size;
+
+            if (!groupBy || distinct < 2) {
+                real.forEach(o => select.appendChild(makeOption(o)));
+            } else {
+                /* Grouped by company, with the company being charged pinned to
+                   the top — that is the account nearly every expense wants, and
+                   scrolling past eleven other companies to reach your own is
+                   how the wrong account gets picked. The rest follow
+                   alphabetically so their order is stable between renders. */
+                const groups = new Map();
+
+                real.forEach((o) => {
+                    const id = String(o.data.company || '');
+                    if (!groups.has(id)) {
+                        groups.set(id, { label: o.data[groupBy.key] || 'Other', items: [] });
+                    }
+                    groups.get(id).items.push(o);
+                });
+
+                const ownId = String(groupBy.first || '');
+
+                const ordered = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
+                    if (aId === ownId) return -1;
+                    if (bId === ownId) return 1;
+                    return a.label.localeCompare(b.label);
+                });
+
+                ordered.forEach(([id, g]) => {
+                    const box = document.createElement('optgroup');
+                    // Only the pinned group is named as the expense's own. The
+                    // others are left plain: the amber note under the picker
+                    // already says what choosing one of them means, and
+                    // repeating "creates a liability" on every group would
+                    // shout it eleven times.
+                    box.label = (id === ownId && ownId !== '')
+                        ? g.label + ' — this expense'
+                        : g.label;
+                    g.items.forEach(o => box.appendChild(makeOption(o)));
+                    select.appendChild(box);
+                });
+            }
+
+            const survived = Array.prototype.some.call(select.querySelectorAll('option'), o => o.value === previous);
             select.value = survived ? previous : '';
 
             return kept;
@@ -343,18 +455,63 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
             if (!bank) return;
 
             const want = BANK_TYPE_FOR[mode.value] || null;
+
+            /* Super admin sees every company's accounts; the method still
+               narrows by account kind, because a mobile-banking payment cannot
+               leave a current account whoever is making it. */
+            const wantCompany = CROSS_COMPANY_BANKS
+                ? null
+                : (company && company.value ? company.value : null);
+
             const kept = narrow(
                 bank,
-                company && company.value ? company.value : null,
-                want ? (o => o.data.type === want) : null
+                wantCompany,
+                want ? (o => o.data.type === want) : null,
+                // Group only when the list actually spans companies, which is
+                // only ever the super admin's list. For everyone else
+                // wantCompany has already reduced it to one company and narrow()
+                // falls back to a flat list on its own.
+                { key: 'company-name', first: company && company.value ? company.value : null }
             );
 
             // Say why the list is empty, rather than showing a picker with nothing
             // in it and letting the required-field error explain it later.
             if (bank.options.length) {
                 bank.options[0].textContent = kept === 0
-                    ? (want ? 'No ' + (TYPE_LABEL[want] || want) + ' account for this company' : 'No account for this company')
+                    ? (want
+                        ? 'No ' + (TYPE_LABEL[want] || want) + ' account' + (wantCompany ? ' for this company' : '')
+                        : (wantCompany ? 'No account for this company' : 'No account available'))
                     : '— Select Bank —';
+            }
+
+            flagCrossCompanyBank();
+        }
+
+        /* Warn, before saving, that this will put one company in debt to another.
+           The picker offering every account is not by itself an answer to "did
+           you mean to do that" — and the consequence is a record on the Liability
+           book, not just a different row in the bank column.
+
+           Renders nothing at all unless the two companies actually differ, so for
+           every ordinary expense this is invisible. */
+        function flagCrossCompanyBank() {
+            const note = document.getElementById(prefix + '_bank_cross_note');
+            if (!note) return;
+
+            const opt = bank.options[bank.selectedIndex];
+            const bankCompany = opt ? opt.getAttribute('data-company') : null;
+            const expenseCompany = company && company.value ? company.value : null;
+
+            const crosses = bank.value && bankCompany && expenseCompany
+                && String(bankCompany) !== String(expenseCompany);
+
+            note.classList.toggle('hidden', !crosses);
+
+            if (crosses) {
+                const payer = opt.getAttribute('data-company-name') || 'that company';
+                const owing = company.options[company.selectedIndex]?.textContent?.trim() || 'this company';
+                note.textContent = owing + ' will owe ' + payer
+                    + ' for this — it will appear on the Liability book once the expense is approved.';
             }
         }
 
@@ -588,7 +745,18 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
             });
         }
 
-        // The cards are the control; they write payment_mode and re-sync.
+        // Compact picker keeps the same persisted payment and reimbursement state.
+        if (sourcePicker) {
+            sourcePicker.addEventListener('change', function () {
+                const selected = sourcePicker.value;
+                mode.value = selected === 'bank'
+                    ? ((method && BANK_BRANCH.includes(method.value)) ? method.value : 'bank_transfer')
+                    : 'cash';
+                if (reimburse) reimburse.value = selected === 'own' ? SELF_ID : '';
+                sync();
+            });
+        }
+        // Legacy card listeners are harmless when those controls are absent.
         if (cardCash) {
             cardCash.addEventListener('click', function () {
                 mode.value = 'cash';
@@ -624,6 +792,11 @@ window.EXP_CASH_POT_BALANCE = @json($cashPotBalance ?? null);
         }
 
         mode.addEventListener('change', sync);
+
+        // Picking a different account can start or stop a cross-company debt,
+        // and filterBanks() does not run for a plain selection change.
+        bank.addEventListener('change', flagCrossCompanyBank);
+
         sync();
 
         // Exposed so the edit modal can re-sync after it fills the fields in.

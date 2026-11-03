@@ -69,8 +69,8 @@ class ContractFileCategoryController implements HasMiddleware
 
         try {
             ContractFileCategory::create([
-                'name' => $request->name,
-                'code' => ContractFileCategory::makeCode($request->name),
+                'name' => $this->jobName($request),
+                'code' => ContractFileCategory::makeCode($this->jobName($request)),
                 'country_id' => $request->country_id,
                 'visa_rate' => $request->visa_rate ?? 0,
                 'required_documents' => $request->required_documents,
@@ -87,7 +87,7 @@ class ContractFileCategoryController implements HasMiddleware
     public function update(Request $request, $role, string $id)
     {
         $category = ContractFileCategory::find($id);
-        if (!$category) {
+        if (! $category) {
             return response()->json(['success' => false, 'message' => 'Data Info Not Found!']);
         }
 
@@ -98,7 +98,7 @@ class ContractFileCategoryController implements HasMiddleware
 
         try {
             $category->update([
-                'name' => $request->name,
+                'name' => $this->jobName($request),
                 'country_id' => $request->country_id,
                 'visa_rate' => $request->visa_rate ?? 0,
                 'required_documents' => $request->required_documents,
@@ -115,7 +115,7 @@ class ContractFileCategoryController implements HasMiddleware
     {
         try {
             $category = ContractFileCategory::find($request->item_id ?? $id);
-            if (!$category) {
+            if (! $category) {
                 return response()->json(['success' => false, 'message' => 'Data Info Not Found!']);
             }
 
@@ -127,10 +127,20 @@ class ContractFileCategoryController implements HasMiddleware
         return response()->json(['success' => true, 'message' => 'File category deleted successfully.']);
     }
 
+    /**
+     * The job is optional (owner, 2026-10-26): one category can cover every job for a country
+     * (Malaysia's jobs vary) instead of one category per job. A blank job is stored as
+     * ALL JOBS, so every screen that prints a category's name still has one to print.
+     */
+    private function jobName(Request $request): string
+    {
+        return trim((string) $request->name) ?: 'ALL JOBS';
+    }
+
     private function validator(Request $request, ?int $ignoreId = null)
     {
         return Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'country_id' => 'required|exists:countries,id',
             'visa_rate' => 'required|numeric|min:0',
             'required_documents' => 'nullable|string',

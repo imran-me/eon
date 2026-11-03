@@ -4,17 +4,28 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\PartyAssignmentService;
 use App\Traits\ExportsPartyList;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
-use Spatie\Permission\Models\Role;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Spatie\Permission\Models\Role;
 
-class AgentController extends Controller
+class AgentController implements HasMiddleware
 {
     use ExportsPartyList;
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view agent|view all agent', only: ['index', 'print']),
+            new Middleware('permission:create agent', only: ['create', 'store']),
+            new Middleware('permission:edit agent', only: ['edit', 'update', 'toggleStatus']),
+            new Middleware('permission:delete agent', only: ['destroy']),
+        ];
+    }
 
     protected function partyExportMeta(): array
     {
@@ -31,11 +42,15 @@ class AgentController extends Controller
 
             // Filter by name, email, or phone
             if ($request->filled('search')) {
-                $query->where(function($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%')
-                    ->orWhere('phone', 'like', '%' . $request->search . '%');
+                $query->where(function ($q) use ($request) {
+                    $q->where('name', 'like', '%'.$request->search.'%')
+                        ->orWhere('email', 'like', '%'.$request->search.'%')
+                        ->orWhere('phone', 'like', '%'.$request->search.'%');
                 });
+            }
+
+            if ($request->filled('service_category')) {
+                $query->whereJsonContains('service_categories', $request->service_category);
             }
 
             // Only agents (assuming you use Spatie Roles)
@@ -43,7 +58,7 @@ class AgentController extends Controller
                 $q->where('name', 'agent');
             });
 
-            $agents = $query->latest()->paginate(10);
+            $agents = $query->latest()->paginate(10)->withQueryString();
 
             $balances = $this->latestBalances($agents->pluck('id'));
 
@@ -77,7 +92,7 @@ class AgentController extends Controller
         try {
             // Return the view for creating a new vendor
 
-            return view('dashboard.agent.create');
+            return view('dashboard.agent.create', PartyAssignmentService::formData(null, 'agent'));
         } catch (\Exception $e) {
             // Handle any exceptions that may occur
             return redirect()->back()->withErrors(['error' => 'Failed to load create form.']);
@@ -91,29 +106,41 @@ class AgentController extends Controller
     {
         try {
             // Validate the form data
-            $validator = Validator::make($request->all(), $this->validationRules(), $this->validationMessages());
+            $validator = Validator::make($request->all(), array_merge(
+                $this->validationRules(),
+                ['service_categories' => $this->travelServicesRule($request)],
+                PartyAssignmentService::rules()
+            ), $this->validationMessages());
 
             if ($validator->fails()) {
                 return redirect()->back()->withErrors($validator)->withInput();
             }
 
+            DB::beginTransaction();
+
             // Create the user
             $user = User::create([
                 'name' => $request->name,
-                'company_id' => 2,
+                'company_id' => null,
                 'contact_person' => $request->contact_person,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'address' => $request->address,
-                // 'password' => Hash::make($request->password??'1234568'),
+                'service_categories' => $request->service_categories,
             ]);
 
             // Assign role
-           $user->assignRole('agent'); // ✅ Direct by name
+            $user->assignRole('agent'); // ✅ Direct by name
+            PartyAssignmentService::sync($user, 'agent', $request->company_ids, $request->project_ids ?? []);
+            DB::commit();
 
             return redirect()->back()->with('success', 'User created successfully.');
 
         } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             // Handle any exceptions that may occur
             return redirect()->back()->with('error', 'Please fix the validation errors.')->withErrors(['error' => 'Failed to create agent.'])->withInput();
         }
@@ -130,52 +157,60 @@ class AgentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($role,string $id)
+    public function edit($role, string $id)
     {
-            try {
-                // Fetch the agent by ID
-                $agent = User::findOrFail($id);
-    
-                // Return the view for editing the agent
-                return view('dashboard.agent.edit', compact('agent'));
-            } catch (\Exception $e) {
-                // Handle any exceptions that may occur
-                return redirect()->back()->withErrors(['error' => 'Failed to load edit form.']);
-            }
+        try {
+            // Fetch the agent by ID
+            $agent = User::findOrFail($id);
+
+            // Return the view for editing the agent
+            return view('dashboard.agent.edit', compact('agent') + PartyAssignmentService::formData($agent, 'agent'));
+        } catch (\Exception $e) {
+            // Handle any exceptions that may occur
+            return redirect()->back()->withErrors(['error' => 'Failed to load edit form.']);
+        }
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request,$role, string $id)
+    public function update(Request $request, $role, string $id)
     {
         try {
             // Fetch the agent by ID
             $agent = User::findOrFail($id);
 
             // Validate the form data
-            $validator = Validator::make($request->all(), $this->validationRules($agent->id), $this->validationMessages());
+            $validator = Validator::make($request->all(), array_merge(
+                $this->validationRules($agent->id),
+                ['service_categories' => $this->travelServicesRule($request)],
+                PartyAssignmentService::rules()
+            ), $this->validationMessages());
             if ($validator->fails()) {
                 return redirect()->back()->withErrors($validator)->withInput();
             }
 
+            DB::beginTransaction();
+
             // Update fields
             $agent->name = $request->name;
-            $agent->company_id = 2;
+            $agent->company_id = null;
             $agent->contact_person = $request->contact_person;
             $agent->email = $request->email;
             $agent->phone = $request->phone;
             $agent->address = $request->address;
-
-            // If password is set, update it
-            if ($request->filled('password')) {
-                $agent->password = Hash::make($request->password);
-            }
+            $agent->service_categories = $request->service_categories;
 
             $agent->save();
+            PartyAssignmentService::sync($agent, 'agent', $request->company_ids, $request->project_ids ?? []);
+            DB::commit();
 
             return redirect()->back()->with('success', 'Agent updated successfully.');
         } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             return redirect()->back()->with('error', $e->getMessage())->withErrors(['error' => 'Failed to update vendor.'])->withInput();
         }
     }
@@ -201,15 +236,30 @@ class AgentController extends Controller
     /**
      * Validation rules for agent forms.
      */
+    /**
+     * Agent types (2026-09-21). A Trainer or Consultant is the responsible
+     * person for a contract flight's training / consulting services — we pay
+     * them, they have a ledger — and stays an agent in every list. Carried
+     * as an extra role beside 'agent'.
+     */
     protected function validationRules($agentId = null)
     {
         return [
             'name' => 'required|string|max:255',
             'contact_person' => 'nullable|string|max:255',
-            'email' => 'nullable|email|unique:users,email' . ($agentId ? ',' . $agentId : ''),
+            'email' => 'nullable|email|unique:users,email'.($agentId ? ','.$agentId : ''),
             'phone' => 'required|string|max:20',
             'address' => 'nullable|string|max:500',
+            'service_categories' => 'required|array|min:1',
+            'service_categories.*' => 'required|in:ticket,visa,flight,file,instructor,others|distinct',
         ];
+    }
+
+    private function travelServicesRule(Request $request): string
+    {
+        return in_array(2, array_map('intval', $request->input('company_ids', [])), true)
+            ? 'required|array|min:1'
+            : 'nullable|array';
     }
 
     /**
@@ -233,6 +283,7 @@ class AgentController extends Controller
             'address.max' => 'The address may not be greater than :max characters.',
         ];
     }
+
     public function toggleStatus(string $role, $id)
     {
         $vendor = User::findOrFail($id);

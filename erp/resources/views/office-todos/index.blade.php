@@ -104,7 +104,7 @@
                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                                 {{ (auth()->user()->hasRole('super admin') || auth()->user()->hasRole('admin')) ? 'Overall Status' : 'My Status' }}
                             </th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            <th class="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase" style="width:1%;white-space:nowrap">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
@@ -199,30 +199,29 @@
                                     {{ $stLabel }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3">
-                                <div style="display:flex;gap:8px;align-items:center;">
+                            <td class="px-2 py-3">
+                                <div style="display:flex;gap:8px;align-items:center;display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                     @if($isAdmin)
                                         <button class="edit-todo-btn" data-id="{{ $todo->id }}"
-                                            style="color:#2563eb;background:none;border:none;cursor:pointer;font-size:14px;" title="Edit">
-                                            <i class="fas fa-edit"></i>
+                                            style="color:#2563eb;background:none;border:none;cursor:pointer;font-size:14px;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Edit">
+                                            <i class="fas fa-edit" style="font-size:11px;margin:0"></i>
                                         </button>
                                         <button class="delete-todo-btn" data-id="{{ $todo->id }}"
-                                            style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:14px;" title="Delete">
-                                            <i class="fas fa-trash"></i>
+                                            style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:14px;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Delete">
+                                            <i class="fas fa-trash" style="font-size:11px;margin:0"></i>
                                         </button>
                                     @else
                                         <button class="update-status-btn"
                                             data-id="{{ $todo->id }}"
                                             data-current="{{ $todo->my_status ?? 'pending' }}"
                                             data-note="{{ $todo->my_note ?? '' }}"
-                                            style="color:#7c3aed;background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;" title="Update My Status">
-                                            <i class="fas fa-check-circle"></i> Update
-                                        </button>
+                                            style="color:#7c3aed;background:none;border:none;cursor:pointer;font-size:13px;font-weight:600;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Update My Status">
+                                            <i class="fas fa-check-circle" style="font-size:11px;margin:0"></i></button>
                                     @endif
                                     @if($todo->attachment)
                                         <a href="{{ asset($todo->attachment) }}" target="_blank"
-                                            style="color:#6b7280;font-size:14px;" title="Attachment">
-                                            <i class="fas fa-paperclip"></i>
+                                            style="color:#6b7280;font-size:14px;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px" title="Attachment">
+                                            <i class="fas fa-paperclip" style="font-size:11px;margin:0"></i>
                                         </a>
                                     @endif
                                 </div>

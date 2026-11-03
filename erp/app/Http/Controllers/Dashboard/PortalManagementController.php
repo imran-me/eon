@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Http\Controllers\Controller;
 use App\Models\Account;
+use App\Models\Bank;
 use App\Models\JournalEntry;
 use App\Models\JournalItem;
 use App\Models\Portal;
@@ -95,6 +96,17 @@ class PortalManagementController implements HasMiddleware
 
             // Usage reduces balance; funding increases balance
             $newBalance  = $isUsage ? ($oldBalance - $amount) : ($oldBalance + $amount);
+
+            if (($isUsage || $requiresSource) && ! $portal->account_id) {
+                throw new \RuntimeException('Portal is not linked to a chart-of-accounts account.');
+            }
+
+            if ($isUsage) {
+                Bank::assertCanCover((int) $portal->account_id, $amount, $portal->name);
+            } elseif ($requiresSource) {
+                $source = Account::findOrFail($request->source_account_id);
+                Bank::assertCanCover((int) $source->id, $amount, $source->name);
+            }
 
             $journal = null;
             if ($portal->account_id) {

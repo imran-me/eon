@@ -2,8 +2,8 @@
     <div class="modal-backdrop fixed inset-0 bg-black opacity-50"></div>
     <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
         <div class="modal-content py-4 text-left px-6">
-            <div class="modal-header flex justify-between items-center pb-3">
-                <h3 class="text-xl font-semibold">Edit </h3>
+            <div class="modal-header flex justify-between items-center">
+                <h3><i class="fas fa-calendar-check mr-2"></i>Edit Leave Request<small>Update dates, type, reason or approval status</small></h3>
                 <button class="modal-close-edit z-50">
                     <i class="fas fa-times"></i>
                 </button>
@@ -21,7 +21,7 @@
                     <input type="hidden" id="editItemId" name="id">                    
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="mb-4">
-                            <label for="edit_user_id" class="block text-gray-700 text-sm font-bold mb-2">Users</label>
+                            <label for="edit_user_id" class="block">Employee <span class="text-red-500">*</span></label>
                             <select id="edit_user_id" name="user_id" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">                                
                                 @foreach ($users as $user)
                                     <option value="{{ $user->id }}">{{ $user->name }}</option>                                            
@@ -30,7 +30,7 @@
                             <p id="edit_user_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select a user</p>
                         </div>
                         <div class="mb-4">
-                            <label for="edit_company_id" class="block text-gray-700 text-sm font-bold mb-2">Company</label>
+                            <label for="edit_company_id" class="block">Company <span class="text-red-500">*</span></label>
                             <select id="edit_company_id" name="company_id" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">                                                                        
                                 @foreach ($companies as $company)
                                     <option value="{{ $company->id }}">{{ $company->name }}</option>                                            
@@ -39,22 +39,24 @@
                             <p id="edit_company_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please choose a company</p>
                         </div>
                         <div class="mb-4">
-                            <label for="edit_leave_type_id" class="block text-gray-700 text-sm font-bold mb-2">Leave Type</label>
+                            <label for="edit_leave_type_id" class="block">Leave Type <span class="text-red-500">*</span></label>
                             <select id="edit_leave_type_id" name="leave_type_id" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">
                                 @foreach ($leave_types as $leave_type)
-                                    <option value="{{ $leave_type->id }}" data-requires-time="{{ $leave_type->requires_time ? 1 : 0 }}">{{ $leave_type->name }}</option>
+                                    <option value="{{ $leave_type->id }}"
+                                        data-requires-time="{{ $leave_type->requires_time ? 1 : 0 }}"
+                                        data-late-in="{{ $leave_type->exempts_late_deduction ? 1 : 0 }}">{{ $leave_type->name }}</option>
                                 @endforeach
                             </select>
                             <p id="edit_leave_type_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please choose a type</p>
                         </div>
                         <div class="mb-4 hidden" id="edit_leave_time_wrapper">
-                            <label for="edit_leave_time" class="block text-gray-700 text-sm font-bold mb-2">Leave Time</label>
+                            <label for="edit_leave_time" id="edit_leave_time_label" class="block text-gray-700 text-sm font-bold mb-2">Leave Time</label>
                             <input type="time" id="edit_leave_time" name="leave_time" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <p class="text-red-500 text-xs mt-1 hidden error-message">Please enter the leave time</p>
                         </div>
                         @if ($canSetLeaveStatus)
                         <div class="mb-4">
-                            <label for="edit_status" class="block text-gray-700 text-sm font-bold mb-2">Status</label>
+                            <label for="edit_status" class="block">Status <span class="text-red-500">*</span></label>
                             <select id="edit_status" name="status" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">
                                 <option value="pending">Pending</option>
                                 <option value="approved">Approved</option>
@@ -100,7 +102,7 @@
                     Cancel
                 </button>
                 <button data-action="{{ route('role.leaves.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'leaf' => 1]) }}" id="editSubmit" type="button" class="btn btn-primary px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition duration-200">
-                    Update
+                    <i class="fas fa-check mr-1"></i> Update Leave
                 </button>
             </div>
         </div>

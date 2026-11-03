@@ -25,24 +25,9 @@
 
             <div class="states-table-content">
                 <!-- Success Alert -->
-                <form action="" method="get">
-                    <div class="filter-container">
-                        <div class="filter-header">
-                            <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                        </div>
-                        <div class="filter-content">
-                            <div class="filter-row">
-                                <div class="filter-group">
-                                    <input type="text" name="name" id="name" value="{{ request('name') }}" placeholder="Type Name...">
-                                </div>
-                                <div class="filter-actions" style="margin: 0">
-                                    <button type="button" class="btn-sm reset-btn" style="padding: 4px 10px;">Reset</button>
-                                    <button type="submit" class="btn-sm apply-btn" style="padding: 4px 10px;">Apply Filters</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <form action="{{ url()->current() }}" method="get">
+                    @if(request()->filled('company_id'))<input type="hidden" name="company_id" value="{{ request('company_id') }}">@endif
+                    <x-payroll-filter-bar search="name" placeholder="Search template name…" :dates="false" :keep="['company_id']" :total="$datas->total()" />
                 </form>
 
                 <!-- Table with Data -->
@@ -78,7 +63,7 @@
                                     <i class="fas fa-hand-holding-usd mr-1 text-teal-500"></i>Total Salary
                                 </th>
                                 @canany(['edit salary template', 'delete salary template'])
-                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:10%">
+                                <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                     <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                 </th>
                                 @endcanany
@@ -122,11 +107,11 @@
                                         <span class="text-sm font-bold text-teal-700">৳ {{ number_format($value->total_salary, 2) }}</span>
                                     </td>
                                     @canany(['edit salary template', 'delete salary template'])
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <div class="flex items-center justify-center gap-1">
+                                    <td class="px-2 py-3 whitespace-nowrap text-center">
+                                        <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                             @can('edit salary template')
                                             <button
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150 edit-btn"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150 edit-btn"
                                                 data-item_id="{{ $value->id }}"
                                                 data-name="{{ $value->name }}"
                                                 data-basic_salary="{{ $value->basic_salary }}"
@@ -138,15 +123,15 @@
                                                 data-total_salary="{{ $value->total_salary }}"
                                                 data-action="{{ route('role.salary-templates.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'salary_template' => $value->id]) }}"
                                                 title="Edit Template">
-                                                <i class="fas fa-edit text-xs"></i>
+                                                <i class="fas fa-edit" style="font-size:11px"></i>
                                             </button>
                                             @endcan
                                             @can('delete salary template')
                                             <button
-                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
                                                 onclick="confirmDelete('{{ $value->id }}', '{{ $value->name }}')"
                                                 title="Delete Template">
-                                                <i class="fas fa-trash text-xs"></i>
+                                                <i class="fas fa-trash" style="font-size:11px"></i>
                                             </button>
                                             @endcan
                                         </div>
@@ -449,33 +434,6 @@
             $('#deleteModal').removeClass('hidden');
         }
 
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterHeader = document.querySelector('.filter-container .filter-header');
-            const filterContent = document.querySelector('.filter-container .filter-content');
-
-            filterHeader.addEventListener('click', function() {
-                this.classList.toggle('active');
-                filterContent.classList.toggle('active');
-            });
-
-            // Reset button functionality
-            document.querySelector('.filter-container .reset-btn').addEventListener('click', function() {
-                const inputs = document.querySelectorAll('.filter-container select, .filter-container input');
-                inputs.forEach(input => {
-                    if (input.type === 'date') {
-                        input.value = '';
-                    } else {
-                        input.selectedIndex = 0;
-                    }
-                });
-            });
-            document.querySelector('.reset-btn').addEventListener('click', function (e) {
-                e.preventDefault();
-                window.location = '{{ route('role.salary-templates.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}';
-            });
-        });
     </script>
     <script>
 document.addEventListener("DOMContentLoaded", function () {

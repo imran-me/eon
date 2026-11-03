@@ -6,28 +6,32 @@ use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\Attendance;
 use App\Models\Bank;
-use App\Models\Department;
 use App\Models\Chat;
 use App\Models\Company;
+use App\Models\Department;
+use App\Models\DmRenewalPayment;
 use App\Models\Holiday;
 use App\Models\Lead;
 use App\Models\Leave;
+use App\Models\ManualAttendanceRequest;
 use App\Models\Notice;
-use App\Models\PaymentSchedule;
 use App\Models\OfficeTodo;
 use App\Models\OfficeTodoAssignee;
+use App\Models\PaymentSchedule;
+use App\Models\Portal;
 use App\Models\Project;
 use App\Models\SupportTicket;
 use App\Models\Task;
 use App\Models\TaskActivityLog;
 use App\Models\User;
+use App\Services\DmApiService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
-use App\Models\Portal;
-use App\Services\DmApiService;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
@@ -39,26 +43,26 @@ class DashboardController extends Controller
     /**
      * Display the Super Admin dashboard.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function index(Request $request)
     {
         // ── Global Date Filter (Month-Year) ───────────────────────────────────
         $period = $request->input('period', '');
         // Guard: if empty, invalid, or missing hyphen — fall back to current month
-        if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+        if (! preg_match('/^\d{4}-\d{2}$/', $period)) {
             $period = now()->format('Y-m');
         }
         [$selectedYear, $selectedMonth] = array_map('intval', explode('-', $period));
         // Clamp to valid ranges
-        $selectedYear  = max(2000, min((int) now()->year + 1, $selectedYear));
+        $selectedYear = max(2000, min((int) now()->year + 1, $selectedYear));
         $selectedMonth = max(1, min(12, $selectedMonth));
-        $period        = sprintf('%04d-%02d', $selectedYear, $selectedMonth);
+        $period = sprintf('%04d-%02d', $selectedYear, $selectedMonth);
 
         $startDate = Carbon::createFromDate($selectedYear, $selectedMonth, 1)->startOfMonth();
-        $endDate   = $startDate->copy()->endOfMonth();
+        $endDate = $startDate->copy()->endOfMonth();
         // For "today-sensitive" logic use today if we are in the current month, else use end of period
-        $date      = ($startDate->isSameMonth(Carbon::today())) ? Carbon::today() : $endDate;
+        $date = ($startDate->isSameMonth(Carbon::today())) ? Carbon::today() : $endDate;
 
         $companyId = Auth::user()->company_id;
 
@@ -118,7 +122,7 @@ class DashboardController extends Controller
 
         // ── Financial summary ─────────────────────────────────────────────────
         // Cumulative balances (liability/payable/receivable) as of end of selected month
-        $asOf     = $endDate->toDateString();
+        $asOf = $endDate->toDateString();
         $accounts = Account::with(['items' => function ($query) use ($asOf) {
             $query->whereHas('journalEntry', function ($q) use ($asOf) {
                 $q->whereDate('date', '<=', $asOf);
@@ -126,7 +130,7 @@ class DashboardController extends Controller
         }])->get();
 
         $accountBalances = $accounts->map(function ($account) {
-            $debits  = $account->items->sum('debit');
+            $debits = $account->items->sum('debit');
             $credits = $account->items->sum('credit');
 
             if (in_array($account->type, ['asset', 'expense'])) {
@@ -136,14 +140,14 @@ class DashboardController extends Controller
             }
 
             return (object) [
-                'code'    => $account->code,
-                'type'    => $account->type,
+                'code' => $account->code,
+                'type' => $account->type,
                 'balance' => $balance,
             ];
         });
 
-        $total_liability  = $accountBalances->where('type', 'liability')->sum('balance');
-        $total_payable    = optional($accountBalances->firstWhere('code', config('accounts.accounts_payable')))->balance ?? 0;
+        $total_liability = $accountBalances->where('type', 'liability')->sum('balance');
+        $total_payable = optional($accountBalances->firstWhere('code', config('accounts.accounts_payable')))->balance ?? 0;
         $total_receivable = optional($accountBalances->firstWhere('code', config('accounts.accounts_receivable')))->balance ?? 0;
         $bankAccountIds = Bank::where('status', 1)->whereNotNull('account_id')->pluck('account_id');
         $total_bank_balance = Account::whereIn('id', $bankAccountIds)
@@ -154,8 +158,9 @@ class DashboardController extends Controller
             }])
             ->get()
             ->sum(function ($account) {
-                $debits  = $account->items->sum('debit');
+                $debits = $account->items->sum('debit');
                 $credits = $account->items->sum('credit');
+
                 return $account->opening_balance + ($debits - $credits);
             });
 
@@ -236,8 +241,8 @@ class DashboardController extends Controller
         // ── Task chart data ───────────────────────────────────────────────────
         // Weekly: show the week that contains the last day of the selected month
         $weekRefDay = $endDate->isFuture() ? Carbon::today() : $endDate;
-        $weekStart  = $weekRefDay->copy()->startOfWeek(Carbon::MONDAY);
-        $weekEnd    = $weekRefDay->copy()->endOfWeek(Carbon::SUNDAY);
+        $weekStart = $weekRefDay->copy()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekRefDay->copy()->endOfWeek(Carbon::SUNDAY);
 
         $weeklyCreatedRaw = DB::table('tasks')
             ->whereNull('deleted_at')
@@ -254,16 +259,16 @@ class DashboardController extends Controller
             ->groupBy('day_date')
             ->pluck('total', 'day_date');
 
-        $taskWeeklyLabels      = [];
+        $taskWeeklyLabels = [];
         $taskWeeklyCreatedData = [];
         $taskWeeklyCompletedData = [];
 
         for ($i = 0; $i < 7; $i++) {
-            $day    = $weekStart->copy()->addDays($i);
+            $day = $weekStart->copy()->addDays($i);
             $dayKey = $day->toDateString();
 
-            $taskWeeklyLabels[]        = $day->format('D');
-            $taskWeeklyCreatedData[]   = (int) ($weeklyCreatedRaw[$dayKey] ?? 0);
+            $taskWeeklyLabels[] = $day->format('D');
+            $taskWeeklyCreatedData[] = (int) ($weeklyCreatedRaw[$dayKey] ?? 0);
             $taskWeeklyCompletedData[] = (int) ($weeklyCompletedRaw[$dayKey] ?? 0);
         }
 
@@ -305,26 +310,26 @@ class DashboardController extends Controller
             ->groupBy('month_no')
             ->pluck('total', 'month_no');
 
-        $taskMonthlyLabels       = [];
-        $taskMonthlyCreatedData  = [];
+        $taskMonthlyLabels = [];
+        $taskMonthlyCreatedData = [];
         $taskMonthlyCompletedData = [];
-        $monthlyIncomeLabels     = [];
-        $monthlyIncomeData       = [];
-        $monthlyExpenseData      = [];
+        $monthlyIncomeLabels = [];
+        $monthlyIncomeData = [];
+        $monthlyExpenseData = [];
 
         for ($month = 1; $month <= 12; $month++) {
-            $label                     = Carbon::create()->month($month)->format('M');
-            $taskMonthlyLabels[]       = $label;
-            $taskMonthlyCreatedData[]  = (int) ($monthlyCreatedRaw[$month] ?? 0);
+            $label = Carbon::create()->month($month)->format('M');
+            $taskMonthlyLabels[] = $label;
+            $taskMonthlyCreatedData[] = (int) ($monthlyCreatedRaw[$month] ?? 0);
             $taskMonthlyCompletedData[] = (int) ($monthlyCompletedRaw[$month] ?? 0);
-            $monthlyIncomeLabels[]     = $label;
-            $monthlyIncomeData[]       = round((float) ($incomeMonthlyRaw[$month] ?? 0), 2);
-            $monthlyExpenseData[]      = round((float) ($expenseMonthlyRaw[$month] ?? 0), 2);
+            $monthlyIncomeLabels[] = $label;
+            $monthlyIncomeData[] = round((float) ($incomeMonthlyRaw[$month] ?? 0), 2);
+            $monthlyExpenseData[] = round((float) ($expenseMonthlyRaw[$month] ?? 0), 2);
         }
 
         // ── Attendance table — always show today's attendance on dashboard ─────
         $selectedDate = Carbon::today()->toDateString();
-        $dayName = strtolower(\Carbon\Carbon::parse($selectedDate)->format('l'));
+        $dayName = strtolower(Carbon::parse($selectedDate)->format('l'));
 
         // 2. Fetch all users with their shifts
         $users = User::whereNotNull('company_id')
@@ -350,9 +355,12 @@ class DashboardController extends Controller
             ->get();
 
         $leaves = DB::table('leaves')
-            ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $selectedDate)
-            ->whereDate('end_date', '>=', $selectedDate)
+            ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->where('leaves.status', 'approved')
+            ->whereNull('leaves.deleted_at')
+            ->whereDate('leaves.start_date', '<=', $selectedDate)
+            ->whereDate('leaves.end_date', '>=', $selectedDate)
+            ->select('leaves.*', 'leave_types.exempts_late_deduction')
             ->get()
             ->keyBy('user_id');
 
@@ -361,6 +369,7 @@ class DashboardController extends Controller
         foreach ($users as $user) {
             $record = $dbAttendances->get($user->id);
             $leaveRecord = $leaves->get($user->id);
+            $approvedLateIn = $leaveRecord && $leaveRecord->exempts_late_deduction ? $leaveRecord : null;
             $isHoliday = $holidays->isNotEmpty();
             $isWeekend = $user->shift && in_array($dayName, $user->shift->holidays ?? []);
 
@@ -372,19 +381,22 @@ class DashboardController extends Controller
                 // Late Calculation
                 if ($checkIn && $record->attendence_setting) {
                     $minutes = (int) $record->attendence_setting->time_after_checkin;
-                    
+
                     $lateThreshold = Carbon::parse($selectedDate.' '.$record->shift->start_time)
-                                            ->addMinutes($minutes);
-                    $actualCheckIn = \Carbon\Carbon::parse($selectedDate . ' ' . $checkIn);
-                    //late minutes calculation
-                    $lateMinutes = $actualCheckIn->gt($lateThreshold) ? $actualCheckIn->diffInMinutes($lateThreshold) : 0;
-                    
-                    $status = $actualCheckIn->gt($lateThreshold) ? 'Late' : 'Present';
+                        ->addMinutes($minutes);
+                    $actualCheckIn = Carbon::parse($selectedDate.' '.$checkIn);
+                    // late minutes calculation
+                    $lateMinutes = $actualCheckIn->gt($lateThreshold) && ! $approvedLateIn ? $actualCheckIn->diffInMinutes($lateThreshold) : 0;
+
+                    $status = $actualCheckIn->gt($lateThreshold) && ! $approvedLateIn ? 'Late' : 'Present';
                 } else {
                     $status = Str::headline((string) ($record->status ?? 'Present'));
                 }
                 $note = $record->note ?? '-';
-            } elseif ($leaveRecord) {
+                if ($approvedLateIn) {
+                    $note = 'Approved Late In (until '.Carbon::parse($approvedLateIn->leave_time)->format('h:i A').')';
+                }
+            } elseif ($leaveRecord && ! $approvedLateIn) {
                 $status = 'Leave';
                 $note = 'Approved Leave';
             } elseif ($isHoliday || $isWeekend) {
@@ -392,7 +404,7 @@ class DashboardController extends Controller
                 $note = $isHoliday ? $holidays->first()->name : 'Weekend';
             }
 
-            $reportData[] = (object)[
+            $reportData[] = (object) [
                 'id' => $record->id ?? null,
                 'user_id' => $user->id,
                 'company_id' => $user->company_id,
@@ -403,15 +415,15 @@ class DashboardController extends Controller
                 'check_out' => $checkOut,
                 'status' => $status,
                 'note' => $note,
-                'date' => $selectedDate
+                'date' => $selectedDate,
             ];
         }
 
         $statusOrder = [
             'Present' => 1,
-            'Late'    => 2,
-            'Absent'  => 3,
-            'Leave'   => 4,
+            'Late' => 2,
+            'Absent' => 3,
+            'Leave' => 4,
             'Holiday' => 5,
         ];
 
@@ -430,11 +442,9 @@ class DashboardController extends Controller
             ->get();
         $companies = Company::where('status', 1)->get();
         $shifts = DB::table('shifts')->get();
-        $employees = User::where('id','!=',Auth::id())->role('employee')->get();
+        $employees = User::where('id', '!=', Auth::id())->role('employee')->get();
         $departments = Department::orderBy('name')->get();
-         
 
-        
         $currentUser = Auth::user();
 
         $employeesQuery = User::query()
@@ -470,9 +480,9 @@ class DashboardController extends Controller
 
         $employees->transform(function ($employee) use ($unreadBySender) {
             $employee->unread_count = (int) ($unreadBySender[$employee->id] ?? 0);
+
             return $employee;
         });
-
 
         // Notices
         $user = Auth::user();
@@ -483,7 +493,7 @@ class DashboardController extends Controller
 
         $notices = collect();
         $departmentId = $profile?->department_id;
-        //only date
+        // only date
         $today = Carbon::today()->toDateString();
         if ($user) {
             $notices = Notice::query()
@@ -492,7 +502,7 @@ class DashboardController extends Controller
                     $query->whereNull('publish_date')
                         ->orWhereDate('publish_date', '<=', $today);
                 })
-                
+
                 ->where(function ($query) use ($today) {
                     $query->whereNull('expiry_date')
                         ->orWhereDate('expiry_date', '>=', $today);
@@ -538,10 +548,10 @@ class DashboardController extends Controller
                 ->where('status', 'approved')
                 ->whereYear('start_date', now()->year)
                 ->count();
-            $employeeStats = (object)[
+            $employeeStats = (object) [
                 'attendance_this_month' => $eAttendance,
-                'tasks_count'           => $eTasks,
-                'leaves_this_year'      => $eLeaves,
+                'tasks_count' => $eTasks,
+                'leaves_this_year' => $eLeaves,
             ];
 
             $todayAttendanceRecord = Attendance::query()
@@ -553,6 +563,7 @@ class DashboardController extends Controller
             $todayAttendanceStatus = 'Absent';
             $todayAttendanceNote = 'No check-in found for today';
             $todayLateMinutes = 0;
+            $todayApprovedLateIn = Leave::findApprovedLateInForDate($user->id, Carbon::today()->toDateString());
 
             if ($todayAttendanceRecord) {
                 $todayAttendanceStatus = $todayAttendanceRecord->status
@@ -561,20 +572,25 @@ class DashboardController extends Controller
                 $todayAttendanceNote = $todayAttendanceRecord->note ?: 'Attendance recorded';
 
                 if ($todayAttendanceRecord->check_in && $todayAttendanceRecord->attendence_setting && $todayAttendanceRecord->shift) {
-                    $lateThreshold = Carbon::parse(Carbon::today()->toDateString() . ' ' . $todayAttendanceRecord->shift->start_time)
+                    $lateThreshold = Carbon::parse(Carbon::today()->toDateString().' '.$todayAttendanceRecord->shift->start_time)
                         ->addMinutes((int) $todayAttendanceRecord->attendence_setting->time_after_checkin);
-                    $actualCheckIn = Carbon::parse(Carbon::today()->toDateString() . ' ' . $todayAttendanceRecord->check_in);
+                    $actualCheckIn = Carbon::parse(Carbon::today()->toDateString().' '.$todayAttendanceRecord->check_in);
 
-                    if ($actualCheckIn->gt($lateThreshold)) {
+                    if ($actualCheckIn->gt($lateThreshold) && ! $todayApprovedLateIn) {
                         $todayAttendanceStatus = 'Late';
                         $todayLateMinutes = $actualCheckIn->diffInMinutes($lateThreshold);
-                        $todayAttendanceNote = 'Checked in ' . $todayLateMinutes . ' min late';
+                        $todayAttendanceNote = 'Checked in '.$todayLateMinutes.' min late';
                     } elseif (blank($todayAttendanceRecord->status)) {
                         $todayAttendanceStatus = 'Present';
                     }
                 }
+                if ($todayApprovedLateIn) {
+                    $todayAttendanceStatus = 'Present';
+                    $todayAttendanceNote = 'Approved Late In (until '.Carbon::parse($todayApprovedLateIn->leave_time)->format('h:i A').')';
+                }
             } else {
                 $todayApprovedLeave = Leave::query()
+                    ->with('leave_type')
                     ->where('user_id', $user->id)
                     ->where('status', 'approved')
                     ->whereDate('start_date', '<=', Carbon::today()->toDateString())
@@ -586,7 +602,7 @@ class DashboardController extends Controller
                     ->whereDate('end_date', '>=', Carbon::today()->toDateString())
                     ->first();
 
-                if ($todayApprovedLeave) {
+                if ($todayApprovedLeave && ! $todayApprovedLeave->leave_type?->exempts_late_deduction) {
                     $todayAttendanceStatus = 'On Leave';
                     $todayAttendanceNote = $todayApprovedLeave->reason ?: 'Approved leave for today';
                 } elseif ($todayHoliday) {
@@ -625,7 +641,7 @@ class DashboardController extends Controller
 
                     return (object) [
                         'dot_class' => 'bg-indigo-500',
-                        'title' => $log->description ?: ('Task updated - ' . (optional($log->task)->title ?? 'Untitled task')),
+                        'title' => $log->description ?: ('Task updated - '.(optional($log->task)->title ?? 'Untitled task')),
                         'subtitle' => optional($log->task)->title ?: 'Task activity',
                         'badge' => Str::limit($statusName, 18),
                         'badge_class' => 'bg-indigo-100 text-indigo-700',
@@ -649,8 +665,8 @@ class DashboardController extends Controller
 
                     return (object) [
                         'dot_class' => 'bg-amber-500',
-                        'title' => 'Leave request - ' . ($leave->leave_type->name ?? 'General Leave'),
-                        'subtitle' => Carbon::parse($leave->start_date)->format('d M') . ' to ' . Carbon::parse($leave->end_date)->format('d M'),
+                        'title' => 'Leave request - '.($leave->leave_type->name ?? 'General Leave'),
+                        'subtitle' => Carbon::parse($leave->start_date)->format('d M').' to '.Carbon::parse($leave->end_date)->format('d M'),
                         'badge' => $status,
                         'badge_class' => $badgeClass,
                         'created_at' => $leave->created_at,
@@ -676,8 +692,8 @@ class DashboardController extends Controller
 
                     return (object) [
                         'dot_class' => 'bg-emerald-500',
-                        'title' => 'Support ticket - ' . Str::limit((string) $ticket->title, 42),
-                        'subtitle' => 'Priority: ' . ucfirst((string) ($ticket->priority ?: 'normal')),
+                        'title' => 'Support ticket - '.Str::limit((string) $ticket->title, 42),
+                        'subtitle' => 'Priority: '.ucfirst((string) ($ticket->priority ?: 'normal')),
                         'badge' => $status,
                         'badge_class' => $badgeClass,
                         'created_at' => $ticket->created_at,
@@ -746,52 +762,87 @@ class DashboardController extends Controller
                 ->first();
         }
 
-        // ── Payment Schedule (Today / Upcoming 7 Days) ────────────────────────
-        $scheduleFilter = $request->input('schedule_filter', 'today');
+        // ── Payment Schedule (Today / Overdue / Upcoming 7 Days) ─────────────────────
+        $scheduleFilter = in_array($request->input('schedule_filter'), ['today', 'overdue', '7days'], true)
+            ? $request->input('schedule_filter')
+            : 'today';
 
         $buildScheduleQuery = function (string $type) use ($scheduleFilter) {
-            $q = PaymentSchedule::with('projectCategory')->where('type', $type);
-            if ($scheduleFilter === '7days') {
-                $rangeEnd = Carbon::today()->addDays(6)->toDateString();
-                $q->where(function ($inner) use ($rangeEnd) {
-                    $inner->where(function ($i2) use ($rangeEnd) {
-                        $i2->whereBetween('scheduled_date', [Carbon::today()->toDateString(), $rangeEnd])
-                            ->whereIn('status', ['pending', 'approved']);
-                    })->orWhere('status', 'overdue');
-                });
+            $q = PaymentSchedule::with(['projectCategory', 'party:id,name,employee_id_no'])
+                ->where('type', $type)
+                ->whereIn('status', PaymentSchedule::OPEN_STATUSES);
+
+            if ($scheduleFilter === 'overdue') {
+                $q->whereDate('scheduled_date', '<', Carbon::today());
+            } elseif ($scheduleFilter === '7days') {
+                $q->whereBetween('scheduled_date', [
+                    Carbon::tomorrow()->toDateString(),
+                    Carbon::today()->addDays(7)->toDateString(),
+                ]);
             } else {
-                $q->where(function ($inner) {
-                    $inner->where(function ($i2) {
-                        $i2->whereDate('scheduled_date', Carbon::today())
-                            ->whereIn('status', ['pending', 'approved']);
-                    })->orWhere('status', 'overdue');
-                });
+                $q->whereDate('scheduled_date', Carbon::today());
             }
+
             return $q->orderByRaw("FIELD(priority,'high','medium','low')")
-                     ->orderBy('scheduled_date')
-                     ->get();
+                ->orderBy('scheduled_date')
+                ->get();
         };
 
-        $dashboardPayable    = $buildScheduleQuery('pay');
+        $dashboardPayable = $buildScheduleQuery('pay');
         $dashboardReceivable = $buildScheduleQuery('receive');
 
+        $todayDate = Carbon::today()->toDateString();
+        $tomorrowDate = Carbon::tomorrow()->toDateString();
+        $upcomingEndDate = Carbon::today()->addDays(7)->toDateString();
+        $scheduleCountRow = PaymentSchedule::whereIn('status', PaymentSchedule::OPEN_STATUSES)
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_count', [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'pay' AND scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_pay", [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'receive' AND scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_receive", [$todayDate])
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date < ? THEN 1 ELSE 0 END), 0) AS overdue_count', [$todayDate])
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date BETWEEN ? AND ? THEN 1 ELSE 0 END), 0) AS upcoming_count', [$tomorrowDate, $upcomingEndDate])
+            ->first();
+        $scheduleTabCounts = [
+            'today' => (int) $scheduleCountRow->today_count,
+            'today_pay' => (int) $scheduleCountRow->today_pay,
+            'today_receive' => (int) $scheduleCountRow->today_receive,
+            'overdue' => (int) $scheduleCountRow->overdue_count,
+            '7days' => (int) $scheduleCountRow->upcoming_count,
+        ];
+
         // ── Paid / Received Payments (Today or Last 7 Days) ───────────────────
-        $buildPaidQuery = function (string $type) use ($scheduleFilter) {
-            $q = PaymentSchedule::where('type', $type)->where('status', 'paid');
-            if ($scheduleFilter === '7days') {
+        $historyFilter = in_array($request->input('history_filter'), ['today', '7days', '30days', 'all'], true)
+            ? $request->input('history_filter')
+            : 'today';
+
+        $buildPaidQuery = function (string $type) use ($historyFilter) {
+            $q = PaymentSchedule::with('party:id,name,employee_id_no')->where('type', $type)->where('status', 'paid');
+            if ($historyFilter === '7days') {
                 $rangeStart = Carbon::today()->subDays(6)->toDateString();
                 $q->whereBetween('paid_date', [$rangeStart, Carbon::today()->toDateString()]);
-            } else {
+            } elseif ($historyFilter === '30days') {
+                $rangeStart = Carbon::today()->subDays(29)->toDateString();
+                $q->whereBetween('paid_date', [$rangeStart, Carbon::today()->toDateString()]);
+            } elseif ($historyFilter === 'today') {
                 $q->whereDate('paid_date', Carbon::today());
             }
-            return $q->orderByDesc('paid_date')->get();
+
+            return $q->orderByDesc('paid_date')->orderByDesc('id')->get();
         };
 
-        $dashboardPaidPayments    = $buildPaidQuery('pay');
+        $dashboardPaidPayments = $buildPaidQuery('pay');
         $dashboardPaidReceivables = $buildPaidQuery('receive');
 
         // ── Office Todos Stats ────────────────────────────────────────────────
         $todoCarbonToday = Carbon::today();
+
+        // Same counts todoList() already returns to the AJAX refresh. Without
+        // them the checklist progress chip only appeared after the first status
+        // update, never on the initial page render. Leaf rows only — a parent is
+        // just a heading for its sub-items, so counting both inflates the total.
+        $dashChecklistCount = [
+            'checklists as checklists_total' => fn ($q) => $q->leafOnly(),
+            'checklists as checklists_checked' => fn ($q) => $q->leafOnly()->where('is_checked', true),
+        ];
 
         if ($user->hasRole('employee')) {
             $myAssigneeRows = OfficeTodoAssignee::where('user_id', $user->id)->get();
@@ -800,9 +851,9 @@ class DashboardController extends Controller
                 ->whereIn('status', ['pending', 'in_progress'])
                 ->whereHas('todo', function ($q) use ($todoCarbonToday) {
                     $q->where('priority', 'high')
-                      ->where(function ($q2) use ($todoCarbonToday) {
-                          $q2->whereNull('due_date')->orWhereDate('due_date', '<=', $todoCarbonToday);
-                      });
+                        ->where(function ($q2) use ($todoCarbonToday) {
+                            $q2->whereNull('due_date')->orWhereDate('due_date', '<=', $todoCarbonToday);
+                        });
                 })
                 ->count();
 
@@ -822,13 +873,13 @@ class DashboardController extends Controller
                 ->count();
 
             $todoStats = [
-                'total'          => $myAssigneeRows->count(),
-                'pending'        => $myAssigneeRows->where('status', 'pending')->count(),
-                'in_progress'    => $myAssigneeRows->where('status', 'in_progress')->count(),
-                'completed'      => $myAssigneeRows->where('status', 'completed')->count(),
-                'urgent'         => $urgentCount,
-                'high'           => $highCount,
-                'medium_week'    => $mediumWeekCount,
+                'total' => $myAssigneeRows->count(),
+                'pending' => $myAssigneeRows->where('status', 'pending')->count(),
+                'in_progress' => $myAssigneeRows->where('status', 'in_progress')->count(),
+                'completed' => $myAssigneeRows->where('status', 'completed')->count(),
+                'urgent' => $urgentCount,
+                'high' => $highCount,
+                'medium_week' => $mediumWeekCount,
                 'resolved_today' => $resolvedTodayCount,
             ];
 
@@ -838,6 +889,7 @@ class DashboardController extends Controller
                     'department:id,name',
                     'assignees' => fn ($q) => $q->where('users.id', $user->id),
                 ])
+                ->withCount($dashChecklistCount)
                 ->whereIn('status', ['pending', 'in_progress'])
                 ->orderByRaw("FIELD(priority, 'high', 'medium', 'low')")
                 ->orderBy('created_at', 'desc')
@@ -874,17 +926,18 @@ class DashboardController extends Controller
                 ->count();
 
             $todoStats = [
-                'total'          => OfficeTodo::count(),
-                'pending'        => OfficeTodo::where('status', 'pending')->count(),
-                'in_progress'    => OfficeTodo::where('status', 'in_progress')->count(),
-                'completed'      => OfficeTodo::where('status', 'completed')->count(),
-                'urgent'         => $urgentCount,
-                'high'           => $highCount,
-                'medium_week'    => $mediumWeekCount,
+                'total' => OfficeTodo::count(),
+                'pending' => OfficeTodo::where('status', 'pending')->count(),
+                'in_progress' => OfficeTodo::where('status', 'in_progress')->count(),
+                'completed' => OfficeTodo::where('status', 'completed')->count(),
+                'urgent' => $urgentCount,
+                'high' => $highCount,
+                'medium_week' => $mediumWeekCount,
                 'resolved_today' => $resolvedTodayCount,
             ];
 
             $todoActiveIssues = OfficeTodo::with(['creator:id,name', 'department:id,name', 'assignees:id,name,image'])
+                ->withCount($dashChecklistCount)
                 ->whereIn('status', ['pending', 'in_progress'])
                 ->orderByRaw("FIELD(priority, 'high', 'medium', 'low')")
                 ->orderBy('created_at', 'desc')
@@ -924,12 +977,11 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
-       
         $banks = Bank::where('status', 1)->orderBy('name')->get();
 
         // ── Portal Account Wallets ────────────────────────────────────────────
         $mtdStart = Carbon::today()->startOfMonth()->toDateString();
-        $mtdEnd   = Carbon::today()->toDateString();
+        $mtdEnd = Carbon::today()->toDateString();
 
         $portalWallets = Portal::whereNull('deleted_at')
             ->orderBy('name')
@@ -941,15 +993,15 @@ class DashboardController extends Controller
                     ->count();
 
                 return (object) [
-                    'id'         => $portal->id,
-                    'name'       => $portal->name,
-                    'type'       => $portal->type,
-                    'status'     => $portal->status,
+                    'id' => $portal->id,
+                    'name' => $portal->name,
+                    'type' => $portal->type,
+                    'status' => $portal->status,
                     'next_payment_date' => $portal->next_payment_date,
                     'next_payment_amount' => $portal->next_payment_amount,
-                    'balance'    => (float) $portal->total_used,
-                    'mtd_tickets'=> $mtdTickets,
-                    'synced_at'  => $portal->updated_at,
+                    'balance' => (float) $portal->total_used,
+                    'mtd_tickets' => $mtdTickets,
+                    'synced_at' => $portal->updated_at,
                 ];
             });
 
@@ -966,7 +1018,7 @@ class DashboardController extends Controller
                 // cannot throw: on a server whose dm_renewal_payments migration
                 // has not run it returns the list untouched, which is exactly how
                 // the Renewal Center behaved before it existed.
-                $dmAccesses = \App\Models\DmRenewalPayment::withoutSettled($accessItems, \App\Models\DmRenewalPayment::SUBSCRIPTION);
+                $dmAccesses = DmRenewalPayment::withoutSettled($accessItems, DmRenewalPayment::SUBSCRIPTION);
             }
 
             // Documents mirrors Subscriptions: lapsed *and* still-upcoming
@@ -974,7 +1026,7 @@ class DashboardController extends Controller
             $documentItems = $dmService->fetchExpiredDocuments(1, 200, ['scope' => 'all']);
             if (is_array($documentItems)) {
                 $dmDocuments = $this->sortDmDocumentsUpcomingFirst(
-                    \App\Models\DmRenewalPayment::withoutSettled($documentItems, \App\Models\DmRenewalPayment::DOCUMENT)
+                    DmRenewalPayment::withoutSettled($documentItems, DmRenewalPayment::DOCUMENT)
                 );
             }
 
@@ -992,17 +1044,21 @@ class DashboardController extends Controller
             $monthDocuments = $dmService->fetchExpiredDocuments(1, 200, $monthWindow);
 
             $dmAllItems = $this->buildDmRenewalDigest(
-                \App\Models\DmRenewalPayment::withoutSettled(is_array($monthAccesses) ? $monthAccesses : [], \App\Models\DmRenewalPayment::SUBSCRIPTION),
-                \App\Models\DmRenewalPayment::withoutSettled(is_array($monthDocuments) ? $monthDocuments : [], \App\Models\DmRenewalPayment::DOCUMENT),
+                DmRenewalPayment::withoutSettled(is_array($monthAccesses) ? $monthAccesses : [], DmRenewalPayment::SUBSCRIPTION),
+                DmRenewalPayment::withoutSettled(is_array($monthDocuments) ? $monthDocuments : [], DmRenewalPayment::DOCUMENT),
                 $monthStart,
                 $monthEnd
             );
         } catch (\Throwable $e) {
-            logger()->warning('Failed to fetch DM renewal data: ' . $e->getMessage());
+            logger()->warning('Failed to fetch DM renewal data: '.$e->getMessage());
         }
 
+        $manualAttendancePendingCount = 0;
+        if (($user->is_super_admin || $user->hasRole('super admin')) && Schema::hasTable('manual_attendance_requests')) {
+            $manualAttendancePendingCount = ManualAttendanceRequest::where('status', 'pending')->count();
+        }
 
-        return view('panel.dashboard.index', compact('reportData', 'selectedDate', 'total_liability', 'total_payable', 'total_receivable', 'total_bank_balance', 'total_office_cash', 'total_income', 'total_expense', 'total_profit', 'task_total', 'task_completed', 'task_due_today', 'task_overdue', 'taskWeeklyLabels', 'taskWeeklyCreatedData', 'taskWeeklyCompletedData', 'taskMonthlyLabels', 'taskMonthlyCreatedData', 'taskMonthlyCompletedData', 'monthlyIncomeLabels', 'monthlyIncomeData', 'monthlyExpenseData', 'selectedYear', 'selectedMonth', 'period', 'startDate', 'endDate', 'users', 'companies', 'shifts', 'employees', 'notices', 'profile', 'employeeStats', 'employeeRecentActivities', 'employeeDueTasks', 'employeeTodayAttendance', 'employeeUpcomingLeave', 'employeeUpcomingHoliday', 'employeeLatestTaskBoardId', 'todayPresentCount', 'monthAttendanceRate', 'monthAbsentCount', 'monthLeaveCount', 'todayAbsentCount', 'todayLeaveCount', 'totalEmployees', 'scheduleFilter', 'dashboardPayable', 'dashboardReceivable', 'dashboardPaidPayments', 'dashboardPaidReceivables', 'todoStats', 'todoUpcoming', 'todoActiveIssues', 'departments',
+        return view('panel.dashboard.index', compact('reportData', 'selectedDate', 'total_liability', 'total_payable', 'total_receivable', 'total_bank_balance', 'total_office_cash', 'total_income', 'total_expense', 'total_profit', 'task_total', 'task_completed', 'task_due_today', 'task_overdue', 'taskWeeklyLabels', 'taskWeeklyCreatedData', 'taskWeeklyCompletedData', 'taskMonthlyLabels', 'taskMonthlyCreatedData', 'taskMonthlyCompletedData', 'monthlyIncomeLabels', 'monthlyIncomeData', 'monthlyExpenseData', 'selectedYear', 'selectedMonth', 'period', 'startDate', 'endDate', 'users', 'companies', 'shifts', 'employees', 'notices', 'profile', 'employeeStats', 'employeeRecentActivities', 'employeeDueTasks', 'employeeTodayAttendance', 'employeeUpcomingLeave', 'employeeUpcomingHoliday', 'employeeLatestTaskBoardId', 'todayPresentCount', 'monthAttendanceRate', 'monthAbsentCount', 'monthLeaveCount', 'todayAbsentCount', 'todayLeaveCount', 'totalEmployees', 'scheduleFilter', 'scheduleTabCounts', 'historyFilter', 'dashboardPayable', 'dashboardReceivable', 'dashboardPaidPayments', 'dashboardPaidReceivables', 'todoStats', 'todoUpcoming', 'todoActiveIssues', 'departments', 'manualAttendancePendingCount',
             'pipelineCount', 'pipelineByStage', 'pipelineLeads',
             'ongoingCount', 'ongoingProjects', 'dmAccesses', 'dmDocuments', 'dmAllItems', 'banks', 'portalWallets'));
     }
@@ -1011,10 +1067,6 @@ class DashboardController extends Controller
      * Merge DM subscriptions and document renewals into one current-month list
      * for the Renewal Center's "All" view. Overdue rows come first (most
      * overdue at the top), then the rest of the month by nearest due date.
-     *
-     * @param array $accesses
-     * @param array $documents
-     * @return array
      */
     private function buildDmRenewalDigest(array $accesses, array $documents, Carbon $monthStart, Carbon $monthEnd): array
     {
@@ -1066,8 +1118,8 @@ class DashboardController extends Controller
             }
 
             $title = data_get($document, 'documents.title') ?: data_get($document, 'title') ?: 'Untitled';
-            $documentType = data_get($document, 'document_type.name') ?: ('Type #' . (data_get($document, 'document_type_id') ?: '—'));
-            $documentCategory = data_get($document, 'document_category.name') ?: ('Category #' . (data_get($document, 'document_category_id') ?: '—'));
+            $documentType = data_get($document, 'document_type.name') ?: ('Type #'.(data_get($document, 'document_type_id') ?: '—'));
+            $documentCategory = data_get($document, 'document_category.name') ?: ('Category #'.(data_get($document, 'document_category_id') ?: '—'));
             $created = $this->parseDmDate(data_get($document, 'created_date') ?: data_get($document, 'documents.created_date'));
             $createdText = $created ? $created->format('d M Y') : '—';
 
@@ -1114,9 +1166,6 @@ class DashboardController extends Controller
      * real data — the live set carries stale and mistyped dates (a year 0025
      * row, several from 2010-2022) which would head the block and push anything
      * actionable out of view. Rows without a usable date go last of all.
-     *
-     * @param array $documents
-     * @return array
      */
     private function sortDmDocumentsUpcomingFirst(array $documents): array
     {
@@ -1171,16 +1220,16 @@ class DashboardController extends Controller
             $daysLabel = 'Expired';
         } elseif ($daysLeft <= 7) {
             $priority = 'high';
-            $daysLabel = $daysLeft . 'd';
+            $daysLabel = $daysLeft.'d';
         } else {
             $priority = 'medium';
-            $daysLabel = $daysLeft . 'd';
+            $daysLabel = $daysLeft.'d';
         }
 
         return array_merge($item, [
             'priority' => $priority,
             'priority_label' => ucfirst($priority),
-            'days_class' => 'rn-days-' . $priority,
+            'days_class' => 'rn-days-'.$priority,
             'days_label' => $daysLabel,
             'due_text' => $due->format('d M Y'),
             'due_sort' => $due->timestamp,
@@ -1237,29 +1286,29 @@ class DashboardController extends Controller
         $today = Carbon::today();
 
         $data = $issues->map(function ($issue) use ($today) {
-            $due     = $issue->due_date;
+            $due = $issue->due_date;
             $overdue = $due && $due->lt($today);
-            $urgent  = $issue->priority === 'high' && ($overdue || ($due && $due->isToday()));
+            $urgent = $issue->priority === 'high' && ($overdue || ($due && $due->isToday()));
 
             $assignees = $issue->assignees->map(fn ($a) => [
-                'id'    => $a->id,
-                'name'  => $a->name,
+                'id' => $a->id,
+                'name' => $a->name,
                 'image' => $a->image ? asset($a->image) : null,
             ])->values()->toArray();
 
             return [
-                'id'                 => $issue->id,
-                'title'              => $issue->title,
-                'priority'           => $issue->priority ?? 'low',
-                'status'             => $issue->status ?? 'pending',
-                'urgent'             => $urgent,
-                'is_self'            => (bool) $issue->is_self,
-                'creator'            => optional($issue->creator)->name ?? 'Unknown',
-                'department'         => optional($issue->department)->name,
-                'time_ago'           => $issue->created_at ? $issue->created_at->diffForHumans() : '',
-                'due_date'           => $due ? $due->format('Y-m-d') : null,
-                'assignees'          => $assignees,
-                'checklists_total'   => (int) $issue->checklists_total,
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'priority' => $issue->priority ?? 'low',
+                'status' => $issue->status ?? 'pending',
+                'urgent' => $urgent,
+                'is_self' => (bool) $issue->is_self,
+                'creator' => optional($issue->creator)->name ?? 'Unknown',
+                'department' => optional($issue->department)->name,
+                'time_ago' => $issue->created_at ? $issue->created_at->diffForHumans() : '',
+                'due_date' => $due ? $due->format('Y-m-d') : null,
+                'assignees' => $assignees,
+                'checklists_total' => (int) $issue->checklists_total,
                 'checklists_checked' => (int) $issue->checklists_checked,
             ];
         });

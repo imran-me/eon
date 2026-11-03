@@ -10,7 +10,7 @@
                 </div>
                 <div>
                     <h3 class="text-base font-bold text-white">Add New Bank</h3>
-                    <p class="text-xs text-indigo-100">Register a bank, mobile banking, digital wallet or cash account</p>
+                    <p class="text-xs text-indigo-100">Register a bank, credit card, mobile banking, digital wallet or cash account</p>
                 </div>
             </div>
             <button class="modal-close-create w-8 h-8 flex items-center justify-center rounded-lg bg-white/20 hover:bg-white/30 text-white transition">
@@ -51,11 +51,15 @@
                                 <select id="create_company_id" name="company_id" required
                                     class="w-full text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 select2" style="width:100%">
                                     <option value="">-- Select Company --</option>
+                                    @if($canViewAllBanks)
+                                        <option value="shared" {{ old('company_id') === 'shared' ? 'selected' : '' }}>GROUP / SHARED — All Companies</option>
+                                    @endif
                                     @foreach ($companies as $company)
                                         <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>{{ $company->name }}</option>
                                     @endforeach
                                 </select>
                                 <p id="create_company_id_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select a company</p>
+                                @if($canViewAllBanks)<p class="mt-1 text-[10px] leading-4 text-amber-600">Shared accounts are available to transactions from every company. Use only for centrally managed group funds.</p>@endif
                             </div>
                             <div>
                                 <label for="create_type" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
@@ -65,6 +69,7 @@
                                     class="w-full text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 select2" style="width:100%">
                                     <option value="">-- Select Type --</option>
                                     <option value="bank" {{ old('type') == 'bank' ? 'selected' : '' }}>Bank</option>
+                                    <option value="credit_card" {{ old('type') == 'credit_card' ? 'selected' : '' }}>Credit Card</option>
                                     <option value="cash" {{ old('type') == 'cash' ? 'selected' : '' }}>Cash</option>
                                     <option value="mobile_banking" {{ old('type') == 'mobile_banking' ? 'selected' : '' }}>Mobile Banking</option>
                                     <option value="digital_wallet" {{ old('type') == 'digital_wallet' ? 'selected' : '' }}>Digital Wallet</option>
@@ -126,7 +131,7 @@
                                     @foreach ($accounts as $account)
                                     {{-- Code first: several accounts share a name (Office Cash / OFFICE CASH),
                                          and the code is the only thing that tells them apart. --}}
-                                    <option value="{{ $account->id }}" {{ old('account_id') == $account->id ? 'selected' : '' }}>{{ $account->code }} — {{ $account->name }} ({{ $account->type }})</option>
+                                    <option value="{{ $account->id }}" data-ledger-type="{{ $account->type }}" {{ old('account_id') == $account->id ? 'selected' : '' }}>{{ $account->code }} — {{ $account->name }} ({{ $account->type }})</option>
                                     @endforeach
                                 </select>
                                 <p class="text-gray-400 text-[11px] mt-1">A new ledger account will be created under this as its parent group.</p>
@@ -150,6 +155,8 @@
                                     <option value="savings" {{ old('account_type') == 'savings' ? 'selected' : '' }}>Savings</option>
                                     <option value="current" {{ old('account_type') == 'current' ? 'selected' : '' }}>Current</option>
                                     <option value="fixed" {{ old('account_type') == 'fixed' ? 'selected' : '' }}>Fixed</option>
+                                    <option value="credit_card" {{ old('account_type') == 'credit_card' ? 'selected' : '' }}>Credit Card</option>
+                                    <option value="personal" {{ old('account_type') == 'personal' ? 'selected' : '' }}>Personal</option>
                                 </select>
                                 <p id="create_account_type_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please select an account type</p>
                             </div>
@@ -168,11 +175,20 @@
                             </div>
                             <div>
                                 <label for="create_balance" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
-                                    Initial Balance <span class="text-red-500">*</span>
+                                    Opening Balance <span class="text-red-500">*</span>
                                 </label>
                                 <input type="text" id="create_balance" name="balance" placeholder="Enter an amount"
                                     class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 transition">
                                 <p id="create_balance_msg" class="text-red-500 text-xs mt-1 hidden error-message">Please enter an amount</p>
+                            </div>
+                            <div>
+                                <label for="create_opening_balance_date" class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">
+                                    Opening Balance Date
+                                </label>
+                                <input type="date" id="create_opening_balance_date" name="opening_balance_date"
+                                    value="{{ old('opening_balance_date', now()->toDateString()) }}" max="{{ now()->toDateString() }}"
+                                    class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50 transition">
+                                <p id="create_opening_balance_date_msg" class="text-red-500 text-xs mt-1 hidden error-message">Select the date when this opening balance applied</p>
                             </div>
                         </div>
                     </div>

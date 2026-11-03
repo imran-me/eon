@@ -7,6 +7,7 @@
     @include('dashboard.ticket_purchases.create-css')
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
 
     <div class="states-table bg-white rounded-lg shadow-md overflow-hidden" style="margin-top: 0">
         <div class="states-table-container">
@@ -72,6 +73,10 @@
                             <div class="mb-2">
                                 <label for="ticket_no" class="block text-gray-700 text-sm font-bold mb-2">Ticket No*</label>
                                 <input type="text" name="ticket_no" required value="{{ $ticketNo }}" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-2">
+                                <label for="name_ticket_no" class="block text-gray-700 text-sm font-bold mb-2">Name Ticket No.</label>
+                                <input type="text" id="name_ticket_no" name="name_ticket_no" maxlength="100" value="{{ old('name_ticket_no') }}" placeholder="e.g. 997-2345678901" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>                            
                             <div class="mb-2">
                                 <label for="attachment" class="block text-gray-700 text-sm font-bold mb-2">Attachment</label>
@@ -170,9 +175,7 @@
                                             <label for="bank_id" class="block text-sm font-medium text-gray-700 mb-1"><strong>Payment Account</strong></label>
                                             <select name="bank_id" id="bank_id" class="form-control select2" style="width: 100%">
                                                 <option value="">Select</option>
-                                                @foreach ($banks as $bank)                                                    
-                                                    <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                                @endforeach
+                                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                                             </select>
                                         </div>
                                     </div>
@@ -197,6 +200,13 @@
                             </div>                                                        
                         </div>
                         
+                        <!-- Route Legs -->
+                        <div class="section-divider pt-4 pb-2 flex items-center justify-between">
+                            <h2 class="text-xl font-semibold text-gray-800">Route Legs <span class="text-sm font-normal text-gray-500">(optional — break a multi-city itinerary into priced segments)</span></h2>
+                            <button type="button" onclick="addLegRow()" class="btn btn-sm px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 text-sm"><i class="fas fa-plus mr-1"></i> Add Leg</button>
+                        </div>
+                        <div id="legsContainer" class="space-y-3 mb-4"></div>
+
                         <div class="flex justify-end pt-2">
                             <button id="createpurchaseBtn" type="button" class="btn btn-success px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-200" style="cursor: pointer">
                                 Submit
@@ -318,8 +328,8 @@
             calculatePaidAmount();
         }
 
-        function manageMethod() {      
-            var isBankSelected = $('#bank_id').val();        
+        function manageMethod() {
+            var isBankSelected = $('#bank_id').val();
             var isPortalSelected = $('#isPortalSelected').val();
             if (isPortalSelected) {
                 $('#bank_id').val('').trigger('change').prop('disabled', true);
@@ -328,5 +338,32 @@
             }
         }
 
-    </script>    
+        // ── Route legs ──────────────────────────────────────────────────
+        // Optional per-segment breakdown (e.g. DAC→BAH, BAH→IST) so a
+        // combined multi-city ticket can still report cost per leg.
+        let legIndex = 0;
+        function addLegRow(prefill) {
+            prefill = prefill || {};
+            const i = legIndex++;
+            const row = $(
+                '<div class="leg-row bg-gray-50 border border-gray-200 rounded-md p-3 grid grid-cols-1 md:grid-cols-6 gap-3 items-end" data-leg-index="' + i + '">' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">From</label>' +
+                        '<input type="text" name="legs[' + i + '][from_location]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" placeholder="e.g. DAC" value="' + (prefill.from_location || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">To</label>' +
+                        '<input type="text" name="legs[' + i + '][to_location]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" placeholder="e.g. IST" value="' + (prefill.to_location || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Travel Date</label>' +
+                        '<input type="text" data-dt name="legs[' + i + '][travel_date]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.travel_date || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Seat No</label>' +
+                        '<input type="text" name="legs[' + i + '][seat_number]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.seat_number || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Cost (৳)</label>' +
+                        '<input type="number" min="0" step="0.01" name="legs[' + i + '][cost]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.cost ?? '') + '"></div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<button type="button" onclick="$(this).closest(\'.leg-row\').remove()" class="text-red-600 hover:text-red-800 text-sm"><i class="fas fa-trash"></i> Remove</button>' +
+                    '</div>' +
+                '</div>'
+            );
+            $('#legsContainer').append(row);
+        }
+    </script>
+@include('partials.datetime-picker'){{-- date + optional time on operational date boxes (2026-09-30) --}}
 @endsection

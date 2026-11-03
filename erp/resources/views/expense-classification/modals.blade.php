@@ -145,18 +145,16 @@
                         <p id="cat_create_name_msg" class="text-red-500 text-xs mt-1 hidden">Please enter a name</p>
                     </div>
                     <div class="mb-4">
-                        <label for="cat_create_account_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Posts To Account</label>
-                        <select id="cat_create_account_id" name="account_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
-                            <option value="">— Not mapped —</option>
+                        <label for="cat_create_account_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Posts To Account <span class="text-red-500">*</span></label>
+                        <select id="cat_create_account_id" name="account_id" required class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">— Select expense account —</option>
                             @foreach($accounts as $account)
-                                <option value="{{ $account->id }}">[{{ $account->code }}] {{ $account->name }}</option>
+                                <option value="{{ $account->id }}" data-company="{{ $account->company_id }}">[{{ $account->code }}] {{ $account->name }}{{ $account->company ? ' · '.($account->company->short_name ?: $account->company->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
+                        <p id="cat_create_account_msg" class="text-red-500 text-xs mt-1 hidden">Please choose the expense account this category posts to</p>
                         <p class="text-[11px] text-gray-500 mt-1">
-                            <i class="fas fa-circle-info text-gray-400"></i> Every expense in this category is debited here.
-                            @if($fallbackAccount)
-                                Left unmapped it falls back to <span class="font-semibold">[{{ $fallbackAccount->code }}] {{ $fallbackAccount->name }}</span>.
-                            @endif
+                            <i class="fas fa-circle-info text-gray-400"></i> Every expense in this category is debited here. New categories cannot remain unmapped.
                         </p>
                     </div>
                     <div class="mb-4">
@@ -211,13 +209,14 @@
                         <p id="cat_edit_name_msg" class="text-red-500 text-xs mt-1 hidden">Please enter a name</p>
                     </div>
                     <div class="mb-4">
-                        <label for="cat_edit_account_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Posts To Account</label>
-                        <select id="cat_edit_account_id" name="account_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
-                            <option value="">— Not mapped —</option>
+                        <label for="cat_edit_account_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Posts To Account <span class="text-red-500">*</span></label>
+                        <select id="cat_edit_account_id" name="account_id" required class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                            <option value="">— Select expense account —</option>
                             @foreach($accounts as $account)
-                                <option value="{{ $account->id }}">[{{ $account->code }}] {{ $account->name }}</option>
+                                <option value="{{ $account->id }}" data-company="{{ $account->company_id }}">[{{ $account->code }}] {{ $account->name }}{{ $account->company ? ' · '.($account->company->short_name ?: $account->company->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
+                        <p id="cat_edit_account_msg" class="text-red-500 text-xs mt-1 hidden">Please choose the expense account this category posts to</p>
                     </div>
                     <div class="mb-4">
                         <label for="cat_edit_description" class="block text-sm font-semibold text-gray-700 mb-1.5">Description</label>
@@ -270,7 +269,7 @@
                         <select id="sub_create_expense_category_id" name="expense_category_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                             <option value="">— Select Category —</option>
                             @foreach($parentCategories as $parent)
-                                <option value="{{ $parent->id }}">{{ $parent->name }}</option>
+                                <option value="{{ $parent->id }}" data-company="{{ $parent->company_id }}">{{ $parent->name }}{{ $parent->company_id ? ' · '.($companies->firstWhere('id', $parent->company_id)?->short_name ?: $companies->firstWhere('id', $parent->company_id)?->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
                         <p id="sub_create_category_msg" class="text-red-500 text-xs mt-1 hidden">Please choose a parent category</p>
@@ -286,7 +285,7 @@
                         <select id="sub_create_account_id" name="account_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                             <option value="">— Use the category's account —</option>
                             @foreach($accounts as $account)
-                                <option value="{{ $account->id }}">[{{ $account->code }}] {{ $account->name }}</option>
+                                <option value="{{ $account->id }}" data-company="{{ $account->company_id }}">[{{ $account->code }}] {{ $account->name }}{{ $account->company ? ' · '.($account->company->short_name ?: $account->company->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
                         {{-- The narrower answer wins: a phone bill and a broadband bill are
@@ -348,7 +347,7 @@
                         <select id="sub_edit_expense_category_id" name="expense_category_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                             <option value="">— Select Category —</option>
                             @foreach($parentCategories as $parent)
-                                <option value="{{ $parent->id }}">{{ $parent->name }}</option>
+                                <option value="{{ $parent->id }}" data-company="{{ $parent->company_id }}">{{ $parent->name }}{{ $parent->company_id ? ' · '.($companies->firstWhere('id', $parent->company_id)?->short_name ?: $companies->firstWhere('id', $parent->company_id)?->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
                         <p id="sub_edit_category_msg" class="text-red-500 text-xs mt-1 hidden">Please choose a parent category</p>
@@ -364,7 +363,7 @@
                         <select id="sub_edit_account_id" name="account_id" class="cls-select2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
                             <option value="">— Use the category's account —</option>
                             @foreach($accounts as $account)
-                                <option value="{{ $account->id }}">[{{ $account->code }}] {{ $account->name }}</option>
+                                <option value="{{ $account->id }}" data-company="{{ $account->company_id }}">[{{ $account->code }}] {{ $account->name }}{{ $account->company ? ' · '.($account->company->short_name ?: $account->company->name) : ' · Shared' }}</option>
                             @endforeach
                         </select>
                         <p class="text-[11px] text-gray-500 mt-1">

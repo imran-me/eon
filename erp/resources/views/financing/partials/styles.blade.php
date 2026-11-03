@@ -145,10 +145,18 @@
     .fin-pager{ padding:1rem 1.25rem; border-top:1px solid var(--fin-line); }
 
     /* ── Modal ────────────────────────────────────────────────────────── */
+    /* align-items:center with no overflow on the overlay is a trap on a short
+       viewport (laptop screens ~650-720px tall): if a form grows taller than
+       92vh — a conditional field set like cheque details appearing — centering
+       pushes the box's top above the fold as well as its bottom below it, and
+       with nothing to scroll, the footer's Save button becomes unreachable.
+       flex-start + overflow-y:auto on the overlay itself is the fallback: the
+       box still centers fine on any screen tall enough, and on a short one the
+       whole overlay scrolls so every field and the footer stay reachable. */
     .fin-modal{ display:none; position:fixed; inset:0; background:rgb(17 24 39 / .5); z-index:1000;
-        align-items:center; justify-content:center; padding:1rem; }
+        align-items:flex-start; justify-content:center; padding:1rem; overflow-y:auto; }
     .fin-modal-box{ background:#fff; border-radius:1rem; width:100%; max-width:46rem; max-height:92vh;
-        overflow-y:auto; box-shadow:0 25px 50px -12px rgb(0 0 0 / .25); animation:finPop .16s ease-out; }
+        margin:2vh auto; overflow-y:auto; box-shadow:0 25px 50px -12px rgb(0 0 0 / .25); animation:finPop .16s ease-out; }
     @keyframes finPop{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
     .fin-modal-head{ padding:1.25rem 1.5rem; border-bottom:1px solid var(--fin-line); }
     .fin-modal-head h3{ margin:0; font-size:1.05rem; font-weight:800; color:#111827; }
@@ -174,6 +182,9 @@
         transition:border-color .15s, box-shadow .15s; }
     .fin-field input:focus,.fin-field select:focus,.fin-field textarea:focus{ border-color:#2563eb;
         box-shadow:0 0 0 3px rgb(37 99 235 / .12); }
+    .fin-time{ display:grid; grid-template-columns:1fr auto 1fr 1.15fr; gap:.35rem; align-items:center; }
+    .fin-time select{ min-width:0; padding-left:.45rem; padding-right:.35rem; }
+    .fin-time b{ color:#64748b; font-size:.875rem; }
     .fin-hint{ display:flex; gap:.5rem; align-items:flex-start; font-size:.78rem; color:#6b7280;
         background:#f9fafb; border:1px solid var(--fin-line); border-radius:.5rem; padding:.625rem .75rem;
         margin:0; line-height:1.6; }

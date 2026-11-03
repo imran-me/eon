@@ -188,6 +188,8 @@ class PurchaseController extends Controller
 
                     // Credit: Cash/Bank — only if payment was made
                     if ($data->paid_amount > 0 && $bank?->account_id) {
+                        Bank::assertCanCover((int) $bank->account_id, (float) $data->paid_amount, $bank->name);
+
                         $journalItems[] = [
                             'account_id' => $bank->account_id,
                             'debit'      => 0,
@@ -293,6 +295,10 @@ class PurchaseController extends Controller
 
             });
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $th->getMessage()
@@ -435,6 +441,8 @@ class PurchaseController extends Controller
 
                     // Credit: Cash/Bank — only if total paid_amount > 0
                     if ($data->paid_amount > 0 && $bank?->account_id) {
+                        Bank::assertCanCover((int) $bank->account_id, (float) $data->paid_amount, $bank->name);
+
                         $journalItems[] = [
                             'account_id' => $bank->account_id,
                             'debit'      => 0,
@@ -579,6 +587,10 @@ class PurchaseController extends Controller
                 }
             });
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return request()->ajax()
                 ? response()->json(['success' => false, 'message' => $th->getMessage()])
                 : redirect()->back()->with('error', $th->getMessage());

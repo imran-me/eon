@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Bank;
 use App\Models\Company;
 use App\Models\ContractFileSale;
-use App\Models\ContractFlightBooking;
+use App\Models\ContractFlightPassenger;
 use App\Models\EmployeeSalary;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
@@ -363,33 +363,53 @@ class CompanyDashboardController extends Controller
         $companies = Company::where('status', 1)->get();
 
         // ── Payment Schedules (company-filtered) ─────────────────────────────
-        $scheduleFilter = $request->input('schedule_filter', 'today');
+        $scheduleFilter = in_array($request->input('schedule_filter'), ['today', 'overdue', '7days'], true)
+            ? $request->input('schedule_filter')
+            : 'today';
         $companyId = $company->id;
 
         $buildCompanySchedule = function (string $type) use ($scheduleFilter, $companyId) {
             $q = PaymentSchedule::where('type', $type)
-                ->where('company_id', $companyId);
-            if ($scheduleFilter === '7days') {
-                $rangeEnd = Carbon::today()->addDays(6)->toDateString();
-                $q->where(function ($inner) use ($rangeEnd) {
-                    $inner->where(function ($i2) use ($rangeEnd) {
-                        $i2->whereBetween('scheduled_date', [Carbon::today()->toDateString(), $rangeEnd])
-                            ->whereIn('status', ['pending', 'approved']);
-                    })->orWhere('status', 'overdue');
-                });
+                ->where('company_id', $companyId)
+                ->whereIn('status', PaymentSchedule::OPEN_STATUSES);
+            if ($scheduleFilter === 'overdue') {
+                $q->whereDate('scheduled_date', '<', Carbon::today());
+            } elseif ($scheduleFilter === '7days') {
+                $q->whereBetween('scheduled_date', [
+                    Carbon::tomorrow()->toDateString(),
+                    Carbon::today()->addDays(7)->toDateString(),
+                ]);
             } else {
-                $q->where(function ($inner) {
-                    $inner->where(function ($i2) {
-                        $i2->whereDate('scheduled_date', Carbon::today())
-                            ->whereIn('status', ['pending', 'approved']);
-                    })->orWhere('status', 'overdue');
-                });
+                $q->whereDate('scheduled_date', Carbon::today());
             }
             return $q->orderBy('scheduled_date')->get();
         };
 
         $companyPayable    = $buildCompanySchedule('pay');
         $companyReceivable = $buildCompanySchedule('receive');
+
+        $todayDate = Carbon::today()->toDateString();
+        $tomorrowDate = Carbon::tomorrow()->toDateString();
+        $upcomingEndDate = Carbon::today()->addDays(7)->toDateString();
+        $companyScheduleCounts = PaymentSchedule::where('company_id', $companyId)
+            ->whereIn('status', PaymentSchedule::OPEN_STATUSES)
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_count', [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'pay' AND scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_pay", [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'receive' AND scheduled_date = ? THEN 1 ELSE 0 END), 0) AS today_receive", [$todayDate])
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date < ? THEN 1 ELSE 0 END), 0) AS overdue_count', [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'pay' AND scheduled_date < ? THEN 1 ELSE 0 END), 0) AS overdue_pay", [$todayDate])
+            ->selectRaw("COALESCE(SUM(CASE WHEN type = 'receive' AND scheduled_date < ? THEN 1 ELSE 0 END), 0) AS overdue_receive", [$todayDate])
+            ->selectRaw('COALESCE(SUM(CASE WHEN scheduled_date BETWEEN ? AND ? THEN 1 ELSE 0 END), 0) AS upcoming_count', [$tomorrowDate, $upcomingEndDate])
+            ->first();
+        $scheduleTabCounts = [
+            'today' => (int) $companyScheduleCounts->today_count,
+            'today_pay' => (int) $companyScheduleCounts->today_pay,
+            'today_receive' => (int) $companyScheduleCounts->today_receive,
+            'overdue' => (int) $companyScheduleCounts->overdue_count,
+            'overdue_pay' => (int) $companyScheduleCounts->overdue_pay,
+            'overdue_receive' => (int) $companyScheduleCounts->overdue_receive,
+            '7days' => (int) $companyScheduleCounts->upcoming_count,
+        ];
 
         // ── CRM Pipeline & Ongoing Projects (company-filtered) ────────────────
         $pipelineStatuses = ['new', 'contacted', 'qualified', 'proposal_sent', 'negotiation'];
@@ -438,16 +458,16 @@ class CompanyDashboardController extends Controller
             'ecommerceSalesByStatus', 'ecommercePurchaseByStatus',
             'recentEcommerceSales', 'recentEcommercePurchases',
             'topSellingProducts', 'topPurchasedProducts',
-            'scheduleFilter', 'companyPayable', 'companyReceivable',
+            'scheduleFilter', 'scheduleTabCounts', 'companyPayable', 'companyReceivable',
             'pipelineCount', 'pipelineByStage', 'pipelineLeads',
             'ongoingCount', 'ongoingProjects'
         ));
     }
 
     /**
-     * Travel's real revenue for a date range — sums the 4 sale-type tables
-     * (Ticket, Visa, Contract Flight, Contract File) instead of the generic
-     * Sale model, which Travel never uses.
+     * Travel's real revenue for a date range. Contract Flight revenue comes
+     * from passenger agent charges; the other lines come from their sale
+     * tables. Travel does not use the generic Sale model.
      */
     private function travelRevenue(int $companyId, string $fromDate, string $toDate): float
     {
@@ -455,22 +475,24 @@ class CompanyDashboardController extends Controller
                 ->whereBetween('sale_date', [$fromDate, $toDate])->sum('total_amount')
             + (float) VisaSale::where('company_id', $companyId)
                 ->whereBetween('voucher_date', [$fromDate, $toDate])->sum('total_amount')
-            + (float) ContractFlightBooking::where('company_id', $companyId)
-                ->whereBetween('created_at', ["{$fromDate} 00:00:00", "{$toDate} 23:59:59"])
-                ->sum('total_amount')
+            + (float) $this->contractFlightCharges($companyId)
+                ->whereBetween('contract_flight_passengers.created_at', ["{$fromDate} 00:00:00", "{$toDate} 23:59:59"])
+                ->sum('agent_price')
             + (float) ContractFileSale::where('company_id', $companyId)
-                ->whereBetween('sale_date', [$fromDate, $toDate])->sum('total_amount');
+                ->whereBetween('sale_date', [$fromDate, $toDate])->sum('total_amount')
+            + (float) \App\Services\ContractFileReporting::revenue($companyId)
+                ->whereBetween('j.date', [$fromDate, $toDate])->sum(DB::raw('i.credit - i.debit'));
     }
 
     /**
-     * Per-type breakdown (count + amount) of Travel's 4 revenue lines for a date range.
+     * Per-type breakdown (count + amount) of Travel's revenue lines for a date range.
      */
     private function travelSalesByType(int $companyId, string $fromDate, string $toDate): array
     {
         $ticket = TicketSale::where('company_id', $companyId)->whereBetween('sale_date', [$fromDate, $toDate]);
         $visa = VisaSale::where('company_id', $companyId)->whereBetween('voucher_date', [$fromDate, $toDate]);
-        $flight = ContractFlightBooking::where('company_id', $companyId)
-            ->whereBetween('created_at', ["{$fromDate} 00:00:00", "{$toDate} 23:59:59"]);
+        $flight = $this->contractFlightCharges($companyId)
+            ->whereBetween('contract_flight_passengers.created_at', ["{$fromDate} 00:00:00", "{$toDate} 23:59:59"]);
         $file = ContractFileSale::where('company_id', $companyId)->whereBetween('sale_date', [$fromDate, $toDate]);
 
         return [
@@ -485,35 +507,40 @@ class CompanyDashboardController extends Controller
                 'amount' => (float) (clone $visa)->sum('total_amount'),
             ],
             'contract_flight' => [
-                'label'  => 'Contract Flight Bookings',
+                'label'  => 'Contract Flight Agent Charges',
                 'count'  => (clone $flight)->count(),
-                'amount' => (float) (clone $flight)->sum('total_amount'),
+                'amount' => (float) (clone $flight)->sum('agent_price'),
             ],
             'contract_file' => [
-                'label'  => 'Contract File Sales',
-                'count'  => (clone $file)->count(),
-                'amount' => (float) (clone $file)->sum('total_amount'),
+                'label'  => 'Contract File Charges',
+                'count'  => (clone $file)->count() + \App\Services\ContractFileReporting::revenue($companyId)
+                    ->whereBetween('j.date', [$fromDate, $toDate])->where('j.source', 'contract_file_client')->distinct()->count('j.source_id'),
+                'amount' => (float) (clone $file)->sum('total_amount') + (float) \App\Services\ContractFileReporting::revenue($companyId)
+                    ->whereBetween('j.date', [$fromDate, $toDate])->sum(DB::raw('i.credit - i.debit')),
             ],
         ];
     }
 
     /**
      * Travel's revenue grouped by calendar month for the year-long trend chart,
-     * merged across the 4 sale-type tables. Returns a plain 1-12 keyed array.
+     * merged across the Travel revenue sources. Returns a plain 1-12 keyed array.
      */
     private function travelMonthlyRevenue(int $companyId, int $year): array
     {
         $totals = array_fill(1, 12, 0.0);
 
         $series = [
+            \App\Services\ContractFileReporting::revenue($companyId)->whereYear('j.date', $year)
+                ->selectRaw('MONTH(j.date) as month_no, SUM(i.credit - i.debit) as total')
+                ->groupByRaw('MONTH(j.date)')->pluck('total', 'month_no'),
             TicketSale::where('company_id', $companyId)->whereYear('sale_date', $year)
                 ->selectRaw('MONTH(sale_date) as month_no, SUM(total_amount) as total')
                 ->groupBy('month_no')->pluck('total', 'month_no'),
             VisaSale::where('company_id', $companyId)->whereYear('voucher_date', $year)
                 ->selectRaw('MONTH(voucher_date) as month_no, SUM(total_amount) as total')
                 ->groupBy('month_no')->pluck('total', 'month_no'),
-            ContractFlightBooking::where('company_id', $companyId)->whereYear('created_at', $year)
-                ->selectRaw('MONTH(created_at) as month_no, SUM(total_amount) as total')
+            $this->contractFlightCharges($companyId)->whereYear('contract_flight_passengers.created_at', $year)
+                ->selectRaw('MONTH(contract_flight_passengers.created_at) as month_no, SUM(agent_price) as total')
                 ->groupBy('month_no')->pluck('total', 'month_no'),
             ContractFileSale::where('company_id', $companyId)->whereYear('sale_date', $year)
                 ->selectRaw('MONTH(sale_date) as month_no, SUM(total_amount) as total')
@@ -530,8 +557,8 @@ class CompanyDashboardController extends Controller
     }
 
     /**
-     * Recent Travel transactions merged across the 4 sale-type tables,
-     * since Travel's activity never appears in the generic Sale model.
+     * Recent Travel transactions merged across its revenue sources, since
+     * Travel's activity never appears in the generic Sale model.
      */
     private function travelRecentSales(int $companyId, int $limit = 6)
     {
@@ -547,10 +574,16 @@ class CompanyDashboardController extends Controller
                 'amount' => $v->total_amount, 'status' => $v->payment_status ?? 'paid', 'date' => $v->voucher_date,
             ]);
 
-        $flight = ContractFlightBooking::where('company_id', $companyId)->latest('created_at')->limit($limit)->get()
-            ->map(fn ($b) => (object) [
-                'type' => 'sale', 'label' => 'Contract Flight #' . $b->booking_number,
-                'amount' => $b->total_amount, 'status' => $b->payment_status ?? 'paid', 'date' => $b->created_at,
+        $flight = $this->contractFlightCharges($companyId)
+            ->with(['contractFlight:id,flight_number', 'passportHolder:id,name'])
+            ->latest('contract_flight_passengers.created_at')->limit($limit)->get()
+            ->map(fn ($passenger) => (object) [
+                'type' => 'sale',
+                'label' => 'Contract Flight ' . ($passenger->contractFlight?->flight_number ?? '#')
+                    . ' — ' . ($passenger->passportHolder?->name ?? 'Passenger'),
+                'amount' => $passenger->agent_price,
+                'status' => 'posted',
+                'date' => $passenger->created_at,
             ]);
 
         $file = ContractFileSale::where('company_id', $companyId)->latest('sale_date')->limit($limit)->get()
@@ -561,5 +594,18 @@ class CompanyDashboardController extends Controller
 
         return $ticket->concat($visa)->concat($flight)->concat($file)
             ->sortByDesc('date')->take($limit)->values();
+    }
+
+    /** Passenger-level contract-flight charges are the single revenue source. */
+    private function contractFlightCharges(int $companyId)
+    {
+        return ContractFlightPassenger::query()
+            ->whereNotNull('agent_id')
+            ->where('agent_price', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('exception_flag')
+                    ->orWhereNotIn('exception_flag', ContractFlightPassenger::AGENT_CHARGE_VOIDING_FLAGS);
+            })
+            ->whereHas('contractFlight.creator', fn ($query) => $query->where('company_id', $companyId));
     }
 }

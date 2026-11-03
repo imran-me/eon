@@ -9,18 +9,13 @@
     </style>
 @endsection
 @section('main-content')
+@include('layout.visa-processing-tabs')
 
-{{-- Page header --}}
-<header class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm mb-4">
-    <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-violet-50 text-violet-600 flex-shrink-0"><i class="fas fa-tags"></i></span>
-    <div class="flex-1">
-        <h1 class="text-lg font-bold text-slate-900">Other Service Types</h1>
-        <p class="text-xs text-slate-500">Manage the catalog of Other Visa Services types — icon, color, default fee</p>
-    </div>
-    <button type="button" class="create-new-btn rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-        <i class="fas fa-plus mr-1"></i> New Type
-    </button>
-</header>
+@include('visa-processing.partials.page-top', [
+    'vxIcon' => 'fa-tags', 'vxTitle' => 'Other Service Types',
+    'vxSub' => 'Manage the catalog of Other Visa Services types — icon, color, default fee',
+    'vxAction' => '<button type="button" class="create-new-btn vx-btn"><i class="fas fa-plus"></i> New Type</button>',
+])
 
 {{-- Table --}}
 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

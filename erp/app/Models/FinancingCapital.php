@@ -23,13 +23,16 @@ class FinancingCapital extends Model
 
     protected $fillable = [
         'company_id', 'created_by', 'kind', 'person_name',
-        'party_type', 'party_id', 'reason', 'amount', 'date',
-        'method', 'bank_id', 'gl_account_id', 'reference', 'notes',
+        'party_type', 'party_id', 'reason', 'amount', 'bank_charge_amount', 'bank_charge_account_id', 'date',
+        'transaction_time', 'method', 'bank_id', 'gl_account_id',
+        'counterparty_method', 'counterparty_bank', 'counterparty_ref',
+        'reference', 'notes',
     ];
 
     protected $casts = [
         'date'   => 'date',
         'amount' => 'decimal:2',
+        'bank_charge_amount' => 'decimal:2',
     ];
 
     /** The reasons the owner actually uses, offered as suggestions not a fixed list. */
@@ -51,6 +54,11 @@ class FinancingCapital extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'party_id')->withTrashed();
     }
 
     public function scopeInvestment($q)

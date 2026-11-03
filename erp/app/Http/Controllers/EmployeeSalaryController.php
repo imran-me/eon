@@ -2,32 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Account;
+use App\Models\Bank;
 use App\Models\Company;
+use App\Models\EmployeeLedger;
+use App\Models\EmployeePaymentAllocation;
 use App\Models\EmployeeSalary;
-use App\Models\Payslip;
+use App\Models\JournalEntry;
+use App\Models\JournalItem;
 use App\Models\Payment;
 use App\Models\PaymentSchedule;
+use App\Models\Payslip;
 use App\Models\SalaryTemplate;
 use App\Models\User;
+use App\Services\EmployeeTaskReportService;
+use App\Services\LoanLedgerService;
+use App\Services\MonthlySummaryService;
 use App\Services\PayrollService;
+use App\Traits\PostsEmployeeLedger;
+use Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-use Auth;
 
 class EmployeeSalaryController extends Controller
 {
-    public function __construct(private PayrollService $payroll)
-    {
-    }
+    use PostsEmployeeLedger;
+
+    public function __construct(private PayrollService $payroll) {}
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index(Request $request)
     {
@@ -39,7 +52,7 @@ class EmployeeSalaryController extends Controller
         // one role depending on which happened to be assigned/returned first.
         $authUser = Auth::user();
         $payrollManagerRoles = ['accountant', 'hr'];
-        $isPlainEmployee = $authUser->hasRole('employee') && !$authUser->hasAnyRole($payrollManagerRoles);
+        $isPlainEmployee = $authUser->hasRole('employee') && ! $authUser->hasAnyRole($payrollManagerRoles);
         if ($isPlainEmployee) {
             $request->merge(['user_id' => auth()->id()]);
         }
@@ -52,7 +65,7 @@ class EmployeeSalaryController extends Controller
         // even though their user record itself still belongs to one company (e.g. HQ).
         $userCompanyId = auth()->user()->company_id;
         $canViewAllCompanies = auth()->user()->can('view all salary');
-        if (!$canViewAllCompanies && !empty($userCompanyId)) {
+        if (! $canViewAllCompanies && ! empty($userCompanyId)) {
             $companyId = (int) $userCompanyId;
         }
 
@@ -81,23 +94,34 @@ class EmployeeSalaryController extends Controller
 
         $periodYear = (int) $periodYear;
         $periodMonth = str_pad((int) $periodMonth, 2, '0', STR_PAD_LEFT);
-        $period = $periodYear . '-' . $periodMonth;
+        $period = $periodYear.'-'.$periodMonth;
 
         $query = EmployeeSalary::select('employee_salaries.*')
-            ->with(['user.company', 'salary_template', 'schedules' => function ($q) {
-                $q->orderByDesc('id');
-            }])
+            ->with([
+                'user.company',
+                'salary_template',
+                'schedules' => function ($q) {
+                    $q->orderByDesc('id');
+                },
+                // The method selected in the Pay Salary flow belongs to the
+                // immutable payment, not necessarily to the salary row.
+                'paymentAllocations' => function ($q) {
+                    $q->whereHas('payment', fn ($payment) => $payment->where('status', 'posted'))
+                        ->with('payment')
+                        ->orderByDesc('id');
+                },
+            ])
             ->join('users', 'users.id', '=', 'employee_salaries.user_id')
             ->join('salary_templates', 'salary_templates.id', '=', 'employee_salaries.salary_template_id')
             ->where('employee_salaries.year', $periodYear)
             ->where('employee_salaries.month', $periodMonth)
             ->orderBy('users.name', 'asc');
 
-        if ($request->has('user_id') && !empty($request->user_id)) {
+        if ($request->has('user_id') && ! empty($request->user_id)) {
             $query->where('employee_salaries.user_id', $request->user_id);
         }
 
-        if ($request->has('salary_template_id') && !empty($request->salary_template_id)) {
+        if ($request->has('salary_template_id') && ! empty($request->salary_template_id)) {
             $query->where('employee_salaries.salary_template_id', $request->salary_template_id);
         }
 
@@ -107,7 +131,7 @@ class EmployeeSalaryController extends Controller
             $query->where('users.company_id', $companyId);
         }
 
-        if ($request->filled('status')) {
+        if (is_string($request->status) && $request->status !== '') {
             $query->whereRaw('LOWER(employee_salaries.status) = ?', [Str::lower($request->status)]);
         }
 
@@ -146,13 +170,14 @@ class EmployeeSalaryController extends Controller
 
         // ── Company-wise payable / due summary for this period ───────────────
         $companiesQuery = Company::where('status', 1)->orderBy('order')->orderBy('name');
-        if (!$canViewAllCompanies && !empty($userCompanyId)) {
+        if (! $canViewAllCompanies && ! empty($userCompanyId)) {
             $companiesQuery->where('id', $userCompanyId);
         }
         $companies = $companiesQuery->get();
 
         $companyStatsRaw = EmployeeSalary::query()
             ->join('users', 'users.id', '=', 'employee_salaries.user_id')
+            ->leftJoinSub(EmployeePaymentAllocation::postedTotalsSubquery(), 'allocation_paid', fn ($j) => $j->on('allocation_paid.schedulable_id', '=', 'employee_salaries.id'))
             ->where('employee_salaries.year', $periodYear)
             ->where('employee_salaries.month', $periodMonth)
             ->when($request->filled('user_id'), function ($q) use ($request) {
@@ -162,7 +187,7 @@ class EmployeeSalaryController extends Controller
                 $q->where('employee_salaries.user_id', $request->user_id);
             })
             ->tap(fn ($q) => $this->applyEmployeeSearch($q, $request->search))
-            ->selectRaw("users.company_id,
+            ->selectRaw('users.company_id,
                 COUNT(*) as headcount,
                 SUM(employee_salaries.gross_salary) as gross,
                 SUM(employee_salaries.total_deductions) as deductions,
@@ -170,8 +195,8 @@ class EmployeeSalaryController extends Controller
                     + COALESCE(employee_salaries.bonus_amount, 0)
                     + COALESCE(employee_salaries.salary_adjustment, 0)) as additions,
                 SUM(employee_salaries.net_salary) as net_payable,
-                SUM(CASE WHEN LOWER(employee_salaries.status) = 'paid' THEN employee_salaries.net_salary ELSE 0 END) as paid,
-                SUM(CASE WHEN LOWER(employee_salaries.status) != 'paid' THEN employee_salaries.net_salary ELSE 0 END) as due")
+                SUM(LEAST(COALESCE(allocation_paid.paid_total, 0), employee_salaries.net_salary)) as paid,
+                SUM(GREATEST(employee_salaries.net_salary - COALESCE(allocation_paid.paid_total, 0), 0)) as due')
             ->groupBy('users.company_id')
             ->get()
             ->keyBy('company_id');
@@ -180,6 +205,7 @@ class EmployeeSalaryController extends Controller
         // company-wise footer can total the same figures the rows show.
         $companyStats = $companies->mapWithKeys(function ($company) use ($companyStatsRaw) {
             $row = $companyStatsRaw->get($company->id);
+
             return [$company->id => [
                 'headcount' => (int) ($row->headcount ?? 0),
                 'gross' => (float) ($row->gross ?? 0),
@@ -207,24 +233,25 @@ class EmployeeSalaryController extends Controller
         // you're comparing are the same slice the sheet above is showing.
         $payrollHistory = EmployeeSalary::query()
             ->join('users', 'users.id', '=', 'employee_salaries.user_id')
+            ->leftJoinSub(EmployeePaymentAllocation::postedTotalsSubquery(), 'allocation_paid', fn ($j) => $j->on('allocation_paid.schedulable_id', '=', 'employee_salaries.id'))
             ->when($companyId, fn ($q) => $q->where('users.company_id', $companyId))
             ->when($request->filled('user_id'), fn ($q) => $q->where('employee_salaries.user_id', $request->user_id))
             ->tap(fn ($q) => $this->applyEmployeeSearch($q, $request->search))
-            ->selectRaw("employee_salaries.year,
+            ->selectRaw('employee_salaries.year,
                 employee_salaries.month,
                 COUNT(*) as staff_total,
-                SUM(CASE WHEN LOWER(employee_salaries.status) = 'paid' THEN 1 ELSE 0 END) as staff_paid,
+                SUM(CASE WHEN COALESCE(allocation_paid.paid_total, 0) >= employee_salaries.net_salary THEN 1 ELSE 0 END) as staff_paid,
                 SUM(employee_salaries.gross_salary) as gross,
-                SUM(CASE WHEN LOWER(employee_salaries.status) = 'paid' THEN employee_salaries.net_salary ELSE 0 END) as net_paid,
-                SUM(CASE WHEN LOWER(employee_salaries.status) != 'paid' THEN employee_salaries.net_salary ELSE 0 END) as outstanding,
-                COUNT(DISTINCT users.company_id) as runs")
+                SUM(LEAST(COALESCE(allocation_paid.paid_total, 0), employee_salaries.net_salary)) as net_paid,
+                SUM(GREATEST(employee_salaries.net_salary - COALESCE(allocation_paid.paid_total, 0), 0)) as outstanding,
+                COUNT(DISTINCT users.company_id) as runs')
             ->groupBy('employee_salaries.year', 'employee_salaries.month')
             ->orderByDesc('employee_salaries.year')
             ->orderByDesc('employee_salaries.month')
             ->get()
             ->map(function ($row) {
                 $row->period = sprintf('%04d-%02d', $row->year, $row->month);
-                $row->label = \Carbon\Carbon::createFromDate($row->year, $row->month, 1)->format('F Y');
+                $row->label = Carbon::createFromDate($row->year, $row->month, 1)->format('F Y');
                 $row->fully_paid = (int) $row->staff_paid === (int) $row->staff_total;
 
                 return $row;
@@ -233,11 +260,11 @@ class EmployeeSalaryController extends Controller
         // $users drives the "Add New" form — only currently active employees, since
         // payroll shouldn't be generated for someone who has left.
         $users = User::orderBy('name')->where('is_super_admin', 0)
-                        ->when($isPlainEmployee, function ($q) {
-                            return $q->where('id', auth()->id());
-                        })
-                        ->where('status', 'active')
-                        ->role('employee')->get();
+            ->when($isPlainEmployee, function ($q) {
+                return $q->where('id', auth()->id());
+            })
+            ->where('status', 'active')
+            ->role('employee')->get();
 
         // $salaryUsers additionally keeps anyone who already has payroll history,
         // active or not. Roughly half the employees on these sheets have resigned,
@@ -257,11 +284,11 @@ class EmployeeSalaryController extends Controller
         }
 
         $templates = SalaryTemplate::when($isPlainEmployee, function ($q) {
-                        return $q->where('id', auth()->user()->salary_template_id);
-                    })
-                    ->orderBy('name')->get();
+            return $q->where('id', auth()->user()->salary_template_id);
+        })
+            ->orderBy('name')->get();
 
-        $banks = \App\Models\Bank::where('status', 1)->orderBy('name')->get();
+        $banks = Bank::where('status', 1)->orderBy('name')->get();
 
         return view('employee-salaries.index', compact(
             'datas',
@@ -325,7 +352,7 @@ class EmployeeSalaryController extends Controller
      */
     private function applyEmployeeSearch($query, $search): void
     {
-        $search = trim((string) $search);
+        $search = is_string($search) ? trim($search) : '';
         if ($search === '') {
             return;
         }
@@ -346,7 +373,7 @@ class EmployeeSalaryController extends Controller
         $userCompanyId = $authUser->company_id;
 
         $companyId = $request->filled('company_id') ? (int) $request->company_id : null;
-        if (!$canViewAllCompanies && !empty($userCompanyId)) {
+        if (! $canViewAllCompanies && ! empty($userCompanyId)) {
             $companyId = (int) $userCompanyId;
         }
 
@@ -359,14 +386,14 @@ class EmployeeSalaryController extends Controller
         // whatever has already been settled — via the one shared rule, so
         // this can never drift from the profile's Salary Due KPI, the
         // Payslips tab or the payroll report again.
-        $paidPerSalary = PaymentSchedule::settledTotalsSubquery(EmployeeSalary::class);
+        $paidPerSalary = EmployeePaymentAllocation::postedTotalsSubquery();
 
         $query = EmployeeSalary::query()
             ->join('users', 'users.id', '=', 'employee_salaries.user_id')
             ->leftJoinSub($paidPerSalary, 'schedule_paid', function ($join) {
                 $join->on('schedule_paid.schedulable_id', '=', 'employee_salaries.id');
             })
-            ->when($companyId, fn($q) => $q->where('users.company_id', $companyId))
+            ->when($companyId, fn ($q) => $q->where('users.company_id', $companyId))
             ->when($from, function ($q) use ($from) {
                 [$fy, $fm] = array_map('intval', explode('-', $from));
                 $q->whereRaw('(employee_salaries.year * 100 + CAST(employee_salaries.month AS UNSIGNED)) >= ?', [$fy * 100 + $fm]);
@@ -376,7 +403,7 @@ class EmployeeSalaryController extends Controller
                 $q->whereRaw('(employee_salaries.year * 100 + CAST(employee_salaries.month AS UNSIGNED)) <= ?', [$ty * 100 + $tm]);
             });
 
-        if ($authUser->hasRole('employee') && !$authUser->hasAnyRole(['accountant', 'hr'])) {
+        if ($authUser->hasRole('employee') && ! $authUser->hasAnyRole(['accountant', 'hr'])) {
             $query->where('employee_salaries.user_id', $authUser->id);
         }
 
@@ -403,12 +430,12 @@ class EmployeeSalaryController extends Controller
 
         $grandTotals = [
             'total_gross' => $rows->sum('total_gross'),
-            'total_paid'  => $rows->sum('total_paid'),
-            'total_due'   => $rows->sum('total_due'),
+            'total_paid' => $rows->sum('total_paid'),
+            'total_due' => $rows->sum('total_due'),
         ];
 
         $companiesQuery = Company::where('status', 1)->orderBy('order')->orderBy('name');
-        if (!$canViewAllCompanies && !empty($userCompanyId)) {
+        if (! $canViewAllCompanies && ! empty($userCompanyId)) {
             $companiesQuery->where('id', $userCompanyId);
         }
         $companies = $companiesQuery->get();
@@ -419,7 +446,7 @@ class EmployeeSalaryController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -429,8 +456,7 @@ class EmployeeSalaryController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
@@ -439,19 +465,20 @@ class EmployeeSalaryController extends Controller
             'loan_id' => 'nullable',
             'advance_salary_id' => 'nullable',
             'date' => 'required',
-            'salary_generation_date' => 'required',
+            'salary_generation_date' => 'required|date',
             'scheduled_date' => 'required|date',
             'payment_method' => 'required',
-            'status' => 'required'
+            'status' => 'required',
         ]);
 
         if ($validator->fails()) {
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $validator->errors()->first()
+                    'message' => $validator->errors()->first(),
                 ]);
             }
+
             return redirect()->back()->withErrors($validator)->withInput();
         }
         $employeeSalary = EmployeeSalary::where('user_id', $request->user_id)
@@ -462,9 +489,10 @@ class EmployeeSalaryController extends Controller
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Salary for this employee already exists for the selected month and year.'
+                    'message' => 'Salary for this employee already exists for the selected month and year.',
                 ]);
             }
+
             return redirect()->back()->with('error', 'Salary for this employee already exists for the selected month and year.')->withInput();
         }
         try {
@@ -503,26 +531,25 @@ class EmployeeSalaryController extends Controller
             // SMS) as the automated monthly payroll job — one shared path
             // via PayrollService so a manually created salary record
             // notifies the employee identically to an automated one.
-            ['payslip' => $payslip] = $this->payroll->issuePayslip($empSalary);
-            $this->payroll->sendPayslipNotifications($empSalary, $payslip);
+            ['payslip' => $payslip, 'pdf_content' => $pdfContent] = $this->payroll->issuePayslip($empSalary);
+            $this->payroll->sendPayslipNotifications($empSalary, $payslip, $pdfContent);
 
             if ($request->ajax()) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Data created successfully.'
+                    'message' => 'Data created successfully.',
                 ]);
             }
         } catch (\Throwable $th) {
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $th->getMessage()
+                    'message' => $th->getMessage(),
                 ]);
             }
+
             return redirect()->back()->with('error', $th->getMessage());
         }
-
-
 
         return redirect()->route('role.employee-salaries.index')->with('success', 'Data created successfully.');
     }
@@ -531,7 +558,7 @@ class EmployeeSalaryController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function edit($id)
     {
@@ -541,9 +568,8 @@ class EmployeeSalaryController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -552,14 +578,14 @@ class EmployeeSalaryController extends Controller
         if (empty($empSalary)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Data Info Not Found!'
+                'message' => 'Data Info Not Found!',
             ]);
         }
         $validated = $request->validate([
             'user_id' => 'required',
             'salary_template_id' => 'required',
             'date' => 'required',
-            'payment_date' => 'required',
+            'payment_date' => 'required|date',
             'scheduled_date' => 'nullable|date',
             'payment_method' => 'required',
             'status' => 'required',
@@ -574,27 +600,121 @@ class EmployeeSalaryController extends Controller
         try {
             DB::transaction(function () use ($request, $empSalary) {
                 [$year, $month] = explode('-', $request->date);
+
+                // ── AMOUNTS ───────────────────────────────────────────────
+                // Anything the form does not send keeps the figure already on
+                // the row. The edit modal only carries part of the sheet —
+                // and the loan/advance instalments deliberately stay out of
+                // it, because moving those here would leave the loan register
+                // holding a repayment this payslip no longer takes.
+                $posted = fn (string $field) => $request->filled($field)
+                    ? (float) $request->input($field)
+                    : (float) $empSalary->{$field};
+
+                $grossSalary = $posted('gross_salary');
+                $overtimeSalary = $posted('overtime_salary');
+                $bonusAmount = $posted('bonus_amount');
+                $salaryAdjustment = $posted('salary_adjustment');
+
+                // Fixed-salary employees are never docked for attendance, so
+                // an edit must not be able to put a deduction back onto the
+                // sheet that payroll excludes — same enforcement as
+                // PayrollService::createEmployeeSalaryRecord(). The
+                // loan/advance instalments deliberately stay out of this
+                // modal (see above), so for them total_deductions falls back
+                // to the instalments already stored on the row.
+                $absentDeduction = $posted('absent_deduction');
+                $leaveDeduction = $posted('leave_deduction');
+                $lateDeduction = $posted('late_deduction');
+                $earlyLeaveDeduction = $posted('early_leave_deduction');
+                $loanDeduction = (float) $empSalary->loan_deduction;
+                $advanceDeduction = (float) $empSalary->advance_salary_deduction;
+
+                if ($empSalary->user?->fixed_salary) {
+                    $absentDeduction = 0;
+                    $leaveDeduction = 0;
+                    $lateDeduction = 0;
+                    $earlyLeaveDeduction = 0;
+                }
+
+                $totalDeductions = round(
+                    $loanDeduction
+                        + $advanceDeduction
+                        + $absentDeduction
+                        + $leaveDeduction
+                        + $lateDeduction
+                        + $earlyLeaveDeduction,
+                    2
+                );
+
+                // Derived, never trusted from the request — same rule as
+                // PayrollService::createEmployeeSalaryRecord(). The Net Salary
+                // box is editable and JS-filled, so a save that beats the
+                // attendance lookup used to store its half-finished figure and
+                // hand it straight to the journal, the schedule and the ledger.
+                // Overtime is part of it: the old modal script computed
+                // gross − deductions and silently dropped the overtime pay.
+                $netSalary = ceil(
+                    $grossSalary + $overtimeSalary + $bonusAmount + $salaryAdjustment - $totalDeductions
+                );
+                $allocatedPaid = EmployeePaymentAllocation::paidForSalary($empSalary->id);
+                $derivedStatus = $allocatedPaid >= $netSalary - 0.01 ? 'Paid' : 'Pending';
+                // ── END AMOUNTS ───────────────────────────────────────────
+
                 $empSalary->update([
                     'user_id' => $request->user_id,
                     'salary_template_id' => $request->salary_template_id,
                     'month' => (string) $month,
                     'year' => (int) $year,
-                    'gross_salary' => $request->gross_salary,
-                    'total_deductions' => $request->total_deductions ?? 0,
-                    'net_salary' => $request->net_salary ?? 0,
+                    'gross_salary' => $grossSalary,
+                    'absent_deduction' => $absentDeduction,
+                    'leave_deduction' => $leaveDeduction,
+                    'late_deduction' => $lateDeduction,
+                    'early_leave_deduction' => $earlyLeaveDeduction,
+                    'over_time' => $posted('over_time'),
+                    'over_time_days' => (int) $posted('over_time_days'),
+                    'overtime_salary' => $overtimeSalary,
+                    'bonus_amount' => $bonusAmount,
+                    'salary_adjustment' => $salaryAdjustment,
+                    'total_deductions' => $totalDeductions,
+                    'net_salary' => $netSalary,
                     'payment_date' => $request->payment_date,
                     'scheduled_date' => $request->scheduled_date,
-                    'bank_id' => $request->bank_id,
-                    'status' => $request->status
+                    'bank_id' => $empSalary->bank_id,
+                    'status' => $derivedStatus,
+                    'notes' => $request->has('notes') ? $request->notes : $empSalary->notes,
                 ]);
 
-                // ── JOURNAL UPDATE (auto) ─────────────────────────────────
-                $salaryExpenseAccount = \App\Models\Account::where('code', config('accounts.salary_expense'))->firstOrFail();
-                $salaryPayableAccount = \App\Models\Account::where('code', config('accounts.salary_payable'))->firstOrFail();
+                // ── EMPLOYEE LEDGER (auto) ────────────────────────────────
+                // The ledger is the employee profile's "Company Owes". It used
+                // to be the one record an edit never touched, so a corrected
+                // payslip left the balance sitting on the original amount for
+                // good. Its running balance is stored rather than derived, so
+                // syncEmployeeLedgerRow() also renumbers every row after this
+                // one.
+                $this->syncEmployeeLedgerRow(
+                    $empSalary,
+                    'salary_earned',
+                    (int) $empSalary->user_id,
+                    [
+                        'entry_date' => optional($empSalary->salary_generation_date)->toDateString()
+                            ?? optional($empSalary->created_at)->toDateString()
+                            ?? now()->toDateString(),
+                        'reference' => Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)
+                            ->format('F Y').' salary (net of deductions)',
+                        'debit' => $empSalary->net_salary,
+                        'credit' => 0,
+                    ]
+                );
+                // ── END EMPLOYEE LEDGER ───────────────────────────────────
 
-                $journal = \App\Models\JournalEntry::where('source', 'salary')
-                                                ->where('source_id', $empSalary->id)
-                                                ->first();
+                // ── JOURNAL UPDATE (auto) ─────────────────────────────────
+                $salaryExpenseAccount = Account::where('code', config('accounts.salary_expense'))->firstOrFail();
+                $salaryPayableAccount = Account::where('code', config('accounts.salary_payable'))->firstOrFail();
+
+                $journal = JournalEntry::where('source', 'salary')
+                    ->where('source_id', $empSalary->id)
+                    ->first();
 
                 // Always the employee's own company, not the editing user's —
                 // an admin/super-admin (company_id null, falling back to 2)
@@ -605,63 +725,68 @@ class EmployeeSalaryController extends Controller
                 if ($journal) {
                     $journal->items()->delete();
                     $journal->update([
-                        'company_id'  => $journalCompanyId,
-                        'date'        => $request->payment_date,
-                        'description' => 'Salary (edited) — ' . ($empSalary->user->name ?? 'Employee'),
+                        'company_id' => $journalCompanyId,
+                        'date' => $request->payment_date,
+                        'description' => 'Salary (edited) — '.($empSalary->user->name ?? 'Employee'),
                     ]);
                 } else {
-                    $journal = \App\Models\JournalEntry::create([
-                        'company_id'  => $journalCompanyId,
-                        'created_by'  => auth()->id(),
-                        'date'        => $request->payment_date,
-                        'reference'   => 'SAL-' . $empSalary->user_id . '-' . $empSalary->month . '-' . $empSalary->year,
-                        'source'      => 'salary',
-                        'source_id'   => $empSalary->id,
-                        'description' => 'Salary (edited) — ' . ($empSalary->user->name ?? 'Employee'),
+                    $journal = JournalEntry::create([
+                        'company_id' => $journalCompanyId,
+                        'created_by' => auth()->id(),
+                        'date' => $request->payment_date,
+                        'reference' => 'SAL-'.$empSalary->user_id.'-'.$empSalary->month.'-'.$empSalary->year,
+                        'source' => 'salary',
+                        'source_id' => $empSalary->id,
+                        'description' => 'Salary (edited) — '.($empSalary->user->name ?? 'Employee'),
                     ]);
                 }
 
                 // Debit: Salary Expense — always, full net salary
-                \App\Models\JournalItem::create([
+                JournalItem::create([
                     'journal_entry_id' => $journal->id,
-                    'account_id'       => $salaryExpenseAccount->id,
-                    'debit'            => $empSalary->net_salary,
-                    'credit'           => 0,
-                    'note'             => 'Net salary — ' . ($empSalary->user->name ?? 'Employee'),
+                    'account_id' => $salaryExpenseAccount->id,
+                    'debit' => $empSalary->net_salary,
+                    'credit' => 0,
+                    'note' => 'Net salary — '.($empSalary->user->name ?? 'Employee'),
                 ]);
 
                 // Credit: Cash (if paid in cash) OR Bank (if paid otherwise) OR Salary Payable (if unpaid)
-                if (in_array($request->status, ['paid', 'Paid']) && $request->payment_method === 'cash') {
-                    $cashAccount = \App\Models\Account::where('code', config('accounts.office_cash'))->firstOrFail();
-                    \App\Models\JournalItem::create([
+                if (false) {
+                    $cashAccount = Account::where('code', config('accounts.office_cash'))->firstOrFail();
+                    // Paying a salary in cash empties the drawer like anything else.
+                    Bank::assertCanCover((int) $cashAccount->id, (float) $empSalary->net_salary, $cashAccount->name);
+
+                    JournalItem::create([
                         'journal_entry_id' => $journal->id,
-                        'account_id'       => $cashAccount->id,
-                        'debit'            => 0,
-                        'credit'           => $empSalary->net_salary,
-                        'note'             => 'Salary paid via cash',
+                        'account_id' => $cashAccount->id,
+                        'debit' => 0,
+                        'credit' => $empSalary->net_salary,
+                        'note' => 'Salary paid via cash',
                     ]);
-                } elseif (in_array($request->status, ['paid', 'Paid'])) {
-                    if (!$request->bank_id) {
+                } elseif (false) {
+                    if (! $request->bank_id) {
                         throw new \Exception('Bank account is required when salary status is paid.');
                     }
-                    $bank = \App\Models\Bank::find($request->bank_id);
-                    if (!$bank || !$bank->account_id) {
+                    $bank = Bank::find($request->bank_id);
+                    if (! $bank || ! $bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
-                    \App\Models\JournalItem::create([
+                    Bank::assertCanCover((int) $bank->account_id, (float) $empSalary->net_salary, $bank->name);
+
+                    JournalItem::create([
                         'journal_entry_id' => $journal->id,
-                        'account_id'       => $bank->account_id,
-                        'debit'            => 0,
-                        'credit'           => $empSalary->net_salary,
-                        'note'             => 'Salary paid via ' . $request->payment_method,
+                        'account_id' => $bank->account_id,
+                        'debit' => 0,
+                        'credit' => $empSalary->net_salary,
+                        'note' => 'Salary paid via '.$request->payment_method,
                     ]);
                 } else {
-                    \App\Models\JournalItem::create([
+                    JournalItem::create([
                         'journal_entry_id' => $journal->id,
-                        'account_id'       => $salaryPayableAccount->id,
-                        'debit'            => 0,
-                        'credit'           => $empSalary->net_salary,
-                        'note'             => 'Salary payable — ' . ($empSalary->user->name ?? 'Employee'),
+                        'account_id' => $salaryPayableAccount->id,
+                        'debit' => 0,
+                        'credit' => $empSalary->net_salary,
+                        'note' => 'Salary payable — '.($empSalary->user->name ?? 'Employee'),
                     ]);
                 }
                 // ── END JOURNAL ───────────────────────────────────────────
@@ -710,7 +835,7 @@ class EmployeeSalaryController extends Controller
                 $scheduleQuery = fn () => PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
                     ->where('schedulable_id', $empSalary->id);
 
-                $alreadySettled = round((float) $scheduleQuery()->settled()->sum('paid_amount'), 2);
+                $alreadySettled = $allocatedPaid;
 
                 // The one schedule this edit is allowed to write to: still in
                 // the queue, and nothing has been paid against it.
@@ -720,7 +845,7 @@ class EmployeeSalaryController extends Controller
                     ->orderBy('id')
                     ->first();
 
-                if (in_array($request->status, ['paid', 'Paid'])) {
+                if ($derivedStatus === 'Paid') {
                     if ($openSchedule) {
                         $openSchedule->update([
                             'status' => 'paid',
@@ -740,7 +865,7 @@ class EmployeeSalaryController extends Controller
                         'party_type' => 'employee',
                         'party_id' => $empSalary->user_id,
                         'party_name' => $empSalary->user?->name,
-                        'source_label' => 'Salary - ' . $empSalary->month . '/' . $empSalary->year,
+                        'source_label' => 'Salary - '.$empSalary->month.'/'.$empSalary->year,
                         'amount' => $outstanding,
                         'scheduled_date' => $empSalary->scheduled_date ?? $request->payment_date,
                     ];
@@ -773,21 +898,34 @@ class EmployeeSalaryController extends Controller
                     // Leave the settled records exactly as they are.
                 }
                 // ── END PAYMENT SCHEDULE ──────────────────────────────────
+
+                // A payroll edit changes the issued document too. Refresh the
+                // attendance pages and payment position after every dependent
+                // amount/schedule has been updated, otherwise the PDF keeps the
+                // snapshot from its original issue date.
+                $empSalary->refresh()->loadMissing(
+                    'user.company',
+                    'user.profile.designation',
+                    'user.salary_template'
+                );
+                $empSalary->summary_snapshot = app(MonthlySummaryService::class)->build($empSalary);
+                $empSalary->saveQuietly();
             });
         } catch (\Throwable $th) {
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
-                    'message' => $th->getMessage()
+                    'message' => $th->getMessage(),
                 ]);
             }
+
             return redirect()->back()->with('error', $th->getMessage());
         }
 
         if ($request->ajax()) {
             return response()->json([
                 'success' => true,
-                'message' => 'Data updated successfully.'
+                'message' => 'Data updated successfully.',
             ]);
         }
 
@@ -797,6 +935,7 @@ class EmployeeSalaryController extends Controller
     public function show($role, $id)
     {
         $data = EmployeeSalary::findOrFail($id);
+
         return view('employee-salaries.show', compact('data'));
     }
 
@@ -804,7 +943,7 @@ class EmployeeSalaryController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy(Request $request, $id)
     {
@@ -815,7 +954,7 @@ class EmployeeSalaryController extends Controller
                 DB::transaction(function () use ($item) {
 
                     // ── JOURNAL CLEANUP ───────────────────────────────────
-                    $journal = \App\Models\JournalEntry::where('source', 'salary')
+                    $journal = JournalEntry::where('source', 'salary')
                         ->where('source_id', $item->id)
                         ->first();
                     if ($journal) {
@@ -825,15 +964,22 @@ class EmployeeSalaryController extends Controller
                     // ── END JOURNAL ───────────────────────────────────────
 
                     // ── PAYMENT SCHEDULE CLEANUP ───────────────────────────
-                    \App\Models\PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
+                    PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
                         ->where('schedulable_id', $item->id)
                         ->delete();
                     // ── END PAYMENT SCHEDULE ───────────────────────────────
 
                     // ── EMPLOYEE LEDGER CLEANUP ─────────────────────────────
-                    \App\Models\EmployeeLedger::where('source_type', EmployeeSalary::class)
+                    EmployeeLedger::where('source_type', EmployeeSalary::class)
                         ->where('source_id', $item->id)
                         ->forceDelete();
+
+                    // Pulling a row out of the middle leaves every later row
+                    // still carrying the deleted one's arithmetic, and the
+                    // profile's "Company Owes" reads the last row's balance.
+                    // Deleting alone is how ৳85,750 of a removed payslip
+                    // stayed in an employee's balance for three weeks.
+                    $this->rebuildEmployeeLedgerBalances((int) $item->user_id);
                     // ── END EMPLOYEE LEDGER ─────────────────────────────────
 
                     // ── LOAN EMI CLEANUP ────────────────────────────────────
@@ -841,8 +987,11 @@ class EmployeeSalaryController extends Controller
                     // would show the employee as having repaid an instalment out
                     // of a salary that no longer exists, and the loan register
                     // reads those rows directly.
-                    app(\App\Services\LoanLedgerService::class)->reverseForSalary($item->id);
+                    app(LoanLedgerService::class)->reverseForSalary($item->id);
                     // ── END LOAN EMI ────────────────────────────────────────
+
+                    // The advance this salary recovered goes back to outstanding.
+                    app(\App\Services\AdvancePostingService::class)->removeRecovery((int) $item->id);
 
                     Payment::where('user_id', $item->user_id)
                         ->where('employee_salary_id', $item->id)
@@ -853,19 +1002,19 @@ class EmployeeSalaryController extends Controller
             } else {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Data Info Not Found!'
+                    'message' => 'Data Info Not Found!',
                 ]);
             }
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Data deleted successfully.'
+            'message' => 'Data deleted successfully.',
         ]);
     }
 
@@ -878,7 +1027,7 @@ class EmployeeSalaryController extends Controller
                 ->toArray();
 
             $data = EmployeeSalary::where('user_id', $request->user_id)
-                ->when(!empty($issuedSalaryIds), function ($q) use ($issuedSalaryIds) {
+                ->when(! empty($issuedSalaryIds), function ($q) use ($issuedSalaryIds) {
                     return $q->whereNotIn('id', $issuedSalaryIds);
                 })
                 ->orderBy('id', 'ASC')
@@ -886,28 +1035,29 @@ class EmployeeSalaryController extends Controller
         } catch (\Throwable $th) {
             return response()->json([
                 'success' => false,
-                'message' => $th->getMessage()
+                'message' => $th->getMessage(),
             ]);
         }
 
         return response()->json([
             'data' => $data,
             'success' => true,
-            'message' => 'Data Found Successfully.'
+            'message' => 'Data Found Successfully.',
         ]);
     }
+
     public function getAttendanceData(Request $request)
     {
         $userId = $request->input('user_id');
         $dateInput = $request->month; // This is "2026-01"
 
-        if (!$userId || !$dateInput) {
+        if (! $userId || ! $dateInput) {
             return response()->json(['absent' => 0, 'late' => 0]);
         }
 
         $timestamp = strtotime($dateInput);
         $user = User::find($userId);
-        if (!$user) {
+        if (! $user) {
             return response()->json(['absent' => 0, 'late' => 0]);
         }
 
@@ -918,16 +1068,28 @@ class EmployeeSalaryController extends Controller
 
     public function handleAction(Request $request, $role, $id, $action)
     {
-        // Explicitly find the salary by ID
-        $data = \App\Models\EmployeeSalary::findOrFail($id);
-
+        // Issued payslips remain valid historical documents after a salary is
+        // moved to the trash, so their preview must include soft-deleted rows.
+        $data = EmployeeSalary::withTrashed()->findOrFail($id);
 
         if ($action === 'download') {
+            // This endpoint is the live browser preview. Rebuild the summary in
+            // memory so older payslips whose stored snapshot predates a payroll
+            // or attendance correction also show the current attendance and
+            // current paid/due position. The issued snapshot in the database is
+            // left untouched by a read-only preview.
+            $data->loadMissing('user.company', 'user.profile.designation', 'user.salary_template');
+            $data->summary_snapshot = app(MonthlySummaryService::class)->build($data);
+
             $logoUrl = asset($data->user->company->logo) ?? asset('default-logo.png');
             $logoData = base64_encode(file_get_contents($logoUrl));
-            $logoBase64 = 'data:image/png;base64,' . $logoData;
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('employee-salaries.pdf', compact('data', 'logoBase64'));
-            return $pdf->download("{$data->user->name}_Payslip_{$data->month}_{$data->year}.pdf");
+            $logoBase64 = 'data:image/png;base64,'.$logoData;
+            $pdf = Pdf::loadView('employee-salaries.pdf', compact('data', 'logoBase64'));
+
+            // The payslip icon is a preview action. Serve the freshly rendered
+            // document inline so the new tab opens the browser's PDF viewer;
+            // users can still print or download from that viewer.
+            return $pdf->stream("{$data->user->name}_Payslip_{$data->month}_{$data->year}.pdf");
         }
 
         if ($action === 'email') {
@@ -939,14 +1101,60 @@ class EmployeeSalaryController extends Controller
                 ['id' => $id]
             );
 
-            $subject = 'আপনার বেতন বিবরণী (Payslip) - ' . $data->month . '/' . $data->year;
+            $subject = 'আপনার বেতন বিবরণী (Payslip) - '.$data->month.'/'.$data->year;
             $htmlContent = view('emails.payslip-notice', [
                 'user' => $data->user,
                 'empSalary' => $data,
                 'viewUrl' => $viewUrl,
             ])->render();
 
-            $response = sendBrevoMail($data->user->email, $data->user->name, $subject, $htmlContent);
+            // Rendered fresh rather than read off disk. The stored file was
+            // written once, when the payslip was issued, so a row issued before
+            // the document grew its history and attendance pages would re-send
+            // the old single-page version forever. Rendering uses the same
+            // frozen snapshot, so the content is still the issued figures — only
+            // the layout is current.
+            $attachments = [];
+
+            try {
+                $data->loadMissing('user.company', 'user.profile.designation', 'user.salary_template');
+
+                $logoData = @file_get_contents(asset($data->user->company->logo ?? 'images/site-setting/69401c60d0949.png'));
+                if ($logoData === false) {
+                    $logoData = @file_get_contents('https://epal.com.bd/images/site-setting/69401c60d0949.png');
+                }
+
+                $monthName = Carbon::createFromDate((int) $data->year, (int) $data->month, 1)->format('F Y');
+                $attachments[] = [
+                    'name' => 'Payslip - '.$monthName.'.pdf',
+                    'content' => Pdf::loadView('employee-salaries.pdf', [
+                        'data' => $data,
+                        'logoBase64' => 'data:image/png;base64,'.base64_encode($logoData ?: ''),
+                    ])->output(),
+                ];
+            } catch (\Throwable $e) {
+                // The body still carries the summary and the signed link, so a
+                // PDF failure must not cost the employee the email.
+                \Log::warning('Payslip attachment render failed; email sent without it.', [
+                    'employee_salary_id' => $data->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            try {
+                $monthName ??= Carbon::createFromDate((int) $data->year, (int) $data->month, 1)->format('F Y');
+                $attachments[] = [
+                    'name' => 'Employee Task Report - '.$monthName.'.pdf',
+                    'content' => app(EmployeeTaskReportService::class)->render($data),
+                ];
+            } catch (\Throwable $e) {
+                \Log::warning('Employee task report attachment render failed; email sent without it.', [
+                    'employee_salary_id' => $data->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            $response = sendBrevoMail($data->user->email, $data->user->name, $subject, $htmlContent, $attachments);
 
             if ($response->successful()) {
                 return back()->with('success', 'ইমেল সফলভাবে পাঠানো হয়েছে।');
@@ -957,19 +1165,21 @@ class EmployeeSalaryController extends Controller
 
         return back();
     }
+
     public function view(Request $request, $id)
     {
-        if (!$request->hasValidSignature()) {
+        if (! $request->hasValidSignature()) {
             abort(401);
         }
 
         $data = EmployeeSalary::with('user')->findOrFail($id);
+
         return view('employee-salaries.view', compact('data'));
     }
 
     public function download(Request $request, $id)
     {
-        if (!$request->hasValidSignature()) {
+        if (! $request->hasValidSignature()) {
             abort(401);
         }
 
@@ -983,8 +1193,8 @@ class EmployeeSalaryController extends Controller
             $logoData = @file_get_contents($fallbackLogoUrl);
         }
 
-        $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData ?: '');
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('employee-salaries.pdf', compact('data', 'logoBase64'));
+        $logoBase64 = 'data:image/png;base64,'.base64_encode($logoData ?: '');
+        $pdf = Pdf::loadView('employee-salaries.pdf', compact('data', 'logoBase64'));
 
         return $pdf->download("{$data->user->name}_Payslip_{$data->month}_{$data->year}.pdf");
     }

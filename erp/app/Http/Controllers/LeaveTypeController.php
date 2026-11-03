@@ -79,8 +79,11 @@ class LeaveTypeController implements HasMiddleware
         $data = LeaveType::create([
             'name' => $request->name,
             'max_leaves_count' => $request->max_leaves_count,
-            'requires_time' => $request->boolean('requires_time'),
+            'requires_time' => $request->boolean('requires_time')
+                || $request->boolean('exempts_early_out_deduction')
+                || $request->boolean('exempts_late_deduction'),
             'exempts_early_out_deduction' => $request->boolean('exempts_early_out_deduction'),
+            'exempts_late_deduction' => $request->boolean('exempts_late_deduction'),
         ]);
 
         if ($request->ajax()) {
@@ -136,8 +139,11 @@ class LeaveTypeController implements HasMiddleware
             $data->update([
                 'name' => $request->name,
                 'max_leaves_count' => $request->max_leaves_count,
-                'requires_time' => $request->boolean('requires_time'),
+                'requires_time' => $request->boolean('requires_time')
+                    || $request->boolean('exempts_early_out_deduction')
+                    || $request->boolean('exempts_late_deduction'),
                 'exempts_early_out_deduction' => $request->boolean('exempts_early_out_deduction'),
+                'exempts_late_deduction' => $request->boolean('exempts_late_deduction'),
             ]);
             
         } catch (\Throwable $th) {

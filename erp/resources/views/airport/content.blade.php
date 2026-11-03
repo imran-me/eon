@@ -10,13 +10,15 @@
   <div class="rounded-xl bg-violet-50 p-4"><span class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-600 text-white"><i class="fas fa-map-location-dot"></i></span><b class="mt-3 block text-2xl text-violet-700">{{ $statesCount }}</b><p class="text-xs font-semibold uppercase text-violet-700">States Covered</p></div>
  </section>
  <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-  <form method="GET" class="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 lg:grid-cols-[1fr_1fr_1fr_auto]">
-   <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">Country</span><select id="country_id" name="country_id" class="select2 w-full" onchange="getStates(this,'#state_id')" data-action="{{ route('role.get-states-by-country',['role'=>$role]) }}"><option value="">All Countries</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected($country->id==request('country_id'))>{{ $country->name }}</option>@endforeach</select></label>
-   <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">State</span><select id="state_id" name="state_id" class="select2 w-full"><option value="">All States</option>@foreach($request_states ?? [] as $state)<option value="{{ $state->id }}" @selected($state->id==request('state_id'))>{{ $state->name }}</option>@endforeach</select></label>
-   <label><span class="mb-1 block text-[11px] font-bold uppercase text-slate-500">Airport</span><input name="name_code" value="{{ request('name_code') }}" class="h-[42px] w-full rounded-lg border border-slate-300 px-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100" placeholder="Search name or IATA code..."></label>
-   <div class="flex items-end gap-2"><button class="h-[42px] rounded-lg bg-slate-900 px-4 text-xs font-semibold text-white"><i class="fas fa-filter mr-1"></i>Filter</button><a href="{{ route('role.airport.index',['role'=>$role]) }}" class="flex h-[42px] items-center rounded-lg border border-slate-300 px-4 text-xs font-semibold text-slate-600">Reset</a></div>
+  {{-- The Manage Banks filter bar, with the country / state selects slotted in.
+       The date range reads the day an airport was added — the only date it has. --}}
+  <form method="GET">
+   <x-ticketing-filter-bar search="name_code" placeholder="Search airport name or IATA code…" :reset="route('role.airport.index',['role'=>$role])" :total="$datas->total()">
+    <select id="country_id" name="country_id" class="select2" aria-label="Country" onchange="getStates(this,'#state_id')" data-action="{{ route('role.get-states-by-country',['role'=>$role]) }}"><option value="">All Countries</option>@foreach($countries as $country)<option value="{{ $country->id }}" @selected($country->id==request('country_id'))>{{ $country->name }}</option>@endforeach</select>
+    <select id="state_id" name="state_id" class="select2" aria-label="State"><option value="">All States</option>@foreach($request_states ?? [] as $state)<option value="{{ $state->id }}" @selected($state->id==request('state_id'))>{{ $state->name }}</option>@endforeach</select>
+   </x-ticketing-filter-bar>
   </form>
-  <div class="overflow-x-auto"><table class="min-w-full divide-y divide-slate-200">
+  <div class="overflow-x-auto" data-tfb-swap><table class="min-w-full divide-y divide-slate-200" data-cf-sort>
    <thead class="bg-slate-50"><tr>@foreach(['SL','Airport','IATA Code','Country','State'] as $heading)<th class="px-5 py-3 text-left text-[11px] font-bold uppercase text-slate-500">{{ $heading }}</th>@endforeach @canany(['edit geography','delete geography'])<th class="px-5 py-3 text-right text-[11px] font-bold uppercase text-slate-500">Action</th>@endcanany</tr></thead>
    <tbody class="divide-y divide-slate-100">
    @forelse($datas as $key => $airport)
@@ -34,6 +36,6 @@
    @empty<tr><td colspan="6" class="px-5 py-12 text-center"><i class="fas fa-plane mb-3 block text-3xl text-slate-300"></i><p class="text-sm text-slate-500">No airports found.</p></td></tr>@endforelse
    </tbody>
   </table></div>
-  <div class="border-t border-slate-100 px-5 py-4">{{ $datas->appends(request()->all())->links() }}</div>
+  <div class="border-t border-slate-100 px-5 py-4" data-tfb-swap>{{ $datas->appends(request()->all())->links() }}</div>
  </section>
 </div>

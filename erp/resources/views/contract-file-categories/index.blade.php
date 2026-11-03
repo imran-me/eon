@@ -1,12 +1,14 @@
-﻿@extends('layout.app')
+@extends('layout.app')
 @section('meta-information')
-<title>Contract File Categories</title>
+<title>Job Categories</title>
 @endsection
 @section('css')
 @endsection
 
 @section('main-content')
 @php($role = Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->first()))
+@include('layout.contract-file-tabs')
+@include('layout.contract-file-setup-tabs')
 @include('contract-file-categories.content')
 @include('contract-file-categories.create-modal')
 @include('contract-file-categories.edit-modal')
@@ -132,7 +134,7 @@
     function validateCategoryForm(form) {
         let ok = true;
         $(form + ' .error-message').addClass('hidden');
-        ['name', 'country_id', 'visa_rate'].forEach(function(name) {
+        ['country_id', 'visa_rate'].forEach(function(name) {   // the job name may be blank = all jobs
             const field = $(form + ' [name="' + name + '"]');
             if (!field.val()) {
                 $('#' + field.attr('id') + '_msg').removeClass('hidden');

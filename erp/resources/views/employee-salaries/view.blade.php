@@ -118,9 +118,47 @@
             font-size: 11px;
             font-weight: 700;
         }
+
+        /* Monthly attendance & work summary card. All `ms-` prefixed. */
+        @include('employee-salaries.partials.monthly-summary-css')
+
+        /* Deliberately not `.container` — that class carries the payslip
+           watermark via ::before, and a second watermarked box above the
+           payslip reads as a duplicate document. */
+        .ms-card {
+            margin: 0 auto 18px auto;
+            border: 1px solid #e2e8f0;
+            background-color: #fff;
+            padding: 20px;
+        }
+
+        .ms-card .ms-wrap {
+            margin-top: 0;
+        }
     </style>
 </head>
 <body>
+
+@php
+    // This is the page the payslip email links to, so the summary sits above
+    // the payslip — the employee sees the month at a glance before scrolling
+    // into the figures. The payslip block itself is unchanged, and a salary
+    // row with no snapshot renders exactly the page it did before.
+    $msSnapshot = is_array($data->summary_snapshot ?? null) ? $data->summary_snapshot : null;
+    $msHasSummary = ($msSnapshot['attendance']['available'] ?? false) === true
+        || ($msSnapshot['tasks']['tracked'] ?? false) === true;
+@endphp
+
+@if ($msHasSummary)
+    <div class="ms-card">
+        @include('employee-salaries.partials.monthly-summary', ['data' => $data])
+    </div>
+@endif
+
+{{-- Live, self-contained, and web-only — see the partial's header for why this
+     one is never allowed into the PDF. It brings its own card and renders
+     absolutely nothing when there is no unpaid salary. --}}
+@include('employee-salaries.partials.outstanding', ['data' => $data])
 
 <div class="container">
     <div class="action-bar">
@@ -184,10 +222,49 @@
             'Early leave'    => payslipRound($data->early_leave_deduction ?? 0),
         ];
 
-        $gross_earning    = array_sum($earnings);
-        $total_deductions = array_sum($deductions);
+        // The salary row is the issued document. Its component columns can be
+        // stale after a legacy edit, and the employee's current template may
+        // no longer be the template used for this month. Never reconstruct the
+        // payable amount from either of those mutable sources.
+        $storedGross      = payslipRound($data->gross_salary ?? 0);
+        $storedDeductions = payslipRound($data->total_deductions ?? 0);
+        if (array_sum(array_slice($earnings, 0, 4)) !== $storedGross) {
+            $earnings = ['Gross Salary' => $storedGross, 'Eid Bonus' => payslipRound($data->bonus_amount ?? 0)];
+        }
+        $rawDeductionTotal = (float) ($data->advance_salary_deduction ?? 0)
+            + (float) ($data->loan_deduction ?? 0) + (float) ($data->absent_deduction ?? 0)
+            + (float) ($data->leave_deduction ?? 0) + (float) ($data->late_deduction ?? 0)
+            + (float) ($data->early_leave_deduction ?? 0);
+        if (abs($rawDeductionTotal - (float) ($data->total_deductions ?? 0)) <= .01) {
+            // Keep the reasons visible. Absorb the occasional one-taka
+            // component-rounding difference into the last non-zero line so
+            // the printed details still add up to the authoritative total.
+            $roundingDelta = $storedDeductions - array_sum($deductions);
+            if ($roundingDelta !== 0) {
+                foreach (array_reverse($deductions, true) as $label => $amount) {
+                    if ($amount !== 0) { $deductions[$label] += $roundingDelta; break; }
+                }
+            }
+        } else {
+            $deductions = [$storedDeductions == 0 ? 'No deductions' : 'Recorded Deductions' => $storedDeductions];
+        }
+
+        $encashmentRows = $data->leaveEncashments;
+        $encashment = payslipRound($encashmentRows->sum('total_amount'));
+        $earnedDays = (float) $encashmentRows->sum('earned_days');
+        $encashmentDays = (float) $encashmentRows->sum('encashable_days');
+        $encashableValue = payslipRound($encashmentRows->sum('month_salary_amount'));
+        $encashmentRefund = payslipRound($encashmentRows->sum('leave_deduction_refund'));
+        $encashmentPeriod = $encashmentRows->isNotEmpty() ? $encashmentRows->min('period_start')->format('d M Y').' – '.$encashmentRows->max('period_end')->format('d M Y') : null;
+        if ($encashment > 0) {
+            $earnings['Leave Encashment (' . number_format($earnedDays, 1) . ' days)'] = $encashment;
+        }
+        $salaryGross      = $storedGross + payslipRound($data->bonus_amount ?? 0) + payslipRound($data->overtime_salary ?? 0);
+        $gross_earning    = $salaryGross + $encashment;
+        $total_deductions = $storedDeductions;
         $adjustment       = payslipRound($data->salary_adjustment ?? 0);
-        $net_salary       = $gross_earning - $total_deductions + $adjustment;
+        $salaryNet        = payslipRound($data->net_salary ?? 0);
+        $net_salary       = $salaryNet + $encashment;
     @endphp
 
     <table class="details-table">
@@ -198,7 +275,7 @@
                     @foreach($earnings as $label => $amount)
                     <tr><td>{{ $label }}</td><td align="right">{{ number_format($amount) }}</td></tr>
                     @endforeach
-                    <tr class="total-row"><td>Gross Earnings</td><td align="right">{{ number_format($gross_earning) }}</td></tr>
+                    <tr class="total-row"><td>{{ $encashment > 0 ? 'Total Earnings' : 'Gross Earnings' }}</td><td align="right">{{ number_format($gross_earning) }}</td></tr>
                 </table>
             </td>
             <td width="4%"></td>
@@ -214,10 +291,20 @@
         </tr>
     </table>
 
+    @if($adjustment != 0)
     <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">
         Salary Adjustment : {{ number_format($adjustment) }}
     </div>
+    @endif
 
+    @include('employee-salaries.partials.pay-breakdown', [
+        'salary_gross' => $salaryGross, 'salary_net' => $salaryNet,
+        'earned_days' => $earnedDays,
+        'encashment_days' => $encashmentDays, 'encashable_value' => $encashableValue,
+        'encashment_refund' => $encashmentRefund, 'encashment_period' => $encashmentPeriod,
+    ])
+
+    @if($encashment <= 0)
     <table class="net-box" width="100%">
         <tr>
             <td width="60%">
@@ -227,6 +314,7 @@
             <td width="40%" class="amount-value">BDT {{ number_format($net_salary) }}</td>
         </tr>
     </table>
+    @endif
 
     <div class="note-text note-block">Note: {{ $data->notes ?? 'No note available' }}</div>
 
@@ -239,6 +327,7 @@
                             <div class="signature">Employee Signature</div>
                         </td>
                         <td class="signature-cell-right">
+                            <x-signature :company="$company" />
                             <div class="signature">Authorized Signatory</div>
                         </td>
                     </tr>

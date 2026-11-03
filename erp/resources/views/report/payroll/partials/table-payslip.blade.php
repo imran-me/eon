@@ -36,13 +36,11 @@
                 ৳ {{ number_format($r->due_amount, 0) }}
             </td>
             <td class="px-4 py-3 text-center">
-                @if($r->pdf_path)
-                    <a href="{{ asset($r->pdf_path) }}" target="_blank" class="text-red-500 hover:text-red-700" title="Open PDF">
-                        <i class="fas fa-file-pdf"></i>
-                    </a>
-                @else
-                    <span class="text-gray-300">—</span>
-                @endif
+                <a href="{{ route('role.employee-salaries.action', ['role' => $role, 'id' => $r->employee_salary_id, 'action' => 'download']) }}"
+                   target="_blank" class="text-red-500 hover:text-red-700"
+                   title="Generate the latest PDF from the current payroll values">
+                    <i class="fas fa-file-pdf"></i>
+                </a>
             </td>
         </tr>
         @endforeach

@@ -77,11 +77,16 @@ class PayrollService
             ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
             ->where('leaves.user_id', $user->id)
             ->where('leaves.status', 'approved')
+            ->whereNull('leaves.deleted_at')
             ->where(function ($query) use ($startDate, $endDate) {
                 $query->whereBetween('leaves.start_date', [$startDate, $endDate])
                     ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
             })
-            ->select('leaves.*', 'leave_types.exempts_early_out_deduction')
+            ->select(
+                'leaves.*',
+                'leave_types.exempts_early_out_deduction',
+                'leave_types.exempts_late_deduction'
+            )
             ->get();
 
         foreach ($period as $date) {
@@ -90,6 +95,7 @@ class PayrollService
 
             if (isset($dbAttendances[$dateString])) {
                 $record = $dbAttendances[$dateString];
+                $approvedLateIn = $this->findApprovedLateInForDate($leaves, $dateString);
 
                 if ($record->check_in && $record->attendence_setting) {
                     $checkInTime = Carbon::parse($dateString . ' ' . $record->check_in);
@@ -97,7 +103,7 @@ class PayrollService
                     $lateThreshold = Carbon::parse($dateString . ' ' . $record->shift->start_time)->addMinutes($minutes);
                     $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
 
-                    if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0) {
+                    if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0 && !$approvedLateIn) {
                         $summary['late']++;
                         $summary['present']++;
                         $summary['late_minutes'] += $lateMinutes;
@@ -149,7 +155,7 @@ class PayrollService
                         $summary[$status]++;
                     }
                 }
-            } elseif ($leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+            } elseif ($leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                 $summary['leave']++;
             } else {
                 $holidayRecord = $holidays->first(fn($h) => $dateString >= $h->start_date && $dateString <= $h->end_date);
@@ -167,7 +173,13 @@ class PayrollService
         $totalSalary = (float) ($user->profile->salary ?? 0);
         $dailySalary = round($totalSalary / $summary['total_days'], 2);
         $absentDeduction = $dailySalary * $summary['absent'];
-        $leaveDeduction = $dailySalary * $summary['leave'];
+        // The new policy begins after the March 2027 settlement: up to two
+        // approved leave days in each payroll month are paid and therefore
+        // do not reduce salary. Historical months retain their exact rule.
+        $paidLeaveDays = Carbon::create($year, $month, 1)->gte(Carbon::create(2027, 3, 1))
+            ? min(2, $summary['leave'])
+            : 0;
+        $leaveDeduction = $dailySalary * max(0, $summary['leave'] - $paidLeaveDays);
         $hourlySalary = round($dailySalary / 9, 2);
         $minuteSalary = $hourlySalary / 60;
         $lateDeductionThresholdMinutes = 120;
@@ -179,26 +191,70 @@ class PayrollService
         $loan = DB::table('loans')
             ->where('user_id', $user->id)
             ->where('status', 'running')
+            ->where('remaining_amount', '>', 0)
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->where('start_date', '<=', $endDate)->where('end_date', '>=', $startDate);
+                $query->where('start_date', '<=', $endDate)
+                    ->where(function ($dates) use ($startDate) {
+                        $dates->whereNull('end_date')->orWhere('end_date', '>=', $startDate);
+                    });
             })
+            ->orderBy('start_date')
+            ->orderBy('id')
             ->first();
 
-        $advanceSalary = AdvanceSalary::where('user_id', $user->id)
+        $loanDeduction = $loan
+            ? min((float) $loan->monthly_deduction, (float) $loan->remaining_amount)
+            : 0;
+
+        $advanceSalaries = AdvanceSalary::where('user_id', $user->id)
             ->where('status', 'Approved')
             ->where('month', sprintf('%04d-%02d', $year, $month))
-            ->first();
+            ->orderBy('id')
+            ->get();
+
+        // More than one advance can be released in the same salary month.
+        // The old first() silently deducted only the earliest one (for example,
+        // ৳1,000 + ৳2,000 appeared as ৳1,000). Sum every still-outstanding
+        // approved advance for the period; keep the first id in the legacy
+        // single-id column while the salary row carries the complete deduction.
+        $advanceSalaryDeduction = round((float) $advanceSalaries->sum(
+            fn (AdvanceSalary $advance) => $advance->outstanding
+        ), 2);
+        $advanceSalary = $advanceSalaries->first();
 
         $overtimeSalary = $user->overtime_eligible
             ? round($summary['overtime_minutes'] * $minuteSalary, 2)
             : 0;
 
+        // ── FIXED SALARY ───────────────────────────────────────────────
+        // A fixed-salary employee's pay never moves with attendance: they
+        // take home their full gross whether they were present, absent or
+        // on approved leave. The four attendance-driven deductions are
+        // zeroed here rather than skipped above, so the summary still
+        // reports the real present/absent/late/overtime day counts — only
+        // the money is unaffected.
+        //
+        // Loan and advance-salary instalments deliberately survive: those
+        // recover money already handed to the employee, they are not
+        // attendance penalties. Overtime also survives, still gated on its
+        // own overtime_eligible flag.
+        $fixedSalary = (bool) $user->fixed_salary;
+
+        if ($fixedSalary) {
+            $absentDeduction = 0;
+            $leaveDeduction = 0;
+            $lateDeduction = 0;
+            $earlyOutDeduction = 0;
+        }
+        // ── END FIXED SALARY ───────────────────────────────────────────
+
         $totalDeductions = $absentDeduction + $leaveDeduction + $lateDeduction + $earlyOutDeduction
-            + ($loan ? $loan->monthly_deduction : 0)
-            + ($advanceSalary ? $advanceSalary->amount : 0);
+            + $loanDeduction
+            + $advanceSalaryDeduction;
 
         return [
             'overtime_eligible' => (bool) $user->overtime_eligible,
+            'fixed_salary' => $fixedSalary,
             'summary' => $summary,
             'advance_salary_id' => $advanceSalary ? $advanceSalary->id : null,
             'loan_id' => $loan ? $loan->id : null,
@@ -207,12 +263,13 @@ class PayrollService
             'hourly_salary' => $hourlySalary,
             'absent_deduction' => $absentDeduction,
             'leave_deduction' => $leaveDeduction,
+            'paid_leave_days' => $paidLeaveDays,
             'late_deduction' => $lateDeduction,
             'early_out_deduction' => $earlyOutDeduction,
             'overtime_salary' => $overtimeSalary,
             'total_deductions' => round($totalDeductions, 2),
-            'loan_deduction' => $loan ? $loan->monthly_deduction : 0,
-            'advance_salary' => $advanceSalary ? $advanceSalary->amount : 0,
+            'loan_deduction' => $loanDeduction,
+            'advance_salary' => $advanceSalaryDeduction,
         ];
     }
 
@@ -236,6 +293,71 @@ class PayrollService
         return DB::transaction(function () use ($data) {
             $user = User::findOrFail($data['user_id']);
 
+            // ── AMOUNTS ────────────────────────────────────────────────
+            // Net salary is derived here, never taken on trust. The manual
+            // form's Net Salary box is a plain editable input filled in by
+            // JS after an attendance lookup, so a sheet saved before that
+            // lookup returned used to be stored verbatim — and the journal,
+            // the payment schedule and the ledger all inherited the
+            // half-finished figure. On 2026-08-19 that put three payslips
+            // of ৳50,000 gross into the books at ৳8,064.60, ৳6,666.58 and
+            // ৳6,451.70. The automated monthly job already computes the
+            // same expression, so this changes nothing for it.
+            $overtimeSalary = $user->overtime_eligible ? (float) ($data['overtime_salary'] ?? 0) : 0;
+
+            // Fixed-salary employees are never docked for attendance. The
+            // manual form posts whatever its JS last left in the deduction
+            // boxes, so — same rule as the derived net salary above — the
+            // flag is enforced here rather than trusted from the request:
+            // a sheet built before the toggle was switched on still saves
+            // clean. Loan and advance instalments are left alone; they
+            // repay money already advanced, they are not penalties.
+            if ($user->fixed_salary) {
+                $data['absent_deduction'] = 0;
+                $data['leave_deduction'] = 0;
+                $data['late_deduction'] = 0;
+                $data['early_leave_deduction'] = 0;
+            }
+
+            // Never trust a stale browser-calculated EMI. The loan may have
+            // received another payment since the salary preview was opened;
+            // collect at most what is still outstanding at posting time.
+            $loan = Loan::find($data['loan_id'] ?? null);
+            $data['loan_deduction'] = $loan
+                ? min((float) ($data['loan_deduction'] ?? 0), $loan->outstanding)
+                : 0;
+
+            $data['total_deductions'] = round(
+                (float) ($data['loan_deduction'] ?? 0)
+                    + (float) ($data['advance_salary_deduction'] ?? 0)
+                    + (float) ($data['absent_deduction'] ?? 0)
+                    + (float) ($data['leave_deduction'] ?? 0)
+                    + (float) ($data['late_deduction'] ?? 0)
+                    + (float) ($data['early_leave_deduction'] ?? 0),
+                2
+            );
+
+            // Payroll is settled in whole taka. Always round any poisha up
+            // here so the salary row, ledger, journal, schedule and Pay Due
+            // modal all inherit the exact same amount.
+            $netSalary = ceil(
+                (float) ($data['gross_salary'] ?? 0)
+                    + $overtimeSalary
+                    + (float) ($data['bonus_amount'] ?? 0)
+                    + (float) ($data['salary_adjustment'] ?? 0)
+                    - (float) ($data['total_deductions'] ?? 0)
+            );
+
+            // The create form parks a status message in the Note box while
+            // it waits on attendance and clears it on success. Seeing it
+            // arrive means the save beat the lookup; it is never a note
+            // anybody typed, so it must not be filed as one.
+            $notes = $data['notes'] ?? null;
+            if (is_string($notes) && in_array(trim($notes), ['Fetching attendance data...', 'Error loading data.'], true)) {
+                $notes = null;
+            }
+            // ── END AMOUNTS ────────────────────────────────────────────
+
             $empSalary = EmployeeSalary::create([
                 'user_id' => $data['user_id'],
                 'salary_template_id' => $user->salary_template_id,
@@ -251,18 +373,18 @@ class PayrollService
                 'early_leave_deduction' => $data['early_leave_deduction'] ?? 0,
                 'over_time' => $data['over_time'] ?? 0,
                 'over_time_days' => $data['over_time_days'] ?? 0,
-                'overtime_salary' => $user->overtime_eligible ? ($data['overtime_salary'] ?? 0) : 0,
+                'overtime_salary' => $overtimeSalary,
                 'absent_deduction' => $data['absent_deduction'] ?? 0,
                 'leave_deduction' => $data['leave_deduction'] ?? 0,
                 'late_deduction' => $data['late_deduction'] ?? 0,
                 'salary_adjustment' => $data['salary_adjustment'] ?? 0,
                 'total_deductions' => $data['total_deductions'] ?? 0,
-                'net_salary' => $data['net_salary'] ?? 0,
+                'net_salary' => $netSalary,
                 'salary_generation_date' => $data['salary_generation_date'],
                 'scheduled_date' => $data['scheduled_date'],
                 'payment_method' => $data['payment_method'] ?? null,
                 'status' => $data['status'] ?? 'Pending',
-                'notes' => $data['notes'] ?? null,
+                'notes' => $notes,
             ]);
 
             // ── EMPLOYEE LEDGER (auto) ─────────────────────────────────
@@ -281,8 +403,6 @@ class PayrollService
             // out of the rows — same figure, but the loan register and the
             // transaction trail can finally show where it came from.
             $loanDeduction = (float) ($data['loan_deduction'] ?? 0);
-            $loan = Loan::find($data['loan_id'] ?? null);
-
             if ($loan && $loanDeduction > 0) {
                 $period = Carbon::createFromDate($empSalary->year, (int) $empSalary->month, 1);
 
@@ -297,7 +417,10 @@ class PayrollService
             // ── END LOAN EMI ───────────────────────────────────────────
 
             $advanceRecord = DB::table('advance_salaries')->where('id', $data['advance_salary_id'] ?? null)->first();
-            if ($advanceRecord && $advanceRecord->status == 'Approved') {
+            // Only an advance not yet marked released: one approved through
+            // AdvancePostingService was released (and posted) on its own date,
+            // which this must not overwrite with today.
+            if ($advanceRecord && $advanceRecord->status == 'Approved' && strtolower((string) $advanceRecord->payment_status) !== 'paid') {
                 DB::table('advance_salaries')->where('id', $data['advance_salary_id'])->update([
                     'payment_status' => 'Paid',
                     'paid_at' => now(),
@@ -317,6 +440,13 @@ class PayrollService
                 $data['bank_id'] ?? null,
             );
             // ── END JOURNAL ───────────────────────────────────────────
+
+            // ── ADVANCE RECOVERY (auto) ───────────────────────────────
+            // The salary journal above books the NET; the advance it withheld
+            // goes Dr Salary Expense / Cr Salary Advance as its own entry.
+            // No-op for advances paid out before posting existed.
+            app(\App\Services\AdvancePostingService::class)->syncRecovery($empSalary);
+            // ── END ADVANCE RECOVERY ──────────────────────────────────
 
             if (!in_array($empSalary->status, ['paid', 'Paid']) && $empSalary->net_salary > 0) {
                 PaymentSchedule::updateOrCreate(
@@ -352,9 +482,26 @@ class PayrollService
      *
      * @return array{payslip: Payslip, pdf_content: string}
      */
-    public function issuePayslip(EmployeeSalary $empSalary): array
+    public function issuePayslip(EmployeeSalary $empSalary, ?array $attendanceSummary = null): array
     {
         $empSalary->loadMissing('user.company', 'user.profile.designation', 'user.salary_template');
+
+        // Freeze the month's attendance + task figures before the PDF renders:
+        // page 2 of the payslip reads this snapshot, and so does every later
+        // re-download, so the copy mailed today and the copy pulled in November
+        // quote the same numbers even after attendance is corrected or a leave
+        // is approved retroactively. Wrapped because a summary block is never
+        // worth failing a payslip over.
+        try {
+            $empSalary->summary_snapshot = app(MonthlySummaryService::class)
+                ->build($empSalary, $attendanceSummary);
+            $empSalary->save();
+        } catch (\Throwable $e) {
+            Log::warning('Payslip monthly summary snapshot failed; payslip issued without it.', [
+                'employee_salary_id' => $empSalary->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         $logoUrl = asset($empSalary->user->company->logo ?? 'images/site-setting/69401c60d0949.png');
         $logoData = @file_get_contents($logoUrl);
@@ -374,9 +521,23 @@ class PayrollService
 
         $payslipNumber = sprintf('PS-%04d%02d-%04d', $empSalary->year, (int) $empSalary->month, $empSalary->user_id);
 
+        $payslip = Payslip::where('payslip_number', $payslipNumber)
+            ->orWhere('employee_salary_id', $empSalary->id)
+            ->first();
+
+        if ($payslip && (int) $payslip->employee_salary_id !== (int) $empSalary->id) {
+            Log::warning('Reusing existing payslip number for a regenerated salary.', [
+                'payslip_id' => $payslip->id,
+                'old_employee_salary_id' => $payslip->employee_salary_id,
+                'new_employee_salary_id' => $empSalary->id,
+                'payslip_number' => $payslipNumber,
+            ]);
+        }
+
         $payslip = Payslip::updateOrCreate(
-            ['employee_salary_id' => $empSalary->id],
+            ['id' => $payslip?->id],
             [
+                'employee_salary_id' => $empSalary->id,
                 'user_id' => $empSalary->user_id,
                 'payslip_number' => $payslipNumber,
                 'issue_date' => now()->toDateString(),
@@ -395,7 +556,7 @@ class PayrollService
      * automated one. Each channel is independently try/caught: none of
      * them should ever fail the salary-creation request itself.
      */
-    public function sendPayslipNotifications(EmployeeSalary $empSalary, ?Payslip $payslip = null): void
+    public function sendPayslipNotifications(EmployeeSalary $empSalary, ?Payslip $payslip = null, ?string $pdfContent = null): void
     {
         $empSalary->loadMissing('user');
         $user = $empSalary->user;
@@ -420,7 +581,55 @@ class PayrollService
                 $subject = 'আপনার বেতন বিবরণী (Payslip) - ' . $empSalary->month . '/' . $empSalary->year;
                 $htmlContent = view('emails.payslip-notice', ['user' => $user, 'empSalary' => $empSalary, 'viewUrl' => $viewUrl])->render();
 
-                $response = sendBrevoMail($user->email, $user->name, $subject, $htmlContent);
+                // Attach the very bytes issuePayslip() produced. It hands them
+                // over directly, so the attachment never depends on the file
+                // having survived on disk — a wiped public/ or a deploy that
+                // does not carry image/payslip/ would otherwise mean employees
+                // silently receive an email with no payslip on it.
+                //
+                // The disk read is only a fallback for callers that did not
+                // pass the content. If neither is available the email still
+                // goes out: the summary is in the body and the signed link
+                // works, so a missing file must not cost the notification.
+                $attachments = [];
+                $bytes = $pdfContent;
+
+                if (!$bytes) {
+                    $pdfFile = $payslip?->pdf_path ? public_path($payslip->pdf_path) : null;
+                    if ($pdfFile && is_file($pdfFile)) {
+                        $bytes = file_get_contents($pdfFile);
+                    }
+                }
+
+                if ($bytes) {
+                    $monthName = Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)->format('F Y');
+                    $attachments[] = [
+                        'name' => 'Payslip - ' . $monthName . '.pdf',
+                        'content' => $bytes,
+                    ];
+                } else {
+                    Log::warning('Payslip PDF unavailable; email sent without attachment.', [
+                        'user_id' => $user->id,
+                        'payslip_id' => $payslip?->id,
+                    ]);
+                }
+
+                // Keep the payslip as its original three-page file and attach
+                // the full employee/month task report as a separate document.
+                try {
+                    $monthName ??= Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)->format('F Y');
+                    $attachments[] = [
+                        'name' => 'Employee Task Report - ' . $monthName . '.pdf',
+                        'content' => app(EmployeeTaskReportService::class)->render($empSalary),
+                    ];
+                } catch (\Throwable $e) {
+                    Log::warning('Employee task report attachment render failed; email sent without it.', [
+                        'employee_salary_id' => $empSalary->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                $response = sendBrevoMail($user->email, $user->name, $subject, $htmlContent, $attachments);
 
                 if (!$response->successful()) {
                     Log::warning('Brevo payslip email API call failed.', [
@@ -472,7 +681,7 @@ class PayrollService
      */
     // Public so the payroll reports can state the same liability the annual
     // reconciliation will settle, rather than a second definition of it.
-    public const ENCASHMENT_CUTOVER_DATE = '2026-02-01';
+    public const ENCASHMENT_CUTOVER_DATE = '2026-03-01';
 
     /**
      * Checks whether ($year, $month) is a February — the one month per year
@@ -494,7 +703,19 @@ class PayrollService
      */
     public function maybeProcessAnniversaryReconciliation(User $user, int $year, int $month): ?SalaryReconciliation
     {
+        // The job generates February payroll in March; that is when the
+        // March-to-February cycle closes and becomes payable.
         if ($month !== 2) {
+            return null;
+        }
+
+        // Fixed-salary employees get no encashment payout. The payout is a
+        // refund of leave that was deducted from their monthly pay over the
+        // service year — for them nothing ever is (see the FIXED SALARY
+        // block in calculateAttendanceDeductions), so there is nothing to
+        // refund, and paying the month's gross on top would be a raise the
+        // policy never intended.
+        if ($user->fixed_salary) {
             return null;
         }
 
@@ -505,7 +726,7 @@ class PayrollService
         }
 
         $effectiveStart = $this->encashmentEffectiveStart(Carbon::parse($joiningDate));
-        $processingDate = Carbon::create($year, 2, 1);
+        $processingDate = Carbon::create($year, 3, 1);
 
         // Must have completed a full year of effective service by this Feb.
         if ($effectiveStart->copy()->addYear()->gt($processingDate)) {
@@ -531,7 +752,7 @@ class PayrollService
         $periodStart = $previous
             ? Carbon::parse($previous->period_end)->addDay()->startOfDay()
             : $effectiveStart->copy();
-        $periodEnd = Carbon::create($year, 1, 1)->endOfMonth(); // Jan 31 of $year — the cycle that just closed
+        $periodEnd = Carbon::create($year, 2, 1)->endOfMonth(); // February of the cycle that just closed
 
         // Fold in the one-time manual opening entry, but only on this
         // employee's very first reconciliation ever ($previous null) — once
@@ -549,30 +770,62 @@ class PayrollService
             }
         }
 
-        $leaveRefund = $this->sumLeaveDeductionForWindow($user->id, $periodStart, $periodEnd);
+        // A manual payout can close an accrual window before March. The next
+        // annual payout must wait for 12 new payroll months and must consume
+        // only those 12 months, otherwise the same cycle could be paid twice.
+        $cycleRows = EmployeeSalary::where('user_id', $user->id)
+            ->whereRaw('(year * 100 + CAST(month AS UNSIGNED)) BETWEEN ? AND ?', [
+                $periodStart->year * 100 + $periodStart->month,
+                $periodEnd->year * 100 + $periodEnd->month,
+            ])
+            ->orderBy('year')->orderBy('month')->limit(12)->get(['year', 'month']);
+
+        if ($cycleRows->count() < 12) {
+            return null;
+        }
+
+        $twelfthMonth = $cycleRows->last();
+        $periodEnd = Carbon::create((int) $twelfthMonth->year, (int) $twelfthMonth->month, 1)->endOfMonth();
+
+        $accrual = $this->leaveEncashmentAccrualForWindow($user->id, $periodStart, $periodEnd);
+        $leaveRefund = $accrual['leave_deduction'];
+        $trackedLeaveRefund = $leaveRefund;
 
         if ($openingEntry) {
             $leaveRefund = round($leaveRefund + (float) $openingEntry->amount, 2);
         }
 
-        $monthSalaryAmount = (float) ($user->profile->salary ?? 0);
+        $usedLeaveDays = $accrual['used_leave_days'];
+        $totals = $this->calculateLeaveEncashmentTotals(
+            $accrual['earned_days'], $usedLeaveDays, $accrual['earned_value'], $trackedLeaveRefund,
+            $accrual['consumed_leave_value'], (float) ($user->profile->salary ?? 0)
+        );
+        $encashableDays = $totals['encashable_days'];
+        $monthSalaryAmount = $totals['encashable_value'];
         $totalAmount = round($monthSalaryAmount + $leaveRefund, 2);
+        $earnedDays = $accrual['earned_days'];
 
-        return DB::transaction(function () use ($user, $serviceYearNumber, $processingDate, $periodStart, $periodEnd, $monthSalaryAmount, $leaveRefund, $totalAmount) {
+        return DB::transaction(function () use ($user, $serviceYearNumber, $processingDate, $periodStart, $periodEnd, $monthSalaryAmount, $leaveRefund, $totalAmount, $earnedDays, $encashableDays) {
             $companyId = $user->company_id ?? 2;
+            $employeeSalaryId = EmployeeSalary::where('user_id', $user->id)
+                ->whereRaw('(year * 100 + CAST(month AS UNSIGNED)) <= ?', [$periodEnd->year * 100 + $periodEnd->month])
+                ->orderByDesc('year')->orderByRaw('CAST(month AS UNSIGNED) DESC')->value('id');
 
             $reconciliation = SalaryReconciliation::create([
                 'user_id' => $user->id,
                 'company_id' => $companyId,
+                'employee_salary_id' => $employeeSalaryId,
                 'service_year_number' => $serviceYearNumber,
                 'anniversary_date' => $processingDate->toDateString(),
                 'period_start' => $periodStart->toDateString(),
                 'period_end' => $periodEnd->toDateString(),
+                'earned_days' => $earnedDays,
+                'encashable_days' => $encashableDays,
                 'month_salary_amount' => $monthSalaryAmount,
                 'leave_deduction_refund' => $leaveRefund,
                 'total_amount' => $totalAmount,
                 'status' => 'Pending',
-                'notes' => 'Auto-generated anniversary reconciliation (service year ' . $serviceYearNumber . ')',
+                'notes' => 'Auto-generated leave encashment: ' . number_format($earnedDays, 1) . ' earned, ' . number_format($encashableDays, 1) . ' unused days (service year ' . $serviceYearNumber . ')',
             ]);
 
             $this->postEmployeeLedgerRow($user->id, [
@@ -624,11 +877,20 @@ class PayrollService
      * maybeProcessAnniversaryReconciliation() so the live display and the
      * real payout can never disagree about which months are being summed.
      *
-     * Returns null if the employee has no joining_date on file.
+     * Returns null if the employee has no joining_date on file, or is on
+     * a fixed salary and therefore never accrues an encashment payout.
      */
     public function projectPendingReconciliation(User $user, Carbon $asOf): ?array
     {
         $user->loadMissing('profile');
+
+        // Mirror of the exclusion in maybeProcessAnniversaryReconciliation()
+        // so the running "due so far" tile can never advertise a payout the
+        // February run will not make.
+        if ($user->fixed_salary) {
+            return null;
+        }
+
         $joiningDate = $user->profile?->joining_date;
         if (!$joiningDate) {
             return null;
@@ -674,7 +936,7 @@ class PayrollService
         // — the first Feb 1st on/after both "today" and their 1-year
         // eligibility floor.
         $eligibleFrom = $effectiveStart->copy()->addYear();
-        $nextPayoutDate = Carbon::create($asOf->year, 2, 1);
+        $nextPayoutDate = Carbon::create($asOf->year, 3, 1);
         while ($nextPayoutDate->lte($asOf) || $nextPayoutDate->lt($eligibleFrom)) {
             $nextPayoutDate->addYear();
         }
@@ -685,27 +947,42 @@ class PayrollService
                 $periodEnd->year * 100 + $periodEnd->month,
             ])
             ->orderBy('year')->orderBy('month')
-            ->get(['year', 'month', 'leave_deduction', 'absent_deduction']);
+            ->get(['user_id', 'year', 'month', 'gross_salary', 'leave_deduction', 'absent_deduction']);
+
+        $fullCycleGross = $monthlyRows->count() >= 12 ? (float) ($user->profile->salary ?? 0) : null;
+
+        $monthlyRows->each(function (EmployeeSalary $salary) use ($fullCycleGross) {
+            $monthStart = Carbon::create((int) $salary->year, (int) $salary->month, 1);
+            $daysInMonth = $monthStart->daysInMonth;
+            $salary->setAttribute('earned_days', 2.0);
+            $usedDays = $this->salaryUsedLeaveDays($salary);
+            $salary->setAttribute('used_leave_days', $usedDays);
+            $salary->setAttribute('earned_value', $fullCycleGross !== null
+                ? round($fullCycleGross / 12, 2)
+                : round(((float) $salary->gross_salary / $daysInMonth) * 2, 2));
+            $salary->setAttribute('consumed_leave_value', $fullCycleGross !== null
+                ? round(($fullCycleGross / 24) * $usedDays, 2)
+                : $this->salaryConsumedLeaveValue($salary, $usedDays));
+        });
 
         $accruedLeaveDeduction = (float) $monthlyRows->sum('leave_deduction');
-
-        $leaveDaysTaken = Leave::where('user_id', $user->id)
-            ->where('status', 'approved')
-            ->whereDate('start_date', '<=', $periodEnd->toDateString())
-            ->whereDate('end_date', '>=', $periodStart->toDateString())
-            ->get()
-            ->sum(function ($leave) use ($periodStart, $periodEnd) {
-                $start = Carbon::parse($leave->start_date)->max($periodStart);
-                $end = Carbon::parse($leave->end_date)->min($periodEnd);
-                return $end->greaterThanOrEqualTo($start) ? $start->diffInDays($end) + 1 : 0;
-            });
+        $trackedLeaveDeduction = $accruedLeaveDeduction;
+        $earnedDays = round((float) $monthlyRows->sum('earned_days'), 2);
+        $earnedLeaveValue = round((float) $monthlyRows->sum('earned_value'), 2);
+        $leaveDaysTaken = round((float) $monthlyRows->sum('used_leave_days'), 2);
+        $consumedLeaveValue = round((float) $monthlyRows->sum('consumed_leave_value'), 2);
 
         if ($openingEntry) {
             $accruedLeaveDeduction = round($accruedLeaveDeduction + (float) $openingEntry->amount, 2);
-            $leaveDaysTaken += (float) $openingEntry->days;
         }
 
         $currentGrossSalary = (float) ($user->profile->salary ?? 0);
+        $totals = $this->calculateLeaveEncashmentTotals(
+            $earnedDays, $leaveDaysTaken, $earnedLeaveValue, $trackedLeaveDeduction, $consumedLeaveValue,
+            $fullCycleGross
+        );
+        $encashableDays = $totals['encashable_days'];
+        $encashableLeaveValue = $totals['encashable_value'];
 
         return [
             'service_year_in_progress' => $serviceYearInProgress,
@@ -713,9 +990,14 @@ class PayrollService
             'period_start' => $periodStart,
             'period_end' => $periodEnd,
             'leave_days_taken' => $leaveDaysTaken,
+            'earned_days' => $earnedDays,
+            'earned_leave_value' => $earnedLeaveValue,
+            'used_leave_days' => $leaveDaysTaken,
+            'encashable_days' => $encashableDays,
+            'encashable_leave_value' => $encashableLeaveValue,
             'accrued_leave_deduction' => $accruedLeaveDeduction,
             'current_gross_salary' => $currentGrossSalary,
-            'projected_total_payout' => round($accruedLeaveDeduction + $currentGrossSalary, 2),
+            'projected_total_payout' => round($accruedLeaveDeduction + $encashableLeaveValue, 2),
             'monthly_breakdown' => $monthlyRows,
             'opening_entry' => $openingEntry,
         ];
@@ -747,12 +1029,179 @@ class PayrollService
             ->sum('leave_deduction');
     }
 
+    private function leaveEncashmentAccrualForWindow(int $userId, Carbon $periodStart, Carbon $periodEnd): array
+    {
+        $rows = EmployeeSalary::where('user_id', $userId)
+            ->whereRaw('(year * 100 + CAST(month AS UNSIGNED)) BETWEEN ? AND ?', [
+                $periodStart->year * 100 + $periodStart->month,
+                $periodEnd->year * 100 + $periodEnd->month,
+            ])->get(['user_id', 'year', 'month', 'gross_salary', 'leave_deduction']);
+
+        $rows->each(function (EmployeeSalary $salary) {
+            $monthStart = Carbon::create((int) $salary->year, (int) $salary->month, 1);
+            $usedDays = $this->salaryUsedLeaveDays($salary);
+            $salary->setAttribute('used_leave_days', $usedDays);
+            $salary->setAttribute('consumed_leave_value', $this->salaryConsumedLeaveValue($salary, $usedDays));
+        });
+
+        return [
+            'earned_days' => round($rows->count() * 2, 2),
+            'earned_value' => round((float) $rows->sum(function ($row) {
+                $daysInMonth = Carbon::create((int) $row->year, (int) $row->month, 1)->daysInMonth;
+                return ((float) $row->gross_salary / $daysInMonth) * 2;
+            }), 2),
+            'leave_deduction' => round((float) $rows->sum('leave_deduction'), 2),
+            'used_leave_days' => round((float) $rows->sum('used_leave_days'), 2),
+            'consumed_leave_value' => round((float) $rows->sum('consumed_leave_value'), 2),
+        ];
+    }
+
+    private function salaryUsedLeaveDays(EmployeeSalary $salary): float
+    {
+        $monthStart = Carbon::create((int) $salary->year, (int) $salary->month, 1);
+
+        // Legacy leave rows are incomplete and may include non-deducted dates.
+        // The posted salary deduction is the authoritative historical record.
+        if ($monthStart->lt(Carbon::create(2027, 3, 1))) {
+            $dailySalary = (float) $salary->gross_salary / $monthStart->daysInMonth;
+            return $dailySalary > 0 ? round((float) $salary->leave_deduction / $dailySalary, 2) : 0;
+        }
+
+        return $this->approvedLeaveDaysForWindow(
+            (int) $salary->user_id, $monthStart, $monthStart->copy()->endOfMonth()
+        );
+    }
+
+    private function salaryConsumedLeaveValue(EmployeeSalary $salary, float $usedDays): float
+    {
+        $monthStart = Carbon::create((int) $salary->year, (int) $salary->month, 1);
+
+        if ($monthStart->lt(Carbon::create(2027, 3, 1))) {
+            return round((float) $salary->leave_deduction, 2);
+        }
+
+        return round(((float) $salary->gross_salary / $monthStart->daysInMonth) * $usedDays, 2);
+    }
+
+    private function approvedLeaveDaysForWindow(int $userId, Carbon $periodStart, Carbon $periodEnd): float
+    {
+        return (float) Leave::where('user_id', $userId)
+            ->where('status', 'approved')
+            ->whereDate('start_date', '<=', $periodEnd->toDateString())
+            ->whereDate('end_date', '>=', $periodStart->toDateString())
+            ->get()
+            ->sum(function ($leave) use ($periodStart, $periodEnd) {
+                $start = Carbon::parse($leave->start_date)->max($periodStart);
+                $end = Carbon::parse($leave->end_date)->min($periodEnd);
+                return $end->greaterThanOrEqualTo($start) ? $start->diffInDays($end) + 1 : 0;
+            });
+    }
+
+    public function calculateLeaveEncashmentTotals(float $earnedDays, float $usedDays, float $earnedValue, float $deductionRefund, ?float $consumedLeaveValue = null, ?float $fullCycleGross = null): array
+    {
+        $encashableDays = max(0, round($earnedDays - $usedDays, 2));
+        $encashableValue = $fullCycleGross !== null && $earnedDays >= 24
+            ? max(0, round($fullCycleGross * ($encashableDays / 24), 2))
+            : max(0, round($earnedValue - ($consumedLeaveValue ?? $deductionRefund), 2));
+
+        return [
+            'encashable_days' => $encashableDays,
+            'encashable_value' => $encashableValue,
+            'deduction_refund' => round($deductionRefund, 2),
+            'total_payout' => round($encashableValue + $deductionRefund, 2),
+        ];
+    }
+
+    public function processLeaveEncashmentPayout(User $user, Carbon $payoutDate): SalaryReconciliation
+    {
+        if ($user->fixed_salary) {
+            throw new \RuntimeException('Fixed-salary employees do not accrue leave encashment.');
+        }
+
+        $projection = $this->projectPendingReconciliation($user, $payoutDate);
+        if (!$projection || $projection['projected_total_payout'] <= 0) {
+            throw new \RuntimeException('No leave encashment has accrued for this employee.');
+        }
+
+        if (SalaryReconciliation::where('user_id', $user->id)
+            ->whereDate('period_start', $projection['period_start']->toDateString())
+            ->whereDate('period_end', $projection['period_end']->toDateString())
+            ->exists()) {
+            throw new \RuntimeException('This leave-encashment period has already been posted.');
+        }
+
+        return DB::transaction(function () use ($user, $payoutDate, $projection) {
+            $companyId = $user->company_id ?? auth()->user()->company_id ?? 2;
+            $periodEnd = $projection['period_end'];
+            $employeeSalaryId = EmployeeSalary::where('user_id', $user->id)
+                ->whereRaw('(year * 100 + CAST(month AS UNSIGNED)) <= ?', [$periodEnd->year * 100 + $periodEnd->month])
+                ->orderByDesc('year')->orderByRaw('CAST(month AS UNSIGNED) DESC')->value('id');
+            $reconciliation = SalaryReconciliation::create([
+                'user_id' => $user->id, 'company_id' => $companyId,
+                'employee_salary_id' => $employeeSalaryId,
+                'service_year_number' => $projection['service_year_in_progress'],
+                'anniversary_date' => $payoutDate->toDateString(),
+                'period_start' => $projection['period_start']->toDateString(),
+                'period_end' => $projection['period_end']->toDateString(),
+                'earned_days' => $projection['earned_days'],
+                'encashable_days' => $projection['encashable_days'],
+                'month_salary_amount' => $projection['encashable_leave_value'],
+                'leave_deduction_refund' => $projection['accrued_leave_deduction'],
+                'total_amount' => $projection['projected_total_payout'], 'status' => 'Pending',
+                'notes' => 'Manual leave encashment: ' . number_format($projection['earned_days'], 1) . ' earned, ' . number_format($projection['encashable_days'], 1) . ' unused days',
+            ]);
+
+            $this->postEmployeeLedgerRow($user->id, [
+                'type' => 'salary_reconciliation', 'entry_date' => $payoutDate->toDateString(),
+                'reference' => 'Leave encashment — ' . number_format($projection['earned_days'], 1) . ' days',
+                'debit' => $projection['projected_total_payout'], 'credit' => 0,
+            ], $reconciliation);
+
+            $this->createSalaryJournal(
+                'salary_reconciliation', $reconciliation->id, $companyId, $payoutDate->toDateString(),
+                'EXIT-ENCASH-' . $user->id . '-' . $reconciliation->id,
+                'Leave encashment — ' . ($user->name ?? 'Employee'),
+                $projection['projected_total_payout'], false, null, 'Leave encashment'
+            );
+
+            PaymentSchedule::create([
+                'schedulable_type' => SalaryReconciliation::class, 'schedulable_id' => $reconciliation->id,
+                'company_id' => $companyId, 'type' => 'pay', 'party_type' => 'employee',
+                'party_id' => $user->id, 'party_name' => $user->name,
+                'source_label' => 'Leave Encashment', 'amount' => $projection['projected_total_payout'],
+                'scheduled_date' => $payoutDate->toDateString(), 'status' => 'pending',
+                'note' => 'Leave encashment payout', 'created_by' => auth()->id(),
+            ]);
+
+            return $reconciliation;
+        });
+    }
+
     private function findApprovedEarlyLeaveForDate($leaves, string $dateString)
     {
         foreach ($leaves as $leave) {
             if (!$leave->exempts_early_out_deduction) {
                 continue;
             }
+            if ($dateString >= $leave->start_date && $dateString <= $leave->end_date) {
+                return $leave;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Return the approved late-in request for a date, if the leave type waives
+     * late-arrival deductions. Approved minutes never enter the payroll total.
+     */
+    private function findApprovedLateInForDate($leaves, string $dateString)
+    {
+        foreach ($leaves as $leave) {
+            if (!$leave->exempts_late_deduction) {
+                continue;
+            }
+
             if ($dateString >= $leave->start_date && $dateString <= $leave->end_date) {
                 return $leave;
             }

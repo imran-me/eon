@@ -75,6 +75,10 @@
     .ledger td { padding: 7px 10px; border-bottom: 1px solid var(--bdr); vertical-align: middle; }
     .ledger td.r    { text-align: right; }
     .ledger td.mono { font-family: var(--nf); font-size: 10px; }
+    .detail-line { display: block; color: #1e293b; }
+    .detail-sub  { display: block; font-size: 9.5px; color: #64748b; margin-top: 1px; }
+    .detail-note { display: block; font-size: 9.5px; color: #64748b; margin-top: 2px; }
+    .detail-ref  { display: block; font-family: var(--nf); font-size: 9px; color: #94a3b8; margin-top: 2px; }
     .ledger tbody tr:nth-child(even) td { background: #f8f9ff; }
     .ledger tfoot tr { background: var(--thd); color: #fff; }
     .ledger tfoot td { padding: 8px 10px; font-weight: 700; border-bottom: none; font-family: var(--tf); font-size: 10px; }
@@ -170,7 +174,7 @@
         <div>
             <table class="meta-tbl">
                 <tr><td>Employee ID</td><td class="nf">{{ 'EMP-'.str_pad($employee->id,4,'0',STR_PAD_LEFT) }}</td></tr>
-                <tr><td>Period</td><td class="nf">All Time</td></tr>
+                <tr><td>Period</td><td class="nf">{{ $reportPeriod ?? 'All Time' }}</td></tr>
                 <tr><td>Generated</td><td class="nf">{{ now()->format('d M Y') }}</td></tr>
                 <tr><td>Printed By</td><td>{{ Auth::user()->name }}</td></tr>
             </table>
@@ -215,12 +219,37 @@
                     $entry->type === 'opening_balance' => 'badge-opening',
                     default => 'badge-default',
                 };
-                $bal = (float) $entry->balance;
+                $bal = (float) ($entry->running_balance ?? $entry->balance);
+                $employeePayment = $entry->source instanceof \App\Models\EmployeePayment ? $entry->source : null;
+                $methodLabels = [
+                    'cash' => 'cash', 'bank_transfer' => 'bank transfer',
+                    'mobile_banking' => 'mobile banking', 'cheque' => 'cheque', 'card' => 'card',
+                ];
             @endphp
             <tr>
-                <td class="mono">{{ $entry->entry_date->format('d M y') }}</td>
+                <td class="mono">
+                    {{ $entry->entry_date->format('d M y') }}
+                    @if($entry->display_time)
+                        <br><span style="font-size:9px;color:#64748b;">{{ $entry->display_time }}</span>
+                    @endif
+                </td>
                 <td><span class="badge {{ $badgeCls }}">{{ \Illuminate\Support\Str::headline($entry->type) }}</span></td>
-                <td>{{ \Illuminate\Support\Str::limit($entry->reference, 60) }}</td>
+                <td>
+                    @if($employeePayment)
+                        <span class="detail-line">Employee paid via {{ $methodLabels[$employeePayment->payment_method] ?? ($employeePayment->payment_method ?: 'cash') }}</span>
+                        @if($employeePayment->recipient_bank || $employeePayment->recipient_account)
+                            <span class="detail-sub">{{ $employeePayment->recipient_bank }}{{ $employeePayment->recipient_bank && $employeePayment->recipient_account ? ' — ' : '' }}{{ $employeePayment->recipient_account }}</span>
+                        @endif
+                    @else
+                        <span class="detail-line">{{ \Illuminate\Support\Str::limit($entry->reference, 60) }}</span>
+                    @endif
+                    @if($entry->note)
+                        <span class="detail-note">{{ \Illuminate\Support\Str::limit($entry->note, 80) }}</span>
+                    @endif
+                    @if($employeePayment)
+                        <span class="detail-ref">{{ $employeePayment->reference }}</span>
+                    @endif
+                </td>
                 <td class="r {{ $entry->debit > 0 ? 'debit' : '' }}">{{ $entry->debit > 0 ? number_format($entry->debit, 2) : '—' }}</td>
                 <td class="r {{ $entry->credit > 0 ? 'credit' : '' }}">{{ $entry->credit > 0 ? number_format($entry->credit, 2) : '—' }}</td>
                 <td class="r {{ $bal > 0 ? 'balance-dr' : ($bal < 0 ? 'balance-cr' : '') }}">
@@ -278,6 +307,7 @@
     {{-- Signature ── --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

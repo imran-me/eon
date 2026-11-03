@@ -6,6 +6,7 @@
 
 @section('main-content')
 <div class="min-h-screen bg-gray-50 p-6">
+    @include('layout.manage-parties-tabs')
 
     {{-- Page Header --}}
     <div class="flex items-center justify-between mb-6">
@@ -137,57 +138,9 @@
                     </div>
                 </div>
 
-                {{-- Account Credentials Card --}}
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                    <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
-                        <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
-                            <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                            </svg>
-                        </div>
-                        <h2 class="text-sm font-semibold text-gray-700">Account Credentials</h2>
-                    </div>
-                    <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-5">
+                @include('dashboard.partials.party-assignments')
+                @include('dashboard.partials.party-service-categories', ['party' => null])
 
-                        {{-- Password --}}
-                        <div class="relative">
-                            <label for="password" class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                Password <span class="text-red-500">*</span>
-                            </label>
-                            <input type="password" name="password" id="password" required
-                                   placeholder="Min. 8 characters"
-                                   class="w-full px-4 py-2.5 pr-10 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition {{ $errors->has('password') ? 'border-red-400 bg-red-50' : 'border-gray-200' }}">
-                            <button type="button" onclick="togglePassword('password', this)"
-                                    class="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                            </button>
-                            @error('password')
-                                <p class="text-xs text-red-600 mt-1.5">{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        {{-- Confirm Password --}}
-                        <div class="relative">
-                            <label for="password_confirmation" class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
-                                Confirm Password <span class="text-red-500">*</span>
-                            </label>
-                            <input type="password" name="password_confirmation" id="password_confirmation" required
-                                   placeholder="Re-enter password"
-                                   class="w-full px-4 py-2.5 pr-10 text-sm rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition">
-                            <button type="button" onclick="togglePassword('password_confirmation', this)"
-                                    class="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {{-- Right: Summary Card --}}

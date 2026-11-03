@@ -1,0 +1,2 @@
+<colgroup><col style="width:9%"><col style="width:16%"><col style="width:15%"><col style="width:18%"><col style="width:10%"><col style="width:10.6%"><col style="width:10.6%"><col style="width:10.8%"></colgroup>
+<thead><tr><th scope="col">Submitted</th><th scope="col">File / Applicant</th><th scope="col">Country / Category</th><th scope="col">Agent / Vendor</th><th scope="col">Documents</th><th scope="col" class="fd-num">Client Charge</th><th scope="col" class="fd-num">File Cost</th><th scope="col" class="fd-num">Vendor Due</th></tr></thead>

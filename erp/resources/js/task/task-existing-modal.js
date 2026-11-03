@@ -4,6 +4,7 @@
  * and to link multiple existing tasks as sub-work items (multi-select + bulk add).
  */
 import { TaskApi } from './task-api';
+import { removeCardFromBoard } from './task-card';
 
 let _addParentIsSubtaskMode = false;
 let _searchParentTimer = null;
@@ -100,6 +101,9 @@ export function selectParentTask(config, selectedId) {
         .then(data => {
             if (!data.success) { alert(data.message || 'Failed to set relationship.'); return; }
             closeAddParentModal();
+            // This task is a sub-work item now, so its card leaves the board —
+            // it is reached from its new parent's card instead.
+            removeCardFromBoard(taskId);
             if (typeof Swal !== 'undefined') {
                 Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
             }
@@ -111,12 +115,24 @@ export function addSelectedWorkItems(config) {
     if (_selectedExistingIds.size === 0) return;
     const parentId = document.getElementById('addParentTaskId').value;
 
-    Promise.all(Array.from(_selectedExistingIds).map(childId =>
+    const childIds = Array.from(_selectedExistingIds);
+
+    Promise.all(childIds.map(childId =>
         TaskApi.setParent(config.role, childId, parentId)
     ))
     .then(results => {
         const failed = results.filter(r => !r.success);
         closeAddParentModal();
+
+        // A task that has just become a sub-work item is no longer a card — the
+        // board lists top-level tasks only (TaskController@index). Take its card
+        // off the board here rather than leaving it sitting in a column as a
+        // twin of the row about to appear under its new parent. Promise.all
+        // keeps the order, so results[i] belongs to childIds[i].
+        results.forEach((r, i) => {
+            if (r.success) removeCardFromBoard(childIds[i]);
+        });
+
         if (typeof window._reloadSubtasks === 'function') window._reloadSubtasks(parentId);
 
         if (failed.length && typeof Swal !== 'undefined') {

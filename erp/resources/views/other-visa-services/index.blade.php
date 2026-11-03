@@ -11,25 +11,20 @@
 </style>
 @endsection
 @section('main-content')
+@include('layout.visa-processing-tabs')
 
-{{-- Page header --}}
-<header class="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm mb-4">
-    <span class="flex h-11 w-11 items-center justify-center rounded-lg bg-cyan-50 text-cyan-600 flex-shrink-0"><i class="fas fa-puzzle-piece"></i></span>
-    <div class="flex-1">
-        <h1 class="text-lg font-bold text-slate-900">Others — Additional Services</h1>
-        <p class="text-xs text-slate-500">Core visa processing-এর বাইরের সার্ভিস — VFS Appointment, Bank Statement, Insurance, Document Support</p>
-    </div>
-    <button type="button" class="create-new-btn rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700">
-        <i class="fas fa-plus mr-1"></i> New Service
-    </button>
-</header>
+@include('visa-processing.partials.page-top', [
+    'vxIcon' => 'fa-puzzle-piece', 'vxTitle' => 'Others — Additional Services',
+    'vxSub' => 'Core visa processing-এর বাইরের সার্ভিস — VFS Appointment, Bank Statement, Insurance, Document Support',
+    'vxAction' => '<button type="button" class="create-new-btn vx-btn"><i class="fas fa-plus"></i> New Service</button>',
+])
 
 {{-- Table card --}}
 <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 
     {{-- Integrated filter --}}
     <form action="" method="get" id="filterForm">
-        <div class="flex flex-wrap items-center gap-2 bg-slate-50 px-4 py-3">
+        <div class="vx-filter flex flex-wrap items-center gap-2 bg-slate-50 px-4 py-3">
             <div class="w-44">
                 <select id="filter_service_type_id" name="other_service_type_id" class="select2-filter" style="width:100%">
                     <option value="">All Services</option>

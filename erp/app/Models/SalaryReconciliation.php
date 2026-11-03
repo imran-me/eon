@@ -15,10 +15,13 @@ class SalaryReconciliation extends Model
     protected $fillable = [
         'user_id',
         'company_id',
+        'employee_salary_id',
         'service_year_number',
         'anniversary_date',
         'period_start',
         'period_end',
+        'earned_days',
+        'encashable_days',
         'month_salary_amount',
         'leave_deduction_refund',
         'total_amount',
@@ -30,6 +33,8 @@ class SalaryReconciliation extends Model
         'anniversary_date' => 'date',
         'period_start' => 'date',
         'period_end' => 'date',
+        'earned_days' => 'decimal:2',
+        'encashable_days' => 'decimal:2',
     ];
 
     public function user()
@@ -40,6 +45,11 @@ class SalaryReconciliation extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function employeeSalary()
+    {
+        return $this->belongsTo(EmployeeSalary::class)->withTrashed();
     }
 
     public function schedules()

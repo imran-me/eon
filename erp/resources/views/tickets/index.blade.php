@@ -89,6 +89,7 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
 </style>
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
 
 <div style="padding:0 0 20px;">
 
@@ -119,6 +120,12 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
     {{-- Filter --}}
     <div class="tk-filter">
       <form action="" method="get" id="filterForm">
+        {{-- The Manage Banks filter bar. Title search and the created-date range
+             live here; the vendor / airport / portal / status selects stay in the
+             collapsible panel below and travel with the same submit. --}}
+        <x-ticketing-filter-bar search="search" placeholder="Search by ticket title…"
+                           :reset="route('role.tickets.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())])"
+                           :total="$datas->total()" />
         <div class="tk-filter-header" id="tkFilterHeader">
           <h3><i class="fas fa-filter" style="margin-right:8px;color:#7c3aed;"></i>Filter Options</h3>
           <i class="fas fa-chevron-down toggle-icon"></i>
@@ -169,10 +176,6 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
                 <option value="0" {{ request('is_active') === '0' ? 'selected' : '' }}>Inactive</option>
               </select>
             </div>
-            <div class="tk-filter-group">
-              <label for="search">Title</label>
-              <input type="text" name="search" value="{{ request('search') }}" id="search" placeholder="Search by title...">
-            </div>
           </div>
           <div class="tk-filter-actions">
             <button type="button" class="tk-filter-reset reset-btn">Reset</button>
@@ -184,7 +187,7 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
 
     {{-- Table --}}
     <div class="tk-table-wrap">
-      <table class="tk-table">
+      <table class="tk-table" data-tfb-swap data-cf-sort>
         <thead>
           <tr>
             <th>SL</th>
@@ -217,6 +220,19 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
                   <i class="fas fa-plane-departure"></i>
                   {{ $value->to_airport?->code ?? '—' }}
                 </span>
+                @php
+                    $routeLegs = $value->legsArray();
+                @endphp
+                @if(count($routeLegs) > 1)
+                  <span class="tk-route-badge" style="background:#fff7ed;color:#9a3412;" title="{{ collect($routeLegs)->map(fn ($l) => (($l['direction'] ?? 'out') === 'return' ? 'Return ' : '') . $l['sector'] . ' — ' . ($l['airline'] ?? '—') . ' · ' . ($l['vendor'] ?? $l['portal'] ?? 'no seller') . ' · ৳' . number_format((float) $l['cost']))->implode(' | ') }}">
+                    {{ trim($value->viaLabel() . ' · ' . count($routeLegs) . ' tickets', ' ·') }}
+                  </span>
+                @endif
+                @if($value->isRoundTrip())
+                  <span class="tk-route-badge" style="background:#f5f3ff;color:#6d28d9;" title="{{ $value->hasSeparateReturn() ? 'Round trip — the return is its own ticket' : 'Round trip — one round-trip ticket' }}">
+                    <i class="fas fa-arrow-right-arrow-left"></i> Round trip{{ $value->hasSeparateReturn() ? ' · return ticket' : '' }}
+                  </span>
+                @endif
               </div>
               @endif
             </td>
@@ -264,6 +280,9 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
                   data-price="{{ $value->price }}"
                   data-qty="{{ $value->qty }}"
                   data-status="{{ $value->status }}"
+                  data-via="{{ $value->viaAirportId() }}"
+                  data-legs='@json($value->legsArray())'
+                  data-trip="{{ $value->isRoundTrip() ? 'two-way' : 'one-way' }}"
                   title="Edit">
                   <i class="fas fa-edit"></i>
                 </button>
@@ -294,7 +313,7 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
 
     {{-- Pagination --}}
     <div class="tk-pagination">
-      {{ $datas->appends(request()->all())->links() }}
+      <div data-tfb-swap>{{ $datas->appends(request()->all())->links() }}</div>
     </div>
 
   </div>
@@ -347,10 +366,11 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
         // Show create modal
         $('.create-new-btn').click(function() {
             $('#createModal').removeClass('hidden');
+            if (window.tkVia) tkVia.reset('create');
         });
 
         // Show edit modal
-        $('.edit-btn').click(function() {
+        $(document).on('click', '.edit-btn', function() {
             const item_id = $(this).data('item_id');
             const title = $(this).data('title');
             const vendor_id = $(this).data('vendor_id');
@@ -381,6 +401,7 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
             $('#edit_qty').val(qty);
             $('#edit_status').prop('checked', status == 1 || status === true);
             $('#editSubmit').data('action', $(this).data('action'));
+            if (window.tkVia) tkVia.set('edit', $(this).data('via'), $(this).data('legs') || [], $(this).data('trip'));
         });
 
         // Close modals
@@ -493,13 +514,14 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
                 $('#create_title').next('.error-message').removeClass('hidden');
                 isValid = false;
             }
+            // With a via, the airline / seller are per leg (tickets.route-via)
+            // With a via nothing on the legs is mandatory (owner, 2026-09-21)
+            if ($('#create_via_airport_id').val()) {
+            } else {
             if (!$('#create_vendor_id').val() && !$('#create_portal_id').val()) {
                 $('#create_vendor_msg').text('Please select at least a vendor or portal.').removeClass('hidden');
                 isValid = false;
             }
-            if (!$('#create_airline_id').val()) {
-                $('#create_airline_msg').removeClass('hidden');
-                isValid = false;
             }
             if (!$('#create_from_airport_id').val()) {
                 $('#create_from_airport_msg').removeClass('hidden');
@@ -519,11 +541,13 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
                 $('#edit_title').next('.error-message').removeClass('hidden');
                 isValid = false;
             }
+            if ($('#edit_via_airport_id').val()) {
+            } else {
             if (!$('#edit_vendor_id').val() && !$('#edit_portal_id').val()) {
                 $('#edit_vendor_id_msg').text('Please select at least a vendor or portal.').removeClass('hidden');
                 isValid = false;
             }
-            if (!$('#edit_airline_id').val()) { $('#edit_airline_id_msg').removeClass('hidden'); isValid = false; }
+            }
             if (!$('#edit_from_airport_id').val()) { $('#edit_from_airport_id_msg').removeClass('hidden'); isValid = false; }
             if (!$('#edit_to_airport_id').val()) { $('#edit_to_airport_id_msg').removeClass('hidden'); isValid = false; }
             return isValid;
@@ -541,7 +565,7 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
             const filterBody   = document.getElementById('tkFilterBody');
 
             @php
-                $hasFilters = collect(['vendor_id','from_airport_id','to_airport_id','portal_id','is_active','search'])->contains(fn($k) => request($k) !== null && request($k) !== '');
+                $hasFilters = collect(['vendor_id','from_airport_id','to_airport_id','portal_id','is_active'])->contains(fn($k) => request($k) !== null && request($k) !== '');
             @endphp
             @if($hasFilters)
             filterHeader.classList.add('active');
@@ -559,4 +583,5 @@ span [aria-current="page"] span{background-color:#2563eb !important;color:white;
             });
         });
     </script>
+    @include('tickets.route-via-script')
 @endsection

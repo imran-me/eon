@@ -57,6 +57,10 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // Unset on the live server (its MySQL already runs in UTC, so nothing changes there).
+            // A local copy of a live dump sets DB_TIMEZONE=+00:00 so TIMESTAMP columns read back
+            // exactly as on live instead of 6 hours later (Bangladesh-time MySQL).
+            'timezone' => env('DB_TIMEZONE'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],

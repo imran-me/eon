@@ -26,6 +26,7 @@ class VisaSale extends Model
         'due_amount',
         'payment_method',
         'bank_id',
+        'payment_instruction_bank_id',
         'notes',
         'status',
         'created_by',
@@ -92,6 +93,11 @@ class VisaSale extends Model
     public function bank()
     {
         return $this->belongsTo(Bank::class, 'bank_id');
+    }
+
+    public function paymentInstructionBank()
+    {
+        return $this->belongsTo(Bank::class, 'payment_instruction_bank_id');
     }
 
     public function creator()

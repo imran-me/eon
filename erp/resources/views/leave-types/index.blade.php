@@ -56,6 +56,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Max Leave</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requires Time</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waives Early-Out Deduction</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waives Late Deduction</th>
                                 <th style="width: 15%" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created on</th>
                                 @canany(['edit leave type', 'delete leave type']) 
                                 <th style="width: 15%" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -85,6 +86,13 @@
                                         @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
+                                        @if ($value->exempts_late_deduction)
+                                            <span class="text-green-600"><i class="fas fa-check"></i> Yes</span>
+                                        @else
+                                            <span class="text-gray-400">No</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         <small class="text-gray-500">{{ date('M d, Y', strtotime($value->created_at)) }}</small>
                                     </td>
                                     @canany(['edit leave type', 'delete leave type'])                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
@@ -97,6 +105,7 @@
                                                 data-item_max_leaves_count="{{ $value->max_leaves_count }}"
                                                 data-item_requires_time="{{ $value->requires_time ? 1 : 0 }}"
                                                 data-item_exempts_early_out_deduction="{{ $value->exempts_early_out_deduction ? 1 : 0 }}"
+                                                data-item_exempts_late_deduction="{{ $value->exempts_late_deduction ? 1 : 0 }}"
                                                 data-action="{{ route('role.leave-types.update', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'leave_type' => $value->id]) }}" title="Edit Item">
                                                 <i class="fas fa-edit"></i>
                                             </button>
@@ -147,6 +156,20 @@
             // initialized select2
             $('.select2').select2();
 
+            function enforceTimedExemption(prefix) {
+                const hasAttendanceExemption = $('#' + prefix + '_exempts_early_out_deduction').is(':checked')
+                    || $('#' + prefix + '_exempts_late_deduction').is(':checked');
+
+                if (hasAttendanceExemption) {
+                    $('#' + prefix + '_requires_time').prop('checked', true);
+                }
+            }
+
+            $('#create_exempts_early_out_deduction, #create_exempts_late_deduction, #create_requires_time')
+                .on('change', () => enforceTimedExemption('create'));
+            $('#edit_exempts_early_out_deduction, #edit_exempts_late_deduction, #edit_requires_time')
+                .on('change', () => enforceTimedExemption('edit'));
+
             $.ajaxSetup({
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
@@ -165,6 +188,7 @@
                 const item_max_leaves_count = $(this).data('item_max_leaves_count');
                 const item_requires_time = $(this).data('item_requires_time');
                 const item_exempts_early_out_deduction = $(this).data('item_exempts_early_out_deduction');
+                const item_exempts_late_deduction = $(this).data('item_exempts_late_deduction');
 
                 // Set values in the edit form
                 $('#editItemId').val(item_id);
@@ -172,6 +196,7 @@
                 $('#edit_max_leaves_count').val(item_max_leaves_count);
                 $('#edit_requires_time').prop('checked', !!Number(item_requires_time));
                 $('#edit_exempts_early_out_deduction').prop('checked', !!Number(item_exempts_early_out_deduction));
+                $('#edit_exempts_late_deduction').prop('checked', !!Number(item_exempts_late_deduction));
                 $('#editModal').removeClass('hidden');
             });
 

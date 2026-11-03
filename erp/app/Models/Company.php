@@ -25,6 +25,7 @@ class Company extends Model
         'website',
         'logo',
         'icon',
+        'signature',
         'status',
         'order',
         'attendance_device_serial_no',

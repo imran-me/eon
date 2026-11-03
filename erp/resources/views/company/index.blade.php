@@ -238,6 +238,7 @@
                                                 data-item_address="{{ $value->address }}"
                                                 data-item_logo="{{ $value->logo }}"
                                                 data-item_icon="{{ $value->icon }}"
+                                                data-item_signature="{{ $value->signature }}"
                                                 data-item_status="{{ $value->status }}"
                                                 data-item_attendance_device_serial_no="{{ $value->attendance_device_serial_no }}"
                                                 data-item_company_order="{{ $value->order }}"
@@ -314,6 +315,7 @@
                 const item_website  = $btn.data('item_website');
                 const item_logo     = $btn.data('item_logo');
                 const item_icon     = $btn.data('item_icon');
+                const item_signature = $btn.data('item_signature');
                 const item_status   = $btn.data('item_status');
                 const item_serial   = $btn.data('item_attendance_device_serial_no');
                 const item_order    = $btn.data('item_company_order');
@@ -330,6 +332,7 @@
                 $('#edit_company_order').val(item_order || 0);
                 $('#preview_logo').attr('src', item_logo ? window.location.origin + '/' + item_logo : '');
                 $('#preview_icon').attr('src', item_icon ? window.location.origin + '/' + item_icon : '');
+                $('#preview_signature').attr('src', item_signature ? window.location.origin + '/' + item_signature : '');
                 $('#edit_status').prop('checked', item_status == 1);
                 $('#editSubmit').data('action', action);
                 $('#editModal').removeClass('hidden');

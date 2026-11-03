@@ -606,6 +606,43 @@ $(function () {
         return ok;
     }
 
+    // A shared GL account is available everywhere; a company-owned GL account
+    // only appears while that company is selected. Backend validation enforces
+    // the same rule, so this is convenience rather than the security boundary.
+    function filterAccounts(companySelector, accountSelector) {
+        const company = String($(companySelector).val() || '');
+        const $account = $(accountSelector);
+        let selectedStillValid = false;
+
+        $account.find('option').each(function () {
+            if (!this.value) return;
+            const owner = String($(this).data('company') || '');
+            const allowed = owner === '' || owner === company;
+            this.disabled = !allowed;
+            if (allowed && this.selected) selectedStillValid = true;
+        });
+
+        if ($account.val() && !selectedStillValid) $account.val('');
+        $account.trigger('change.select2');
+    }
+
+    $('#cat_create_company_id').on('change', () => filterAccounts('#cat_create_company_id', '#cat_create_account_id'));
+    $('#cat_edit_company_id').on('change', () => filterAccounts('#cat_edit_company_id', '#cat_edit_account_id'));
+    $('#sub_create_company_id').on('change', () => filterAccounts('#sub_create_company_id', '#sub_create_account_id'));
+    $('#sub_edit_company_id').on('change', () => filterAccounts('#sub_edit_company_id', '#sub_edit_account_id'));
+
+    function inheritParentCompany(parentSelector, companySelector) {
+        const owner = String($(parentSelector).find(':selected').data('company') || '');
+        if (owner) $(companySelector).val(owner).trigger('change');
+    }
+    $('#sub_create_expense_category_id').on('change', () => inheritParentCompany('#sub_create_expense_category_id', '#sub_create_company_id'));
+    $('#sub_edit_expense_category_id').on('change', () => inheritParentCompany('#sub_edit_expense_category_id', '#sub_edit_company_id'));
+
+    filterAccounts('#cat_create_company_id', '#cat_create_account_id');
+    filterAccounts('#cat_edit_company_id', '#cat_edit_account_id');
+    filterAccounts('#sub_create_company_id', '#sub_create_account_id');
+    filterAccounts('#sub_edit_company_id', '#sub_edit_account_id');
+
     /*
      * Edit URLs are built from the update route with the id swapped in, not from
      * the index route + '/id' — the three index routes now redirect here, so
@@ -640,7 +677,9 @@ $(function () {
 
     /* ── Category ── */
     $('#catCreateSubmit').on('click', function () {
-        if (!filled('#cat_create_name', '#cat_create_name_msg')) return;
+        const okName = filled('#cat_create_name', '#cat_create_name_msg');
+        const okAccount = filled('#cat_create_account_id', '#cat_create_account_msg');
+        if (!okName || !okAccount) return;
         post('catCreateForm', 'catCreateModal');
     });
     $('.js-cat-edit').on('click', function () {
@@ -655,7 +694,9 @@ $(function () {
         open('catEditModal');
     });
     $('#catEditSubmit').on('click', function () {
-        if (!filled('#cat_edit_name', '#cat_edit_name_msg')) return;
+        const okName = filled('#cat_edit_name', '#cat_edit_name_msg');
+        const okAccount = filled('#cat_edit_account_id', '#cat_edit_account_msg');
+        if (!okName || !okAccount) return;
         post('catEditForm', 'catEditModal', 'PUT');
     });
 

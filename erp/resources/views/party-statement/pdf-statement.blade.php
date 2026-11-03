@@ -144,12 +144,24 @@ tfoot td.r { text-align: right; }
             @forelse($transactions as $t)
             @php
                 $badgeCls = match($t->type) {
-                    'party_payment', 'bank_transfer' => 'badge-payment',
+                    'party_payment', 'party_payment_reversal', 'customer_advance_received_reversal', 'supplier_advance_paid_reversal', 'bank_transfer' => 'badge-payment',
+                    'customer_advance_refund', 'customer_advance_refund_reversal' => 'badge-payment',
+                    'customer_service_refund', 'customer_service_refund_reversal' => 'badge-payment',
                     'party_invoice', 'ticket_sale', 'sale' => 'badge-invoice',
                     default => 'badge-default'
                 };
                 $badgeLabel = match($t->type) {
+                    'contract_file_client'=>'File process', 'contract_file'=>'File process cost', 'contract_file_service_cost'=>'File service cost',
+                    'contract_file_client_adjustment'=>'File process adjustment', 'contract_file_vendor_adjustment'=>'File cost adjustment',
                     'party_payment'  => 'Payment',
+                    'party_payment_reversal' => 'Payment reversal',
+                    'customer_advance_refund' => 'Advance returned',
+                    'customer_advance_refund_reversal' => 'Advance return reversal',
+                    'customer_service_refund' => 'Service refund paid',
+                    'customer_service_refund_reversal' => 'Service refund reversal',
+                    'customer_advance_received' => 'Payment', 'customer_advance_received_reversal' => 'Payment reversal',
+                    'supplier_advance_paid_reversal' => 'Supplier advance reversal',
+                    'contract_flight_service_cost' => 'Flight service cost',
                     'party_invoice'  => 'Invoice',
                     'bank_transfer'  => 'Transfer',
                     'ticket_sale'    => 'Ticket',
@@ -160,7 +172,7 @@ tfoot td.r { text-align: right; }
             <tr>
                 <td>{{ \Carbon\Carbon::parse($t->payment_date)->format('d M y') }}</td>
                 <td class="mono">{{ $t->reference_no ?? '—' }}</td>
-                <td>{{ Str::limit($t->remarks, 55) }}</td>
+                <td>{{ Str::limit($t->display_remarks, 55) }}</td>
                 <td><span class="badge {{ $badgeCls }}">{{ $badgeLabel }}</span></td>
                 <td class="r {{ $t->debit > 0 ? 'debit' : '' }}">{{ $t->debit > 0 ? number_format($t->debit, 2) : '—' }}</td>
                 <td class="r {{ $t->credit > 0 ? 'credit' : '' }}">{{ $t->credit > 0 ? number_format($t->credit, 2) : '—' }}</td>

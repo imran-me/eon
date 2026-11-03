@@ -80,7 +80,9 @@
 <body>
 
 <div class="btn-row" style="max-width:1080px;margin:0 auto 12px auto;display:flex;gap:8px;justify-content:flex-end;">
-    <a href="javascript:history.back()" style="background:#6b7280;color:#fff;text-decoration:none;display:inline-block;padding:7px 18px;font-family:'Montserrat',sans-serif;font-size:12px;border-radius:4px;">← Back</a>
+    <a href="{{ route('role.report.payroll', array_merge(['role' => request()->route('role')], request()->query())) }}"
+       onclick="if (window.opener && !window.opener.closed) { event.preventDefault(); window.opener.focus(); window.close(); }"
+       style="background:#6b7280;color:#fff;text-decoration:none;display:inline-block;padding:7px 18px;font-family:'Montserrat',sans-serif;font-size:12px;border-radius:4px;">← Back</a>
     <button onclick="window.print()" style="background:#4f46e5;color:#fff;border:none;padding:7px 18px;font-family:'Montserrat',sans-serif;font-size:12px;cursor:pointer;border-radius:4px;">🖨️ Print</button>
 </div>
 
@@ -250,6 +252,7 @@
 
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

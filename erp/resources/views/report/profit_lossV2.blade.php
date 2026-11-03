@@ -66,6 +66,11 @@
     .pl-table tbody tr { border-bottom:1px solid #f1f5f9; transition:background .15s; }
     .pl-table tbody tr:hover { background:#f8fafc; }
     .pl-table tbody td { padding:10px 16px; font-size:13px; color:#334155; }
+    .pl-account-link { display:block; color:inherit; text-decoration:none; border-radius:6px; }
+    .pl-account-link:hover .pl-account-name,
+    .pl-account-link:focus .pl-account-name { color:#1d4ed8; text-decoration:underline; }
+    .pl-account-link:focus { outline:2px solid #93c5fd; outline-offset:3px; }
+    .pl-drill-icon { margin-left:5px; color:#94a3b8; font-size:10px; }
     .pl-table tfoot td { padding:12px 16px; font-size:13px; font-weight:700; border-top:2px solid #e2e8f0; }
     .pl-table tfoot.income-foot  td { background:#f0fdf4; color:#065f46; }
     .pl-table tfoot.expense-foot td { background:#fff1f2; color:#b91c1c; }
@@ -201,11 +206,30 @@
                 <table class="pl-table">
                     <tbody>
                         @forelse($incomeAccounts as $row)
-                        @php $pct = $totalIncome > 0 ? ($row['net'] / $totalIncome) * 100 : 0; @endphp
+                        @php
+                            $pct = $totalIncome > 0 ? ($row['net'] / $totalIncome) * 100 : 0;
+                            $ledgerUrl = route('role.report.account-ledger', array_filter([
+                                'role' => request()->route('role') ?: Str::slug(Auth::user()->getRoleNames()->first()),
+                                'account_id' => $row['account']->id,
+                                'date_from' => request('date_from'),
+                                'date_to' => request('date_to'),
+                                'scope' => $ledgerScope,
+                                'from_report' => 'profit-loss',
+                            ], fn ($value) => $value !== null && $value !== ''));
+                        @endphp
                         <tr>
                             <td>
-                                <span class="code-chip">{{ $row['account']->code }}</span>
-                                <span class="ml-1">{{ $row['account']->name }}</span>
+                                @can('view account ledger report')
+                                <a href="{{ $ledgerUrl }}" class="pl-account-link"
+                                   aria-label="View ledger details for {{ $row['account']->name }}">
+                                    <span class="code-chip">{{ $row['account']->code }}</span>
+                                    <span class="ml-1 pl-account-name">{{ $row['account']->name }}</span>
+                                    <i class="fas fa-arrow-up-right-from-square pl-drill-icon" aria-hidden="true"></i>
+                                </a>
+                                @else
+                                    <span class="code-chip">{{ $row['account']->code }}</span>
+                                    <span class="ml-1">{{ $row['account']->name }}</span>
+                                @endcan
                                 <div class="pct-bar-wrap">
                                     <div class="pct-bar income-bar" style="width:{{ min($pct, 100) }}%"></div>
                                 </div>
@@ -241,11 +265,30 @@
                 <table class="pl-table">
                     <tbody>
                         @forelse($expenseAccounts as $row)
-                        @php $pct = $totalExpense > 0 ? ($row['net'] / $totalExpense) * 100 : 0; @endphp
+                        @php
+                            $pct = $totalExpense > 0 ? ($row['net'] / $totalExpense) * 100 : 0;
+                            $ledgerUrl = route('role.report.account-ledger', array_filter([
+                                'role' => request()->route('role') ?: Str::slug(Auth::user()->getRoleNames()->first()),
+                                'account_id' => $row['account']->id,
+                                'date_from' => request('date_from'),
+                                'date_to' => request('date_to'),
+                                'scope' => $ledgerScope,
+                                'from_report' => 'profit-loss',
+                            ], fn ($value) => $value !== null && $value !== ''));
+                        @endphp
                         <tr>
                             <td>
-                                <span class="code-chip">{{ $row['account']->code }}</span>
-                                <span class="ml-1">{{ $row['account']->name }}</span>
+                                @can('view account ledger report')
+                                <a href="{{ $ledgerUrl }}" class="pl-account-link"
+                                   aria-label="View ledger details for {{ $row['account']->name }}">
+                                    <span class="code-chip">{{ $row['account']->code }}</span>
+                                    <span class="ml-1 pl-account-name">{{ $row['account']->name }}</span>
+                                    <i class="fas fa-arrow-up-right-from-square pl-drill-icon" aria-hidden="true"></i>
+                                </a>
+                                @else
+                                    <span class="code-chip">{{ $row['account']->code }}</span>
+                                    <span class="ml-1">{{ $row['account']->name }}</span>
+                                @endcan
                                 <div class="pct-bar-wrap">
                                     <div class="pct-bar expense-bar" style="width:{{ min($pct, 100) }}%"></div>
                                 </div>

@@ -50,5 +50,16 @@ class WoodArtServiceProvider extends ServiceProvider
         $this->publishes([
             $base . '/resources/assets' => public_path('woodart'),
         ], 'woodart-assets');
+
+        // Console-only: nothing here exists for web requests.
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \Modules\WoodArt\Console\SeedCostHeads::class,
+                \Modules\WoodArt\Console\SeedMunshiVilla::class,
+                \Modules\WoodArt\Console\UpdateMunshiVilla::class,
+                \Modules\WoodArt\Console\UndoMunshiWrongCompany::class,
+                \Modules\WoodArt\Console\SyncProjectPartyStatements::class,
+            ]);
+        }
     }
 }

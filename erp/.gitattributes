@@ -9,3 +9,6 @@
 /.github export-ignore
 CHANGELOG.md export-ignore
 .styleci.yml export-ignore
+
+# Two people append notes here; keep both sides on merge instead of a conflict.
+context.md merge=union

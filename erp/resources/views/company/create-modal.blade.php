@@ -97,6 +97,14 @@
                         </div>
                     </div>
 
+                    <!-- Account Signature -->
+                    <div class="mt-4">
+                        <label for="create_signature" class="block text-gray-700 text-sm font-medium mb-2">Account Signature <span class="text-gray-400 text-xs">(shown on invoices instead of "Authorized Signatory")</span></label>
+                        <input type="file" id="create_signature" name="signature" accept="image/*" style="padding: 10px"
+                            class="block w-full text-sm text-gray-700 border-2 border-gray-200 rounded-md cursor-pointer bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition duration-150">
+                        <p class="text-gray-400 text-xs mt-1">PNG, JPG with transparent background recommended (max 2MB)</p>
+                    </div>
+
                     <!-- Status -->
                     <div class="mt-4">
                         <label class="flex items-center">

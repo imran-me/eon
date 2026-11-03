@@ -101,7 +101,6 @@
                         @php
                             $travelSubmenuGroups = [
                                 'Operations' => [
-                                    'Vendor & Agent' => 'vendor',
                                     'Portal Management' => 'portal',
                                 ],
                                 'Air Ticketing' => [
@@ -115,7 +114,6 @@
                                 'Contract Flight' => [
                                     'Flight Schedule / Add Flight' => 'flight schedule',
                                     'Manage Flight' => 'contract flight',
-                                    'Manage Sales' => 'contract flight sale',
                                     'Flight Category' => 'flight category',
                                 ],
                                 'Visa Processing' => [
@@ -129,6 +127,17 @@
                                 ],
                             ];
                             $travelSubmenuModules = collect($travelSubmenuGroups)->flatMap(fn ($items) => array_values($items))->values()->all();
+                            $partySubmenuGroups = [
+                                'Party Management' => [
+                                    'Manage Vendor' => 'vendor',
+                                    'Manage Agent' => 'agent',
+                                    'Manage Customer' => 'customer',
+                                    'Party Statement' => 'party statement',
+                                    'Import Transactions' => 'party transaction import',
+                                    'Import Custom Invoices' => 'party invoice import',
+                                ],
+                            ];
+                            $partySubmenuModules = collect($partySubmenuGroups)->flatMap(fn ($items) => array_values($items))->values()->all();
                             $hrmSubmenuGroups = [
                                 'HRM' => [
                                     'Department' => 'department',
@@ -143,18 +152,23 @@
                             ];
                             $hrmSubmenuModules = collect($hrmSubmenuGroups)->flatMap(fn ($items) => array_values($items))->values()->all();
                             $accountsSubmenuGroups = [
-                                'Expenses' => [
-                                    'All Expenses / Budget Setup / Expense Report' => 'expense',
-                                ],
                                 'Accounts' => [
-                                    'Manage Accounts' => 'account',
-                                    'Manage Journals' => 'journal',
-                                    'Payment Schedules' => 'payment schedule',
                                     'Manage Banks' => 'bank',
+                                    'All Banks' => 'bank account',
+                                    'Bank Transfers' => 'bank transfer',
+                                    'Payment Entry' => 'payment entry',
+                                    'Expenses' => 'expense',
+                                    'Payment Schedules' => 'payment schedule',
+                                    'Capital & Financing' => 'financing',
+                                    'Manage Journals' => 'journal',
+                                    'Chart of Accounts' => 'account',
                                 ],
                             ];
                             $accountsSubmenuModules = collect($accountsSubmenuGroups)->flatMap(fn ($items) => array_values($items))->values()->all();
                             $businessSubmenuGroups = [
+                                'Control Tower' => [
+                                    'Status Tracker' => 'operation tracker',
+                                ],
                                 'Products' => [
                                     'Unit' => 'unit',
                                     'Brand' => 'brand',
@@ -274,16 +288,20 @@
                                 return implode(' ', $parts);
                             };
 
-                            $hiddenPermissionModules = ['branch', 'project category', 'project'];
+                            $hiddenPermissionModules = ['branch', 'project category', 'project', 'party type'];
                             $visiblePermissions = $permissions->reject(function ($item) use ($permissionModuleName, $hiddenPermissionModules) {
                                 return in_array($permissionModuleName($item->name), $hiddenPermissionModules, true);
                             });
 
-                            $groupedPermissions = $visiblePermissions->groupBy(function ($item) use ($permissionModuleName, $travelSubmenuModules, $hrmSubmenuModules, $accountsSubmenuModules, $businessSubmenuModules, $payrollSubmenuModules, $crmSubmenuModules, $communicationsSubmenuModules, $settingsSubmenuModules, $taskSubmenuModules, $requireSubmenuModules, $userDashboardSubmenuModules) {
+                            $groupedPermissions = $visiblePermissions->groupBy(function ($item) use ($permissionModuleName, $travelSubmenuModules, $partySubmenuModules, $hrmSubmenuModules, $accountsSubmenuModules, $businessSubmenuModules, $payrollSubmenuModules, $crmSubmenuModules, $communicationsSubmenuModules, $settingsSubmenuModules, $taskSubmenuModules, $requireSubmenuModules, $userDashboardSubmenuModules) {
                                 $moduleName = $permissionModuleName($item->name);
 
                                 if (in_array($moduleName, $travelSubmenuModules, true)) {
                                     return 'travel';
+                                }
+
+                                if (in_array($moduleName, $partySubmenuModules, true)) {
+                                    return 'party management';
                                 }
 
                                 if (in_array($moduleName, $hrmSubmenuModules, true)) {
@@ -343,6 +361,7 @@
                                         && !in_array($name, $mainReportPermissions, true);
                                 });
                                 $travelSubmenuItems = collect();
+                                $partySubmenuItems = collect();
                                 $hrmSubmenuItems = collect();
                                 $accountsSubmenuItems = collect();
                                 $businessSubmenuItems = collect();
@@ -366,6 +385,14 @@
                                     })->filter(function ($groupItems) {
                                         return $groupItems->isNotEmpty();
                                     });
+                                }
+
+                                if ($moduleName === 'party management') {
+                                    $partySubmenuItems = collect($partySubmenuGroups)->map(function ($groupItems) use ($items, $permissionModuleName) {
+                                        return collect($groupItems)->map(function ($partyModuleName) use ($items, $permissionModuleName) {
+                                            return $items->filter(fn ($permission) => $permissionModuleName($permission->name) === $partyModuleName);
+                                        })->filter(fn ($partyItems) => $partyItems->isNotEmpty());
+                                    })->filter(fn ($groupItems) => $groupItems->isNotEmpty());
                                 }
 
                                 if ($moduleName === 'hrm') {
@@ -483,7 +510,7 @@
 
                                 <div class="w-full md:w-3/4">
                                     <div class="flex flex-wrap gap-4">
-                                    @if ($viewAllPermission && !in_array($moduleName, ['report', 'travel', 'hrm', 'accounts', 'business operations', 'payroll', 'crm', 'communications', 'settings', 'task module', 'require', 'user dashboard'], true))
+                                    @if ($viewAllPermission && !in_array($moduleName, ['report', 'travel', 'party management', 'hrm', 'accounts', 'business operations', 'payroll', 'crm', 'communications', 'settings', 'task module', 'require', 'user dashboard'], true))
                                         <label class="inline-flex items-center cursor-pointer">
                                             <input type="checkbox" name="permissions[]" value="{{ $viewAllPermission->name }}"
                                                 {{ in_array($viewAllPermission->name, $rolePermissions) ? 'checked' : '' }}
@@ -507,7 +534,7 @@
                                         @if ($moduleName === 'report')
                                             @continue
                                         @endif
-                                        @if (in_array($moduleName, ['travel', 'hrm', 'accounts', 'business operations', 'payroll', 'crm', 'communications', 'settings', 'task module', 'require', 'user dashboard'], true))
+                                        @if (in_array($moduleName, ['travel', 'party management', 'hrm', 'accounts', 'business operations', 'payroll', 'crm', 'communications', 'settings', 'task module', 'require', 'user dashboard'], true))
                                             @continue
                                         @endif
                                         <label class="inline-flex items-center cursor-pointer">
@@ -649,6 +676,44 @@
                                                                             <span class="ml-2 text-sm text-gray-600 capitalize">
                                                                                 {{ $label }}
                                                                             </span>
+                                                                        </label>
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                @endforeach
+                                            </div>
+                                        </details>
+                                    @endif
+
+                                    @if ($moduleName === 'party management' && $partySubmenuItems->isNotEmpty())
+                                        <details class="permission-submenu mt-3" open>
+                                            <summary>Party Management permissions</summary>
+                                            <div class="mt-3">
+                                                @foreach ($partySubmenuItems as $partyGroupName => $partyGroupItems)
+                                                    @foreach ($partyGroupItems as $partyMenuLabel => $partyItems)
+                                                        @php
+                                                            $partyViewAllPermission = $partyItems->first(fn ($permission) => str_starts_with(trim($permission->name), 'view all '));
+                                                        @endphp
+                                                        <div class="permission-submenu-row">
+                                                            <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
+                                                                <div class="w-full md:w-1/4">
+                                                                    <span class="text-sm font-bold text-gray-700 capitalize">{{ $partyMenuLabel }}</span><br>
+                                                                    <button type="button" class="select-all-submenu-row text-[10px] font-semibold text-blue-500 hover:text-blue-700 uppercase tracking-tighter w-fit">Select All</button>
+                                                                </div>
+                                                                <div class="w-full md:w-3/4 flex flex-wrap gap-x-6 gap-y-2">
+                                                                    @if ($partyViewAllPermission)
+                                                                        <label class="inline-flex items-center cursor-pointer group">
+                                                                            <input type="checkbox" name="permissions[]" value="{{ $partyViewAllPermission->name }}" {{ in_array($partyViewAllPermission->name, $rolePermissions) ? 'checked' : '' }} class="row-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition">
+                                                                            <span class="ml-2 text-sm text-gray-600 group-hover:text-blue-700 font-semibold capitalize">View All</span>
+                                                                        </label>
+                                                                    @endif
+                                                                    @foreach ($partyItems as $permission)
+                                                                        @continue(str_starts_with(trim($permission->name), 'view all '))
+                                                                        <label class="inline-flex items-center cursor-pointer group">
+                                                                            <input type="checkbox" name="permissions[]" value="{{ $permission->name }}" {{ in_array($permission->name, $rolePermissions) ? 'checked' : '' }} class="row-checkbox w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 transition">
+                                                                            <span class="ml-2 text-sm text-gray-600 group-hover:text-blue-700 capitalize">{{ explode(' ', trim($permission->name))[0] }}</span>
                                                                         </label>
                                                                     @endforeach
                                                                 </div>

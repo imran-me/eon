@@ -1,6 +1,6 @@
-﻿@extends('layout.app')
+@extends('layout.app')
 @section('meta-information')
-<title>Contract File Applications Board</title>
+<title>{{ request()->routeIs('role.contract-files.dashboard') ? 'File Dashboard' : (request()->routeIs('role.contract-files.accounts') ? 'File Accounts' : (request()->routeIs('role.contract-files.board') ? 'Passenger Board' : 'Files & Passengers')) }}</title>
 @endsection
 @section('css')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -14,27 +14,47 @@
 @endsection
 @section('main-content')
 @php($role = Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->first()))
-@include('contract-files.content')
+@include('layout.contract-file-tabs')
+@include('contract-files.workspace-styles')
+{{-- Contract Flight's own look (owner, 2026-10-25): dashboard, ledger and
+     Flights & Passengers sheets, the column sort. All fd-/fdl-/mfp-/mj- prefixed. --}}
+@include('contract-files.flight-dashboard-styles')
+@include('contract-flights.dashboard-ledger-styles')
+@include('contract-files.flight-list-styles')
+@include('contract-flights.partials.accounts-styles')
+@include('contract-flights.partials.table-sort')
+@if(request()->routeIs('role.contract-files.dashboard'))
+@include('contract-files.dashboard')
+@elseif(request()->routeIs('role.contract-files.board'))
+@include('contract-files.board')
+@elseif(request()->routeIs('role.contract-files.accounts'))
+@include('contract-files.accounts')
+@else
+@include('contract-files.passenger-list')
+@endif
 
 @include('contract-files.create-modal')
+@include('contract-files.batch-builder')
 @include('contract-files.edit-modal')
 @include('contract-files.view-modal')
+@include('contract-files.record-sheet-modal')
 @include('contract-files.delete-modal')
 @include('contract-files.pay-vendor-modal')
+@include('contract-files.money-action-modal')
 
-<div id="cfPhModal" class="fixed inset-0 z-[9100] hidden flex items-center justify-center bg-slate-950/50 p-4 modal-backdrop">
+<div id="cfPhModal" class="fixed inset-0 z-[9100] hidden flex items-center justify-center bg-slate-950/50 p-4 modal-backdrop" style="z-index:9300">
     <div class="w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl" onclick="event.stopPropagation()">
         <header class="flex items-center gap-3 bg-blue-600 px-5 py-4 text-white"><i class="fas fa-user-plus"></i><div><h2 class="text-sm font-bold">Add New Passport Holder</h2><p class="text-[11px] text-blue-100">Save applicant and select automatically</p></div><button type="button" class="ml-auto h-8 w-8 rounded-lg bg-white/15" onclick="closeCfPhModal()"><i class="fas fa-times"></i></button></header>
         <div class="p-5">
             <div id="cfPhErr" style="display:none;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;font-size:12px;margin-bottom:12px;"></div>
             <div class="cfm-grid" style="grid-template-columns:1fr 1fr;margin-bottom:0;">
                 <div><label class="cfm-lbl">Full Name <sup>*</sup></label><input type="text" id="cfPhName" class="cfm-input" placeholder="e.g. Md Rahman"></div>
-                <div><label class="cfm-lbl">Passport No <sup>*</sup></label><input type="text" id="cfPhPassportNo" class="cfm-input" placeholder="e.g. BD1234567"></div>
-                <div><label class="cfm-lbl">Nationality <sup>*</sup></label><input type="text" id="cfPhNationality" class="cfm-input" value="Bangladeshi"></div>
-                <div><label class="cfm-lbl">Phone <sup>*</sup></label><input type="text" id="cfPhPhone" class="cfm-input" placeholder="01XXXXXXXXX"></div>
+                <div><label class="cfm-lbl">Passport No</label><input type="text" id="cfPhPassportNo" class="cfm-input" placeholder="e.g. BD1234567"></div>
+                <div><label class="cfm-lbl">Nationality</label><input type="text" id="cfPhNationality" class="cfm-input" value="Bangladeshi"></div>
+                <div><label class="cfm-lbl">Phone</label><input type="text" id="cfPhPhone" class="cfm-input" placeholder="01XXXXXXXXX"></div>
                 <div><label class="cfm-lbl">Date of Birth</label><input type="date" id="cfPhDob" class="cfm-input"></div>
-                <div><label class="cfm-lbl">Category <sup>*</sup></label><select id="cfPhCategory" class="cfm-select"><option value="">Select category</option>@foreach($phCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div>
-                <div><label class="cfm-lbl">Type <sup>*</sup></label><select id="cfPhType" class="cfm-select">@include('passport-holder.type-options')</select></div>
+                <div><label class="cfm-lbl">Category</label><select id="cfPhCategory" class="cfm-select"><option value="">Select category</option>@foreach($phCategories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select></div>
+                <div><label class="cfm-lbl">Type</label><select id="cfPhType" class="cfm-select">@include('passport-holder.type-options')</select></div>
                 <div><label class="cfm-lbl">Issue Date</label><input type="date" id="cfPhIssueDate" class="cfm-input"></div>
                 <div><label class="cfm-lbl">Expiry Date</label><input type="date" id="cfPhExpiryDate" class="cfm-input"></div>
             </div>
@@ -51,7 +71,7 @@
     const roleSlug = '{{ $role }}';
     const categories = @json($categoriesJson);
     let passportHolders = @json($passportHoldersJson);
-    const files = @json($filesJson);
+    let files = @json($filesJson);
     const statuses = @json($statuses);
     let cfPhTargetSelectId = null;
 
@@ -65,11 +85,20 @@
         initSelect2();
 
         $('.create-btn').on('click', function() {
+            if (window.CFFileBuilder) {
+                window.CFFileBuilder.open();
+                @if($groupClient) window.CFFileBuilder.setClient(@json($groupClient->id)); @endif
+                return;
+            }
             $('#createForm')[0].reset();
             resetSelect2('#createModal');
             applyPassportHolder('create', '');
             $('#create_file_number').val('{{ $nextFileNumber }}');
-            $('#create_status').val('doc_collection');
+            $('#create_status').val('file_received');
+            @if($groupClient)
+            $('#create_client_id').val(@json($groupClient->id)).trigger('change.select2');
+            $('#create_client_type').val(@json($groupClient->hasRole('agent') ? 'agent' : 'direct')).trigger('change.select2');
+            @endif
             $('#create_submit_date').val(new Date().toISOString().slice(0, 10));
             renderDocuments('#create_documents_grid', []);
             clearErrors('#createForm');
@@ -95,6 +124,12 @@
         $('#edit_country_id').on('change', function() {
             filterCategoryOptions('edit', true);
         });
+        // Setup (2026-10-25): a new country / category / visa type on a file ADDS the documents Setup
+        // requires for it (unticked — not received yet). Nothing is removed and no figure changes:
+        // the file's money has its own history.
+        $('#edit_country_id, #edit_contract_file_category_id, #edit_contract_file_visa_type_id').on('change', function() {
+            addSetupDocuments('edit');
+        });
         $('#create_passport_holder_id').on('change', function() {
             applyPassportHolder('create', this.value);
         });
@@ -111,7 +146,7 @@
 
         $('.modal-close-create,.modal-close-edit,.modal-close-view,.modal-close-delete').on('click', closeModals);
         $('.modal-backdrop').on('click', function(e) {
-            if ($(e.target).hasClass('modal-backdrop')) closeModals();
+            if ($(e.target).hasClass('modal-backdrop') && e.target.id !== 'editModal') closeModals();
         });
 
         $('#createSubmit').on('click', function(e) {
@@ -124,12 +159,28 @@
             submitFile('#editForm', $(this).data('action'), 'Contract file updated successfully.', '#editModal');
         });
 
+        $('#deleteReason,#deleteConfirmation').on('input', function() {
+            const ready = $('#deleteReason').val().trim().length >= 5 && $('#deleteConfirmation').val() === 'CONFIRM';
+            $('#confirmDeleteBtn').prop('disabled', !ready);
+            $('#deleteValidation').addClass('hidden').text('');
+        });
+
         $('#confirmDeleteBtn').on('click', function() {
+            const reason = $('#deleteReason').val().trim();
+            const confirmation = $('#deleteConfirmation').val();
+            if (reason.length < 5 || confirmation !== 'CONFIRM') {
+                $('#deleteValidation').removeClass('hidden').text('Enter a reason of at least 5 characters and type CONFIRM exactly.');
+                return;
+            }
+            const button = $(this);
+            button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Deleting…');
             $.ajax({
-                url: $(this).data('action'),
+                url: button.data('action'),
                 method: 'DELETE',
                 data: {
-                    item_id: $(this).data('item-id')
+                    item_id: button.data('item-id'),
+                    deletion_reason: reason,
+                    confirmation: confirmation
                 },
                 success: function(res) {
                     if (res.success) {
@@ -148,12 +199,12 @@
                         });
                     }
                 },
-                error: function() {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Delete request failed.'
-                    });
+                error: function(xhr) {
+                    const message = xhr.responseJSON?.message || Object.values(xhr.responseJSON?.errors || {})[0]?.[0] || 'Delete request failed.';
+                    $('#deleteValidation').removeClass('hidden').text(message);
+                },
+                complete: function() {
+                    button.prop('disabled', false).html('<i class="fas fa-trash mr-1"></i> Delete file');
                 }
             });
         });
@@ -188,10 +239,13 @@
 
     function submitFile(form, url, successText, modal) {
         if (!validateFileForm(form)) return;
+        const hasFiles = $(form).find('input[type="file"]').length > 0;
         $.ajax({
             url: url,
             method: 'POST',
-            data: $(form).serialize(),
+            data: hasFiles ? new FormData($(form)[0]) : $(form).serialize(),
+            processData: !hasFiles,
+            contentType: hasFiles ? false : 'application/x-www-form-urlencoded; charset=UTF-8',
             success: function(res) {
                 if (res.success) {
                     Swal.fire({
@@ -222,7 +276,7 @@
     function validateFileForm(form) {
         let ok = true;
         clearErrors(form);
-        ['passport_holder_id', 'country_id', 'contract_file_category_id', 'vendor_id', 'visa_rate', 'submit_date'].forEach(function(name) {
+        ['passport_holder_id', 'client_id', 'client_type', 'client_price', 'country_id', 'contract_file_category_id', 'vendor_id', 'visa_rate', 'submit_date'].forEach(function(name) {
             const field = $(form + ' [name="' + name + '"]');
             if (!field.val()) {
                 $('#' + field.attr('id') + '_msg').removeClass('hidden');
@@ -262,6 +316,28 @@
             name: name,
             checked: true
         })));
+    }
+
+    const setupMatchUrl = @json($setupMatchUrl ?? null);
+    function addSetupDocuments(prefix) {
+        if (!setupMatchUrl) return;
+        const q = new URLSearchParams({
+            country_id: $('#' + prefix + '_country_id').val() || '',
+            visa_type_id: $('#' + prefix + '_contract_file_visa_type_id').val() || '',
+            category_id: $('#' + prefix + '_contract_file_category_id').val() || ''
+        });
+        fetch(setupMatchUrl + '?' + q, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+            .then(r => r.ok ? r.json() : null)
+            .then(r => {
+                if (!r || !Array.isArray(r.documents)) return;
+                const target = '#' + prefix + '_documents_grid';
+                const have = new Set($(target).find('input[name="document_names[]"]').map((i, el) => String(el.value).toLowerCase()).get());
+                const missing = r.documents.filter(name => !have.has(String(name).toLowerCase()));
+                if (!missing.length) return;
+                $(target + ' .cfm-doc-empty').remove();
+                missing.forEach(name => $(target).append(documentRow(name, false)));
+            })
+            .catch(() => {});
     }
 
     function filterCategoryOptions(prefix, resetIfMismatch = true) {
@@ -327,6 +403,7 @@
         $('#edit_country_id').val(item.country_id || '').trigger('change.select2');
         filterCategoryOptions('edit', false);
         $('#edit_contract_file_category_id').val(item.contract_file_category_id || '').trigger('change.select2');
+        $('#edit_contract_file_visa_type_id').val(item.contract_file_visa_type_id || '').trigger('change.select2');
         $('#edit_vendor_id').val(item.vendor_id || '').trigger('change.select2');
         $('#edit_portal_id').val(item.portal_id || '').trigger('change.select2');
         $('#edit_cost_bank_id').val(item.cost_bank_id || '').trigger('change.select2');
@@ -334,38 +411,29 @@
         $('#edit_purchase_date').val(item.purchase_date || '');
         cfOnVendorChange(document.getElementById('edit_vendor_id'));
         cfOnPortalChange(document.getElementById('edit_portal_id'));
+        $('#edit_client_id').val(item.client_id || '').trigger('change.select2');
+        $('#edit_client_type').val(item.client_type || 'agent').trigger('change.select2');
+        $('#edit_client_price').val(item.client_price || 0);
         $('#edit_visa_rate').val(item.visa_rate || 0);
         $('#edit_payable_date').val(item.payable_date || '');
         $('#edit_submit_date').val(item.submit_date || '');
         $('#edit_expected_out_date').val(item.expected_out_date || '');
-        $('#edit_status').val(item.status || 'doc_collection').trigger('change.select2');
+        $('#edit_status').val(item.status || 'file_received').trigger('change.select2');
+        $('#edit_exception_flag').val(item.exception_flag || '').trigger('change.select2');
         $('#edit_notes').val(item.notes || '');
         renderDocuments('#edit_documents_grid', item.required_documents || []);
         $('#editSubmit').data('action', `/${roleSlug}/contract-files/${id}`);
+        const actions=document.getElementById('cf_edit_money_actions');actions.replaceChildren();
+        const source=document.querySelector(`[data-file-row="${id}"] [data-cf-money-info]`);
+        if(source){const heading=document.createElement('span');heading.textContent='Financial actions';actions.append(heading,source.cloneNode(true));}
         clearErrors('#editForm');
+        window.resetFileEditSteps(item);
         $('#editModal').removeClass('hidden');
         refreshSelect2('#editModal');
     }
 
     function viewFile(id) {
-        const item = files.find(file => file.id === id);
-        if (!item) return;
-        $('#view_file_number').text(item.file_number);
-        $('#view_applicant').text(item.applicant_name);
-        $('#view_passport').text(item.passport_no);
-        $('#view_phone').text(item.phone);
-        $('#view_nationality').text(item.passport_holder?.nationality || '-');
-        $('#view_country').text(item.country?.name || '-');
-        $('#view_category').text(item.category?.name || '-');
-        $('#view_vendor').text(item.vendor?.name || '-');
-        $('#view_visa_rate').text(Number(item.visa_rate || 0).toLocaleString());
-        $('#view_submit_date').text(formatDate(item.submit_date));
-        $('#view_expected_out_date').text(formatDate(item.expected_out_date));
-        $('#view_status').html(`<span class="cf-pill cf-pill-${item.status}">${item.status_label}</span>`);
-        $('#view_notes').text(item.notes || '-');
-        const docs = item.required_documents || [];
-        $('#view_documents').html(docs.length ? docs.map(doc => `<span class="cfm-view-doc ${doc.checked ? 'done' : ''}">${escapeHtml(doc.name)}</span>`).join('') : '<span class="cf-sub">No documents tracked</span>');
-        $('#viewModal').removeClass('hidden');
+        return window.openFileSheet(id);
     }
 
     function openCfPhModal(selectId) {
@@ -395,11 +463,13 @@
             category_id: $('#cfPhCategory').val(),
             type: $('#cfPhType').val(),
             status: 1,
+            // Contract File asks for the name only (owner, 2026-10-26) — the rest can be filled in later
+            source: 'contract_file',
             _token: $('meta[name="csrf-token"]').attr('content')
         };
 
-        if (!payload.name || !payload.passport_no || !payload.nationality || !payload.phone || !payload.category_id) {
-            $('#cfPhErr').text('Name, passport no, nationality, phone and category are required.').show();
+        if (!payload.name) {
+            $('#cfPhErr').text('Full name is required.').show();
             return;
         }
 
@@ -424,8 +494,11 @@
                     date_of_birth: res.data.date_of_birth
                 };
                 passportHolders.push(holder);
+                if (window.CFFileBuilder) {
+                    window.CFFileBuilder.registerHolder(holder);
+                }
                 const label = holder.name + (holder.phone ? ' - ' + holder.phone : '');
-                $('#create_passport_holder_id,#edit_passport_holder_id').each(function() {
+                $('#create_passport_holder_id,#edit_passport_holder_id,#cfe-add-holder').each(function() {
                     if (!$(this).find('option[value="' + holder.id + '"]').length) {
                         $(this).append(new Option(label, holder.id));
                     }
@@ -446,7 +519,11 @@
     function confirmDelete(id, name) {
         $('#deleteName').text(name);
         $('#confirmDeleteBtn').data('item-id', id).data('action', `/${roleSlug}/contract-files/${id}`);
+        $('#deleteReason,#deleteConfirmation').val('');
+        $('#deleteValidation').addClass('hidden').text('');
+        $('#confirmDeleteBtn').prop('disabled', true).html('<i class="fas fa-trash mr-1"></i> Delete file');
         $('#deleteModal').removeClass('hidden');
+        setTimeout(() => $('#deleteReason').trigger('focus'), 0);
     }
 
     // ── Vendor / Portal / Cost Bank mutual exclusion ────────────────
@@ -572,5 +649,20 @@
             } [match];
         });
     }
+</script>
+
+{{-- Deep link from the Operations Status Tracker: `?open={id}` opens that
+     file's view modal. The tracker also sends `?search={file_number}` because
+     `files` above only holds the current page — the search guarantees the
+     record is on it. Inert on every visit without `?open` in the URL. --}}
+<script>
+    (function () {
+        var openId = new URLSearchParams(window.location.search).get('open');
+        if (!openId || !/^[0-9]+$/.test(openId)) return;
+
+        window.addEventListener('load', function () {
+            if (typeof viewFile === 'function') viewFile(Number(openId));
+        });
+    })();
 </script>
 @endsection

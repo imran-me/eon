@@ -1,7 +1,7 @@
 @extends('layout.app')
 
 @section('meta-information')
-    <title>Manage Accounts</title>
+    <title>Chart of Accounts</title>
 @endsection
 
 @section('css')
@@ -174,6 +174,48 @@
         font-family:monospace; background:#f1f5f9; border:1px solid #e2e8f0;
         border-radius:4px; padding:2px 7px; font-size:12px; color:#475569;
     }
+    .account-ledger-link {
+        display:inline-flex; align-items:center; gap:7px; color:#1d4ed8;
+        font-weight:600; text-decoration:none; transition:color .15s ease;
+    }
+    .account-ledger-link:hover { color:#1e40af; text-decoration:underline; }
+    .account-ledger-link i { font-size:11px; opacity:.65; }
+
+    /* Account hierarchy: parent-first rows with a compact tree in Name. */
+    .accounts-table tr.account-parent-row { background:#f8fafc; }
+    .accounts-table tr.account-parent-row:hover { background:#f1f5f9; }
+    .account-tree-name {
+        --tree-depth:0;
+        position:relative;
+        display:flex;
+        align-items:center;
+        min-height:24px;
+        padding-left:calc(var(--tree-depth) * 24px);
+    }
+    .account-tree-name.is-child::before {
+        content:"";
+        position:absolute;
+        left:calc((var(--tree-depth) - 1) * 24px + 7px);
+        top:-17px;
+        width:14px;
+        height:30px;
+        border-left:1px solid #cbd5e1;
+        border-bottom:1px solid #cbd5e1;
+        border-bottom-left-radius:3px;
+    }
+    .account-tree-icon {
+        width:18px;
+        flex:0 0 18px;
+        color:#94a3b8;
+        font-size:11px;
+        text-align:center;
+        margin-right:6px;
+    }
+    .account-parent-row .account-ledger-link,
+    .account-parent-row .account-name-text { font-weight:700; color:#0f4fbf; }
+    .account-child-row .account-ledger-link,
+    .account-child-row .account-name-text { font-weight:500; }
+    .account-child-row td:first-child { color:#94a3b8; }
 
     /* ── Responsive ─────────────────────────────── */
     @media (max-width:768px) {
@@ -200,7 +242,7 @@
         {{-- Header --}}
         <div class="states-table-header bg-blue-600 px-6 py-4 flex justify-between items-center">
             <h2 class="text-white text-xl font-semibold" style="color:white">
-                <i class="fas fa-wallet mr-2"></i>Manage Accounts
+                <i class="fas fa-sitemap mr-2"></i>Chart of Accounts
             </h2>
             @can('create account')
             <button id="openCreateModal"
@@ -301,21 +343,41 @@
                             <th>@include('partials.sortable-th', ['key' => 'parent', 'label' => 'Parent Account'])</th>
                             <th>@include('partials.sortable-th', ['key' => 'company', 'label' => 'Company'])</th>
                             <th>@include('partials.sortable-th', ['key' => 'opening_balance', 'label' => 'Opening Balance', 'dirDefault' => 'desc'])</th>
+                            <th title="Opening balance + posted debits − posted credits; direct postings to this head">@include('partials.sortable-th', ['key' => 'closing_balance', 'label' => 'Closing Balance', 'dirDefault' => 'desc'])</th>
                             <th>@include('partials.sortable-th', ['key' => 'status', 'label' => 'Status'])</th>
-                            <th class="text-center">Actions</th>
+                            <th class="text-center" style="width:1%;white-space:nowrap">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($accounts as $index => $account)
-                        <tr id="row-{{ $account->id }}">
+                        <tr id="row-{{ $account->id }}" class="{{ $account->tree_has_children ? 'account-parent-row' : ($account->tree_depth > 0 ? 'account-child-row' : '') }}">
                             <td data-label="#">{{ $accounts->firstItem() + $index }}</td>
 
                             <td data-label="Code">
-                                <span class="code-chip">{{ $account->code }}</span>
+                                @can('view account ledger report')
+                                    <a href="{{ route('role.report.account-ledger', ['role' => request()->route('role'), 'account_id' => $account->id, 'scope' => auth()->user()->can('view all account') ? 'all' : null]) }}"
+                                       class="code-chip" title="Open account journal">
+                                        {{ $account->code }}
+                                    </a>
+                                @else
+                                    <span class="code-chip">{{ $account->code }}</span>
+                                @endcan
                             </td>
 
                             <td data-label="Name">
-                                <span class="font-medium text-gray-800">{{ $account->name }}</span>
+                                <div class="account-tree-name {{ $account->tree_depth > 0 ? 'is-child' : '' }}" style="--tree-depth:{{ $account->tree_depth }}">
+                                    <span class="account-tree-icon">
+                                        <i class="fas {{ $account->tree_has_children ? 'fa-folder' : ($account->tree_depth > 0 ? 'fa-file-invoice' : 'fa-folder-open') }}"></i>
+                                    </span>
+                                    @can('view account ledger report')
+                                        <a href="{{ route('role.report.account-ledger', ['role' => request()->route('role'), 'account_id' => $account->id, 'scope' => auth()->user()->can('view all account') ? 'all' : null]) }}"
+                                           class="account-ledger-link" title="View journal transactions for {{ $account->name }}">
+                                            {{ $account->name }} <i class="fas fa-external-link-alt"></i>
+                                        </a>
+                                    @else
+                                        <span class="account-name-text text-gray-800">{{ $account->name }}</span>
+                                    @endcan
+                                </div>
                             </td>
 
                             <td data-label="Type">
@@ -347,6 +409,14 @@
                                     {{ number_format($account->opening_balance, 2) }}
                                 </span>
                             </td>
+                            <td data-label="Closing Balance" style="white-space:nowrap">
+                                <span class="font-mono text-sm" style="font-weight:600;color:{{ $account->closing_balance < 0 ? '#dc2626' : '#1d4ed8' }}">
+                                    {{ number_format(abs($account->closing_balance), 2) }}
+                                    @if(abs($account->closing_balance) >= 0.005)
+                                        <small>{{ $account->closing_balance < 0 ? 'Cr' : 'Dr' }}</small>
+                                    @endif
+                                </span>
+                            </td>
 
                             <td data-label="Status">
                                 <span class="status-badge {{ $account->status ? 'status-active' : 'status-inactive' }}">
@@ -355,14 +425,14 @@
                             </td>
 
                             <td data-label="Actions" class="text-center">
-                                <div class="flex items-center justify-center gap-2">
+                                <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                     {{-- Edit button --}}
                                     @can('edit account')
                                     <button class="btn-action btn-edit btn-edit-account"
                                             {{-- title="{{ $account->isSystemAccount() ? 'System account — limited edit' : 'Edit Account' }}" --}}
                                             title="Edit Account"
-                                            data-id="{{ $account->id }}">
-                                        <i class="fas fa-pen"></i>
+                                            data-id="{{ $account->id }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <i class="fas fa-pen" style="font-size:11px;margin:0"></i>
                                         {{-- <i class="fas {{ $account->isSystemAccount() ? 'fa-lock' : 'fa-pen' }}"></i> --}}
                                     </button>
                                     @endcan
@@ -373,14 +443,14 @@
                                     <button class="btn-action btn-delete btn-delete-account"
                                             title="Delete Account"
                                             data-id="{{ $account->id }}"
-                                            data-name="{{ $account->name }}">
-                                        <i class="fas fa-trash-alt"></i>
+                                            data-name="{{ $account->name }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <i class="fas fa-trash-alt" style="font-size:11px;margin:0"></i>
                                     </button>
                                     @else
                                     <button class="btn-action" disabled
                                             title="System account — cannot delete"
-                                            style="background:#f1f5f9;color:#cbd5e1;cursor:not-allowed;">
-                                        <i class="fas fa-ban"></i>
+                                            style="background:#f1f5f9;color:#cbd5e1;cursor:not-allowed;width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <i class="fas fa-ban" style="font-size:11px;margin:0"></i>
                                     </button>
                                     @endif
                                     @endcan

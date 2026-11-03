@@ -65,9 +65,10 @@
                                     <label for="status">Status</label>
                                     <select id="status" name="status" class="form-control select2" style="width: 100%">
                                         <option value="">All</option>
-                                        <option value="pending">Pending</option>
-                                        <option value="approved">Approved</option>
-                                        <option value="rejected">Rejected</option>
+                                        <option value="present" {{ request('status') === 'present' ? 'selected' : '' }}>Present</option>
+                                        <option value="absent" {{ request('status') === 'absent' ? 'selected' : '' }}>Absent</option>
+                                        <option value="leave" {{ request('status') === 'leave' ? 'selected' : '' }}>Leave</option>
+                                        <option value="holiday" {{ request('status') === 'holiday' ? 'selected' : '' }}>Holiday</option>
                                     </select>
                                 </div>
                                 <div class="filter-group">
@@ -90,6 +91,7 @@
                             <tr>
                                 <th style="padding-left: 20px" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SL</th>                                                                	
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>	
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>	              
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>	                                                                                             	
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Shift</th>	                                                                                             	
@@ -107,9 +109,32 @@
                                     <td class="px-6 py-4 whitespace-nowrap" style="padding-left: 20px">
                                         <strong>{{ ($datas->currentPage() - 1) * $datas->perPage() + $key + 1 }}</strong>
                                     </td>  
+                                    @php
+                                        $employee = $value->user;
+                                        $historyParams = [
+                                            'role' => Str::slug(Auth::user()->getRoleNames()->first()),
+                                            'user_id' => $value->user_id,
+                                            'month' => \Carbon\Carbon::parse($value->date)->month,
+                                            'year' => \Carbon\Carbon::parse($value->date)->year,
+                                        ];
+                                        $employeeAttendanceUrl = Auth::user()->can('view monthly attendance report')
+                                            ? route('role.report.monthly-attendances', $historyParams)
+                                            : route('role.attendances.index', [
+                                                'role' => $historyParams['role'],
+                                                'user_id' => $value->user_id,
+                                            ]);
+                                    @endphp
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        {{ $value->user?->name }}                                                                                                                        
-                                    </td>  
+                                        <a href="{{ $employeeAttendanceUrl }}" class="group inline-flex items-center gap-2 font-semibold text-slate-800 transition hover:text-blue-600" title="View {{ $employee?->name }}'s attendance history">
+                                            <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-600 group-hover:bg-blue-100">{{ strtoupper(substr($employee?->name ?: 'E', 0, 1)) }}</span>
+                                            <span>{{ $employee?->name ?: 'Unknown employee' }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <a href="{{ $employeeAttendanceUrl }}" class="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 font-mono text-xs font-semibold text-slate-600 transition hover:bg-blue-50 hover:text-blue-700" title="View monthly attendance">
+                                            {{ $employee?->employee_id_no ?: 'EMP-' . str_pad((string) $value->user_id, 4, '0', STR_PAD_LEFT) }}
+                                        </a>
+                                    </td>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         {{ $value->company?->name }}                                                                                                                        
                                     </td>                                                                                  
@@ -179,7 +204,7 @@
                                 </tr>
                             @empty
                             <tr>
-                                <td colspan="10" class="text-center py-8">
+                                <td colspan="11" class="text-center py-8">
                                     <i class="fas fa-inbox fa-3x text-gray-400 mb-4"></i>
                                     <h4 class="text-gray-500 text-xl font-medium mb-2">No data found</h4>
                                     <p class="text-gray-400 mb-4">Try filtering with different datas.</p>
@@ -223,7 +248,7 @@
 
             // Show create modal
             $('.create-new-btn').click(function() {
-                $('#createModal').removeClass('hidden');
+                $('#createModal').removeClass('hidden').css('display', 'flex');
             });
 
             // Show edit modal
@@ -250,8 +275,31 @@
                 $('#edit_check_out').val(check_out);
                 $('#edit_note').val(note);
                 $('#edit_status').val(status).trigger('change');  
-                $('#editModal').removeClass('hidden'); 
+                $('#editModal').removeClass('hidden').css('display', 'flex');
             });
+
+            const attendanceStatusStyles = {
+                present: ['Present', 'bg-emerald-100', 'text-emerald-700'],
+                absent: ['Absent', 'bg-red-100', 'text-red-700'],
+                leave: ['Leave', 'bg-amber-100', 'text-amber-700'],
+                holiday: ['Holiday', 'bg-blue-100', 'text-blue-700'],
+            };
+            function syncEditStatusPreview() {
+                const style = attendanceStatusStyles[$('#edit_status').val()] || attendanceStatusStyles.present;
+                $('#editStatusPreview')
+                    .removeClass('bg-emerald-100 text-emerald-700 bg-red-100 text-red-700 bg-amber-100 text-amber-700 bg-blue-100 text-blue-700')
+                    .addClass(style[1] + ' ' + style[2])
+                    .text(style[0]);
+            }
+            $('#edit_status').on('change', syncEditStatusPreview);
+            function syncCreateStatusPreview() {
+                const style = attendanceStatusStyles[$('#create_status').val()] || attendanceStatusStyles.present;
+                $('#createStatusPreview')
+                    .removeClass('bg-emerald-100 text-emerald-700 bg-red-100 text-red-700 bg-amber-100 text-amber-700 bg-blue-100 text-blue-700')
+                    .addClass(style[1] + ' ' + style[2])
+                    .text(style[0]);
+            }
+            $('#create_status').on('change', syncCreateStatusPreview);
 
             // Show selfie preview modal
             $('.view-selfie-btn').click(function() {
@@ -274,13 +322,13 @@
             // Close modals
             $('.modal-close-create, .modal-backdrop').click(function(e) {
                 if ($(e.target).closest('.modal-close-create').length || $(e.target).hasClass('modal-backdrop')) {
-                    $('#createModal').addClass('hidden');
+                    $('#createModal').addClass('hidden').css('display', 'none');
                 }
             });
 
             $('.modal-close-edit, .modal-backdrop').click(function(e) {
                 if ($(e.target).hasClass('modal-backdrop') || $(e.target).closest('.modal-close-edit').length) {
-                    $('#editModal').addClass('hidden');
+                    $('#editModal').addClass('hidden').css('display', 'none');
                 }
             });
 
@@ -314,7 +362,7 @@
                                     title: 'Done',
                                     text: 'Data created successfully!'
                                 });
-                                $('#createModal').addClass('hidden');
+                                $('#createModal').addClass('hidden').css('display', 'none');
                                 $('#createForm')[0].reset();
                                 setTimeout(() => window.location.reload(), 800);
                             } else {
@@ -354,7 +402,7 @@
                                     title: "Done",
                                     text: "Data updated successfully!",
                                 });
-                                $('#editModal').addClass('hidden');
+                                $('#editModal').addClass('hidden').css('display', 'none');
                                 setTimeout(() => window.location.reload(), 800);
                             } else {
                                 Swal.fire({
@@ -369,7 +417,7 @@
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Error!',
-                                text: 'Something went wrong!'
+                                text: xhr.responseJSON?.message || Object.values(xhr.responseJSON?.errors || {})[0]?.[0] || 'Something went wrong!'
                             });
                         }
                     }); 
@@ -440,15 +488,27 @@
             $('#createForm .error-message').addClass('hidden');
             $('#createForm .form-select, #createForm .form-input').removeClass('border-red-500');                                                
                         
-            if (!$('#create_date').val().trim()) {
-                $('#create_date').next('.error-message').removeClass('hidden');
+            if (!$('#create_date').val()) {
+                $('#create_date_msg').removeClass('hidden');
                 $('#create_date').addClass('border-red-500');
                 isValid = false;
             }                                                                                
             if (!$('#create_user_id').val() || ($('#create_user_id').val() == '') || ($('#create_user_id').val() == null)) {
                 $('#create_user_msg').removeClass('hidden');
                 isValid = false;
-            }    
+            }
+            if (!$('#create_status').val()) {
+                $('#create_status_msg').removeClass('hidden');
+                $('#create_status').addClass('border-red-500');
+                isValid = false;
+            }
+            const checkIn = $('#create_check_in').val();
+            const checkOut = $('#create_check_out').val();
+            if (checkIn && checkOut && checkOut < checkIn) {
+                $('#create_time_msg').removeClass('hidden');
+                $('#create_check_out').addClass('border-red-500');
+                isValid = false;
+            }
             // if (!$('#create_company_id').val() || ($('#create_company_id').val() == '') || ($('#create_company_id').val() == null)) {
             //     $('#create_company_msg').removeClass('hidden');
             //     isValid = false;
@@ -468,15 +528,27 @@
             $('#editForm .error-message').addClass('hidden');
             $('#editForm .form-select, #editForm .form-input').removeClass('border-red-500');
             
-            // if (!$('#edit_date').val().trim()) {
-            //     $('#edit_date').next('.error-message').removeClass('hidden');
-            //     $('#edit_date').addClass('border-red-500');
-            //     isValid = false;
-            // }                                                                                
+            if (!$('#edit_date').val()) {
+                $('#edit_date_msg').removeClass('hidden');
+                $('#edit_date').addClass('border-red-500');
+                isValid = false;
+            }
             if (!$('#edit_user_id').val() || ($('#edit_user_id').val() == '') || ($('#edit_user_id').val() == null)) {
                 $('#edit_user_msg').removeClass('hidden');
                 isValid = false;
-            }    
+            }
+            if (!$('#edit_status').val()) {
+                $('#edit_status_msg').removeClass('hidden');
+                $('#edit_status').addClass('border-red-500');
+                isValid = false;
+            }
+            const checkIn = $('#edit_check_in').val();
+            const checkOut = $('#edit_check_out').val();
+            if (checkIn && checkOut && checkOut < checkIn) {
+                $('#edit_time_msg').removeClass('hidden');
+                $('#edit_check_out').addClass('border-red-500');
+                isValid = false;
+            }
             // if (!$('#edit_company_id').val() || ($('#edit_company_id').val() == '') || ($('#edit_company_id').val() == null)) {
             //     $('#edit_company_msg').removeClass('hidden');
             //     isValid = false;

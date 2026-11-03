@@ -12,52 +12,457 @@ use App\Models\TaskActivityLog;
 use App\Models\TaskAttachment;
 use App\Models\TaskComment;
 use App\Models\TaskLink;
+use App\Models\TaskSeen;
 use App\Models\User;
 use App\Services\NotificationService;
 use Carbon\Carbon;
 use Exception;
+use Throwable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 
 
 class TaskController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Which cards should wear the corner ribbon, and with which word.
+     *
+     * "New"      — an admin created this task and I have not opened it since.
+     * "Comment"  — an admin commented on it after the last time I opened it.
+     * "Sub-item" — an admin added a sub-work item to it since then. The item is
+     *              not a card, so the news has to surface on its parent.
+     *
+     * One card, one word: whichever of the three happened LAST wins, so the
+     * ribbon always names the freshest thing waiting to be read.
+     *
+     * Mine never shouts at me: an action by the person viewing the board is
+     * skipped, so an admin does not get "New" on the task they just wrote.
+     *
+     * Three queries for the whole board, not three per card. A board here runs
+     * to four figures of cards and this sits on the page's critical path, so
+     * everything is fetched keyed by task id and matched up in memory.
+     *
+     * Returns [taskId => ['New'|'Comment', <css gradient>]].
      */
-    public function index($role, Board $board)
+    public function adminAlerts(Board $board, ?User $viewer): array
+    {
+        // The board is the task module's front door for every company on this
+        // install. A ribbon is decoration; it may never be the reason the page
+        // does not load — and it CAN be, because task_seen arrives by migration
+        // and deploys land before migrations run. Anything unexpected in here
+        // costs the ribbons and nothing else.
+        try {
+            return $this->buildAdminAlerts($board, $viewer);
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    private function buildAdminAlerts(Board $board, ?User $viewer): array
+    {
+        if (!$viewer) {
+            return [];
+        }
+
+        $tasks = collect($board->board_columns ?? [])
+            ->pluck('column.tasks')
+            ->filter()
+            ->flatten();
+
+        $taskIds = $tasks->pluck('id')->all();
+
+        if (empty($taskIds)) {
+            return [];
+        }
+
+        // Role names, not a permission: this is "someone above me asked for
+        // this", which is about who they are rather than what they may do.
+        $adminIds = User::whereHas('roles', function ($q) {
+            $q->whereIn('name', ['admin', 'super admin']);
+        })->pluck('id')->all();
+
+        if (empty($adminIds)) {
+            return [];
+        }
+
+        $seen = TaskSeen::where('user_id', $viewer->id)
+            ->whereIn('task_id', $taskIds)
+            ->pluck('seen_at', 'task_id');
+
+        $lastAdminComment = TaskComment::whereIn('task_id', $taskIds)
+            ->whereIn('user_id', $adminIds)
+            ->where('user_id', '!=', $viewer->id)
+            ->groupBy('task_id')
+            ->selectRaw('task_id, MAX(created_at) as last_at')
+            ->pluck('last_at', 'task_id');
+
+        // Sub-work items are Tasks with a parent, and never cards of their own —
+        // so an admin adding one shows up on the parent's card or nowhere.
+        $lastAdminSubtask = Task::whereIn('parent_id', $taskIds)
+            ->whereIn('created_by', $adminIds)
+            ->where('created_by', '!=', $viewer->id)
+            ->groupBy('parent_id')
+            ->selectRaw('parent_id, MAX(created_at) as last_at')
+            ->pluck('last_at', 'parent_id');
+
+        $alerts = [];
+
+        $bands = [
+            'Comment'  => 'linear-gradient(135deg,#a78bfa,#7c3aed)',
+            'Sub-item' => 'linear-gradient(135deg,#fbbf24,#d97706)',
+            'New'      => 'linear-gradient(135deg,#34d399,#059669)',
+        ];
+
+        foreach ($tasks as $task) {
+            $seenAt = $seen[$task->id] ?? null;
+
+            // Every candidate, with when it happened. Only an admin's own board
+            // skips its own work — mine never shouts at me.
+            $byAdmin = $task->created_by
+                && in_array($task->created_by, $adminIds)
+                && $task->created_by != $viewer->id;
+
+            $candidates = array_filter([
+                'Comment'  => $lastAdminComment[$task->id] ?? null,
+                'Sub-item' => $lastAdminSubtask[$task->id] ?? null,
+                'New'      => $byAdmin ? $task->created_at : null,
+            ]);
+
+            // Unread only: anything older than my last visit has been read.
+            $unread = [];
+            foreach ($candidates as $word => $at) {
+                $at = Carbon::parse($at);
+                if (!$seenAt || $at->gt($seenAt)) {
+                    $unread[$word] = $at;
+                }
+            }
+
+            if (!$unread) {
+                continue;
+            }
+
+            // The freshest wins — one card, one word.
+            arsort($unread);
+            $word = array_key_first($unread);
+            $alerts[$task->id] = [$word, $bands[$word]];
+        }
+
+        return $alerts;
+    }
+
+    /**
+     * Stamp "I have looked at this", which is what takes the ribbon off my own
+     * board and leaves it up for everyone who has not looked yet.
+     *
+     * Called when the task drawer opens. Deliberately forgiving: a failure here
+     * must never break opening a task, so the caller ignores the response and
+     * the worst case is a ribbon that stays one refresh longer.
+     */
+    public function markSeen($role, Task $task)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['success' => false], 401);
+        }
+
+        TaskSeen::updateOrCreate(
+            ['task_id' => $task->id, 'user_id' => $user->id],
+            ['seen_at' => now()],
+        );
+
+        return response()->json(['success' => true]);
+    }
+
+    /** Cards fetched per page in a "done" column (first paint and each scroll). */
+    private const BOARD_PAGE = 20;
+
+    /**
+     * The scope every board card query shares: this board's top-level tasks plus
+     * every relation and count the card markup touches (it used to be the
+     * $topLevelOnly closure inside index(); boardColumnTasks() needs it too).
+     */
+    private function boardCardScope($q, int $boardId): void
+    {
+        $q->where('board_id', $boardId)
+            ->whereNull('parent_id')
+            // Every relation the card markup touches, loaded once for the
+            // whole column rather than once per card. Without this the board
+            // runs four lazy loads per card — users, labels, creator, column —
+            // which an employee never notices because they see a handful of
+            // cards, and which costs a super admin ~5,500 queries and twenty
+            // seconds on a 1,400-card board.
+            // `oversight` rides along so a restricted or flagged card can
+            // say so on EVERY board, not only inside Employee Task
+            // Oversight — an employee who cannot see the lock only meets it
+            // later as a baffling refusal. Conditional because the table
+            // arrives by migration and deploys land before migrations run:
+            // no table, no relation, board renders exactly as before.
+            ->with(EmployeeTaskOversightController::hasOversightTable()
+                ? ['users', 'labels', 'creator', 'column', 'oversight']
+                : ['users', 'labels', 'creator', 'column'])
+            ->withCount([
+                // reorder(): subtasks() carries an orderBy for the drawer's
+                // list, which has no business inside a count sub-select.
+                'subtasks' => fn($sq) => $sq->reorder(),
+                'subtasks as done_subtasks_count' => fn($sq) => $sq->reorder()->whereNotNull('completed_at'),
+                // Rides along for the footer's comment button, for the same
+                // reason: one sub-select beats one query per card.
+                'comments',
+            ]);
+
+        /* Time under this card, for the footer's clock chip.
+         *
+         * A card shows the sum of its sub-work items' time, or — when it has
+         * none — its own. The banked part is a SUM; the part still ticking
+         * cannot be, so the start of the one running child comes back too
+         * and the browser adds the live remainder. Only one clock can run
+         * under a parent (startTimer banks the siblings), so MAX is that
+         * one.
+         *
+         * Two more sub-selects for the whole column, not two per card, and
+         * both behind timersReady() because these columns arrive by
+         * migration. AFTER withCount, which is what puts `tasks.*` into the
+         * select list that these then extend. */
+        if ($this->timersReady()) {
+            $q->withSum(['subtasks as sub_accum_ms' => fn ($sq) => $sq->reorder()], 'timer_accum_ms')
+                ->withMax(
+                    ['subtasks as sub_running_since' => fn ($sq) => $sq->reorder()->whereNotNull('timer_started_at')],
+                    'timer_started_at'
+                );
+        }
+    }
+
+    /** Employees without "view all task" only see what is theirs. */
+    private function taskVisibility(User $user, bool $restricted): ?\Closure
+    {
+        if (!$restricted) {
+            return null;
+        }
+
+        return function ($query) use ($user) {
+            $query->whereHas('users', function ($q2) use ($user) {
+                $q2->where('users.id', $user->id);
+            })
+            ->orWhere('created_by', $user->id)
+            // Mine by inheritance: a parent I am not on myself still has
+            // to appear when one of its sub-items is mine. Without this,
+            // dropping sub-tasks from the columns would hide that work
+            // from the person doing it.
+            ->orWhereHas('subtasks', function ($q3) use ($user) {
+                $q3->where(function ($q4) use ($user) {
+                    $q4->whereHas('users', function ($q5) use ($user) {
+                        $q5->where('users.id', $user->id);
+                    })
+                    ->orWhere('created_by', $user->id);
+                });
+            });
+        };
+    }
+
+    /** Same name reading the card accent uses in show.blade.php ($kbcAccent). */
+    private static function isDoneColumnName(?string $name): bool
+    {
+        $n = preg_replace('/[^a-z]/', '', strtolower((string) $name));
+
+        return !Str::contains($n, ['cancel', 'reject', 'dropped'])
+            && Str::contains($n, ['done', 'complete', 'finish', 'closed']);
+    }
+
+    private function doneColumnIds(Board $board): array
+    {
+        return $board->columns
+            ->filter(fn ($c) => self::isDoneColumnName($c->name))
+            ->pluck('id')->map(fn ($i) => (int) $i)->values()->all();
+    }
+
+    /**
+     * The period a "done" column shows. Default is the last 7 days: on the live
+     * board that is ~30 cards where the whole column is 600+.
+     */
+    private function doneWindow(Request $request): array
+    {
+        $key = (string) $request->query('done', 'week');
+        $now = Carbon::now();
+        $fmt = 'Y-m-d H:i:s';
+
+        $from = $to = null;
+        switch ($key) {
+            case 'today':
+                $from = $now->copy()->startOfDay();
+                break;
+            case 'yesterday':
+                $from = $now->copy()->subDay()->startOfDay();
+                $to = $now->copy()->subDay()->endOfDay();
+                break;
+            case 'month':
+                $from = $now->copy()->startOfMonth();
+                break;
+            case 'days30':
+                $from = $now->copy()->subDays(29)->startOfDay();
+                break;
+            case 'all':
+                break;
+            case 'custom':
+                try {
+                    $from = $request->filled('done_from') ? Carbon::parse($request->query('done_from'))->startOfDay() : null;
+                    $to = $request->filled('done_to') ? Carbon::parse($request->query('done_to'))->endOfDay() : null;
+                } catch (Throwable $e) {
+                    $from = $to = null;
+                }
+                if (!$from && !$to) {
+                    $key = 'week';
+                    $from = $now->copy()->subDays(6)->startOfDay();
+                }
+                break;
+            default:
+                $key = 'week';
+                $from = $now->copy()->subDays(6)->startOfDay();
+        }
+
+        return [
+            'key' => $key,
+            'from' => $from?->format($fmt),
+            'to' => $to?->format($fmt),
+            'from_in' => $from?->format('Y-m-d'),
+            'to_in' => $to?->format('Y-m-d'),
+        ];
+    }
+
+    /**
+     * One done column, newest finish first. A card parked in DONE without
+     * completed_at is dated by its last update (123 of this month's 126 Done
+     * cards on the live board have no completed_at, so filtering on it alone
+     * would hide them).
+     */
+    private function doneQuery(int $boardId, int $columnId, array $win, ?\Closure $visibility, bool $cards)
+    {
+        $q = Task::query();
+        if ($cards) {
+            $this->boardCardScope($q, $boardId);
+        } else {
+            $q->where('board_id', $boardId)->whereNull('parent_id');
+        }
+        $q->where('tasks.column_id', $columnId);
+        if ($visibility) {
+            $q->where($visibility);
+        }
+
+        $stamp = 'COALESCE(tasks.completed_at, tasks.updated_at)';
+        if ($win['from']) {
+            $q->whereRaw("$stamp >= ?", [$win['from']]);
+        }
+        if ($win['to']) {
+            $q->whereRaw("$stamp <= ?", [$win['to']]);
+        }
+
+        return $q->orderByRaw("$stamp DESC")->orderByDesc('tasks.id');
+    }
+
+    /**
+     * The next page of cards for a done column — what the board's infinite
+     * scroll asks for. Returns the cards as HTML (the same partial the page
+     * uses) plus whether more remain.
+     */
+    public function boardColumnTasks(Request $request, $role, Board $board, int $column)
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
         $isEmployee = Str::slug($user->getRoleNames()->first()) == 'employee';
         $canViewAllTasks = $user->hasPermissionTo('view all task');
-        if ($isEmployee && !$canViewAllTasks) {
-            $board = Board::with([
-                'board_columns.column.tasks' => function ($q) use ($board, $user) {
-                    $q->where('board_id', $board->id)
-                        ->where(function ($query) use ($user) {
-                            $query->whereHas('users', function ($q2) use ($user) {
-                                $q2->where('users.id', $user->id);
-                            })
-                            ->orWhere('created_by', $user->id);
-                        });
+
+        $board->load('columns');
+        if (!in_array($column, $this->doneColumnIds($board), true)) {
+            abort(404);
+        }
+
+        $visibility = $this->taskVisibility($user, $isEmployee && !$canViewAllTasks);
+        $offset = max(0, (int) $request->query('offset', 0));
+
+        $rows = $this->doneQuery($board->id, $column, $this->doneWindow($request), $visibility, true)
+            ->offset($offset)->limit(self::BOARD_PAGE + 1)->get();
+        $hasMore = $rows->count() > self::BOARD_PAGE;
+        $tasks = $rows->take(self::BOARD_PAGE)->values();
+
+        $project = Project::find($board->project_id);
+        $users = User::whereIn('id', $project->team_members ?? [])->get();
+        $labels = Label::where('project_id', $board->project_id)->orderBy('name')->get();
+
+        // adminAlerts() reads the tasks off board_columns.column.tasks.
+        $shell = clone $board;
+        $shell->setRelation('board_columns', collect([(object) ['column' => (object) ['tasks' => $tasks]]]));
+        $adminAlerts = $this->adminAlerts($shell, $user);
+
+        return response()->json([
+            'html' => view('task-module.task.partials.board-cards', compact('tasks', 'board', 'users', 'labels', 'adminAlerts'))->render(),
+            'count' => $tasks->count(),
+            'next_offset' => $offset + $tasks->count(),
+            'has_more' => $hasMore,
+        ]);
+    }
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request, $role, Board $board)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $isEmployee = Str::slug($user->getRoleNames()->first()) == 'employee';
+        $canViewAllTasks = $user->hasPermissionTo('view all task');
+
+        /**
+         * A sub-work item is not a card.
+         *
+         * Sub-tasks used to be pulled into their column's list like any other
+         * task, so a sub-item sat next to its own parent looking exactly like a
+         * top-level task with nothing on screen to tell them apart. The board
+         * now lists parents only; the items underneath one are reached by
+         * expanding the sub-work chip on its card (toggleCardSubtasks in
+         * task-subtask.js), which is the only place they appear.
+         *
+         * The two counts ride along with the parent so the chip can render
+         * "1/2" without one request per card.
+         */
+        $doneIds = $this->doneColumnIds($board);
+        $doneWindow = $this->doneWindow($request);
+
+        $topLevelOnly = function ($q) use ($board, $doneIds) {
+            $this->boardCardScope($q, $board->id);
+            // Done columns hold hundreds of cards. They are NOT loaded here: each
+            // is fetched below, one page at a time, inside the chosen period, and
+            // the rest arrives as the person scrolls (boardColumnTasks()).
+            if ($doneIds) {
+                $q->whereNotIn('tasks.column_id', $doneIds);
+            }
+        };
+
+        $visibility = $this->taskVisibility($user, $isEmployee && !$canViewAllTasks);
+
+        $board = Board::with([
+            'board_columns.column.tasks' => function ($q) use ($topLevelOnly, $visibility) {
+                $topLevelOnly($q);
+                if ($visibility) {
+                    $q->where($visibility);
                 }
-            ])->findOrFail($board->id);
-        } elseif($canViewAllTasks){
-            $board = Board::with([
-                'board_columns.column.tasks' => function ($q) use ($board) {
-                    $q->where('board_id', $board->id);
-                }
-            ])->findOrFail($board->id);
-        } else {
-            $board = Board::with([
-                'board_columns.column.tasks' => function ($q) use ($board) {
-                    $q->where('board_id', $board->id);
-                }
-            ])->findOrFail($board->id);
+            },
+        ])->findOrFail($board->id);
+
+        $doneMeta = [];
+        foreach ($board->board_columns as $bc) {
+            if (!$bc->column || !in_array($bc->column->id, $doneIds, true)) {
+                continue;
+            }
+            $total = $this->doneQuery($board->id, $bc->column->id, $doneWindow, $visibility, false)->count();
+            $page = $this->doneQuery($board->id, $bc->column->id, $doneWindow, $visibility, true)
+                ->limit(self::BOARD_PAGE)->get();
+            $bc->column->setRelation('tasks', $page);
+            $doneMeta[$bc->column->id] = ['total' => $total, 'loaded' => $page->count()];
         }
 
         $project = Project::find($board->project_id);
@@ -78,9 +483,11 @@ class TaskController extends Controller
             ->orderBy('name')
             ->get();
 
+        $adminAlerts = $this->adminAlerts($board, $user);
+
         return view(
             "task-module.task.show",
-            compact("board", "users", "labels", "boards"),
+            compact("board", "users", "labels", "boards", "adminAlerts", "doneMeta", "doneWindow"),
         );
     }
 
@@ -229,23 +636,28 @@ class TaskController extends Controller
         if (!empty($assignedUsers)) {
             $task->users()->sync($assignedUsers);
             
-            // Log each assigned user
-            foreach ($assignedUsers as $userId) {
-                $user = User::find($userId);
-                if ($user && $user->id != auth()->id()) {
+            // Log each assigned user (one query for all of them, not one each)
+            $assignees = User::whereIn('id', $assignedUsers)->get();
+            $mailRole = auth()->user()->getRoleNames()->first();
+            $mailTargets = [];
+            foreach ($assignees as $user) {
+                if ($user->id != auth()->id()) {
                     $this->logActivity($task->id, 'assignee_added', "added a new assignee {$user->name}");
-                    //send mail notification to assigned user
-                    sendBrevoMail(
-                        $user->email,
-                        $user->name,
-                        'New Task Assigned: ' . $task->title,
-                        "You have been assigned a new task: <strong>{$task->title}</strong><br><br>Click <a href='" . route('role.tasks.board', ['role' => auth()->user()->getRoleNames()->first(), 'board' => $task->board_id]) . "'>here</a> to view the task details."
-                    );
+                    $mailTargets[] = $user;
                 }
             }
 
-            // Notify users about new task creation (this handles the initial assignment notification)
-            NotificationService::notifyTaskCreated($task, $assignedUsers);
+            // The emails and phone pushes are slow network calls (one HTTP request
+            // per person, per device). They used to run before the response, so
+            // "Save" waited on every one of them. They now go to the queue
+            // (NotifyTaskAssigned); a failure there can no longer fail or delay the save.
+            \App\Jobs\NotifyTaskAssigned::dispatch(
+                $task->id,
+                (int) auth()->id(),
+                (string) $mailRole,
+                $assignedUsers,
+                collect($mailTargets)->pluck('id')->map(fn ($i) => (int) $i)->all(),
+            );
         }
 
         // Sync labels if provided
@@ -326,6 +738,78 @@ class TaskController extends Controller
                 'updated_at'      => $task->updated_at?->toIso8601String(),
             ]
         ]);
+    }
+
+    /**
+     * One task, printed — what the drawer's "Task report" button downloads.
+     *
+     * Prints what the drawer shows on screen: the property block, the
+     * description, the sub-work items with the time each one banked, links,
+     * attachments and the activity trail.
+     *
+     * Deliberately NOT part of Report\TaskReportController: that one reports
+     * across many tasks and sits behind the "view task report" permission, which
+     * employees do not have. This is scoped to a single task and is open to
+     * anyone who can already open that task's drawer — same reach as show().
+     */
+    public function report($role, Task $task)
+    {
+        $task->load([
+            'column',
+            'board.project',
+            'board.workspace',
+            'creator',
+            'users',
+            'labels',
+            'parent',
+            'links.creator',
+            'attachments.uploader',
+        ]);
+
+        // Same read-time reconcile the drawer does, so a run left open past the
+        // 8h cap prints the capped total rather than the wall-clock one.
+        $task->reconcileTimer();
+
+        $subtasks = $task->subtasks()->with(['users', 'column'])->get();
+        $subtasks->each(fn (Task $sub) => $sub->reconcileTimer());
+
+        // Activity and comments, merged newest-first — the order the drawer's
+        // Activity tab uses.
+        $activities = $task->activityLogs()->with('user:id,name')->get()
+            ->map(fn (TaskActivityLog $log) => [
+                'type'      => 'activity',
+                'user_name' => $log->user->name ?? 'Unknown',
+                'text'      => (string) $log->description,
+                'at'        => $log->created_at,
+            ])
+            ->concat($task->comments()->with('user:id,name')->get()->map(fn (TaskComment $c) => [
+                'type'      => 'comment',
+                'user_name' => $c->user->name ?? 'Unknown',
+                'text'      => (string) $c->comment,
+                'at'        => $c->created_at,
+            ]))
+            ->sortByDesc(fn (array $row) => $row['at']?->getTimestamp() ?? 0)
+            ->values();
+
+        $company = $task->board?->workspace;
+
+        // dompdf has remote fetching disabled, so the logo has to be handed over
+        // as a filesystem path — and only when it is really there, or the whole
+        // report would fail on a company with a stale logo row.
+        $logoPath = $company?->logo ? public_path(ltrim($company->logo, '/')) : null;
+
+        $pdf = Pdf::loadView('task-module.task.report_pdf', [
+            'task'        => $task,
+            'subtasks'    => $subtasks,
+            'activities'  => $activities,
+            'trackedMs'   => (int) $subtasks->sum(fn (Task $sub) => $sub->elapsedMs()),
+            'ownMs'       => $task->elapsedMs(),
+            'company'     => $company,
+            'logoPath'    => ($logoPath && is_file($logoPath)) ? $logoPath : null,
+            'generatedBy' => Auth::user()?->name ?? 'Unknown',
+        ])->setPaper('a4');
+
+        return $pdf->download('TASK-' . $task->id . '_report_' . now()->format('Y-m-d_His') . '.pdf');
     }
 
     /**
@@ -412,6 +896,10 @@ class TaskController extends Controller
      */
     public function update(Request $request, $role, Task $task)
     {
+        if ($stop = $this->blockedByRestriction($task)) {
+            return $stop;
+        }
+
         // dd($request->all());
 
         // Store old values for activity logging
@@ -460,6 +948,59 @@ class TaskController extends Controller
             $data['due_date'] = null;
         } elseif (!empty($data['due_date'])) {
             $data['due_date'] = Carbon::parse($data['due_date'])->format('Y-m-d H:i:s');
+        }
+
+        /* ── Dates and the timer are one fact shown twice ────────────────────
+         * The "5.09pm:24/08/2026 → 5.09pm:24/08/2026" range chip and the Start
+         * and Due chips describe the same two moments, so whichever the user
+         * touches LAST wins and is written to both. This is the dates → timer
+         * half; startTimer() and completeTimer() are the timer → dates half.
+         *
+         * Due date only rewrites completed_at on an item that is ALREADY done.
+         * On an open item a due date is a deadline — often in the future — and
+         * copying it into completed_at would mark unfinished work as finished
+         * and move it in every project's completion percentage.
+         */
+        if ($this->timersReady()) {
+            if (array_key_exists('start_date', $data)) {
+                $data['timer_first_started_at'] = $data['start_date'];
+
+                /* BACK-DATING THE START CHIP BACK-DATES THE CLOCK.
+                 *
+                 * The owner's case: a task is dropped into In Progress at 11:30
+                 * but the work actually began at 11:00. Setting the Start chip
+                 * to 11:00 has to make the counter read 30 min and carry on from
+                 * there — otherwise the two disagree on the same fact and the
+                 * chip is the one telling the truth.
+                 *
+                 * Done by re-basing the running clock rather than adding to the
+                 * bank: elapsed becomes exactly now - start_date, which is what
+                 * "work began at 11:00" means. Any previously banked time is
+                 * subsumed by that statement, so it is cleared — otherwise
+                 * correcting a start time would quietly inflate the total.
+                 *
+                 * Only when the task is actually counting, and only when it has
+                 * no sub-work items: a parent's time is the sum of its
+                 * children's, and its Start chip says when the first of them
+                 * began, not how long the parent has run.
+                 *
+                 * A start date in the future is harmless — elapsedMs() floors
+                 * the run at zero — and one further back than eight hours is
+                 * capped by TIMER_MAX_RUN_MS, the same ceiling that stops a
+                 * forgotten tab banking a whole night.
+                 */
+                if (!empty($data['start_date'])
+                    && Carbon::parse($data['start_date'])->lessThanOrEqualTo(now())
+                    && $task->isTimerRunning()
+                    && !$task->subtasks()->exists()) {
+                    $data['timer_started_at'] = $data['start_date'];
+                    $data['timer_accum_ms']   = 0;
+                }
+            }
+
+            if (array_key_exists('due_date', $data) && $task->completed_at) {
+                $data['completed_at'] = $data['due_date'];
+            }
         }
 
         $task->update($data);
@@ -526,6 +1067,12 @@ class TaskController extends Controller
                     $data['start_date'] = now();
                 }
 
+                // Same rule as the drag in move(): set to In Progress and a task
+                // with no sub-work items starts counting.
+                if ($isNewColumnInProgress) {
+                    $data = array_merge($data, $this->autoStartFields($task));
+                }
+
                 if (!$isOldColumnCompleted && $isNewColumnCompleted) {
                     // Moving to completed column
                     $data['completed_at'] = now();
@@ -533,13 +1080,46 @@ class TaskController extends Controller
                     if (!$task->due_date && !array_key_exists('due_date', $data)) {
                         $data['due_date'] = now();
                     }
-                } elseif ($isOldColumnCompleted && !$isNewColumnCompleted) {
-                    // Moving away from completed column
+
+                    // The State dropdown is the other face of the ✓ button, so it
+                    // stops the clock too. Without this a running item dragged to
+                    // Done keeps counting with no Pause control left to stop it,
+                    // and banks the full 8h cap overnight.
+                    $this->bankRunningTime($task);
+                    $data['pre_complete_column_id'] = $oldColumn?->id;
+                } elseif (!$isNewColumnCompleted) {
+                    /* Anything that is not Done has not ended, so it carries no end
+                     * date. This used to fire only when coming BACK from Done, which
+                     * left the date behind: finishing an item stamps the Due chip,
+                     * and dragging it to To Do or In Progress afterwards kept that
+                     * stamp on a card that was plainly not finished. Clearing it for
+                     * every non-Done target is the rule the board already implies —
+                     * the red chip means "ended on", and only Done has an end.
+                     */
                     $data['completed_at'] = null;
+                    $data['due_date'] = null;
+                    $data['pre_complete_column_id'] = null;
+                }
+
+                // Back to Note / To Do means the work has not begun: the clock is
+                // stopped and every trace of it removed, so nothing in those
+                // columns ever shows a time. Moving out to In Progress captures a
+                // fresh start above.
+                if ($this->timersReady() && $this->isBacklogColumn($newColumn->name)) {
+                    $data = array_merge($data, $this->resetTimerFields());
                 }
 
                 // Re-update the task with timestamps if they changed
-                $timestampUpdates = array_intersect_key($data, array_flip(['start_date', 'due_date', 'completed_at']));
+                // pre_complete_column_id rides along with completed_at: it is set in
+                // the same branch above, and without it here the second update()
+                // drops it and un-ticking cannot restore the original column.
+                $timestampUpdates = array_intersect_key($data, array_flip([
+                    'start_date', 'due_date', 'completed_at', 'pre_complete_column_id',
+                    // the backlog reset above lands after the first update(), so its
+                    // fields have to be listed here or they are silently dropped —
+                    // and so does the start-date re-base further up
+                    'timer_started_at', 'timer_accum_ms', 'timer_first_started_at',
+                ]));
                 if (!empty($timestampUpdates)) {
                     $task->update($timestampUpdates);
                 }
@@ -610,9 +1190,18 @@ class TaskController extends Controller
         }
 
         if ($request->expectsJson()) {
+            $fresh = $task->fresh()->load('labels', 'users');
+
             return response()->json([
                 'success' => true,
-                'task' => $task->fresh()->load('labels', 'users'),
+                'task' => $fresh,
+                // The card's time chip, so setting a Start date or a State
+                // repaints it on the spot. Back-dating the Start chip re-bases
+                // the clock (see above), and a chip still showing the old total
+                // beside a corrected date is the disagreement this is here to
+                // prevent.
+                'timer'   => $this->timersReady() ? $this->timerPayload($fresh) : null,
+                'tracked' => $this->timersReady() ? $this->trackedPayload($fresh) : null,
                 'last_edited_by' => auth()->user()->name,
                 'last_edited_at' => $task->updated_at->toIso8601String()
             ]);
@@ -624,6 +1213,45 @@ class TaskController extends Controller
     /**
      * Helper method to log task activities
      */
+    /**
+     * A task a super admin has locked may not be edited or deleted by anyone
+     * else. Enforced here and not only in the drawer, because the drawer is a
+     * suggestion and this is the rule: /tasks/{id} accepts a PUT from anything
+     * that can sign in.
+     *
+     * Returns a JSON 403 to stop on, or null to carry on. Silent when the
+     * oversight table has not been migrated yet — no table, no locks, exactly
+     * the behaviour this app had before the feature existed.
+     */
+    private function blockedByRestriction(Task $task)
+    {
+        if (!EmployeeTaskOversightController::hasOversightTable()) {
+            return null;
+        }
+
+        $user = Auth::user();
+
+        if ($user && ($user->is_super_admin || $user->hasRole('super admin'))) {
+            return null;
+        }
+
+        try {
+            if (!$task->isRestricted()) {
+                return null;
+            }
+        } catch (Throwable $e) {
+            // Cannot tell — let the work through. A lock that fails open costs
+            // one unguarded edit; a lock that fails closed breaks every board.
+            return null;
+        }
+
+        return response()->json([
+            'success'    => false,
+            'restricted' => true,
+            'message'    => 'This task is restricted by the Super Admin — you cannot edit or delete it.',
+        ], 403);
+    }
+
     private function logActivity($taskId, $activityType, $description)
     {
         TaskActivityLog::create([
@@ -639,6 +1267,10 @@ class TaskController extends Controller
      */
     public function destroy($role, Task $task)
     {
+        if ($stop = $this->blockedByRestriction($task)) {
+            return $stop;
+        }
+
         try {
             $taskId = $task->id;
             $boardId = $task->board_id;
@@ -737,6 +1369,13 @@ class TaskController extends Controller
                 $updateData['start_date'] = now();
             }
 
+            // Dropped into In Progress: a task with no sub-work items starts
+            // counting. Guarded on the column actually changing so that
+            // reordering a card inside In Progress does not restart its clock.
+            if ($isNewColumnInProgress && $oldColumnId != $request->column_id) {
+                $updateData = array_merge($updateData, $this->autoStartFields($task));
+            }
+
             // Set completed_at based on column change
             if (!$isOldColumnCompleted && $isNewColumnCompleted) {
                 // Moving to completed column
@@ -745,9 +1384,27 @@ class TaskController extends Controller
                 if (!$task->due_date) {
                     $updateData['due_date'] = now();
                 }
-            } elseif ($isOldColumnCompleted && !$isNewColumnCompleted) {
-                // Moving away from completed column
+
+                // Same rule as the ✓ button and the State dropdown: finishing a
+                // work item stops its clock. (Drag-and-drop on the board lands
+                // here rather than in update().)
+                $this->bankRunningTime($task);
+                $updateData['pre_complete_column_id'] = $oldColumnId;
+            } elseif (!$isNewColumnCompleted && $oldColumnId != $request->column_id) {
+                // Not Done means not ended: no end date. Guarded on the column
+                // actually changing, because this block also runs for a plain
+                // reorder inside one column, and dragging a card up its own list
+                // must not rewrite its dates.
                 $updateData['completed_at'] = null;
+                $updateData['due_date'] = null;
+                $updateData['pre_complete_column_id'] = null;
+            }
+
+            // Dragged back to Note / To Do: the work has not begun, so the clock
+            // and the captured start time go with it. Same rule as the State
+            // dropdown in update().
+            if ($this->timersReady() && $newColumn && $this->isBacklogColumn($newColumn->name)) {
+                $updateData = array_merge($updateData, $this->resetTimerFields());
             }
 
             // Update moving task
@@ -764,10 +1421,91 @@ class TaskController extends Controller
             }
         });
 
+        $moved = Task::with('labels', 'users')->find($request->task_id);
+
         return response()->json([
             'success' => true,
-            'task' => Task::with('labels', 'users')->find($request->task_id),
+            'task'    => $moved,
+            // Dropping a childless task into In Progress starts its clock (see
+            // autoStartFields). The board moves cards over AJAX, so without the
+            // clock in this answer the card would go on showing "0/0" until
+            // somebody refreshed — the timer running invisibly.
+            'timer'   => $this->timersReady() && $moved ? $this->timerPayload($moved) : null,
+            // A parent's chip shows its sub-work items' total, which a move to
+            // Done can change (the ✓ banks a running child). Sent alongside so
+            // one answer repaints the chip whichever kind of card it is.
+            'tracked' => $this->timersReady() && $moved ? $this->trackedPayload($moved) : null,
         ]);
+    }
+
+    /**
+     * A column that means "not started yet" — Note, To Do, Backlog, Ideas.
+     *
+     * Defined by exclusion rather than by a name list, because every company
+     * names these differently: anything that is neither in-progress nor done is
+     * work that has not begun. Landing here wipes the clock (see resetTimerFor).
+     */
+    private function isBacklogColumn(?string $columnName): bool
+    {
+        $columnName = (string) $columnName;
+
+        return $columnName !== ''
+            && !$this->isInProgressColumn($columnName)
+            && !preg_match(self::DONE_COLUMN_PATTERN, $columnName);
+    }
+
+    /**
+     * Send a work item back to "never started": stop the clock, drop the banked
+     * time, and clear both the Start chip and the range chip.
+     *
+     * The owner's rule: nothing in Note or To Do carries a time. Moving out to
+     * In Progress captures a fresh start; moving back here has to remove it
+     * again, or the card claims work that, by its own column, has not begun.
+     *
+     * Returns the fields to merge into the pending update rather than saving,
+     * so it rides along with the caller's single write.
+     */
+    private function resetTimerFields(): array
+    {
+        return [
+            'start_date'             => null,
+            'timer_started_at'       => null,
+            'timer_accum_ms'         => 0,
+            'timer_first_started_at' => null,
+        ];
+    }
+
+    /**
+     * A task with nothing under it IS the work item, so entering In Progress
+     * starts its own clock — the same thing Start does on a sub-work item.
+     *
+     * A task that HAS sub-work items is left alone: its time is the sum of
+     * theirs, and a second clock on the parent would count the same work twice.
+     * That is also why storeSubtask() stops this clock the moment the first
+     * sub-item appears.
+     *
+     * Returns fields to merge into the caller's pending update rather than
+     * saving, so it rides along with the caller's single write. Empty when
+     * nothing should change — already running, has children, or the timer
+     * columns have not been migrated yet.
+     */
+    private function autoStartFields(Task $task): array
+    {
+        if (!$this->timersReady() || $task->isTimerRunning() || $task->subtasks()->exists()) {
+            return [];
+        }
+
+        /* Seeded from an existing start_date rather than always from now():
+         * startTimer() overwrites start_date because the user pressing Start
+         * IS the statement of when work began, but a column move is not, and
+         * silently rewriting a date somebody typed would be wrong. */
+        $first = $task->timer_first_started_at ?: ($task->start_date ?: now());
+
+        return [
+            'timer_started_at'       => now(),
+            'timer_first_started_at' => $first,
+            'start_date'             => $first,
+        ];
     }
 
     private function isInProgressColumn(string $columnName): bool
@@ -1115,6 +1853,11 @@ class TaskController extends Controller
     public function getSubtasks($role, Task $task)
     {
         $subtasks = $task->subtasks()->with(['users', 'column'])->get()->map(function ($sub) {
+            // A run left open overnight is force-paused at the 8h cap here, on
+            // read, so a forgotten browser tab corrects itself without needing a
+            // scheduled job.
+            $sub->reconcileTimer();
+
             return [
                 'id'              => $sub->id,
                 'title'           => $sub->title,
@@ -1134,18 +1877,349 @@ class TaskController extends Controller
                 ]),
                 'parent_id'    => $sub->parent_id,
                 'parent_title' => $sub->title,
+                'timer'        => $this->timerPayload($sub),
             ];
         });
 
         $total = $subtasks->count();
         $done  = $subtasks->where('is_done', true)->count();
 
+        // A task with no sub-work items is its own work item, and the expanded
+        // panel is where its Start / Pause / Done live. Sent on every response
+        // so the panel never has to ask a second time; the client ignores it
+        // once there are children.
+        $task->reconcileTimer();
+
         return response()->json([
-            'success'  => true,
-            'subtasks' => $subtasks,
-            'total'    => $total,
-            'done'     => $done,
+            'success'      => true,
+            'subtasks'     => $subtasks,
+            'total'        => $total,
+            'done'         => $done,
+            'tracked'      => $this->trackedPayload($task),
+            'parent_timer' => $this->timerPayload($task),
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     | Sub-work item time tracking — Start / Pause / Done
+     |
+     | Mirrors the reference build's per-phase timers. The rules, in full:
+     |   Start  banks and stops any other running sibling under the same parent
+     |          (so two clocks can never run on one task at once), stamps the
+     |          first-start once, and starts the clock.
+     |   Pause  banks now - started_at and stops the clock.
+     |   Done   banks anything still running, stamps completed_at, and stamps
+     |          first-start too if the item was ticked off without ever running.
+     |   Reopen clears completed_at. The reference has no reopen; ours needs one
+     |          because completed_at already drives the progress ring.
+     |
+     | Deliberately NOT done here: moving the item to another column, and
+     | touching the parent's state. Column moves keep working exactly as before.
+     ╚══════════════════════════════════════════════════════════ */
+
+    /**
+     * The timer half of a task's JSON — everything the row needs to draw itself.
+     *
+     * elapsed_ms is computed server side and paired with a client-side anchor in
+     * the browser, so the live counter never depends on the viewer's clock being
+     * in step with the server's.
+     */
+    private function timerPayload(Task $task): array
+    {
+        $elapsed = $task->elapsedMs();
+
+        return [
+            'running'      => $task->isTimerRunning(),
+            'elapsed_ms'   => $elapsed,
+            'elapsed_text' => $elapsed > 0 || $task->timer_first_started_at
+                ? Task::humanDuration($elapsed)
+                : 'not started',
+            'started'      => (bool) $task->timer_first_started_at,
+            'start_label'  => Task::stampLabel($task->timer_first_started_at),
+            'end_label'    => Task::stampLabel($task->completed_at),
+            'is_done'      => !is_null($task->completed_at),
+        ];
+    }
+
+    /**
+     * Total time banked across a parent's sub-work items, for the section header.
+     */
+    private function trackedPayload(Task $task): array
+    {
+        $subtasks = $task->subtasks()->get();
+        $total    = $subtasks->sum(fn(Task $sub) => $sub->elapsedMs());
+
+        return [
+            'total_ms'   => (int) $total,
+            'total_text' => Task::humanDuration((int) $total),
+            // The card's chip has to know whether to keep counting or stand
+            // still; total_ms alone cannot say.
+            'running'    => $subtasks->contains(fn (Task $sub) => $sub->isTimerRunning()),
+            // Returned alongside the time so the progress ring can be repainted
+            // after a ✓ without re-fetching and re-rendering the whole list.
+            'done'       => $subtasks->whereNotNull('completed_at')->count(),
+            'total'      => $subtasks->count(),
+        ];
+    }
+
+    /**
+     * Fresh timer state for a task plus its parent's running total — the single
+     * response shape all three timer actions return.
+     */
+    private function timerResponse(Task $task, string $message): \Illuminate\Http\JsonResponse
+    {
+        $task->refresh();
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'id'      => $task->id,
+            // Start can lift an item out of To Do and Done drops it into the
+            // Done column. The board cannot see either from a timer response,
+            // so it is told where the task now is and reloads only if that
+            // moved — a reload on every Pause would throw away the scroll.
+            'column_id' => $task->column_id,
+            'timer'   => $this->timerPayload($task),
+            'tracked' => $task->parent_id
+                ? $this->trackedPayload($task->parent()->first() ?? $task)
+                : null,
+        ]);
+    }
+
+    /**
+     * The timer columns exist. Compiled assets are uploaded by hand and can reach
+     * the server before the migration does; reads survive that (a missing
+     * attribute reads as null, so the row shows "not started"), but a write would
+     * throw "Unknown column" and 500. Say so plainly instead.
+     */
+    private function timersReady(): bool
+    {
+        static $ready = null;
+
+        return $ready ??= Schema::hasColumn('tasks', 'timer_started_at');
+    }
+
+    private function timersNotReady(): \Illuminate\Http\JsonResponse
+    {
+        return response()->json([
+            'success' => false,
+            'message' => 'Time tracking is not enabled on this server yet — the database migration still has to run.',
+        ], 503);
+    }
+
+    public function startTimer($role, Task $task)
+    {
+        if (!$this->timersReady()) {
+            return $this->timersNotReady();
+        }
+
+        $task->reconcileTimer();
+
+        if ($task->isTimerRunning()) {
+            return $this->timerResponse($task, 'Timer already running.');
+        }
+
+        DB::transaction(function () use ($task) {
+            // One clock per parent: bank and stop every running sibling first.
+            if ($task->parent_id) {
+                Task::where('parent_id', $task->parent_id)
+                    ->where('id', '!=', $task->id)
+                    ->whereNotNull('timer_started_at')
+                    ->get()
+                    ->each(function (Task $sibling) {
+                        $this->bankRunningTime($sibling);
+                        $this->logActivity($sibling->id, 'timer_paused', 'timer paused automatically — another sub-work item was started');
+                    });
+            }
+
+            $first = $task->timer_first_started_at ?: now();
+
+            // Nothing in Note / To Do carries a time, so starting the clock on an
+            // item sitting there moves it to In Progress rather than leaving a
+            // running timer in a column that means "not started". Without this the
+            // two rules contradict each other and the next column change wipes the
+            // clock the user just started.
+            $progress = $this->isBacklogColumn($task->column?->name)
+                ? $this->progressColumnFor($task)
+                : null;
+
+            $task->forceFill([
+                'timer_started_at'       => now(),
+                'timer_first_started_at' => $first,
+                // The Start chip and the left half of the range chip are the same
+                // moment, so running the clock writes it to both. Last action wins.
+                'start_date'             => $first,
+                'column_id'              => $progress ?: $task->column_id,
+            ])->save();
+        });
+
+        $this->logActivity($task->id, 'timer_started', 'started the timer');
+
+        return $this->timerResponse($task, 'Timer started.');
+    }
+
+    public function pauseTimer($role, Task $task)
+    {
+        if (!$this->timersReady()) {
+            return $this->timersNotReady();
+        }
+
+        $task->reconcileTimer();
+
+        if (!$task->isTimerRunning()) {
+            return $this->timerResponse($task, 'Timer is not running.');
+        }
+
+        $this->bankRunningTime($task);
+        $this->logActivity($task->id, 'timer_paused', 'paused the timer at ' . Task::humanDuration($task->fresh()->elapsedMs()));
+
+        return $this->timerResponse($task, 'Timer paused.');
+    }
+
+    /**
+     * The ✓ button — a toggle, so a mis-click is one click to undo.
+     *
+     * The tick and the State dropdown are two faces of one thing, so ✓ also moves
+     * the item into the board's Done column and un-ticking moves it back where it
+     * came from. Without that they drift: the card sits in "To Do" while the ring
+     * counts it finished, and `completed_at` — which the company dashboards and
+     * every project's completion percentage read — would be set by a control that
+     * left no trace on the board.
+     */
+    public function completeTimer($role, Task $task)
+    {
+        if (!$this->timersReady()) {
+            return $this->timersNotReady();
+        }
+
+        $task->reconcileTimer();
+
+        if ($task->completed_at) {
+            // Reopen: back to the column it was ticked from.
+            $restore = $this->openColumnFor($task);
+
+            $task->forceFill([
+                'completed_at'           => null,
+                'column_id'              => $restore ?: $task->column_id,
+                'pre_complete_column_id' => null,
+            ])->save();
+
+            $this->logActivity($task->id, 'reopened', 'reopened the sub-work item');
+
+            return $this->timerResponse($task, 'Sub-work item reopened.');
+        }
+
+        // Marking done stops the clock: a finished item must never keep counting.
+        $this->bankRunningTime($task);
+        $task->refresh();
+
+        $done     = $this->doneColumnFor($task);
+        $finished = now();
+        $first    = $task->timer_first_started_at ?: $finished;
+
+        $task->forceFill([
+            'completed_at'           => $finished,
+            // Ticked off without ever starting the clock: stamp a start anyway so
+            // the range chip reads "3.59pm:24/08/2026 → 3.59pm:24/08/2026" rather
+            // than losing the date entirely.
+            'timer_first_started_at' => $first,
+            // Both chips mirror the range they sit above — finishing the item is
+            // the last action, so it wins over whatever they held before.
+            'start_date'             => $first,
+            'due_date'               => $finished,
+            'pre_complete_column_id' => $done ? $task->column_id : null,
+            'column_id'              => $done ?: $task->column_id,
+        ])->save();
+
+        $this->logActivity($task->id, 'completed', 'marked done — ' . Task::humanDuration($task->fresh()->elapsedMs()) . ' tracked');
+
+        return $this->timerResponse($task, 'Sub-work item marked done.');
+    }
+
+    /**
+     * The board's "done" column, by the same name test the board has always used
+     * for `completed_at`. Null when the board has no such column — the tick then
+     * marks the item done without pretending to move it somewhere that
+     * does not exist.
+     */
+    private function doneColumnFor(Task $task): ?int
+    {
+        return $this->boardColumns($task)
+            ->first(fn($c) => preg_match(self::DONE_COLUMN_PATTERN, (string) $c->name))?->id;
+    }
+
+    /**
+     * The board's in-progress column, if it has one. Null on a board that does
+     * not — starting the clock then leaves the item where it is rather than
+     * inventing a move.
+     */
+    private function progressColumnFor(Task $task): ?int
+    {
+        return $this->boardColumns($task)
+            ->first(fn($c) => $this->isInProgressColumn((string) $c->name))?->id;
+    }
+
+    /**
+     * Where an un-ticked item goes: the column it was ticked from, or failing
+     * that (ticked before this was recorded, or that column since deleted) the
+     * board's in-progress column, or its first non-done column.
+     */
+    private function openColumnFor(Task $task): ?int
+    {
+        $columns = $this->boardColumns($task);
+
+        if ($task->pre_complete_column_id && $columns->contains('id', $task->pre_complete_column_id)) {
+            return (int) $task->pre_complete_column_id;
+        }
+
+        $open = $columns->reject(fn($c) => preg_match(self::DONE_COLUMN_PATTERN, (string) $c->name));
+
+        return $open->first(fn($c) => $this->isInProgressColumn((string) $c->name))?->id
+            ?? $open->first()?->id;
+    }
+
+    /**
+     * The columns of the board this task sits on, in board order — read through
+     * the same board_columns pivot the board itself renders from, so the tick can
+     * never move an item to a column the board does not show.
+     */
+    private function boardColumns(Task $task)
+    {
+        $board = $task->board_id ? Board::with('columns')->find($task->board_id) : null;
+
+        return $board ? $board->columns : collect();
+    }
+
+    /** The board's long-standing test for "this column means finished". */
+    private const DONE_COLUMN_PATTERN = '/done|completed|complete|closed|finish|finished/i';
+
+    /**
+     * Move the run in progress into the banked total and stop the clock.
+     *
+     * The UPDATE is conditional on the clock still being the one we read, so a
+     * double-clicked Pause cannot bank the same stretch twice: the second request
+     * matches no row and changes nothing. Capped, so one unbroken run can never
+     * bank more than eight hours.
+     */
+    private function bankRunningTime(Task $task): void
+    {
+        if (!$task->isTimerRunning()) {
+            return;
+        }
+
+        $startedAt = $task->timer_started_at;
+        // Signed for the same reason as Task::elapsedMs() — an absolute diff
+        // banks real hours off a start stamp that lies in the future.
+        $run       = (int) max(0, now()->getTimestampMs() - $startedAt->getTimestampMs());
+        $banked    = min($run, Task::TIMER_MAX_RUN_MS);
+
+        Task::where('id', $task->id)
+            ->where('timer_started_at', $startedAt)
+            ->update([
+                'timer_accum_ms'   => DB::raw('timer_accum_ms + ' . $banked),
+                'timer_started_at' => null,
+                'updated_at'       => now(),
+            ]);
     }
 
     /**
@@ -1154,6 +2228,15 @@ class TaskController extends Controller
      */
     public function storeSubtask(Request $request, $role, Task $task)
     {
+        /* The parent's own clock only runs while it has nothing under it. From
+         * the first sub-work item on, the parent's time is the sum of its
+         * children's, so bank whatever it has run and stop it — otherwise the
+         * same stretch of work is counted on the parent AND on the item. */
+        if ($this->timersReady() && $task->isTimerRunning()) {
+            $this->bankRunningTime($task);
+            $this->logActivity($task->id, 'timer_paused', 'timer stopped automatically — the work was split into sub-work items');
+        }
+
         $request->validate([
             'title'         => 'required|string|max:255',
             'description'   => 'nullable|string',

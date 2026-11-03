@@ -8,32 +8,39 @@
     <style>
         .kb-board {
             display: flex;
-            gap: 14px;
+            gap: 12px;
             overflow-x: auto;
-            padding: 16px;
+            padding: 16px 18px 20px;
             min-height: calc(100vh - 200px);
             align-items: flex-start;
+            background: #f8fafc;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
         }
         .kb-col {
-            flex: 0 0 230px;
-            min-width: 230px;
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 10px;
+            flex: 1 0 224px;
+            min-width: 224px;
+            max-width: 272px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 9px;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 9px;
             max-height: calc(100vh - 260px);
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
         }
         .kb-col-h {
             display: flex;
             align-items: center;
             gap: 7px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: .06em;
-            color: #475569;
-            padding: 4px 4px 8px;
+            min-height: 34px;
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: .055em;
+            color: #334155;
+            padding: 3px 3px 8px;
             border-bottom: 1px solid #e2e8f0;
             margin-bottom: 2px;
             flex-shrink: 0;
@@ -41,50 +48,56 @@
         .kb-col-cards {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 9px;
             overflow-y: auto;
             flex: 1;
             min-height: 0;
         }
         .kb-col-dot {
-            width: 9px;
-            height: 9px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             flex-shrink: 0;
         }
         .kb-col-count {
             margin-left: auto;
-            background: #e2e8f0;
+            min-width: 22px;
+            background: #fff;
             color: #475569;
+            border: 1px solid #dbe3ed;
             font-size: 10px;
-            font-weight: 700;
-            padding: 1px 6px;
+            font-weight: 800;
+            padding: 1px 5px;
             border-radius: 20px;
+            text-align: center;
         }
         .kb-card {
             background: #fff;
-            border-radius: 9px;
+            border: 1px solid #e5eaf1;
             border-left: 3px solid #94a3b8;
-            box-shadow: 0 1px 4px rgba(0,0,0,.07);
-            padding: 10px 11px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+            padding: 11px 11px 9px;
             cursor: pointer;
-            transition: box-shadow .15s, transform .1s;
+            transition: border-color .15s, box-shadow .15s, transform .15s;
         }
         .kb-card:hover {
-            box-shadow: 0 4px 14px rgba(0,0,0,.12);
-            transform: translateY(-1px);
+            border-color: #cbd5e1;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, .09);
+            transform: translateY(-2px);
         }
         .kb-card-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 4px;
+            font-size: 12.5px;
+            font-weight: 700;
+            line-height: 1.35;
+            color: #0f172a;
+            margin-bottom: 5px;
         }
         .kb-card-meta {
-            font-size: 11px;
+            font-size: 10.5px;
             color: #64748b;
-            line-height: 1.5;
-            margin-bottom: 6px;
+            line-height: 1.55;
+            margin-bottom: 7px;
         }
         .kb-card-foot {
             display: flex;
@@ -92,18 +105,21 @@
             font-size: 10px;
             color: #94a3b8;
             border-top: 1px solid #f1f5f9;
-            padding-top: 5px;
-            margin-top: 4px;
+            padding-top: 6px;
+            margin-top: 5px;
         }
         .kb-card-actions {
             display: flex;
             gap: 5px;
-            margin-top: 7px;
+            margin-top: 8px;
+            padding-top: 1px;
+            flex-wrap: wrap;
         }
         .kb-btn {
             border: none;
             border-radius: 5px;
-            padding: 3px 8px;
+            min-height: 25px;
+            padding: 4px 8px;
             font-size: 10px;
             cursor: pointer;
             font-weight: 600;
@@ -116,7 +132,13 @@
             text-align: center;
             color: #cbd5e1;
             font-size: 11px;
-            padding: 20px 0;
+            padding: 34px 8px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            background: rgba(255,255,255,.65);
+        }
+        @media (min-width: 1500px) {
+            .kb-col { min-width: 232px; }
         }
         .kb-board-header {
             background: #fff;
@@ -146,7 +168,7 @@
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            display: flex;
+            display: none;
             align-items: center;
             gap: 5px;
         }
@@ -344,10 +366,11 @@
     </style>
 @endsection
 @section('main-content')
+    @include('layout.visa-processing-tabs')
     @php
         $columns = [
             'pending'    => ['label' => 'NEW',           'color' => '#94a3b8'],
-            'received'   => ['label' => 'DOC COLLECTION','color' => '#3b82f6'],
+            'received'   => ['label' => 'DOCUMENTS PREPARATION','color' => '#3b82f6'],
             'in_embassy' => ['label' => 'IN EMBASSY',    'color' => '#f59e0b'],
             'delivered'  => ['label' => 'IN PROGRESS',   'color' => '#f59e0b'],
             'approved'   => ['label' => 'APPROVED',      'color' => '#16a34a'],
@@ -355,53 +378,51 @@
         ];
         $statCardMeta = [
             'pending'    => ['theme' => 'c-blue',   'icon' => 'fa-file-pen',        'sub' => 'Awaiting review'],
-            'received'   => ['theme' => 'c-cyan',   'icon' => 'fa-folder-open',     'sub' => 'Documents collected'],
+            'received'   => ['theme' => 'c-cyan',   'icon' => 'fa-folder-open',     'sub' => 'Documents being prepared'],
             'in_embassy' => ['theme' => 'c-amber',  'icon' => 'fa-building-columns','sub' => 'Submitted to embassy'],
             'delivered'  => ['theme' => 'c-orange', 'icon' => 'fa-hourglass-half',  'sub' => 'In progress'],
             'approved'   => ['theme' => 'c-green',  'icon' => 'fa-circle-check',    'sub' => 'Approved'],
             'rejected'   => ['theme' => 'c-red',    'icon' => 'fa-circle-xmark',    'sub' => 'Need follow-up'],
         ];
         $role = Str::slug(auth()->user()->getRoleNames()->first());
+        // List View follows the operational workflow instead of newest-id
+        // order. Keep legacy In Progress records visible, but always leave
+        // rejected applications at the very end.
+        $listStatusOrder = [
+            'pending' => 10,
+            'received' => 20,
+            'in_embassy' => 30,
+            'approved' => 40,
+            'delivered' => 50,
+            'rejected' => 60,
+        ];
+        $listDatas = $datas->sortBy(fn ($visa) => sprintf(
+            '%03d|%012d',
+            $listStatusOrder[$visa->status] ?? 55,
+            PHP_INT_MAX - (int) $visa->id
+        ))->values();
     @endphp
 
+    @php
+        $vxTiles = [];
+        foreach ($columns as $status => $col) {
+            $meta = $statCardMeta[$status];
+            $vxTiles[] = [$status === 'received' ? 'Documents' : ucwords(strtolower($col['label'])), $grouped->get($status, collect())->count(), $meta['sub'], $meta['icon'],
+                ['c-blue' => 'blue', 'c-cyan' => 'cyan', 'c-amber' => 'amber', 'c-orange' => 'orange', 'c-green' => 'green', 'c-red' => 'red'][$meta['theme']] ?? 'slate',
+                route('role.visa.index', ['role' => $role] + (request('status') === $status ? [] : ['status' => $status])), request('status') === $status];
+        }
+        $vxAction = '<div class="vp-view-toggle" id="viewToggle">'
+            . '<button type="button" class="active" data-view="kanban"><i class="fas fa-columns"></i> Kanban View</button>'
+            . '<button type="button" data-view="list"><i class="fas fa-list"></i> List View</button></div>'
+            . '<button type="button" class="kb-btn-filter vx-btn vx-btn-ghost" id="toggleFilter"><i class="fas fa-filter"></i> Filter</button>'
+            . '<button type="button" class="create-btn vx-btn"><i class="fas fa-plus"></i> New Application</button>';
+    @endphp
+    @include('visa-processing.partials.page-top', [
+        'vxIcon' => 'fa-th-large', 'vxTitle' => 'Visa Application Board',
+        'vxSub' => $datas->count() . ' applications · drag a card to move it along',
+    ])
+
     <div class="bg-white rounded-lg shadow-md overflow-hidden mt-0">
-
-        {{-- Board Header --}}
-        <div class="kb-board-header">
-            <div class="kb-board-title">
-                <i class="fas fa-th-large text-blue-600"></i>
-                Visa Application Board
-                <span style="font-size:12px;font-weight:500;color:#64748b;">{{ $datas->count() }} total</span>
-            </div>
-            <div class="kb-board-actions">
-                <div class="vp-view-toggle" id="viewToggle">
-                    <button type="button" class="active" data-view="kanban"><i class="fas fa-columns"></i> Kanban View</button>
-                    <button type="button" data-view="list"><i class="fas fa-list"></i> List View</button>
-                </div>
-                <button class="kb-btn-filter" id="toggleFilter">
-                    <i class="fas fa-filter"></i> Filter
-                </button>
-                <button class="kb-btn-new create-btn">
-                    <i class="fas fa-plus"></i> New Application
-                </button>
-            </div>
-        </div>
-
-        {{-- Status Summary --}}
-        <div class="vp-stat-grid">
-            @foreach ($columns as $status => $col)
-                @php
-                    $count = $grouped->get($status, collect())->count();
-                    $meta  = $statCardMeta[$status];
-                @endphp
-                <a href="{{ route('role.visa.index', ['role' => $role, 'status' => $status]) }}" class="vp-stat {{ $meta['theme'] }}">
-                    <div class="vp-stat-ic"><i class="fas {{ $meta['icon'] }}"></i></div>
-                    <div class="vp-stat-num">{{ $count }}</div>
-                    <div class="vp-stat-lbl">{{ $col['label'] }}</div>
-                    <div class="vp-stat-sub">{{ $meta['sub'] }}</div>
-                </a>
-            @endforeach
-        </div>
 
         {{-- Filter Panel --}}
         <form action="" method="get" id="filterForm">
@@ -560,7 +581,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($datas as $visa)
+                        @foreach ($listDatas as $visa)
                             @php $col = $columns[$visa->status] ?? ['label' => $visa->status, 'color' => '#94a3b8']; @endphp
                             <tr class="view-details-row" data-visa-id="{{ $visa->id }}">
                                 <td><span class="vp-sub" style="font-family:monospace;">{{ $visa->application_id ?? '—' }}</span></td>
@@ -643,7 +664,7 @@
                         <input type="text" id="vpPhName" class="vp-ph-input" placeholder="e.g. Md. Rahman">
                     </div>
                     <div>
-                        <label class="vp-ph-lbl">Passport No <span class="req">*</span></label>
+                        <label class="vp-ph-lbl">Passport No <span style="font-weight:400;color:#94a3b8">— optional</span></label>
                         <input type="text" id="vpPhPassportNo" class="vp-ph-input" placeholder="e.g. BD1234567">
                     </div>
                     <div>
@@ -817,17 +838,27 @@
                 if (view === 'list') {
                     $('#kanbanView').hide();
                     $('#listView').show();
+                    $('#toggleFilter').css('display', 'flex');
                 } else {
                     $('#listView').hide();
                     $('#kanbanView').show();
+                    $('#toggleFilter').hide();
+                    $('#filterPanel').removeClass('open');
+                    $('#toggleFilter').find('i').removeClass('fa-times').addClass('fa-filter');
                 }
                 localStorage.setItem('vpVisaBoardView', view);
             });
             if (localStorage.getItem('vpVisaBoardView') === 'list') {
                 $('#viewToggle button[data-view="list"]').click();
             }
-            @if(request()->hasAny(['passport_holder_id','country_id','visa_category_id','status']))
-                $('#filterPanel').addClass('open');
+            {{-- A status summary card applies its filter through the URL, but it
+                 should not expand the advanced filter panel. Only filters that
+                 are selected from that panel reopen it after submission. --}}
+            @if(request()->hasAny(['passport_holder_id','country_id','visa_category_id']))
+                if ($('#viewToggle button[data-view="list"]').hasClass('active')) {
+                    $('#filterPanel').addClass('open');
+                    $('#toggleFilter').find('i').removeClass('fa-filter').addClass('fa-times');
+                }
             @endif
 
             // Attachment rows
@@ -1373,11 +1404,6 @@
                 err.style.display = 'block';
                 return;
             }
-            if (!payload.passport_no) {
-                err.textContent = 'Passport number is required.';
-                err.style.display = 'block';
-                return;
-            }
 
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving…';
@@ -1432,4 +1458,27 @@
             });
         }
     </script>
+
+    {{-- Deep link from the Operations Status Tracker: `?open={id}` scrolls to
+         that application and pops the details modal the page already has, so a
+         reference clicked over there lands on the record rather than on this
+         list. Entirely inert on every visit without `?open` in the URL. --}}
+    <script>
+        (function () {
+            var openId = new URLSearchParams(window.location.search).get('open');
+            if (!openId || !/^[0-9]+$/.test(openId)) return;
+
+            window.addEventListener('load', function () {
+                var target = document.querySelector('.kb-card[data-visa-id="' + openId + '"]')
+                    || document.querySelector('.view-details-row[data-visa-id="' + openId + '"]');
+                if (!target) return;
+
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                target.click();
+            });
+        })();
+    
+// Visa Dashboard's "New Application" lands here with ?open=create (2026-10-13).
+$(function () { if (new URLSearchParams(location.search).get('open') === 'create') $('header .create-btn').first().trigger('click'); });
+</script>
 @endsection

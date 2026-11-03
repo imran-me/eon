@@ -18,12 +18,19 @@ trait PostsPartyLedger
 {
     protected function resolvePartyUserType(User $party): string
     {
-        return $party->hasRole('vendor') ? 'supplier' : 'customer';
+        // An agent is charged for the passengers they bring — a receivable,
+        // the same side of the ledger as a customer — never paid a commission,
+        // so 'agent' does not belong in the supplier bucket. A trainer or
+        // consultant is the exception: they carry the agent role so they sit
+        // in the agent lists, but we PAY them for training our passengers,
+        // so their rows are payables (2026-09-21).
+        return $party->hasAnyRole(['vendor', 'trainer', 'consultant']) ? 'supplier' : 'customer';
     }
 
     protected function postPartyLedgerRow(int $partyId, array $attrs): Transaction
     {
-        $last = Transaction::where('user_id', $partyId)->orderByDesc('id')->lockForUpdate()->first();
+        $companyId = (int) ($attrs['company_id'] ?? auth()->user()?->company_id ?? 2);
+        $last = Transaction::where('user_id', $partyId)->where('company_id', $companyId)->orderByDesc('id')->lockForUpdate()->first();
         $oldBalance = $last ? (float) $last->balance : 0;
         $newBalance = $oldBalance + (float) ($attrs['debit'] ?? 0) - (float) ($attrs['credit'] ?? 0);
 
@@ -31,6 +38,7 @@ trait PostsPartyLedger
 
         return Transaction::create(array_merge([
             'user_id'     => $partyId,
+            'company_id'  => $companyId,
             'user_type'   => $this->resolvePartyUserType($party),
             'old_balance' => $oldBalance,
             'balance'     => $newBalance,
@@ -82,8 +90,8 @@ trait PostsPartyLedger
         ], $extraAttrs));
 
         $shift = $isDebitRow ? $delta : -$delta;
-        Transaction::where('user_id', $partyId)->where('id', '>', $row->id)->increment('old_balance', $shift);
-        Transaction::where('user_id', $partyId)->where('id', '>', $row->id)->increment('balance', $shift);
+        Transaction::where('user_id', $partyId)->where('company_id', $row->company_id)->where('id', '>', $row->id)->increment('old_balance', $shift);
+        Transaction::where('user_id', $partyId)->where('company_id', $row->company_id)->where('id', '>', $row->id)->increment('balance', $shift);
     }
 
     /**

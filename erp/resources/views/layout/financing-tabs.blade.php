@@ -45,6 +45,12 @@
             'hint'  => 'Money the owner puts in, and profit taken out',
         ],
         [
+            'key'   => 'liability',
+            'label' => 'Liability',
+            'icon'  => 'fa-right-left',
+            'hint'  => 'One company\'s expense paid from another company\'s account',
+        ],
+        [
             'key'   => 'categories',
             'label' => 'Categories',
             'icon'  => 'fa-sliders',

@@ -34,13 +34,19 @@
 */
 
 return [
+    // Debit-balance contra-revenue, never a bank/cash expense posting.
+    'sales_discount' => '4195',
 
     // ── ASSETS ───────────────────────────────────────────
-    'accounts_receivable'   => '1311',  // Customer Receivable - General — customers owe us
-    'inventory'             => '1400',  // Inventory — control account, stock sits in its children
-    'prepaid_expense'       => '1470',  // Prepaid Expenses — control account
+    'accounts_receivable' => '1311',  // Customer Receivable - General — customers owe us
+    'supplier_advance' => '1456',  // Advance to Supplier — vendor prepayments not yet matched to a bill
+    'inventory' => '1400',  // Inventory — control account, stock sits in its children
+    'prepaid_expense' => '1470',  // Prepaid Expenses — control account
     // Staff loans. 1457 is the leaf under 1455 Advances & Loans; 1455 is a group.
-    'loan_receivable'       => '1457',  // Employee Loan — money staff owe us
+    'loan_receivable' => '1457',  // Employee Loan — money staff owe us
+    // Advance salary paid out, owed back from future salary (AdvancePostingService).
+    'salary_advance' => '1458',  // Salary Advance — leaf under 1455 Advances & Loans
+    'advances_group' => '1450',  // Advances, Deposits & Prepayments — the advance picker lists its asset leaves
     // What the company owes the director because he paid a company bill out of his
     // own pocket. An asset only in the sense that it is a claim to be settled: it
     // sits debit while the company is in his debt and clears when he is reimbursed.
@@ -49,8 +55,8 @@ return [
     // carries interest) and NOT 3210 Drawings (money he took out for himself).
     // Mixing the three is how a reimbursement ends up reducing profit.
     'director_current_account' => '1351',  // Director's Current Account — SHARED (company_id NULL)
-    'cash'                  => '1013',  // unused by any call site; kept aligned with office_cash
-    'office_cash'           => '1013',  // Office Cash — the drawer. SHARED (company_id NULL) on purpose
+    'cash' => '1013',  // unused by any call site; kept aligned with office_cash
+    'office_cash' => '1013',  // Office Cash — the drawer. SHARED (company_id NULL) on purpose
     // The small pot day-to-day spending actually comes out of.
     //
     // WHY THIS IS NOT office_cash — 1013 holds the whole group's cash. Paying for
@@ -72,16 +78,17 @@ return [
     // introduced. If the account named here is missing or inactive,
     // PettyCashService::cashPotAccount() falls back to office_cash, so a server
     // that has the code but not the account keeps working exactly as before.
-    'petty_cash_pool'       => '1011',  // Petty Cash - Head Office — SHARED (company_id NULL) required
+    'petty_cash_pool' => '1011',  // Petty Cash - Head Office — SHARED (company_id NULL) required
     // Money handed to a custodian and not yet spent — still ours, just in someone's
     // pocket rather than the drawer. Who is holding what is told apart by
     // party_id on the journal item, not by one account per person. That is why
     // this must NOT be a per-location drawer account.
-    'petty_cash_float'      => '1015',  // Petty Cash Float — the 1165 row renamed back, see accounts:check
+    'petty_cash_float' => '1015',  // Petty Cash Float — the 1165 row renamed back, see accounts:check
 
     // ── LIABILITIES ───────────────────────────────────────
-    'accounts_payable'      => '2111',  // Supplier Payable — we owe suppliers (purchase due)
-    'salary_payable'        => '2210',  // Salaries Payable — unpaid salary
+    'accounts_payable' => '2111',  // Supplier Payable — we owe suppliers (purchase due)
+    'customer_advance' => '2310',  // Advance from Customers — receipts not yet matched to an invoice
+    'salary_payable' => '2210',  // Salaries Payable — unpaid salary
     // Money an employee spent out of their OWN pocket on the company's behalf and
     // has not been paid back for. The mirror of 1015 Petty Cash Float: that one is
     // company cash sitting in a pocket (an asset), this is a pocket the company
@@ -94,8 +101,8 @@ return [
     // NOT 2113 Expense Payable — that is under 2110 Accounts Payable, the supplier
     // side, and mixing staff claims into it makes supplier ageing meaningless.
     'employee_reimbursement_payable' => '2240',  // Employee Expense Reimbursement Payable
-    'loan_payable'          => '2410',  // Short Term Loan — loan taken from others
-    'tax_payable'           => '2270',  // Income Tax Payable
+    'loan_payable' => '2410',  // Short Term Loan — loan taken from others
+    'tax_payable' => '2270',  // Income Tax Payable
     // ── Borrowings the company itself owes ───────────────
     // One key per facility TYPE, not per lender: a second bank term loan posts to
     // 2510 as well and is told apart by the loan row behind the entry, exactly as
@@ -105,17 +112,17 @@ return [
     // to book interest to 8520. A loan in the OWNER's personal name has no entry
     // here and no interest — its instalments go to 3210 in full. See the
     // financing desk's posting rules.
-    'bank_loan_long_term'   => '2510',  // Bank Loan - Long Term      — term loan, company's name
-    'party_loan_long_term'  => '2520',  // Party Loan - Long Term     — director/third party lent to us
-    'vehicle_loan'          => '2560',  // Vehicle Loan - IDLC Finance
-    'credit_card_payable'   => '2440',  // Credit Card Payable - City Bank ••4417
+    'bank_loan_long_term' => '2510',  // Bank Loan - Long Term      — term loan, company's name
+    'party_loan_long_term' => '2520',  // Party Loan - Long Term     — director/third party lent to us
+    'vehicle_loan' => '2560',  // Vehicle Loan - IDLC Finance
+    'credit_card_payable' => '2440',  // Credit Card Payable - City Bank ••4417
     // Tax deducted from someone else's money and held until deposited with the NBR
     // — interest paid to a director is the case that matters here. Government money
     // being held, never the company's expense, which is why it is NOT 2270.
     'withholding_tax_payable' => '2280',  // Withholding Tax (TDS/VDS) Payable
 
     // ── EQUITY ───────────────────────────────────────────
-    'owners_equity'          => '3110',  // Owner Investment
+    'owners_equity' => '3110',  // Owner Investment
     // Money the owner took out for himself. Reduces his equity; it is NOT an
     // expense and must never reduce profit.
     //
@@ -125,38 +132,53 @@ return [
     // A second owner gets 3211 under 3200, not a company-owned copy of this one.
     //
     // 3200 Owner Drawings is now a HEADER (this is its child) — do not post to it.
-    'owner_drawings'         => '3210',  // Drawings - Mohsin
-    'retained_earnings'      => '3310',  // Retained Earnings (was 3120, which is Additional Paid-in Capital)
+    'owner_drawings' => '3210',  // Drawings - Mohsin
+    'retained_earnings' => '3310',  // Retained Earnings (was 3120, which is Additional Paid-in Capital)
     'opening_balance_equity' => '3400',  // Opening Balance Equity — contra for opening balance entries
 
     // ── INCOME ───────────────────────────────────────────
-    'sales_revenue'         => '4610',  // Product Sales
-    'ticket_sales_revenue'  => '4110',  // Air Ticket Sales           (co 2 — only Travels sells these)
+    'sales_revenue' => '4610',  // Product Sales
+    'ticket_sales_revenue' => '4110',  // Air Ticket Sales           (co 2 — only Travels sells these)
+    'ticket_commission_income' => '4171',  // IATA Air Ticket Commission — the airline commission on a ticket (owner, 2026-10-07)
     'service_charge_income' => '4160',  // Travel Commission Income   (co 2) — CONFIRM: refund/reissue service charge
-    'flight_sales_revenue'  => '4150',  // Contract Flight & File Revenue (co 2)
-    'file_sales_revenue'    => '4150',  // same account — the chart merged flight and file revenue
-    'visa_sales_revenue'    => '4120',  // Visa Service Income        (co 2)
+    'flight_sales_revenue' => '4150',  // Contract Flight & File Revenue (co 2)
+    'file_sales_revenue' => '4150',  // same account — the chart merged flight and file revenue
+    'visa_sales_revenue' => '4120',  // Visa Service Income        (co 2)
     // 8110 Interest Income is typed `expense` in the chart, so interest earned
     // currently reads as a cost on the P&L. Fix the TYPE in the chart, not this line.
-    'loan_interest_income'  => '8110',  // Interest Income — SEE NOTE: type must be corrected to `income`
+    'loan_interest_income' => '8110',  // Interest Income — SEE NOTE: type must be corrected to `income`
+
+    // Contract flight recoveries — penalty / fare difference / change charges
+    // billed back to the agent when the fault was theirs. Leaves under the
+    // 4180 group, which the Company Ledger reads whole.
+    'company_recoveries_group' => '4180',  // Contract Flight - Recoveries (co 2)
+    'cf_penalty_recovered' => '4181',  // Cancellation Penalty Recovered
+    'cf_fare_diff_recovered' => '4182',  // Fare Difference Recovered
+    'cf_change_recovered' => '4183',  // Rebooking & Change Charges Recovered
 
     // ── EXPENSES ─────────────────────────────────────────
-    'cost_of_goods_sold'    => '5610',  // Purchase — COGS on sale
-    'purchase_expense'      => '5610',  // Purchase — direct purchase cost
-    'ticket_purchase_cost'  => '5110',  // Air Ticket Purchase Cost       (co 2)
-    'visa_processing_cost'  => '5120',  // Visa Processing Cost           (co 2)
-    'flight_purchase_cost'  => '5150',  // Contract Flight & File Cost    (co 2)
-    'contract_file_cost'    => '5150',  // same account — merged in the chart
-    'salary_expense'        => '6110',  // Salary Expense (was 6101, which never existed)
+    // What the company itself absorbs when a contract flight goes wrong on
+    // its side — the Company Ledger (Party Statement). Leaves under 5170.
+    'company_borne_group' => '5170',  // Contract Flight - Company Borne Losses (co 2)
+    'cf_penalty_company' => '5171',  // Airline Cancellation Penalty (Company Borne)
+    'cf_fare_diff_company' => '5172',  // Fare Difference Absorbed
+    'cf_change_company' => '5173',  // Rebooking & Change Fees (Company Borne)
+    'cost_of_goods_sold' => '5610',  // Purchase — COGS on sale
+    'purchase_expense' => '5610',  // Purchase — direct purchase cost
+    'ticket_purchase_cost' => '5110',  // Air Ticket Purchase Cost       (co 2)
+    'visa_processing_cost' => '5120',  // Visa Processing Cost           (co 2)
+    'flight_purchase_cost' => '5150',  // Contract Flight & File Cost    (co 2)
+    'contract_file_cost' => '5150',  // same account — merged in the chart
+    'salary_expense' => '6110',  // Salary Expense (was 6101, which never existed)
     // The fallback when an expense category names no account. A leaf under
     // 7000 rather than the 6000 header, so it cannot be double counted by a
     // tree-walking report and shows as its own line.
-    'general_expense'       => '7400',  // Miscellaneous Expenses
+    'general_expense' => '7400',  // Miscellaneous Expenses
     'loan_interest_expense' => '8520',  // Interest Expense — interest on loan taken
     // Arrangement, processing and early-closure charges. A separate expense, never
     // part of the principal: a ৳1,000,000 loan that credits ৳985,000 after a
     // ৳15,000 fee still owes ৳1,000,000, so the fee is expensed on day one rather
     // than netted off the liability.
-    'loan_processing_fee'   => '8530',  // Loan Processing Fee
+    'loan_processing_fee' => '8530',  // Loan Processing Fee
 
 ];

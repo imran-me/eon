@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Bank;
 use App\Models\BankTransfer;
-use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -82,25 +81,24 @@ class BankTransferController extends Controller
 
         $fromBank = Bank::findOrFail($validated['from_bank_id']);
 
-        // Check sufficient balance when completing immediately
-        if ($validated['status'] === 'completed' && $fromBank->balance < $validated['amount']) {
+        try {
+            DB::transaction(function () use ($validated, $fromBank) {
+                $transfer = BankTransfer::create([
+                    ...$validated,
+                    'created_by' => Auth::id(),
+                ]);
+
+                if ($validated['status'] === 'completed') {
+                    $this->processTransfer($transfer, $fromBank);
+                }
+            });
+        } catch (\App\Exceptions\BankOverdrawnException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Insufficient balance in source bank.',
-                'errors' => ['amount' => 'Insufficient balance in source bank. Available: ' . number_format($fromBank->balance, 2)]
+                'message' => $e->getMessage(),
+                'errors' => ['amount' => $e->getMessage()],
             ], 422);
         }
-
-        DB::transaction(function () use ($validated, $fromBank) {
-            $transfer = BankTransfer::create([
-                ...$validated,
-                'created_by' => Auth::id(),
-            ]);
-
-            if ($validated['status'] === 'completed') {
-                $this->processTransfer($transfer, $fromBank);
-            }
-        });
 
         return response()->json([
             'success' => true,
@@ -110,7 +108,7 @@ class BankTransferController extends Controller
 
     // ─── Show ─────────────────────────────────────────────────────────────────
 
-    public function show($role, BankTransfer $bankTransfer)
+    public function show(BankTransfer $bankTransfer)
     {
         $bankTransfer->load(['fromBank', 'toBank', 'creator', 'transactions']);
 
@@ -122,7 +120,7 @@ class BankTransferController extends Controller
 
     // ─── Edit ─────────────────────────────────────────────────────────────────
 
-    public function edit($role, BankTransfer $bankTransfer)
+    public function edit(BankTransfer $bankTransfer)
     {
         if ($bankTransfer->status === 'completed') {
             return response()->json([
@@ -144,7 +142,7 @@ class BankTransferController extends Controller
 
     // ─── Update ───────────────────────────────────────────────────────────────
 
-    public function update(Request $request, $role, BankTransfer $bankTransfer)
+    public function update(Request $request, BankTransfer $bankTransfer)
     {
         if ($bankTransfer->status === 'completed') {
             return response()->json([
@@ -168,23 +166,32 @@ class BankTransferController extends Controller
 
         $fromBank = Bank::findOrFail($validated['from_bank_id']);
 
-        if ($validated['status'] === 'completed' && $fromBank->balance < $validated['amount']) {
+        try {
+            DB::transaction(function () use ($validated, $fromBank, $bankTransfer) {
+                $bankTransfer = BankTransfer::query()
+                    ->whereKey($bankTransfer->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($bankTransfer->status === 'completed') {
+                    abort(422, 'Completed transfers cannot be edited.');
+                }
+
+                $previousStatus = $bankTransfer->status;
+                $bankTransfer->update($validated);
+
+                // Newly marked as completed — process the transfer
+                if ($previousStatus !== 'completed' && $validated['status'] === 'completed') {
+                    $this->processTransfer($bankTransfer, $fromBank);
+                }
+            });
+        } catch (\App\Exceptions\BankOverdrawnException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Insufficient balance in source bank.',
-                'errors' => ['amount' => 'Insufficient balance in source bank. Available: ' . number_format($fromBank->balance, 2)]
+                'message' => $e->getMessage(),
+                'errors' => ['amount' => $e->getMessage()],
             ], 422);
         }
-
-        DB::transaction(function () use ($validated, $fromBank, $bankTransfer) {
-            $previousStatus = $bankTransfer->status;
-            $bankTransfer->update($validated);
-
-            // Newly marked as completed — process the transfer
-            if ($previousStatus !== 'completed' && $validated['status'] === 'completed') {
-                $this->processTransfer($bankTransfer, $fromBank);
-            }
-        });
 
         return response()->json([
             'success' => true,
@@ -194,16 +201,20 @@ class BankTransferController extends Controller
 
     // ─── Destroy ──────────────────────────────────────────────────────────────
 
-    public function destroy($role, BankTransfer $bankTransfer)
+    public function destroy(BankTransfer $bankTransfer)
     {
-        if ($bankTransfer->status === 'completed') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Completed transfers cannot be deleted. Cancel it first.'
-            ], 422);
-        }
+        DB::transaction(function () use ($bankTransfer) {
+            $bankTransfer = BankTransfer::query()
+                ->whereKey($bankTransfer->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $bankTransfer->delete();
+            if ($bankTransfer->status === 'completed') {
+                abort(422, 'Completed transfers cannot be deleted. Cancel it first.');
+            }
+
+            $bankTransfer->delete();
+        });
 
         return response()->json([
             'success' => true,
@@ -218,46 +229,6 @@ class BankTransferController extends Controller
      */
     private function processTransfer(BankTransfer $transfer, Bank $fromBank): void
     {
-        $toBank = Bank::findOrFail($transfer->to_bank_id);
-
-        // ── Debit: source bank ──────────────────────────────────────────────
-        Transaction::create([
-            'user_id'        => Auth::id(),
-            'type'           => 'bank_transfer',
-            'user_type'      => 'supplier',
-            'account_id'     => $transfer->from_bank_id,
-            'payment_date'   => $transfer->payment_date,
-            'reference_no'   => $transfer->reference_no,
-            'payment_method' => $transfer->payment_method,
-            'invoice_id'     => $transfer->id,
-            'old_balance'    => $fromBank->balance,
-            'debit'          => $transfer->amount,
-            'credit'         => 0,
-            'balance'        => $fromBank->balance - $transfer->amount,
-            'remarks'        => 'Transfer to: ' . $toBank->name . ' | ' . $transfer->remarks,
-        ]);
-
-        $fromBank->decrement('balance', $transfer->amount);
-
-        // ── Credit: destination bank ─────────────────────────────────────────
-        $toBank->refresh();
-
-        Transaction::create([
-            'user_id'        => Auth::id(),
-            'type'           => 'bank_transfer',
-            'user_type'      => 'customer',
-            'account_id'     => $transfer->to_bank_id,
-            'payment_date'   => $transfer->payment_date,
-            'reference_no'   => $transfer->reference_no,
-            'payment_method' => $transfer->payment_method,
-            'invoice_id'     => $transfer->id,
-            'old_balance'    => $toBank->balance,
-            'debit'          => 0,
-            'credit'         => $transfer->amount,
-            'balance'        => $toBank->balance + $transfer->amount,
-            'remarks'        => 'Transfer from: ' . $fromBank->name . ' | ' . $transfer->remarks,
-        ]);
-
-        $toBank->increment('balance', $transfer->amount);
+        app(\App\Services\BankTransferService::class)->post($transfer, $fromBank);
     }
 }

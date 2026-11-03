@@ -104,6 +104,8 @@
 
 /* ── DASHBOARD SCHEDULE ACTION BUTTONS ── */
 .dash-sched-btn{width:26px;height:26px;border-radius:6px;border:none;cursor:pointer;font-size:11px;display:inline-flex;align-items:center;justify-content:center;transition:.15s;}
+.dash-party-link{color:#1e293b;text-decoration:none;border-bottom:1px dotted #94a3b8;}.dash-party-link:hover{color:#4f46e5;border-bottom-color:#4f46e5;}
+.dash-party-code{display:inline-flex;align-items:center;gap:3px;margin-top:3px;font-size:9px;font-weight:700;color:#4f46e5;text-decoration:none;}.dash-party-code:hover{text-decoration:underline;}
 .dash-btn-pay{background:#dbeafe;color:#1d4ed8;}.dash-btn-pay:hover{background:#bfdbfe;}
 .dash-btn-approve{background:#d1fae5;color:#065f46;}.dash-btn-approve:hover{background:#a7f3d0;}
 .dash-btn-reschedule{background:#e0e7ff;color:#3730a3;}.dash-btn-reschedule:hover{background:#c7d2fe;}
@@ -126,6 +128,11 @@
 .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
 .kpi-card{background:white;border-radius:16px;padding:20px;border:1px solid var(--slate-200);box-shadow:0 1px 3px rgba(0,0,0,.04);position:relative;overflow:hidden;transition:box-shadow .2s,transform .2s;}
 .kpi-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-1px);}
+/* Drill-down overlay. The whole card becomes the hit area without the card
+   itself turning into an <a>, so the existing markup and grid layout are
+   untouched and a card with no destination looks exactly as it did. */
+.kpi-hit{position:absolute;inset:0;z-index:3;border-radius:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.kpi-hit:focus-visible{outline:2px solid #4f46e5;outline-offset:-2px;}
 .kpi-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;}
 .kpi-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
 .kpi-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;}
@@ -400,6 +407,399 @@
   .welcome-banner{flex-direction:column;gap:16px;}
 }
 
+
+/* ── Office ToDos section ───────────────────────────────────────────────────
+   Every selector below is prefixed `otd-`. These class names exist nowhere
+   else in the ERP, so adding them cannot restyle any other dashboard section
+   for any other company or role. */
+.otd-wrap{margin-bottom:28px;}
+.otd-sec-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.otd-sec-title{display:flex;align-items:center;gap:11px;min-width:0;}
+.otd-sec-dot{width:34px;height:34px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.otd-sec-dot i{color:#dc2626;font-size:16px;}
+.otd-sec-name{font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.2px;}
+.otd-sec-link{font-size:12px;font-weight:700;color:#4f46e5;text-decoration:none;white-space:nowrap;}
+.otd-sec-link:hover{color:#4338ca;text-decoration:none;}
+
+/* Stat tiles */
+.otd-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+.otd-stat{position:relative;border-radius:16px;padding:18px 20px;color:#fff;display:flex;align-items:center;gap:14px;cursor:pointer;overflow:hidden;border:none;text-align:left;width:100%;font-family:inherit;transition:transform .16s ease,box-shadow .16s ease;}
+.otd-stat::after{content:"";position:absolute;right:-26px;top:-26px;width:96px;height:96px;border-radius:50%;background:rgba(255,255,255,.10);pointer-events:none;}
+.otd-stat:hover{transform:translateY(-2px);}
+.otd-stat-ico{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.20);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:19px;}
+.otd-stat-n{font-size:30px;font-weight:900;line-height:1.05;letter-spacing:-.6px;}
+.otd-stat-l{font-size:12px;font-weight:700;margin-top:3px;}
+.otd-stat-s{font-size:10px;opacity:.82;margin-top:1px;}
+
+/* Card shell */
+.otd-card{background:#fff;border:1px solid #e6eaf0;border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.05);overflow:hidden;}
+.otd-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid #f1f5f9;background:linear-gradient(180deg,#fcfdff,#f8fafc);}
+.otd-head-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#334155;white-space:nowrap;}
+.otd-head-title i{color:#64748b;font-size:13px;}
+.otd-count{display:inline-flex;align-items:center;justify-content:center;min-width:21px;height:20px;padding:0 7px;border-radius:999px;background:#eef2ff;color:#4f46e5;font-size:11px;font-weight:800;}
+.otd-head-actions{margin-left:auto;display:flex;gap:8px;align-items:center;}
+
+/* Filter chips */
+.otd-chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid #f4f6fa;background:#fff;}
+.otd-chip{appearance:none;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;line-height:1.5;font-family:inherit;transition:background .15s ease,border-color .15s ease,color .15s ease;}
+.otd-chip:hover{border-color:#c7d2fe;color:#4f46e5;background:#f7f8ff;}
+.otd-chip.is-on{background:#4f46e5;border-color:#4f46e5;color:#fff;}
+.otd-chip.is-on .otd-chip-n{background:rgba(255,255,255,.24);color:#fff;}
+.otd-chip-n{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;background:#f1f5f9;color:#64748b;}
+.otd-chip[data-otd-filter="overdue"]:not(.is-on) .otd-chip-n{background:#fef2f2;color:#dc2626;}
+
+/* Buttons in the card header */
+.otd-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;font-family:inherit;white-space:nowrap;transition:background .15s ease,color .15s ease,transform .12s ease;}
+.otd-btn:hover{transform:translateY(-1px);text-decoration:none;}
+.otd-btn-primary{background:#4f46e5;color:#fff;box-shadow:0 1px 5px rgba(79,70,229,.30);}
+.otd-btn-primary:hover{background:#4338ca;color:#fff;}
+.otd-btn-ghost{background:#fff;color:#475569;border-color:#e2e8f0;}
+.otd-btn-ghost:hover{background:#f8fafc;color:#1e293b;}
+
+/* Scrolling list */
+.otd-list{max-height:452px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#dbe2ea transparent;}
+.otd-list::-webkit-scrollbar{width:9px;}
+.otd-list::-webkit-scrollbar-track{background:transparent;}
+.otd-list::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:999px;border:2px solid #fff;}
+.otd-list::-webkit-scrollbar-thumb:hover{background:#cbd5e1;}
+
+/* Row */
+.otd-row{position:relative;display:flex;flex-wrap:wrap;gap:12px;padding:13px 18px 13px 22px;margin:9px 14px;background:#fff;border:1px solid rgba(15,23,42,.12);border-radius:12px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:background .16s ease,border-color .16s ease,box-shadow .22s ease;cursor:pointer;}
+.otd-row:hover{background:#fafbff;border-color:rgba(15,23,42,.22);}
+.otd-row::before{content:"";position:absolute;left:9px;top:14px;bottom:14px;width:3px;border-radius:999px;background:var(--otd-accent,#94a3b8);}
+.otd-row.is-hidden{display:none;}
+.otd-ico{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;margin-top:1px;background:var(--otd-soft,#f1f5f9);color:var(--otd-accent,#64748b);}
+.otd-body{min-width:0;flex:1;}
+.otd-title{font-size:13px;font-weight:700;color:#0f172a;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.otd-meta{font-size:11px;color:#94a3b8;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.otd-meta strong{color:#64748b;font-weight:600;}
+.otd-note{font-size:11px;color:#64748b;margin-top:6px;background:#f8fafc;border:1px solid #eef2f7;padding:5px 9px;border-radius:7px;font-style:italic;}
+.otd-tags{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:9px;}
+.otd-tags:empty{display:none;}
+
+/* Tag chips inside a row */
+.otd-tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid #e2e8f0;background:#f8fafc;color:#64748b;white-space:nowrap;}
+.otd-tag.is-soon{background:#fffbeb;color:#b45309;border-color:#fde68a;}
+.otd-tag.is-over{background:#fef2f2;color:#dc2626;border-color:#fecaca;}
+.otd-tag-prog{background:#eef2ff;color:#4f46e5;border-color:#c7d2fe;cursor:pointer;}
+.otd-tag-prog:hover{background:#e0e7ff;}
+.otd-bar{display:inline-block;width:44px;height:4px;border-radius:999px;background:#c7d2fe;overflow:hidden;}
+.otd-bar span{display:block;height:100%;border-radius:999px;background:#4f46e5;}
+.otd-bar span.is-full{background:#16a34a;}
+
+/* Assignee stack */
+.otd-avs{display:inline-flex;align-items:center;padding-left:6px;}
+.otd-avs img,.otd-avs b{width:22px;height:22px;border-radius:50%;border:2px solid #fff;object-fit:cover;margin-left:-6px;box-shadow:0 0 0 1px #e2e8f0;}
+.otd-avs b{background:#e2e8f0;color:#475569;font-size:9px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
+
+/* Right-hand rail */
+.otd-side{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;flex-shrink:0;align-self:flex-start;padding-top:1px;}
+.otd-badge{font-size:9px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid transparent;}
+.otd-st{font-size:10px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+.otd-acts{display:flex;gap:4px;margin-left:4px;}
+.otd-act{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;border:none;border-radius:7px;padding:4px 9px;cursor:pointer;background:#f1f5f9;color:#475569;font-family:inherit;transition:background .15s ease,color .15s ease;}
+.otd-act:hover{background:#e2e8f0;color:#1e293b;}
+.otd-act-go{background:#eef2ff;color:#4f46e5;}
+.otd-act-go:hover{background:#e0e7ff;color:#4338ca;}
+.otd-act-edit{background:#ecfdf5;color:#047857;}
+.otd-act-edit:hover{background:#d1fae5;color:#065f46;}
+
+/* Empty states */
+.otd-empty{padding:44px 20px;text-align:center;color:#94a3b8;font-size:13px;}
+.otd-empty i{font-size:30px;color:#22c55e;display:block;margin-bottom:10px;}
+.otd-none{display:none;padding:34px 20px;text-align:center;color:#94a3b8;font-size:12.5px;}
+.otd-none i{font-size:24px;color:#cbd5e1;display:block;margin-bottom:9px;}
+.otd-list.is-filtered-empty .otd-none{display:block;}
+
+/* Inline detail panel — replaces the old details modal.
+   The panel is a child of .otd-row so the chip filter, which hides rows,
+   hides an open panel along with its row. */
+.otd-row.is-open{background:#f7f8ff;border-color:#c7d2fe;}
+.otd-row.is-open::before{background:#4f46e5;}
+.otd-caret{transition:transform .18s ease;}
+.otd-row.is-open .otd-caret{transform:rotate(180deg);}
+.otd-act-toggle{background:#f1f5f9;color:#475569;}
+.otd-row.is-open .otd-act-toggle{background:#4f46e5;color:#fff;}
+.otd-panel{flex-basis:100%;width:100%;order:9;display:none;margin-top:4px;padding:16px 18px;background:#fff;border:1px solid #e6eaf0;border-radius:12px;cursor:default;max-height:58vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#dbe2ea transparent;}
+.otd-panel::-webkit-scrollbar{width:9px;}
+.otd-panel::-webkit-scrollbar-thumb{background:#e2e8f0;border-radius:999px;border:2px solid #fff;}
+/* While a panel is open the list stops being its own scroll box, so the
+   page has one scrollbar instead of a panel nested inside a scrolling list. */
+.otd-list.has-open{max-height:none;overflow:visible;}
+
+/* ── Office ToDos: motion ───────────────────────────────────────────────────
+   Every selector and every @keyframes name below is `otd-` prefixed, so none
+   of it can reach another dashboard section. One easing curve and one set of
+   durations are used throughout so the section moves as a single system.
+   Everything is switched off under prefers-reduced-motion at the bottom. */
+.otd-wrap{--otd-ease:cubic-bezier(.22,.61,.36,1);--otd-fast:.16s;--otd-mid:.28s;--otd-slow:.45s;}
+
+@keyframes otd-rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+@keyframes otd-grow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+@keyframes otd-pop{0%{transform:scale(.6);opacity:0;}60%{transform:scale(1.12);}100%{transform:scale(1);opacity:1;}}
+@keyframes otd-sheen{from{transform:translateX(-120%) skewX(-18deg);}to{transform:translateX(320%) skewX(-18deg);}}
+@keyframes otd-shimmer{from{background-position:-420px 0;}to{background-position:420px 0;}}
+@keyframes otd-pulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.30);}50%{box-shadow:0 0 0 6px rgba(220,38,38,0);}}
+
+/* Stat tiles — a sheen sweeps across on hover, the icon lifts with it. */
+.otd-stat{transition:transform var(--otd-mid) var(--otd-ease),box-shadow var(--otd-mid) var(--otd-ease);}
+.otd-stat::before{content:"";position:absolute;top:0;bottom:0;left:0;width:38%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);transform:translateX(-120%) skewX(-18deg);pointer-events:none;}
+.otd-stat:hover::before{animation:otd-sheen .85s var(--otd-ease);}
+.otd-stat:hover{transform:translateY(-3px);}
+.otd-stat:active{transform:translateY(-1px) scale(.995);}
+.otd-stat-ico{transition:transform var(--otd-mid) var(--otd-ease),background var(--otd-mid) var(--otd-ease);}
+.otd-stat:hover .otd-stat-ico{transform:scale(1.09) rotate(-6deg);background:rgba(255,255,255,.30);}
+.otd-stat-n{transition:transform var(--otd-mid) var(--otd-ease);}
+.otd-stat:hover .otd-stat-n{transform:translateX(2px);}
+
+/* Rows deal themselves in on load, one after the next. */
+.otd-row{animation:otd-rise var(--otd-slow) var(--otd-ease) both;}
+.otd-row:nth-child(1){animation-delay:0ms;}
+.otd-row:nth-child(2){animation-delay:55ms;}
+.otd-row:nth-child(3){animation-delay:110ms;}
+.otd-row:nth-child(4){animation-delay:165ms;}
+.otd-row:nth-child(5){animation-delay:220ms;}
+.otd-row:nth-child(6){animation-delay:275ms;}
+.otd-row:nth-child(7){animation-delay:330ms;}
+.otd-row:nth-child(8){animation-delay:385ms;}
+.otd-row:nth-child(9){animation-delay:440ms;}
+.otd-row:nth-child(10){animation-delay:495ms;}
+.otd-row:nth-child(11){animation-delay:550ms;}
+.otd-row:nth-child(12){animation-delay:605ms;}
+
+.otd-row::before{transition:width var(--otd-fast) var(--otd-ease),background var(--otd-fast) var(--otd-ease),top var(--otd-mid) var(--otd-ease),bottom var(--otd-mid) var(--otd-ease);}
+.otd-row:hover::before{width:5px;top:10px;bottom:10px;}
+.otd-row:hover{background:#fafbff;}
+.otd-row:hover .otd-title{color:#4f46e5;}
+.otd-title{transition:color var(--otd-fast) var(--otd-ease);}
+
+/* The priority tile reacts to the row, not just to itself. */
+.otd-ico{transition:transform var(--otd-mid) var(--otd-ease),box-shadow var(--otd-mid) var(--otd-ease);}
+.otd-row:hover .otd-ico{transform:scale(1.09) rotate(-5deg);box-shadow:0 4px 12px rgba(15,23,42,.10);}
+.otd-row.is-open .otd-ico{transform:scale(1.05);}
+/* An overdue row breathes, so it reads as needing attention without shouting. */
+.otd-row[data-overdue="1"] .otd-ico{animation:otd-pulse 2.4s ease-in-out infinite;}
+
+/* Chips and tags. */
+.otd-chip{transition:background var(--otd-fast) var(--otd-ease),border-color var(--otd-fast) var(--otd-ease),color var(--otd-fast) var(--otd-ease),transform var(--otd-fast) var(--otd-ease),box-shadow var(--otd-fast) var(--otd-ease);}
+.otd-chip:hover{transform:translateY(-1px);}
+.otd-chip:active{transform:translateY(0) scale(.97);}
+.otd-chip.is-on{box-shadow:0 3px 10px rgba(79,70,229,.32);}
+.otd-chip-n{transition:background var(--otd-fast) var(--otd-ease),color var(--otd-fast) var(--otd-ease);}
+.otd-chip.is-on .otd-chip-n{animation:otd-pop var(--otd-mid) var(--otd-ease);}
+.otd-tag{transition:transform var(--otd-fast) var(--otd-ease),background var(--otd-fast) var(--otd-ease),border-color var(--otd-fast) var(--otd-ease);}
+.otd-tag-prog:hover{transform:translateY(-1px);}
+
+/* Progress fills sweep out from the left the first time they are painted. */
+.otd-bar span{transform-origin:left center;animation:otd-grow var(--otd-slow) var(--otd-ease) both;animation-delay:.15s;transition:width var(--otd-mid) var(--otd-ease),background var(--otd-mid) var(--otd-ease);}
+
+/* Assignee stack fans out under the cursor. */
+.otd-avs img,.otd-avs b{transition:transform var(--otd-fast) var(--otd-ease),margin var(--otd-fast) var(--otd-ease),box-shadow var(--otd-fast) var(--otd-ease);}
+.otd-avs:hover img,.otd-avs:hover b{margin-left:-1px;}
+.otd-avs img:hover{transform:translateY(-3px) scale(1.14);box-shadow:0 4px 10px rgba(15,23,42,.18);z-index:2;position:relative;}
+
+/* Buttons. */
+.otd-act{transition:background var(--otd-fast) var(--otd-ease),color var(--otd-fast) var(--otd-ease),transform var(--otd-fast) var(--otd-ease),box-shadow var(--otd-fast) var(--otd-ease);}
+.otd-act:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(15,23,42,.09);}
+.otd-act:active{transform:translateY(0) scale(.95);}
+.otd-act i{transition:transform var(--otd-mid) var(--otd-ease);}
+.otd-act-go:hover i{transform:rotate(180deg);}
+.otd-act-edit:hover i{transform:rotate(-12deg) scale(1.1);}
+.otd-btn{transition:background var(--otd-fast) var(--otd-ease),color var(--otd-fast) var(--otd-ease),transform var(--otd-fast) var(--otd-ease),box-shadow var(--otd-fast) var(--otd-ease);}
+.otd-btn:active{transform:translateY(0) scale(.97);}
+.otd-btn-primary:hover{box-shadow:0 5px 16px rgba(79,70,229,.38);}
+.otd-btn-primary i{transition:transform var(--otd-mid) var(--otd-ease);}
+.otd-btn-primary:hover i{transform:rotate(90deg);}
+.otd-sec-link{transition:color var(--otd-fast) var(--otd-ease);}
+.otd-sec-link i{transition:transform var(--otd-mid) var(--otd-ease);}
+.otd-sec-link:hover i{transform:translateX(4px);}
+.otd-sec-dot{transition:transform var(--otd-mid) var(--otd-ease);}
+.otd-sec-head:hover .otd-sec-dot{transform:rotate(-8deg) scale(1.06);}
+
+/* Panel open/close. */
+.otd-panel{animation:none;}
+.otd-row.is-open .otd-panel{animation:otd-rise var(--otd-mid) var(--otd-ease);}
+.otd-badge,.otd-st{transition:transform var(--otd-fast) var(--otd-ease);}
+.otd-row:hover .otd-badge{transform:scale(1.05);}
+
+/* Loading skeleton — three shimmering bars instead of a bare spinner. */
+.otd-skel{padding:6px 2px;}
+.otd-skel span{display:block;height:11px;border-radius:6px;margin-bottom:10px;background:#eef2f7;background-image:linear-gradient(90deg,#eef2f7 0px,#f8fafc 180px,#eef2f7 360px);background-size:420px 100%;animation:otd-shimmer 1.15s linear infinite;}
+.otd-skel span:nth-child(1){width:42%;height:15px;}
+.otd-skel span:nth-child(2){width:100%;}
+.otd-skel span:nth-child(3){width:88%;}
+.otd-skel span:nth-child(4){width:64%;margin-bottom:0;}
+
+
+/* ── Office ToDos: detail panel, checklist and its add controls ─────────────
+   Scoped under .otd-panel so the `dash-cl-*` markup, which is generated only
+   by buildDashDetailHtml, is styled here without a bare class ever applying
+   anywhere else on the dashboard. */
+.otd-cl{margin-bottom:16px;}
+.otd-cl-head{display:flex;align-items:center;gap:10px;margin-bottom:9px;flex-wrap:wrap;}
+.otd-cl-label{font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;}
+.otd-cl-label i{color:#4f46e5;margin-right:4px;}
+.otd-cl-prog{font-size:11px;color:#64748b;font-weight:600;margin-left:auto;}
+.otd-cl-prog span{color:#4f46e5;}
+.otd-cl-track{height:6px;background:#f1f5f9;border-radius:999px;margin-bottom:12px;overflow:hidden;}
+.otd-cl-track > div{height:100%;border-radius:999px;transition:width var(--otd-slow,.45s) var(--otd-ease,ease);}
+.otd-cl ul{list-style:none;padding:0;margin:0;}
+.otd-cl-none{padding:18px 12px;text-align:center;color:#94a3b8;font-size:12px;border:1px dashed #e2e8f0;border-radius:10px;}
+
+/* The primary "Add task" button — deliberately the most prominent thing in
+   the checklist header, since creating items was previously buried at the
+   bottom of the edit modal. */
+.otd-cl-addbtn{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:9px;padding:7px 15px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:#4f46e5;color:#fff;box-shadow:0 2px 8px rgba(79,70,229,.32);transition:background .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease),box-shadow .16s var(--otd-ease,ease);}
+.otd-cl-addbtn:hover{background:#4338ca;transform:translateY(-1px);box-shadow:0 5px 16px rgba(79,70,229,.42);}
+.otd-cl-addbtn:active{transform:translateY(0) scale(.97);}
+.otd-cl-addbtn i{transition:transform .28s var(--otd-ease,ease);}
+.otd-cl-addbtn:hover i{transform:rotate(90deg);}
+
+/* "+ Sub" sits on each top-level row. It stays faint until the row is hovered,
+   so a long checklist is not a wall of buttons. */
+.otd-cl-subbtn{display:inline-flex;align-items:center;gap:4px;border:1px dashed #cbd5e1;border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:#fff;color:#64748b;flex-shrink:0;opacity:.85;transition:opacity .16s var(--otd-ease,ease),background .16s var(--otd-ease,ease),color .16s var(--otd-ease,ease),border-color .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-node:hover > div > .otd-cl-subbtn,.otd-cl-subbtn:focus-visible{opacity:1;}
+.otd-cl-subbtn:hover{background:#eef2ff;color:#4f46e5;border-color:#4f46e5;border-style:solid;transform:translateY(-1px);}
+.otd-cl-subbtn:active{transform:translateY(0) scale(.94);}
+
+/* One composer, moved to wherever it is needed. */
+.otd-cl-form{display:flex;align-items:center;gap:8px;margin-top:10px;padding:10px;background:#f7f8ff;border:1px solid #c7d2fe;border-radius:11px;animation:otd-rise .2s var(--otd-ease,ease);}
+.otd-cl-form[hidden]{display:none;}
+.otd-cl-form-hint{color:#a5b4fc;font-size:12px;flex-shrink:0;}
+.otd-cl-title{flex:1;min-width:0;padding:8px 12px;border:1px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:inherit;outline:none;background:#fff;transition:border-color .16s var(--otd-ease,ease),box-shadow .16s var(--otd-ease,ease);}
+.otd-cl-title:focus{border-color:#4f46e5;box-shadow:0 0 0 3px rgba(79,70,229,.14);}
+.otd-cl-priority{padding:8px 10px;border:1px solid #e2e8f0;border-radius:9px;font-size:12px;font-family:inherit;font-weight:600;color:#475569;background:#fff;cursor:pointer;outline:none;flex-shrink:0;}
+.otd-cl-save{display:inline-flex;align-items:center;gap:6px;border:none;border-radius:9px;padding:8px 15px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:#4f46e5;color:#fff;flex-shrink:0;transition:background .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-cl-save:hover{background:#4338ca;transform:translateY(-1px);}
+.otd-cl-save:disabled{opacity:.6;cursor:default;transform:none;}
+.otd-cl-cancel{border:none;border-radius:9px;padding:8px 11px;font-size:12px;font-family:inherit;cursor:pointer;background:#fff;color:#94a3b8;border:1px solid #e2e8f0;flex-shrink:0;transition:color .16s var(--otd-ease,ease),background .16s var(--otd-ease,ease);}
+.otd-cl-cancel:hover{background:#fef2f2;color:#dc2626;border-color:#fecaca;}
+.otd-cl-err{margin-top:9px;padding:8px 12px;border-radius:9px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;font-size:12px;font-weight:600;}
+.otd-cl-err[hidden]{display:none;}
+
+/* The add row that closes every open sub-list. Unlike the faint "+ Sub" on
+   the parent, this one is always legible — it is the end of the list you
+   have just finished reading, which is where the urge to add one lands. */
+.otd-cl-addrow{margin:2px 0 4px;}
+.otd-cl-addsub{display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;border:1px dashed #c7d2fe;border-radius:9px;padding:7px 12px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:#fbfcff;color:#6366f1;transition:background .16s var(--otd-ease,ease),color .16s var(--otd-ease,ease),border-color .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease),box-shadow .16s var(--otd-ease,ease);}
+.otd-cl-addsub:hover{background:#eef2ff;color:#4338ca;border-color:#4f46e5;border-style:solid;transform:translateY(-1px);box-shadow:0 4px 14px -4px rgba(79,70,229,.35);}
+.otd-cl-addsub:active{transform:translateY(0) scale(.98);}
+.otd-cl-addsub i{transition:transform .28s var(--otd-ease,ease);}
+.otd-cl-addsub:hover i{transform:rotate(90deg);}
+
+/* A just-added item announces itself, so the scroll lands somewhere obvious. */
+@keyframes otd-fresh{0%{background:#e0e7ff;border-color:#818cf8;box-shadow:0 0 0 4px rgba(129,140,248,.28);}100%{background:#fff;border-color:#f1f5f9;box-shadow:0 1px 2px rgba(15,23,42,.04);}}
+.otd-panel .dash-cl-node.otd-cl-fresh{animation:otd-fresh 2.4s var(--otd-ease,ease) both;}
+
+/* ── Drag: every row at every level is grabbable ───────────────────────────
+   The grip was a 11px glyph at 30%% grey that read as decoration. It is now
+   a real target with its own hit area, and the whole row answers the cursor
+   so it is obvious the thing can be picked up. */
+.otd-panel .dash-cl-handle{cursor:grab;font-size:13px;color:#cbd5e1;padding:3px 4px;margin-top:1px;flex-shrink:0;border-radius:5px;touch-action:none;transition:color .16s var(--otd-ease,ease),background .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-handle:hover{color:#4f46e5;background:#eef2ff;transform:scale(1.2);}
+.otd-panel .dash-cl-handle:active{cursor:grabbing;background:#e0e7ff;transform:scale(1.05);}
+.otd-panel .dash-cl-node:hover > div > .dash-cl-handle{color:#818cf8;}
+
+/* The row being picked up, and the one being dragged around. */
+.otd-panel .otd-cl-chosen{background:#f5f7ff !important;border-color:#818cf8 !important;cursor:grabbing !important;}
+.otd-panel .dash-cl-node:active{cursor:grabbing;}
+/* The controls carved out of the drag keep their own cursor. */
+.otd-panel .dash-cl-node select,.otd-panel .dash-cl-node button,.otd-panel .dash-cl-node input{cursor:pointer;}
+.otd-panel .dash-cl-node input{cursor:text;}
+.otd-panel .otd-cl-drag{box-shadow:0 18px 38px -10px rgba(15,23,42,.34),0 0 0 1px rgba(79,70,229,.30) !important;transform:rotate(-.7deg);opacity:.97;}
+.otd-panel .cl-ghost{opacity:1 !important;background:#eef2ff !important;border:1px dashed #818cf8 !important;box-shadow:none !important;}
+.otd-panel .cl-ghost > div{visibility:hidden;}
+
+/* A group that can receive the row shows where it would land. */
+.otd-panel .dash-cl-children{min-height:14px;border-radius:9px;transition:background .16s var(--otd-ease,ease);}
+
+/* ── Per-row editing: rename, priority, delete ─────────────────────────── */
+.otd-cl-rowacts{display:inline-flex;gap:3px;flex-shrink:0;opacity:.62;transition:opacity .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-node:hover > div > .otd-cl-rowacts{opacity:1;}
+.otd-cl-rowacts button{border:1px solid #e2e8f0;background:#fff;}
+.otd-cl-rowacts button:focus-visible,.otd-cl-rowacts:focus-within{opacity:1;}
+.otd-cl-rowacts button{color:#64748b;font-size:11px;line-height:1;padding:5px 7px;border-radius:6px;cursor:pointer;font-family:inherit;transition:background .16s var(--otd-ease,ease),color .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-cl-ren:hover{background:#eef2ff;color:#4f46e5;transform:translateY(-1px);}
+.otd-cl-del:hover{background:#fef2f2;color:#dc2626;transform:translateY(-1px);}
+.otd-cl-rowacts button:active{transform:translateY(0) scale(.9);}
+
+/* The label turns into this on rename, sized to sit exactly where it was. */
+.otd-cl-renameinput{width:100%;font-size:13px;font-family:inherit;font-weight:inherit;color:#0f172a;padding:2px 8px;border:1px solid #4f46e5;border-radius:7px;outline:none;background:#fff;box-shadow:0 0 0 3px rgba(79,70,229,.14);}
+
+/* Priority reads as a chip but behaves as a control. */
+.otd-cl-prio-sel{font-size:10px;font-weight:700;border:none;border-radius:999px;padding:2px 6px;cursor:pointer;font-family:inherit;letter-spacing:.3px;appearance:none;-webkit-appearance:none;text-align:center;transition:box-shadow .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-cl-prio-sel:hover{transform:scale(1.05);box-shadow:0 2px 8px rgba(15,23,42,.12);}
+.otd-cl-prio-sel:focus{outline:none;box-shadow:0 0 0 3px rgba(79,70,229,.18);}
+
+/* Checklist rows — the hover that was missing. */
+.otd-panel .dash-cl-node{cursor:grab;padding:11px 13px;border-radius:11px;border:1px solid #dbe3ec;margin-bottom:11px;background:#fff;transition:background .16s var(--otd-ease,ease),border-color .16s var(--otd-ease,ease),box-shadow .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-node:hover{background:#f9faff;border-color:#818cf8;transform:translateY(-2px);}
+.otd-panel .dash-cl-node:hover > div > .dash-cl-label{color:#4338ca;}
+.otd-panel .dash-cl-parent-row:hover{background:#f5f6ff;}
+.otd-panel .dash-cl-label{transition:color .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-handle{transition:color .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-node:hover > div > .dash-cl-handle{color:#818cf8;transform:scale(1.15);}
+.otd-panel .dash-cl-caret{transition:transform .18s var(--otd-ease,ease),color .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-node:hover > div > .dash-cl-caret{color:#4f46e5;}
+.otd-panel .dash-cl-status{transition:box-shadow .16s var(--otd-ease,ease),transform .16s var(--otd-ease,ease);}
+.otd-panel .dash-cl-status:hover{transform:scale(1.05);box-shadow:0 2px 8px rgba(15,23,42,.12);}
+.otd-panel .dash-cl-children{position:relative;}
+.otd-panel .dash-cl-children::before{content:"";position:absolute;left:-11px;top:2px;bottom:8px;width:2px;border-radius:999px;background:#e0e7ff;}
+
+/* ── Elevation and glaze ───────────────────────────────────────────────────
+   Shadows are ~40% larger and ~25% deeper than the first pass, and each
+   surface carries an inset hairline along its top edge — the glaze that
+   makes a card read as a lit pane rather than a printed rectangle. */
+.otd-card{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 1px rgba(15,23,42,.03),0 3px 6px rgba(15,23,42,.09),0 21px 58px -13px rgba(15,23,42,.38);transition:box-shadow var(--otd-mid,.28s) var(--otd-ease,ease),transform var(--otd-mid,.28s) var(--otd-ease,ease);}
+.otd-card:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 1px rgba(15,23,42,.04),0 4px 9px rgba(15,23,42,.12),0 37px 88px -16px rgba(15,23,42,.50);transform:translateY(-2px);}
+.otd-panel{box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 0 0 1px rgba(15,23,42,.03),0 3px 6px rgba(15,23,42,.08),0 25px 60px -18px rgba(15,23,42,.48);}
+/* The tiles are dark, so their glaze is a bright inner edge instead. */
+.otd-stat{box-shadow:inset 0 1px 0 rgba(255,255,255,.34),inset 0 0 0 1px rgba(255,255,255,.10),0 4px 12px rgba(15,23,42,.15),0 25px 52px -12px var(--otd-glow,rgba(15,23,42,.55));}
+.otd-stat:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.42),inset 0 0 0 1px rgba(255,255,255,.16),0 9px 20px rgba(15,23,42,.19),0 46px 86px -16px var(--otd-glow,rgba(15,23,42,.72));}
+.otd-row:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 6px 22px -8px rgba(15,23,42,.18);z-index:1;}
+.otd-row.is-open{box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 8px 31px -11px rgba(79,70,229,.33);z-index:2;}
+/* Checklist rows pick up the same treatment so the panel reads as depth. */
+.otd-panel .dash-cl-node{box-shadow:inset 0 1px 0 rgba(255,255,255,1),0 1px 2px rgba(15,23,42,.10),0 8px 20px -6px rgba(15,23,42,.26);}
+.otd-panel .dash-cl-node:hover{box-shadow:inset 0 1px 0 rgba(255,255,255,1),0 3px 6px rgba(15,23,42,.12),0 18px 34px -8px rgba(79,70,229,.34);}
+
+@media (prefers-reduced-motion: reduce){
+  .otd-row,.otd-bar span,.otd-panel,.otd-row.is-open .otd-panel,.otd-chip.is-on .otd-chip-n,.otd-skel span,.otd-panel .dash-cl-node.otd-cl-fresh{animation:none !important;}
+  .otd-row[data-overdue="1"] .otd-ico{animation:none !important;}
+  .otd-stat:hover::before{animation:none !important;}
+  .otd-stat:hover,.otd-chip:hover,.otd-act:hover,.otd-btn:hover,.otd-tag-prog:hover{transform:none !important;}
+  .otd-row:hover .otd-ico,.otd-avs img:hover{transform:none !important;}
+}
+
+.otd-row.is-open .otd-panel{display:block;}
+.otd-panel-msg{padding:26px 10px;text-align:center;color:#94a3b8;font-size:12.5px;}
+.otd-panel-msg i{margin-right:6px;}
+.otd-panel-msg.is-err{color:#dc2626;}
+
+@media(max-width:1180px){
+  .otd-stats{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:820px){
+  .otd-row{flex-wrap:wrap;}
+  .otd-side{width:100%;justify-content:flex-start;padding-left:48px;}
+  .otd-acts{margin-left:auto;}
+}
+@media(max-width:560px){
+  .otd-stats{grid-template-columns:1fr;}
+  .otd-head-actions{margin-left:0;width:100%;}
+  .otd-btn{flex:1;justify-content:center;}
+  .otd-side{padding-left:0;}
+  .otd-acts{margin-left:0;width:100%;}
+  .otd-act{flex:1;justify-content:center;}
+}
+.ma-btn{border:0;border-radius:9px;background:#4f46e5;color:#fff;padding:8px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;margin-top:8px;}
+.ma-btn:hover{background:#4338ca;}.ma-count{background:#fff;color:#4f46e5;border-radius:999px;padding:1px 6px;font-size:10px;}
+.ma-modal{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10020;align-items:center;justify-content:center;padding:20px;}.ma-modal.open{display:flex;}
+.swal2-container{z-index:11050 !important;}
+.ma-dialog{width:min(820px,100%);max-height:90vh;background:#fff;border-radius:16px;box-shadow:0 25px 70px rgba(15,23,42,.3);overflow:hidden;display:flex;flex-direction:column;}
+.ma-head{padding:16px 20px;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:space-between;}.ma-body{padding:16px;overflow:auto;background:#f8fafc;}
+.ma-request{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px;}.ma-request-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;}.ma-name{font-size:14px;font-weight:800;color:#1e293b;}.ma-meta{font-size:11px;color:#64748b;margin-top:4px;}.ma-pill{font-size:10px;font-weight:800;border-radius:999px;padding:4px 9px;background:#fef3c7;color:#b45309;text-transform:uppercase;}
+.ma-form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;}.ma-field label{display:block;font-size:10px;font-weight:700;color:#64748b;margin-bottom:4px;}.ma-field input,.ma-field textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px 10px;font-size:12px;box-sizing:border-box;}.ma-field-wide{grid-column:1/-1;}.ma-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;}.ma-approve,.ma-reject{border:0;border-radius:8px;padding:8px 12px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;}.ma-approve{background:#16a34a;}.ma-reject{background:#dc2626;}.ma-empty{text-align:center;padding:40px 10px;color:#94a3b8;font-size:13px;}
+@media(max-width:600px){.ma-form{grid-template-columns:1fr;}.ma-field-wide,.ma-actions{grid-column:1;}.ma-request-top{flex-direction:column;}}
     </style>
 @endsection
 
@@ -428,10 +828,9 @@
                 {{ implode(' · ', $wbSub) }}
             </div> --}}
             @php
-                $today = \Carbon\Carbon::today()->toDateString();
-                $todayPayableCount    = $dashboardPayable->filter(fn($s) => in_array($s->status, ['pending','approved']) && \Carbon\Carbon::parse($s->scheduled_date)->toDateString() === $today)->count();
-                $todayReceivableCount = $dashboardReceivable->filter(fn($s) => in_array($s->status, ['pending','approved']) && \Carbon\Carbon::parse($s->scheduled_date)->toDateString() === $today)->count();
-                $overdueTotal         = $dashboardPayable->where('status','overdue')->count() + $dashboardReceivable->where('status','overdue')->count();
+                $todayPayableCount = $scheduleTabCounts['today_pay'];
+                $todayReceivableCount = $scheduleTabCounts['today_receive'];
+                $overdueTotal = $scheduleTabCounts['overdue'];
             @endphp
             <div class="wb-pills">
                 <div class="wb-pill wb-pill-payable">
@@ -591,10 +990,69 @@
 
     
     
+    {{-- KPI DRILL-DOWNS ─────────────────────────────────────────────────
+         Every figure on the two rows below is read off the general ledger, so
+         each card opens the report that figure is computed from rather than a
+         module landing page. A card whose route is missing, or whose report
+         this user may not open, stays a plain card — never a dead link, and
+         never an exception on a dashboard twelve companies share. --}}
+    @php
+        $kpiLink = function (string $name, array $params = [], ?string $permission = null) use ($qtRoleSlug) {
+            try {
+                if ($permission && ! auth()->user()?->can($permission)) return null;
+                if (! \Illuminate\Support\Facades\Route::has($name)) return null;
+                return route($name, array_merge(['role' => $qtRoleSlug], $params));
+            } catch (\Throwable $e) {
+                return null;
+            }
+        };
+
+        $kpiFrom = $startDate->toDateString();
+        $kpiTo   = $endDate->toDateString();
+
+        // Office Cash, Payable and Receivable are each ONE ledger account, so
+        // they drill into the general ledger narrowed to that account. Only
+        // date_to is passed: the cards carry a balance cumulative to period
+        // end, and the report takes the account's own opening balance unless a
+        // date_from narrows it — pass both and the report's closing figure
+        // would no longer be the figure on the card.
+        //
+        // General Ledger, not the Account Ledger report: the latter filters
+        // journal entries by the viewer's own company_id with no exemption,
+        // and a super admin's company_id is NULL — so it would open empty for
+        // exactly the person this dashboard is built for. General Ledger has
+        // the 'view all account' escape hatch and shows the whole book.
+        try {
+            $kpiAccountIds = \App\Models\Account::whereIn('code', array_filter([
+                config('accounts.office_cash'),
+                config('accounts.accounts_payable'),
+                config('accounts.accounts_receivable'),
+            ]))->pluck('id', 'code')->all();
+        } catch (\Throwable $e) {
+            $kpiAccountIds = [];
+        }
+
+        $kpiLedgerLink = function ($code) use ($kpiAccountIds, $kpiLink, $kpiTo) {
+            $accountId = $kpiAccountIds[$code] ?? null;
+            return $accountId
+                ? $kpiLink('role.report.general-ledger', ['account_id' => $accountId, 'date_to' => $kpiTo], 'view general ledger report')
+                : null;
+        };
+
+        // Income, Expense and Net Profit are three lines of one statement.
+        $kpiProfitLossHref = $kpiLink('role.report.profit-loss', ['date_from' => $kpiFrom, 'date_to' => $kpiTo], 'view profit loss report');
+        $kpiBankHref       = $kpiLink('role.banks.dashboard');
+        $kpiOfficeCashHref = $kpiLedgerLink(config('accounts.office_cash'));
+        $kpiLiabilityHref  = $kpiLink('role.report.balance-sheet', ['as_of' => $kpiTo], 'view balance sheet report');
+        $kpiPayableHref    = $kpiLedgerLink(config('accounts.accounts_payable'));
+        $kpiReceivableHref = $kpiLedgerLink(config('accounts.accounts_receivable'));
+    @endphp
+
     {{-- FINANCE KPI ROW --}}
     <div class="db-section-title">Accounting &amp; Finance</div>
     <div class="kpi-grid" style="margin-bottom:16px;">
         <div class="kpi-card" style="border-top:3px solid #10b981;">
+            @if($kpiProfitLossHref)<a href="{{ $kpiProfitLossHref }}" class="kpi-hit" data-no-prefetch aria-label="Total Income — open the Profit &amp; Loss statement"></a>@endif
             <div class="kpi-top">
                 <div class="kpi-icon" style="background:#d1fae5;">💹</div>
                 <span class="kpi-badge" style="background:#d1fae5;color:#059669;">Income</span>
@@ -604,6 +1062,7 @@
             <div class="kpi-bar"><div class="kpi-bar-fill" style="width:{{ $incomePercent }}%;background:#10b981;"></div></div>
         </div>
         <div class="kpi-card" style="border-top:3px solid #ef4444;">
+            @if($kpiProfitLossHref)<a href="{{ $kpiProfitLossHref }}" class="kpi-hit" data-no-prefetch aria-label="Total Expense — open the Profit &amp; Loss statement"></a>@endif
             <div class="kpi-top">
                 <div class="kpi-icon" style="background:#fef2f2;">💸</div>
                 <span class="kpi-badge" style="background:#fef2f2;color:#dc2626;">Expense</span>
@@ -613,6 +1072,7 @@
             <div class="kpi-bar"><div class="kpi-bar-fill" style="width:{{ $expensePercent }}%;background:#ef4444;"></div></div>
         </div>
         <div class="kpi-card" style="border-top:3px solid #4f46e5;">
+            @if($kpiProfitLossHref)<a href="{{ $kpiProfitLossHref }}" class="kpi-hit" data-no-prefetch aria-label="Net Profit — open the Profit &amp; Loss statement"></a>@endif
             <div class="kpi-top">
                 <div class="kpi-icon" style="background:#ede9fe;">📊</div>
                 <span class="kpi-badge" style="{{ $total_profit >= 0 ? 'background:#d1fae5;color:#059669;' : 'background:#fef2f2;color:#dc2626;' }}">{{ $total_profit >= 0 ? 'Profit' : 'Loss' }}</span>
@@ -622,6 +1082,7 @@
             <div class="kpi-bar"><div class="kpi-bar-fill" style="width:{{ $incomePercent }}%;background:#4f46e5;"></div></div>
         </div>
         <div class="kpi-card" style="border-top:3px solid #14b8a6;">
+            @if($kpiBankHref)<a href="{{ $kpiBankHref }}" class="kpi-hit" data-no-prefetch aria-label="Bank Balance — open Manage Banks"></a>@endif
             <div class="kpi-top">
                 <div class="kpi-icon" style="background:#ccfbf1;">🏦</div>
                 <span class="kpi-badge" style="background:#ccfbf1;color:#0d9488;">Live</span>
@@ -631,6 +1092,7 @@
             <div class="kpi-bar"><div class="kpi-bar-fill" style="width:80%;background:#14b8a6;"></div></div>
         </div>
         <div class="kpi-card" style="border-top:3px solid #f59e0b;">
+            @if($kpiOfficeCashHref)<a href="{{ $kpiOfficeCashHref }}" class="kpi-hit" data-no-prefetch aria-label="Office Cash — open the Office Cash ledger"></a>@endif
             <div class="kpi-top">
                 <div class="kpi-icon" style="background:#fef3c7;">💵</div>
                 <span class="kpi-badge" style="background:#fef3c7;color:#b45309;">Live</span>
@@ -724,18 +1186,24 @@
             <div class="db-section-title">Payroll Summary</div>
             <div class="finance-grid">
                 <div class="finance-card" style="background:linear-gradient(135deg,#dc2626,#be185d);">
+                    @if($kpiLiabilityHref)<a href="{{ $kpiLiabilityHref }}" class="kpi-hit" data-no-prefetch aria-label="Total Liability — open the Balance Sheet"></a>
+                    @endif
                     <div class="fc-icon">⚖️</div>
                     <div class="fc-label">Total Liability</div>
                     <div class="fc-amount">৳{{ number_format($total_liability, 0) }}</div>
                     <div class="fc-sub">Cumulative balance</div>
                 </div>
                 <div class="finance-card" style="background:linear-gradient(135deg,#f97316,#eab308);">
+                    @if($kpiPayableHref)<a href="{{ $kpiPayableHref }}" class="kpi-hit" data-no-prefetch aria-label="Accounts Payable — open the Supplier Payable ledger"></a>
+                    @endif
                     <div class="fc-icon">💳</div>
                     <div class="fc-label">Accounts Payable</div>
                     <div class="fc-amount">৳{{ number_format($total_payable, 0) }}</div>
                     <div class="fc-sub">{{ $periodLabel }}</div>
                 </div>
                 <div class="finance-card" style="background:linear-gradient(135deg,#059669,#0d9488);">
+                    @if($kpiReceivableHref)<a href="{{ $kpiReceivableHref }}" class="kpi-hit" data-no-prefetch aria-label="Accounts Receivable — open the Customer Receivable ledger"></a>
+                    @endif
                     <div class="fc-icon">💰</div>
                     <div class="fc-label">Accounts Receivable</div>
                     <div class="fc-amount">৳{{ number_format($total_receivable, 0) }}</div>
@@ -770,22 +1238,59 @@
     @php
         $roleSlugForSched = \Illuminate\Support\Str::slug(auth()->user()->getRoleNames()->first() ?? 'admin');
         $schedTodayUrl   = request()->fullUrlWithQuery(['schedule_filter' => 'today']);
+        $schedOverdueUrl = request()->fullUrlWithQuery(['schedule_filter' => 'overdue']);
         $sched7DaysUrl   = request()->fullUrlWithQuery(['schedule_filter' => '7days']);
+        $historyTodayUrl = request()->fullUrlWithQuery(['history_filter' => 'today']);
+        $history7DaysUrl = request()->fullUrlWithQuery(['history_filter' => '7days']);
+        $history30DaysUrl = request()->fullUrlWithQuery(['history_filter' => '30days']);
+        $historyAllUrl = request()->fullUrlWithQuery(['history_filter' => 'all']);
         $schedRouteUrl   = route('role.payment-schedules.index', ['role' => $roleSlugForSched]);
+        $dashboardRole = request()->route('role');
+        $partyStatementUrl = route('role.party-statement.index', ['role' => $dashboardRole]);
+        $schedulePartyLink = static function ($schedule) use ($partyStatementUrl, $dashboardRole) {
+            $partyType = strtolower((string) $schedule->party_type);
+
+            if ($partyType === 'employee' && $schedule->party_id) {
+                return [
+                    'name' => $schedule->party_name ?: ($schedule->party?->name ?? 'Unknown employee'),
+                    'code' => $schedule->party?->employee_id_no ?: 'Employee #'.(int) $schedule->party_id,
+                    'url' => route('role.user.summary', [
+                        'role' => $dashboardRole,
+                        'user' => (int) $schedule->party_id,
+                    ]),
+                ];
+            }
+
+            $statementType = match ($partyType) {
+                'agent' => 'agent',
+                'vendor', 'supplier' => 'vendor',
+                'customer', 'client' => 'client',
+                default => null,
+            };
+            if (!$statementType || !$schedule->party_id) return null;
+            return [
+                'name' => $schedule->party_name ?: ($schedule->party?->name ?? 'Unknown party'),
+                'code' => \App\Http\Controllers\Dashboard\PartyStatementController::partyCode((int) $schedule->party_id, $statementType),
+                'url' => $partyStatementUrl . '?party_id=' . (int) $schedule->party_id,
+            ];
+        };
     @endphp
     <div class="db-section-title" style="margin-top:8px;">Payment Schedules</div>
     <div style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <div style="font-size:12px;color:#64748b;font-weight:600;">
-                @if($scheduleFilter === '7days')
-                    Upcoming 7 Days ({{ \Carbon\Carbon::today()->format('d M') }} – {{ \Carbon\Carbon::today()->addDays(6)->format('d M Y') }})
+                @if($scheduleFilter === 'overdue')
+                    Overdue — before {{ \Carbon\Carbon::today()->format('d M Y') }}
+                @elseif($scheduleFilter === '7days')
+                    Upcoming 7 Days ({{ \Carbon\Carbon::tomorrow()->format('d M') }} – {{ \Carbon\Carbon::today()->addDays(7)->format('d M Y') }})
                 @else
                     Today — {{ \Carbon\Carbon::today()->format('d M Y') }}
                 @endif
             </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-                <a href="{{ $schedTodayUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;transition:.15s;{{ $scheduleFilter !== '7days' ? 'background:#4f46e5;color:white;border-color:#4f46e5;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Today</a>
-                <a href="{{ $sched7DaysUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;transition:.15s;{{ $scheduleFilter === '7days' ? 'background:#4f46e5;color:white;border-color:#4f46e5;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Upcoming 7 Days</a>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                <a href="{{ $schedTodayUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;transition:.15s;{{ $scheduleFilter === 'today' ? 'background:#4f46e5;color:white;border-color:#4f46e5;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Today ({{ $scheduleTabCounts['today'] }})</a>
+                <a href="{{ $schedOverdueUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;transition:.15s;{{ $scheduleFilter === 'overdue' ? 'background:#dc2626;color:white;border-color:#dc2626;' : 'background:white;color:#dc2626;border-color:#fecaca;' }}">Overdue ({{ $scheduleTabCounts['overdue'] }})</a>
+                <a href="{{ $sched7DaysUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;transition:.15s;{{ $scheduleFilter === '7days' ? 'background:#4f46e5;color:white;border-color:#4f46e5;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Upcoming 7 Days ({{ $scheduleTabCounts['7days'] }})</a>
                 <a href="{{ $schedRouteUrl }}" style="padding:4px 14px;border-radius:999px;font-size:11px;font-weight:600;text-decoration:none;color:#4f46e5;background:#ede9fe;border:1px solid #c4b5fd;">View All</a>
             </div>
         </div>
@@ -809,6 +1314,7 @@
                 <div style="max-height:260px;overflow-y:auto;">
                     @forelse($dashboardPayable as $sched)
                     @php
+                        $partyLink = $schedulePartyLink($sched);
                         $sStyle = match($sched->status) {
                             'overdue'  => 'background:#fee2e2;color:#dc2626;',
                             'approved' => 'background:#dbeafe;color:#2563eb;',
@@ -829,7 +1335,7 @@
                     <div style="padding:10px 18px;border-bottom:1px solid #fff1f2;display:flex;align-items:center;gap:8px;{{ $pri === 'high' ? 'border-left:3px solid #ef4444;' : '' }}">
                         <div style="min-width:0;flex:1;">
                             <div style="display:flex;align-items:center;gap:5px;">
-                                <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $sched->party_name ?? '—' }}</div>
+                                <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@if($partyLink)<a class="dash-party-link" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} ledger">{{ $partyLink['name'] }}</a>@else{{ $sched->party_name ?? '—' }}@endif</div>
                                 <span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:999px;flex-shrink:0;{{ $priStyle }}">{{ $priIcon }} {{ ucfirst($pri) }}</span>
                             </div>
                             <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
@@ -837,6 +1343,9 @@
                             </div>
                             <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap;">
                                 <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:#fee2e2;color:#b91c1c;text-transform:capitalize;">{{ $sched->party_type ?? '—' }}</span>
+                                @if($partyLink)
+                                    <a class="dash-party-code" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} overall paid/due ledger"><i class="fas fa-id-badge"></i>{{ $partyLink['code'] }}</a>
+                                @endif
                                 @if($sched->projectCategory)
                                     <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ede9fe;color:#6d28d9;"><i class="fas fa-folder" style="margin-right:2px;font-size:8px;"></i>{{ $sched->projectCategory->name }}</span>
                                 @endif
@@ -893,6 +1402,7 @@
                 <div style="max-height:260px;overflow-y:auto;">
                     @forelse($dashboardReceivable as $sched)
                     @php
+                        $partyLink = $schedulePartyLink($sched);
                         $rStyle = match($sched->status) {
                             'overdue'  => 'background:#fee2e2;color:#dc2626;',
                             'approved' => 'background:#dbeafe;color:#2563eb;',
@@ -913,7 +1423,7 @@
                     <div style="padding:10px 18px;border-bottom:1px solid #f0fdf4;display:flex;align-items:center;gap:8px;{{ $rPri === 'high' ? 'border-left:3px solid #ef4444;' : '' }}">
                         <div style="min-width:0;flex:1;">
                             <div style="display:flex;align-items:center;gap:5px;">
-                                <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $sched->party_name ?? '—' }}</div>
+                                <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@if($partyLink)<a class="dash-party-link" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} ledger">{{ $partyLink['name'] }}</a>@else{{ $sched->party_name ?? '—' }}@endif</div>
                                 <span style="font-size:9px;font-weight:800;padding:1px 5px;border-radius:999px;flex-shrink:0;{{ $rPriStyle }}">{{ $rPriIcon }} {{ ucfirst($rPri) }}</span>
                             </div>
                             <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
@@ -921,6 +1431,9 @@
                             </div>
                             <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap;">
                                 <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:#dcfce7;color:#15803d;text-transform:capitalize;">{{ $sched->party_type ?? '—' }}</span>
+                                @if($partyLink)
+                                    <a class="dash-party-code" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} overall paid/due ledger"><i class="fas fa-id-badge"></i>{{ $partyLink['code'] }}</a>
+                                @endif
                                 @if($sched->projectCategory)
                                     <span style="font-size:9px;font-weight:700;padding:1px 6px;border-radius:999px;background:#ede9fe;color:#6d28d9;"><i class="fas fa-folder" style="margin-right:2px;font-size:8px;"></i>{{ $sched->projectCategory->name }}</span>
                                 @endif
@@ -966,13 +1479,22 @@
     <div style="margin-bottom:24px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <div style="font-size:12px;color:#64748b;font-weight:600;">
-                @if($scheduleFilter === '7days')
+                @if($historyFilter === 'all')
+                    All completed payments &amp; receipts
+                @elseif($historyFilter === '30days')
+                    Last 30 Days ({{ \Carbon\Carbon::today()->subDays(29)->format('d M') }} – {{ \Carbon\Carbon::today()->format('d M Y') }})
+                @elseif($historyFilter === '7days')
                     Last 7 Days ({{ \Carbon\Carbon::today()->subDays(6)->format('d M') }} – {{ \Carbon\Carbon::today()->format('d M Y') }})
                 @else
                     Today — {{ \Carbon\Carbon::today()->format('d M Y') }}
                 @endif
             </div>
-            <div style="font-size:11px;color:#94a3b8;">Completed payments &amp; receipts</div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                <a href="{{ $historyTodayUrl }}" style="padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;{{ $historyFilter === 'today' ? 'background:#7c3aed;color:white;border-color:#7c3aed;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Today</a>
+                <a href="{{ $history7DaysUrl }}" style="padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;{{ $historyFilter === '7days' ? 'background:#7c3aed;color:white;border-color:#7c3aed;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Last 7 Days</a>
+                <a href="{{ $history30DaysUrl }}" style="padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;{{ $historyFilter === '30days' ? 'background:#7c3aed;color:white;border-color:#7c3aed;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">Last 30 Days</a>
+                <a href="{{ $historyAllUrl }}" style="padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid;text-decoration:none;{{ $historyFilter === 'all' ? 'background:#7c3aed;color:white;border-color:#7c3aed;' : 'background:white;color:#64748b;border-color:#e2e8f0;' }}">All Paid</a>
+            </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -993,13 +1515,17 @@
                 </div>
                 <div style="max-height:260px;overflow-y:auto;">
                     @forelse($dashboardPaidPayments as $sched)
+                    @php
+                        $partyLink = $schedulePartyLink($sched);
+                    @endphp
                     <div style="padding:10px 18px;border-bottom:1px solid #faf5ff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
                         <div style="min-width:0;flex:1;">
-                            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $sched->party_name ?? '—' }}</div>
+                            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@if($partyLink)<a class="dash-party-link" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} ledger">{{ $partyLink['name'] }}</a>@else{{ $sched->party_name ?? '—' }}@endif</div>
                             <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
                                 Paid: {{ $sched->paid_date ? \Carbon\Carbon::parse($sched->paid_date)->format('d M Y') : '—' }}
                                 @if($sched->source_label) &middot; {{ $sched->source_label }}@endif
                             </div>
+                            @if($partyLink)<a class="dash-party-code" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} overall paid/due ledger"><i class="fas fa-id-badge"></i>{{ $partyLink['code'] }}</a>@endif
                         </div>
                         <div style="text-align:right;flex-shrink:0;">
                             <div style="font-size:12px;font-weight:800;color:#7c3aed;">৳{{ number_format($sched->paid_amount ?? $sched->amount, 0) }}</div>
@@ -1008,7 +1534,7 @@
                     </div>
                     @empty
                     <div style="padding:28px 18px;text-align:center;color:#94a3b8;font-size:12px;">No paid payments
-                        @if($scheduleFilter === '7days') in last 7 days @else today @endif.
+                        @if($historyFilter === 'all') found @elseif($historyFilter === '30days') in last 30 days @elseif($historyFilter === '7days') in last 7 days @else today @endif.
                     </div>
                     @endforelse
                 </div>
@@ -1031,13 +1557,17 @@
                 </div>
                 <div style="max-height:260px;overflow-y:auto;">
                     @forelse($dashboardPaidReceivables as $sched)
+                    @php
+                        $partyLink = $schedulePartyLink($sched);
+                    @endphp
                     <div style="padding:10px 18px;border-bottom:1px solid #f0f9ff;display:flex;align-items:center;justify-content:space-between;gap:10px;">
                         <div style="min-width:0;flex:1;">
-                            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $sched->party_name ?? '—' }}</div>
+                            <div style="font-size:12px;font-weight:600;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@if($partyLink)<a class="dash-party-link" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} ledger">{{ $partyLink['name'] }}</a>@else{{ $sched->party_name ?? '—' }}@endif</div>
                             <div style="font-size:10px;color:#94a3b8;margin-top:2px;">
                                 Received: {{ $sched->paid_date ? \Carbon\Carbon::parse($sched->paid_date)->format('d M Y') : '—' }}
                                 @if($sched->source_label) &middot; {{ $sched->source_label }}@endif
                             </div>
+                            @if($partyLink)<a class="dash-party-code" href="{{ $partyLink['url'] }}" title="Open {{ $partyLink['name'] }} overall paid/due ledger"><i class="fas fa-id-badge"></i>{{ $partyLink['code'] }}</a>@endif
                         </div>
                         <div style="text-align:right;flex-shrink:0;">
                             <div style="font-size:12px;font-weight:800;color:#0284c7;">৳{{ number_format($sched->paid_amount ?? $sched->amount, 0) }}</div>
@@ -1046,7 +1576,7 @@
                     </div>
                     @empty
                     <div style="padding:28px 18px;text-align:center;color:#94a3b8;font-size:12px;">No receipts
-                        @if($scheduleFilter === '7days') in last 7 days @else today @endif.
+                        @if($historyFilter === 'all') found @elseif($historyFilter === '30days') in last 30 days @elseif($historyFilter === '7days') in last 7 days @else today @endif.
                     </div>
                     @endforelse
                 </div>
@@ -1054,6 +1584,247 @@
         </div>
     </div>
     @endcan
+
+    {{-- OFFICE ISSUES — ACTION REQUIRED (Admin) --}}
+    @php
+        $issueRoleSlug = \Illuminate\Support\Str::slug(auth()->user()->getRoleNames()->first());
+        $issueListUrl  = route('role.office-todos.index', ['role' => $issueRoleSlug]);
+
+        // Chip counts are derived from the rows already loaded — no extra query.
+        $otdRows     = $todoActiveIssues ?? collect();
+        $otdToday    = \Carbon\Carbon::today();
+        $otdOverdue  = $otdRows->filter(fn ($i) => $i->due_date && \Carbon\Carbon::parse($i->due_date)->lt($otdToday))->count();
+        $otdUrgent   = $otdRows->filter(function ($i) use ($otdToday) {
+            $d = $i->due_date ? \Carbon\Carbon::parse($i->due_date) : null;
+            return $i->priority === 'high' && $d && ($d->lt($otdToday) || $d->isSameDay($otdToday));
+        })->count();
+        $otdUnassign = $otdRows->filter(fn ($i) => !$i->is_self && $i->assignees->isEmpty())->count();
+    @endphp
+    <div class="otd-wrap">
+        {{-- Section Header --}}
+        <div class="otd-sec-head">
+            <div class="otd-sec-title">
+                <div class="otd-sec-dot"><i class="fas fa-clipboard-check"></i></div>
+                <span class="otd-sec-name">Office ToDos — Action Required</span>
+            </div>
+            <a href="{{ $issueListUrl }}" class="otd-sec-link">
+                View All Issues <i class="fas fa-arrow-right" style="font-size:11px;margin-left:4px;"></i>
+            </a>
+        </div>
+
+        {{-- 4 Stat Cards --}}
+        <div class="otd-stats">
+            {{-- Urgent --}}
+            <div class="otd-stat" style="background:linear-gradient(135deg,#ef4444,#dc2626);--otd-glow:rgba(239,68,68,.56);" onclick="location.href='{{ $issueListUrl }}?priority=high&status=pending'">
+                <div class="otd-stat-ico"><i class="fas fa-bell"></i></div>
+                <div>
+                    <div class="otd-stat-n">{{ $todoStats['urgent'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Urgent</div>
+                    <div class="otd-stat-s">24h SLA</div>
+                </div>
+            </div>
+
+            {{-- High Priority --}}
+            <div class="otd-stat" style="background:linear-gradient(135deg,#f97316,#ea580c);--otd-glow:rgba(249,115,22,.56);" onclick="location.href='{{ $issueListUrl }}?priority=high'">
+                <div class="otd-stat-ico"><i class="fas fa-exclamation-triangle"></i></div>
+                <div>
+                    <div class="otd-stat-n">{{ $todoStats['high'] ?? 0 }}</div>
+                    <div class="otd-stat-l">High Priority</div>
+                    <div class="otd-stat-s">Open</div>
+                </div>
+            </div>
+
+            {{-- Medium --}}
+            <div class="otd-stat" style="background:linear-gradient(135deg,#f59e0b,#d97706);--otd-glow:rgba(245,158,11,.56);" onclick="location.href='{{ $issueListUrl }}?priority=medium'">
+                <div class="otd-stat-ico"><i class="fas fa-clipboard-list"></i></div>
+                <div>
+                    <div class="otd-stat-n">{{ $todoStats['medium_week'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Medium</div>
+                    <div class="otd-stat-s">This Week</div>
+                </div>
+            </div>
+
+            {{-- Resolved Today --}}
+            <div class="otd-stat" style="background:linear-gradient(135deg,#22c55e,#16a34a);--otd-glow:rgba(34,197,94,.56);" onclick="location.href='{{ $issueListUrl }}?status=completed'">
+                <div class="otd-stat-ico"><i class="fas fa-check-circle"></i></div>
+                <div>
+                    <div class="otd-stat-n">{{ $todoStats['resolved_today'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Resolved Today</div>
+                    <div class="otd-stat-s">Closed out</div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Active Issues List --}}
+        <div class="otd-card">
+            <div class="otd-head">
+                <div class="otd-head-title">
+                    <i class="fas fa-tools"></i>
+                    <span>Active Office ToDos</span>
+                    <span class="otd-count" data-otd-total>{{ $otdRows->count() }}</span>
+                </div>
+                <div class="otd-head-actions">
+                    <button type="button" class="otd-btn otd-btn-primary" onclick="openReportTodoModal()">
+                        <i class="fas fa-plus"></i> Report ToDo
+                    </button>
+                    <a href="{{ $issueListUrl }}" class="otd-btn otd-btn-ghost">
+                        <i class="fas fa-list"></i> View All
+                    </a>
+                </div>
+            </div>
+
+            {{-- Filter chips: hide/show rows already on the page, no request --}}
+            <div class="otd-chips" data-otd-chips="admin-todo-active-list">
+                <button type="button" class="otd-chip is-on" data-otd-filter="all">
+                    All <span class="otd-chip-n">{{ $otdRows->count() }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="overdue">
+                    <i class="far fa-clock"></i> Overdue <span class="otd-chip-n">{{ $otdOverdue }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="urgent">
+                    <i class="fas fa-fire"></i> Urgent <span class="otd-chip-n">{{ $otdUrgent }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="high">
+                    High <span class="otd-chip-n">{{ $otdRows->where('priority', 'high')->count() }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="unassigned">
+                    Unassigned <span class="otd-chip-n">{{ $otdUnassign }}</span>
+                </button>
+            </div>
+
+            <div id="admin-todo-active-list" class="otd-list">
+            @forelse($otdRows as $issue)
+            @php
+                $iDue     = $issue->due_date ? \Carbon\Carbon::parse($issue->due_date) : null;
+                $iOverdue = $iDue && $iDue->lt(\Carbon\Carbon::today());
+                $iUrgent  = $issue->priority === 'high' && ($iOverdue || ($iDue && $iDue->isToday()));
+                $iBadge   = $iUrgent ? 'URGENT' : strtoupper($issue->priority ?? 'LOW');
+                $iLeftClr = $iUrgent ? '#dc2626' : match($issue->priority) {
+                    'high'   => '#f97316',
+                    'medium' => '#f59e0b',
+                    default  => '#22c55e',
+                };
+                $iBadgeSt = $iUrgent
+                    ? 'background:#fef2f2;color:#dc2626;border-color:#fecaca;'
+                    : match($issue->priority) {
+                        'high'   => 'background:#fff7ed;color:#ea580c;border-color:#fed7aa;',
+                        'medium' => 'background:#fefce8;color:#ca8a04;border-color:#fde68a;',
+                        default  => 'background:#f0fdf4;color:#16a34a;border-color:#86efac;',
+                    };
+                $iIconCls = $iUrgent ? 'fas fa-fire' : match($issue->priority) {
+                    'high'   => 'fas fa-exclamation-circle',
+                    'medium' => 'fas fa-clipboard',
+                    default  => 'fas fa-check',
+                };
+                $iIconBg  = $iUrgent ? '#fee2e2' : match($issue->priority) {
+                    'high'   => '#fff7ed',
+                    'medium' => '#fefce8',
+                    default  => '#f0fdf4',
+                };
+                $iTimeAgo = $issue->created_at ? $issue->created_at->diffForHumans() : '';
+                $iDept    = optional($issue->department)->name;
+                $iCreator = optional($issue->creator)->name ?? 'Unknown';
+                $iStStyle = match($issue->status) {
+                    'completed'   => 'background:#dcfce7;color:#16a34a;',
+                    'in_progress' => 'background:#dbeafe;color:#1d4ed8;',
+                    default       => 'background:#f3f4f6;color:#6b7280;',
+                };
+                $iStLabel = match($issue->status) {
+                    'in_progress' => 'In Progress',
+                    default       => ucfirst($issue->status),
+                };
+
+                // Due-date chip: the dashboard never showed a due date before,
+                // even though "urgent" is defined by it.
+                $iDueCls = '';
+                $iDueTxt = null;
+                if ($iDue) {
+                    $iDays = (int) \Carbon\Carbon::today()->diffInDays($iDue->copy()->startOfDay(), false);
+                    if ($iDays < 0) {
+                        $iDueCls = 'is-over';
+                        $iDueTxt = 'Overdue ' . abs($iDays) . 'd';
+                    } elseif ($iDays === 0) {
+                        $iDueCls = 'is-soon';
+                        $iDueTxt = 'Due today';
+                    } elseif ($iDays <= 3) {
+                        $iDueCls = 'is-soon';
+                        $iDueTxt = 'Due in ' . $iDays . 'd';
+                    } else {
+                        $iDueTxt = 'Due ' . $iDue->format('d M');
+                    }
+                }
+
+                $iClTotal = (int) ($issue->checklists_total ?? 0);
+                $iClDone  = (int) ($issue->checklists_checked ?? 0);
+                $iClPct   = $iClTotal > 0 ? (int) round($iClDone / $iClTotal * 100) : 0;
+            @endphp
+            <div class="otd-row" data-todo-id="{{ $issue->id }}"
+                 style="--otd-accent:{{ $iLeftClr }};--otd-soft:{{ $iIconBg }};"
+                 data-priority="{{ $issue->priority ?? 'low' }}"
+                 data-overdue="{{ $iOverdue ? 1 : 0 }}"
+                 data-urgent="{{ $iUrgent ? 1 : 0 }}"
+                 data-unassigned="{{ (!$issue->is_self && $issue->assignees->isEmpty()) ? 1 : 0 }}">
+                <div class="otd-ico"><i class="{{ $iIconCls }}"></i></div>
+                <div class="otd-body">
+                    <div class="otd-title" title="{{ $issue->title }}">{{ $issue->title }}</div>
+                    <div class="otd-meta">
+                        Reported by <strong>{{ $iCreator }}</strong>@if($iTimeAgo) &middot; {{ $iTimeAgo }}@endif @if($iDept)&middot; {{ $iDept }}@endif
+                    </div>
+                    <div class="otd-tags">
+                        @if($iDueTxt)
+                        <span class="otd-tag {{ $iDueCls }}"><i class="far fa-clock"></i> {{ $iDueTxt }}</span>
+                        @endif
+                        @if($iClTotal > 0)
+                        <span class="otd-tag otd-tag-prog" title="Show checklist">
+                            <i class="fas fa-list-check"></i> {{ $iClDone }}/{{ $iClTotal }}
+                            <span class="otd-bar"><span class="{{ $iClPct === 100 ? 'is-full' : '' }}" style="width:{{ $iClPct }}%;"></span></span>
+                            {{ $iClPct }}%
+                        </span>
+                        @endif
+                        @if($issue->is_self)
+                        <span class="otd-tag"><i class="fas fa-user"></i> Personal</span>
+                        @elseif($issue->assignees->isEmpty())
+                        <span class="otd-tag is-soon"><i class="fas fa-user-slash"></i> Unassigned</span>
+                        @else
+                        <span class="otd-avs">
+                            @foreach($issue->assignees->take(5) as $aUser)
+                            <img src="{{ $aUser->image ? asset($aUser->image) : 'https://ui-avatars.com/api/?name='.urlencode($aUser->name).'&size=22&background=4f46e5&color=fff' }}"
+                                 alt="{{ $aUser->name }}" title="{{ $aUser->name }}">
+                            @endforeach
+                            @if($issue->assignees->count() > 5)
+                            <b>+{{ $issue->assignees->count() - 5 }}</b>
+                            @endif
+                        </span>
+                        @endif
+                    </div>
+                </div>
+                <div class="otd-side">
+                    <span class="otd-badge" style="{{ $iBadgeSt }}">{{ $iBadge }}</span>
+                    <span class="otd-st" style="{{ $iStStyle }}">{{ $iStLabel }}</span>
+                    <div class="otd-acts">
+                        <button type="button" class="otd-act otd-act-go" data-otd-stop onclick="openDashStatusModal({{ $issue->id }}, '{{ $issue->status }}')">
+                            <i class="fas fa-sync-alt"></i> Status
+                        </button>
+                        <button type="button" class="otd-act otd-act-toggle">
+                            <i class="fas fa-chevron-down otd-caret"></i> Details
+                        </button>
+                        <button type="button" class="otd-act otd-act-edit" data-otd-stop onclick="openDashEditModal({{ $issue->id }})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </div>
+                </div>
+                <div class="otd-panel"></div>
+            </div>
+            @empty
+            <div class="otd-empty">
+                <i class="fas fa-check-double"></i>
+                All caught up! No active issues.
+            </div>
+            @endforelse
+            <div class="otd-none"><i class="fas fa-filter"></i> Nothing matches this filter.</div>
+            </div>{{-- #admin-todo-active-list --}}
+        </div>
+    </div>
 
     {{-- HR KPI ROW --}}
 
@@ -1354,6 +2125,12 @@
                 <div>
                     <div class="chart-title">📋 Attendance — {{ \Carbon\Carbon::parse($selectedDate)->format('d M Y') }}</div>
                     <div class="chart-subtitle">{{ count($reportData) }} employees</div>
+                    @if(Auth::user()->is_super_admin || Auth::user()->hasRole('super admin'))
+                        <button type="button" class="ma-btn" onclick="maOpen()">
+                            <i class="fas fa-user-clock"></i> Manual Attendance Requests
+                            <span class="ma-count" id="maPendingCount">{{ $manualAttendancePendingCount }}</span>
+                        </button>
+                    @endif
                 </div>
                 {{-- Attendance Rate Circle --}}
                 @php
@@ -1464,6 +2241,18 @@
 
     </div>
 
+    @if(Auth::user()->is_super_admin || Auth::user()->hasRole('super admin'))
+    <div class="ma-modal" id="manualAttendanceModal" aria-hidden="true">
+        <div class="ma-dialog" role="dialog" aria-modal="true" aria-labelledby="maModalTitle">
+            <div class="ma-head">
+                <div><strong id="maModalTitle">Manual Attendance Requests</strong><div style="font-size:10px;opacity:.8;margin-top:2px;">Review employee mobile attendance submissions</div></div>
+                <button type="button" onclick="maClose()" aria-label="Close" style="border:0;background:transparent;color:#fff;font-size:22px;cursor:pointer;">&times;</button>
+            </div>
+            <div class="ma-body" id="maRequestList"><div class="ma-empty">Loading requests...</div></div>
+        </div>
+    </div>
+    @endif
+
     {{-- TASK STATS --}}
     {{-- @can('view all task')
     <div class="db-section-title">Task Overview</div>
@@ -1565,191 +2354,6 @@
             <div class="bs-icon" style="background:#fef3c7;">📊</div>
             <div class="bs-num">{{ $todayAttendanceRate }}%</div>
             <div class="bs-label">Att. Rate</div>
-        </div>
-    </div>
-
-    {{-- OFFICE ISSUES — ACTION REQUIRED (Admin) --}}
-    @php
-        $issueRoleSlug = \Illuminate\Support\Str::slug(auth()->user()->getRoleNames()->first());
-        $issueListUrl  = route('role.office-todos.index', ['role' => $issueRoleSlug]);
-    @endphp
-    <div style="margin-bottom:28px;">
-        {{-- Section Header --}}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:34px;height:34px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-times-circle" style="color:#dc2626;font-size:17px;"></i>
-                </div>
-                <span style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.2px;">Office ToDos — Action Required</span>
-            </div>
-            <a href="{{ $issueListUrl }}" style="font-size:12px;font-weight:700;color:#4f46e5;text-decoration:none;">
-                View All Issues <i class="fas fa-arrow-right" style="font-size:11px;margin-left:4px;"></i>
-            </a>
-        </div>
-
-        {{-- 4 Stat Cards --}}
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
-            {{-- Urgent --}}
-            <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(239,68,68,.25);" onclick="location.href='{{ $issueListUrl }}?priority=high&status=pending'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-bell" style="font-size:22px;"></i>
-                </div>
-                <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['urgent'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Urgent</div>
-                    <div style="font-size:10px;opacity:.75;margin-top:1px;">24h SLA</div>
-                </div>
-            </div>
-
-            {{-- High Priority --}}
-            <div style="background:linear-gradient(135deg,#f97316,#ea580c);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(249,115,22,.25);" onclick="location.href='{{ $issueListUrl }}?priority=high'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:22px;"></i>
-                </div>
-                <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['high'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">High Priority</div>
-                </div>
-            </div>
-
-            {{-- Medium --}}
-            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(245,158,11,.25);" onclick="location.href='{{ $issueListUrl }}?priority=medium'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-clipboard-list" style="font-size:22px;"></i>
-                </div>
-                <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['medium_week'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Medium</div>
-                    <div style="font-size:10px;opacity:.75;margin-top:1px;">This Week</div>
-                </div>
-            </div>
-
-            {{-- Resolved Today --}}
-            <div style="background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(34,197,94,.25);" onclick="location.href='{{ $issueListUrl }}?status=completed'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-check-circle" style="font-size:22px;"></i>
-                </div>
-                <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['resolved_today'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Resolved Today</div>
-                </div>
-            </div>
-        </div>
-
-        {{-- Active Issues List --}}
-        <div style="background:white;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden;">
-            <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-tools" style="color:#64748b;font-size:13px;"></i>
-                    <span style="font-size:13px;font-weight:700;color:#374151;">Active Office ToDO</span>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <button onclick="openReportTodoModal()" style="display:inline-flex;align-items:center;gap:6px;background:#4f46e5;color:white;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;border:none;cursor:pointer;">
-                        <i class="fas fa-plus"></i> Report ToDo
-                    </button>
-                    <a href="{{ $issueListUrl }}" style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;color:#374151;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #e2e8f0;">
-                        <i class="fas fa-list"></i> View All
-                    </a>
-                </div>
-            </div>
-
-            <div id="admin-todo-active-list" style="max-height:430px;overflow-y:auto;">
-            @forelse(($todoActiveIssues ?? collect()) as $issue)
-            @php
-                $iDue     = $issue->due_date ? \Carbon\Carbon::parse($issue->due_date) : null;
-                $iOverdue = $iDue && $iDue->lt(\Carbon\Carbon::today());
-                $iUrgent  = $issue->priority === 'high' && ($iOverdue || ($iDue && $iDue->isToday()));
-                $iBadge   = $iUrgent ? 'URGENT' : strtoupper($issue->priority ?? 'LOW');
-                $iLeftClr = $iUrgent ? '#dc2626' : match($issue->priority) {
-                    'high'   => '#f97316',
-                    'medium' => '#f59e0b',
-                    default  => '#22c55e',
-                };
-                $iBadgeSt = $iUrgent
-                    ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
-                    : match($issue->priority) {
-                        'high'   => 'background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;',
-                        'medium' => 'background:#fefce8;color:#ca8a04;border:1px solid #fde68a;',
-                        default  => 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;',
-                    };
-                $iIconCls = $iUrgent ? 'fas fa-fire' : match($issue->priority) {
-                    'high'   => 'fas fa-exclamation-circle',
-                    'medium' => 'fas fa-clipboard',
-                    default  => 'fas fa-check',
-                };
-                $iIconBg  = $iUrgent ? '#fee2e2' : match($issue->priority) {
-                    'high'   => '#fff7ed',
-                    'medium' => '#fefce8',
-                    default  => '#f0fdf4',
-                };
-                $iTimeAgo = $issue->created_at ? $issue->created_at->diffForHumans() : '';
-                $iDept    = optional($issue->department)->name;
-                $iCreator = optional($issue->creator)->name ?? 'Unknown';
-                $iStStyle = match($issue->status) {
-                    'completed'   => 'background:#dcfce7;color:#16a34a;',
-                    'in_progress' => 'background:#dbeafe;color:#1d4ed8;',
-                    default       => 'background:#f3f4f6;color:#6b7280;',
-                };
-                $iStLabel = match($issue->status) {
-                    'in_progress' => 'In Progress',
-                    default       => ucfirst($issue->status),
-                };
-            @endphp
-            <div style="padding:14px 20px;border-bottom:1px solid #f8fafc;border-left:3px solid {{ $iLeftClr }};">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                    <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1;">
-                        <div style="width:38px;height:38px;border-radius:11px;background:{{ $iIconBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                            <i class="{{ $iIconCls }}" style="color:{{ $iLeftClr }};font-size:15px;"></i>
-                        </div>
-                        <div style="min-width:0;flex:1;">
-                            <div style="font-size:13px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $issue->title }}</div>
-                            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">
-                                Reported by: <strong style="color:#64748b;">{{ $iCreator }}</strong>
-                                @if($iTimeAgo) &middot; {{ $iTimeAgo }} @endif
-                                @if($iDept) &middot; {{ $iDept }} @endif
-                            </div>
-                            @if(!$issue->is_self && $issue->assignees->isNotEmpty())
-                            <div style="display:flex;align-items:center;gap:2px;margin-top:7px;flex-wrap:wrap;">
-                                <span style="font-size:10px;color:#94a3b8;margin-right:3px;">Assigned:</span>
-                                @foreach($issue->assignees->take(5) as $aUser)
-                                <img src="{{ $aUser->image ? asset($aUser->image) : 'https://ui-avatars.com/api/?name='.urlencode($aUser->name).'&size=22&background=4f46e5&color=fff' }}"
-                                     style="width:22px;height:22px;border-radius:50%;border:1.5px solid white;object-fit:cover;margin-right:-4px;"
-                                     title="{{ $aUser->name }}">
-                                @endforeach
-                                @if($issue->assignees->count() > 5)
-                                <span style="width:22px;height:22px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid white;font-weight:700;margin-right:4px;">+{{ $issue->assignees->count() - 5 }}</span>
-                                @endif
-                            </div>
-                            @endif
-                        </div>
-                    </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-                        <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap;letter-spacing:.4px;{{ $iBadgeSt }}">{{ $iBadge }}</span>
-                        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;{{ $iStStyle }}">{{ $iStLabel }}</span>
-                        <div style="display:flex;gap:5px;margin-top:2px;">
-                            <button onclick="openDashStatusModal({{ $issue->id }}, '{{ $issue->status }}')"
-                                style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-sync-alt"></i> Status
-                            </button>
-                            <button onclick="openDashDetailsModal({{ $issue->id }})"
-                                style="font-size:11px;font-weight:600;color:#374151;background:#f1f5f9;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            <button onclick="openDashEditModal({{ $issue->id }})"
-                                style="font-size:11px;font-weight:600;color:#047857;background:#d1fae5;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            @empty
-            <div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px;">
-                <i class="fas fa-check-double" style="font-size:28px;color:#22c55e;display:block;margin-bottom:10px;"></i>
-                All caught up! No active issues.
-            </div>
-            @endforelse
-            </div>{{-- #admin-todo-active-list --}}
         </div>
     </div>
 
@@ -2184,89 +2788,107 @@
     @php
         $empIssueRoleSlug = \Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->first());
         $empIssueListUrl  = route('role.office-todos.index', ['role' => $empIssueRoleSlug]);
+
+        // Chip counts come from the rows already loaded — no extra query.
+        $otdERows    = $todoActiveIssues ?? collect();
+        $otdEToday   = \Carbon\Carbon::today();
+        $otdEOverdue = $otdERows->filter(fn ($i) => $i->due_date && \Carbon\Carbon::parse($i->due_date)->lt($otdEToday))->count();
+        $otdEUrgent  = $otdERows->filter(function ($i) use ($otdEToday) {
+            $d = $i->due_date ? \Carbon\Carbon::parse($i->due_date) : null;
+            return $i->priority === 'high' && $d && ($d->lt($otdEToday) || $d->isSameDay($otdEToday));
+        })->count();
     @endphp
-    <div class="mb-6">
+    <div class="otd-wrap">
         {{-- Section Header --}}
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-            <div style="display:flex;align-items:center;gap:10px;">
-                <div style="width:34px;height:34px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-times-circle" style="color:#dc2626;font-size:17px;"></i>
-                </div>
-                <span style="font-size:17px;font-weight:800;color:#0f172a;letter-spacing:-.2px;">Office Issues — Action Required</span>
+        <div class="otd-sec-head">
+            <div class="otd-sec-title">
+                <div class="otd-sec-dot"><i class="fas fa-clipboard-check"></i></div>
+                <span class="otd-sec-name">Office Issues — Action Required</span>
             </div>
-            <a href="{{ $empIssueListUrl }}" style="font-size:12px;font-weight:700;color:#4f46e5;text-decoration:none;">
+            <a href="{{ $empIssueListUrl }}" class="otd-sec-link">
                 View All Issues <i class="fas fa-arrow-right" style="font-size:11px;margin-left:4px;"></i>
             </a>
         </div>
 
         {{-- 4 Stat Cards --}}
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;">
+        <div class="otd-stats">
             {{-- Urgent --}}
-            <div style="background:linear-gradient(135deg,#ef4444,#dc2626);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(239,68,68,.25);" onclick="location.href='{{ $empIssueListUrl }}?priority=high&status=pending'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-bell" style="font-size:22px;"></i>
-                </div>
+            <div class="otd-stat" style="background:linear-gradient(135deg,#ef4444,#dc2626);--otd-glow:rgba(239,68,68,.56);" onclick="location.href='{{ $empIssueListUrl }}?priority=high&status=pending'">
+                <div class="otd-stat-ico"><i class="fas fa-bell"></i></div>
                 <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['urgent'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Urgent</div>
-                    <div style="font-size:10px;opacity:.75;margin-top:1px;">24h SLA</div>
+                    <div class="otd-stat-n">{{ $todoStats['urgent'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Urgent</div>
+                    <div class="otd-stat-s">24h SLA</div>
                 </div>
             </div>
 
             {{-- High Priority --}}
-            <div style="background:linear-gradient(135deg,#f97316,#ea580c);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(249,115,22,.25);" onclick="location.href='{{ $empIssueListUrl }}?priority=high'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:22px;"></i>
-                </div>
+            <div class="otd-stat" style="background:linear-gradient(135deg,#f97316,#ea580c);--otd-glow:rgba(249,115,22,.56);" onclick="location.href='{{ $empIssueListUrl }}?priority=high'">
+                <div class="otd-stat-ico"><i class="fas fa-exclamation-triangle"></i></div>
                 <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['high'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">High Priority</div>
+                    <div class="otd-stat-n">{{ $todoStats['high'] ?? 0 }}</div>
+                    <div class="otd-stat-l">High Priority</div>
+                    <div class="otd-stat-s">Open</div>
                 </div>
             </div>
 
             {{-- Medium --}}
-            <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(245,158,11,.25);" onclick="location.href='{{ $empIssueListUrl }}?priority=medium'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-clipboard-list" style="font-size:22px;"></i>
-                </div>
+            <div class="otd-stat" style="background:linear-gradient(135deg,#f59e0b,#d97706);--otd-glow:rgba(245,158,11,.56);" onclick="location.href='{{ $empIssueListUrl }}?priority=medium'">
+                <div class="otd-stat-ico"><i class="fas fa-clipboard-list"></i></div>
                 <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['medium_week'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Medium</div>
-                    <div style="font-size:10px;opacity:.75;margin-top:1px;">This Week</div>
+                    <div class="otd-stat-n">{{ $todoStats['medium_week'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Medium</div>
+                    <div class="otd-stat-s">This Week</div>
                 </div>
             </div>
 
             {{-- Resolved Today --}}
-            <div style="background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:18px;padding:22px 20px;color:white;display:flex;align-items:center;gap:16px;cursor:pointer;box-shadow:0 4px 18px rgba(34,197,94,.25);" onclick="location.href='{{ $empIssueListUrl }}?status=completed'">
-                <div style="width:52px;height:52px;border-radius:15px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-check-circle" style="font-size:22px;"></i>
-                </div>
+            <div class="otd-stat" style="background:linear-gradient(135deg,#22c55e,#16a34a);--otd-glow:rgba(34,197,94,.56);" onclick="location.href='{{ $empIssueListUrl }}?status=completed'">
+                <div class="otd-stat-ico"><i class="fas fa-check-circle"></i></div>
                 <div>
-                    <div style="font-size:36px;font-weight:900;line-height:1.1;">{{ $todoStats['resolved_today'] ?? 0 }}</div>
-                    <div style="font-size:13px;font-weight:700;margin-top:2px;">Resolved Today</div>
+                    <div class="otd-stat-n">{{ $todoStats['resolved_today'] ?? 0 }}</div>
+                    <div class="otd-stat-l">Resolved Today</div>
+                    <div class="otd-stat-s">Closed out</div>
                 </div>
             </div>
         </div>
 
         {{-- Active Issues List --}}
-        <div style="background:white;border-radius:16px;border:1px solid #e2e8f0;box-shadow:0 1px 4px rgba(0,0,0,.05);overflow:hidden;">
-            <div style="padding:14px 20px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-tools" style="color:#64748b;font-size:13px;"></i>
-                    <span style="font-size:13px;font-weight:700;color:#374151;">Active Office Issues</span>
+        <div class="otd-card">
+            <div class="otd-head">
+                <div class="otd-head-title">
+                    <i class="fas fa-tools"></i>
+                    <span>Active Office Issues</span>
+                    <span class="otd-count" data-otd-total>{{ $otdERows->count() }}</span>
                 </div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                    <button onclick="openReportTodoModal()" style="display:inline-flex;align-items:center;gap:6px;background:#4f46e5;color:white;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;border:none;cursor:pointer;">
+                <div class="otd-head-actions">
+                    <button type="button" class="otd-btn otd-btn-primary" onclick="openReportTodoModal()">
                         <i class="fas fa-plus"></i> Report ToDo
                     </button>
-                    <a href="{{ $empIssueListUrl }}" style="display:inline-flex;align-items:center;gap:6px;background:#6366f1;color:white;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:600;text-decoration:none;">
+                    <a href="{{ $empIssueListUrl }}" class="otd-btn otd-btn-ghost">
                         <i class="fas fa-eye"></i> View My Issues
                     </a>
                 </div>
             </div>
 
-            <div id="emp-todo-active-list" style="max-height:430px;overflow-y:auto;">
-            @forelse(($todoActiveIssues ?? collect()) as $issue)
+            {{-- Filter chips: hide/show rows already on the page, no request --}}
+            <div class="otd-chips" data-otd-chips="emp-todo-active-list">
+                <button type="button" class="otd-chip is-on" data-otd-filter="all">
+                    All <span class="otd-chip-n">{{ $otdERows->count() }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="overdue">
+                    <i class="far fa-clock"></i> Overdue <span class="otd-chip-n">{{ $otdEOverdue }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="urgent">
+                    <i class="fas fa-fire"></i> Urgent <span class="otd-chip-n">{{ $otdEUrgent }}</span>
+                </button>
+                <button type="button" class="otd-chip" data-otd-filter="high">
+                    High <span class="otd-chip-n">{{ $otdERows->where('priority', 'high')->count() }}</span>
+                </button>
+            </div>
+
+            <div id="emp-todo-active-list" class="otd-list">
+            @forelse($otdERows as $issue)
             @php
                 $eDue     = $issue->due_date ? \Carbon\Carbon::parse($issue->due_date) : null;
                 $eOverdue = $eDue && $eDue->lt(\Carbon\Carbon::today());
@@ -2278,11 +2900,11 @@
                     default  => '#22c55e',
                 };
                 $eBadgeSt = $eUrgent
-                    ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;'
+                    ? 'background:#fef2f2;color:#dc2626;border-color:#fecaca;'
                     : match($issue->priority) {
-                        'high'   => 'background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;',
-                        'medium' => 'background:#fefce8;color:#ca8a04;border:1px solid #fde68a;',
-                        default  => 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;',
+                        'high'   => 'background:#fff7ed;color:#ea580c;border-color:#fed7aa;',
+                        'medium' => 'background:#fefce8;color:#ca8a04;border-color:#fde68a;',
+                        default  => 'background:#f0fdf4;color:#16a34a;border-color:#86efac;',
                     };
                 $eIconCls = $eUrgent ? 'fas fa-fire' : match($issue->priority) {
                     'high'   => 'fas fa-exclamation-circle',
@@ -2308,53 +2930,85 @@
                     'in_progress' => 'In Progress',
                     default       => ucfirst($eMyStatus),
                 };
+
+                // Due-date chip: the dashboard never showed a due date before,
+                // even though "urgent" is defined by it.
+                $eDueCls = '';
+                $eDueTxt = null;
+                if ($eDue) {
+                    $eDays = (int) \Carbon\Carbon::today()->diffInDays($eDue->copy()->startOfDay(), false);
+                    if ($eDays < 0) {
+                        $eDueCls = 'is-over';
+                        $eDueTxt = 'Overdue ' . abs($eDays) . 'd';
+                    } elseif ($eDays === 0) {
+                        $eDueCls = 'is-soon';
+                        $eDueTxt = 'Due today';
+                    } elseif ($eDays <= 3) {
+                        $eDueCls = 'is-soon';
+                        $eDueTxt = 'Due in ' . $eDays . 'd';
+                    } else {
+                        $eDueTxt = 'Due ' . $eDue->format('d M');
+                    }
+                }
+
+                $eClTotal = (int) ($issue->checklists_total ?? 0);
+                $eClDone  = (int) ($issue->checklists_checked ?? 0);
+                $eClPct   = $eClTotal > 0 ? (int) round($eClDone / $eClTotal * 100) : 0;
             @endphp
-            <div style="padding:14px 20px;border-bottom:1px solid #f8fafc;border-left:3px solid {{ $eLeftClr }};">
-                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                    <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1;">
-                        <div style="width:38px;height:38px;border-radius:11px;background:{{ $eIconBg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                            <i class="{{ $eIconCls }}" style="color:{{ $eLeftClr }};font-size:15px;"></i>
-                        </div>
-                        <div style="min-width:0;flex:1;">
-                            <div style="font-size:13px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $issue->title }}</div>
-                            <div style="font-size:11px;color:#94a3b8;margin-top:2px;">
-                                Assigned by: <strong style="color:#64748b;">{{ $eCreator }}</strong>
-                                @if($eTimeAgo) &middot; {{ $eTimeAgo }} @endif
-                                @if($eDept) &middot; {{ $eDept }} @endif
-                            </div>
-                            @if($eMyNote)
-                            <div style="font-size:11px;color:#64748b;margin-top:4px;background:#f8fafc;padding:4px 8px;border-radius:6px;font-style:italic;">{{ Str::limit($eMyNote, 60) }}</div>
-                            @endif
-                        </div>
+            <div class="otd-row" data-todo-id="{{ $issue->id }}"
+                 style="--otd-accent:{{ $eLeftClr }};--otd-soft:{{ $eIconBg }};"
+                 data-priority="{{ $issue->priority ?? 'low' }}"
+                 data-overdue="{{ $eOverdue ? 1 : 0 }}"
+                 data-urgent="{{ $eUrgent ? 1 : 0 }}"
+                 data-unassigned="0">
+                <div class="otd-ico"><i class="{{ $eIconCls }}"></i></div>
+                <div class="otd-body">
+                    <div class="otd-title" title="{{ $issue->title }}">{{ $issue->title }}</div>
+                    <div class="otd-meta">
+                        Assigned by <strong>{{ $eCreator }}</strong>@if($eTimeAgo) &middot; {{ $eTimeAgo }}@endif @if($eDept)&middot; {{ $eDept }}@endif
                     </div>
-                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-                        <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap;letter-spacing:.4px;{{ $eBadgeSt }}">{{ $eBadge }}</span>
-                        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;{{ $eStStyle }}">My: {{ $eStLabel }}</span>
-                        <div style="display:flex;gap:5px;margin-top:2px;">
-                            <button onclick="openDashStatusModal({{ $issue->id }}, '{{ $eMyStatus }}', '{{ addslashes($eMyNote) }}')"
-                                style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-sync-alt"></i> Status
-                            </button>
-                            <button onclick="openDashDetailsModal({{ $issue->id }})"
-                                style="font-size:11px;font-weight:600;color:#374151;background:#f1f5f9;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-eye"></i> Details
-                            </button>
-                            @if(Auth::user()->hasRole('super admin') || Auth::user()->hasRole('admin'))
-                            <button onclick="openDashEditModal({{ $issue->id }})"
-                                style="font-size:11px;font-weight:600;color:#047857;background:#d1fae5;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            @endif
-                        </div>
+                    @if($eMyNote)
+                    <div class="otd-note">{{ Str::limit($eMyNote, 90) }}</div>
+                    @endif
+                    <div class="otd-tags">
+                        @if($eDueTxt)
+                        <span class="otd-tag {{ $eDueCls }}"><i class="far fa-clock"></i> {{ $eDueTxt }}</span>
+                        @endif
+                        @if($eClTotal > 0)
+                        <span class="otd-tag otd-tag-prog" title="Show checklist">
+                            <i class="fas fa-list-check"></i> {{ $eClDone }}/{{ $eClTotal }}
+                            <span class="otd-bar"><span class="{{ $eClPct === 100 ? 'is-full' : '' }}" style="width:{{ $eClPct }}%;"></span></span>
+                            {{ $eClPct }}%
+                        </span>
+                        @endif
                     </div>
                 </div>
+                <div class="otd-side">
+                    <span class="otd-badge" style="{{ $eBadgeSt }}">{{ $eBadge }}</span>
+                    <span class="otd-st" style="{{ $eStStyle }}">My: {{ $eStLabel }}</span>
+                    <div class="otd-acts">
+                        <button type="button" class="otd-act otd-act-go" data-otd-stop onclick="openDashStatusModal({{ $issue->id }}, '{{ $eMyStatus }}', '{{ addslashes($eMyNote) }}')">
+                            <i class="fas fa-sync-alt"></i> Status
+                        </button>
+                        <button type="button" class="otd-act otd-act-toggle">
+                            <i class="fas fa-chevron-down otd-caret"></i> Details
+                        </button>
+                        @if(Auth::user()->hasRole('super admin') || Auth::user()->hasRole('admin'))
+                        <button type="button" class="otd-act otd-act-edit" data-otd-stop onclick="openDashEditModal({{ $issue->id }})">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        @endif
+                    </div>
+                </div>
+                <div class="otd-panel"></div>
             </div>
             @empty
-            <div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px;">
-                <i class="fas fa-check-double" style="font-size:28px;color:#22c55e;display:block;margin-bottom:10px;"></i>
+            <div class="otd-empty">
+                <i class="fas fa-check-double"></i>
                 All caught up! No active issues assigned to you.
             </div>
             @endforelse
+            <div class="otd-none"><i class="fas fa-filter"></i> Nothing matches this filter.</div>
             </div>{{-- #emp-todo-active-list --}}
         </div>
     </div>
@@ -3651,7 +4305,7 @@
                 $('#create_check_in').val(normalizeTimeValue($(this).data('check_in')));
                 $('#create_check_out').val(normalizeTimeValue($(this).data('check_out')));
                 $('#create_note').val($(this).data('note') || '');
-                $('#createModal').removeClass('hidden');
+                $('#createModal').removeClass('hidden').css('display', 'flex');
             });
 
             $('.edit-item-btn').click(function() {
@@ -3664,11 +4318,11 @@
                 $('#edit_check_out').val(normalizeTimeValue($(this).data('check_out')));
                 $('#edit_note').val($(this).data('note'));
                 $('#edit_status').val($(this).data('status')).trigger('change');
-                $('#editModal').removeClass('hidden');
+                $('#editModal').removeClass('hidden').css('display', 'flex');
             });
 
             $('.modal-close-create, .modal-close-edit, .modal-backdrop').click(function() {
-                $('#createModal, #editModal').addClass('hidden');
+                $('#createModal, #editModal').addClass('hidden').css('display', 'none');
             });
 
             function validateCreateAttendanceForm() {
@@ -3732,7 +4386,7 @@
                                 title: 'Done',
                                 text: 'Attendance created successfully!'
                             });
-                            $('#createModal').addClass('hidden');
+                            $('#createModal').addClass('hidden').css('display', 'none');
                             $('#createForm')[0].reset();
                             setTimeout(() => window.location.reload(), 800);
                         } else {
@@ -3775,7 +4429,7 @@
                                 title: 'Done',
                                 text: 'Attendance updated successfully!'
                             });
-                            $('#editModal').addClass('hidden');
+                            $('#editModal').addClass('hidden').css('display', 'none');
                             setTimeout(() => window.location.reload(), 800);
                         } else {
                             Swal.fire({
@@ -4163,17 +4817,632 @@
             });
         }
 
+        // ── Office ToDos: chip filter ─────────────────────────────────────────────
+        // Purely visual. It hides rows that are already on the page and never
+        // issues a request, so it cannot change what any endpoint returns.
+        // Edit is only wired up for super admin / admin — the Blade role guard
+        // around openDashEditModal() below. The row template has to honour the
+        // same condition, or the button would call an undefined function.
+        const otdCanEdit = {{ (Auth::user()->hasRole('super admin') || Auth::user()->hasRole('admin')) ? 'true' : 'false' }};
+
+        window.otdFilterState = window.otdFilterState || {};
+
+        function otdMatches(row, key) {
+            switch (key) {
+                case 'overdue':    return row.getAttribute('data-overdue') === '1';
+                case 'urgent':     return row.getAttribute('data-urgent') === '1';
+                case 'high':       return row.getAttribute('data-priority') === 'high';
+                case 'unassigned': return row.getAttribute('data-unassigned') === '1';
+                default:           return true;
+            }
+        }
+
+        function otdSyncCounts(listId) {
+            var list  = document.getElementById(listId);
+            var chips = document.querySelector('[data-otd-chips="' + listId + '"]');
+            if (!list) return;
+
+            var rows = Array.prototype.slice.call(list.querySelectorAll('.otd-row'));
+            var card = list.closest('.otd-card');
+            var tot  = card ? card.querySelector('[data-otd-total]') : null;
+            if (tot) tot.textContent = rows.length;
+
+            if (!chips) return;
+            Array.prototype.forEach.call(chips.querySelectorAll('.otd-chip'), function (chip) {
+                var key = chip.getAttribute('data-otd-filter') || 'all';
+                var n   = key === 'all'
+                    ? rows.length
+                    : rows.filter(function (r) { return otdMatches(r, key); }).length;
+                var slot = chip.querySelector('.otd-chip-n');
+                if (slot) slot.textContent = n;
+            });
+        }
+
+        function otdApplyFilter(listId) {
+            var list = document.getElementById(listId);
+            if (!list) return;
+
+            var key   = window.otdFilterState[listId] || 'all';
+            var rows  = list.querySelectorAll('.otd-row');
+            var shown = 0;
+
+            Array.prototype.forEach.call(rows, function (row) {
+                var ok = otdMatches(row, key);
+                row.classList.toggle('is-hidden', !ok);
+                if (ok) shown++;
+            });
+
+            list.classList.toggle('is-filtered-empty', rows.length > 0 && shown === 0);
+
+            var chips = document.querySelector('[data-otd-chips="' + listId + '"]');
+            if (chips) {
+                Array.prototype.forEach.call(chips.querySelectorAll('.otd-chip'), function (chip) {
+                    chip.classList.toggle('is-on', (chip.getAttribute('data-otd-filter') || 'all') === key);
+                });
+            }
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+            var chip = e.target.closest('.otd-chip');
+            if (!chip) return;
+            var box = chip.closest('[data-otd-chips]');
+            if (!box) return;
+
+            var listId = box.getAttribute('data-otd-chips');
+            window.otdFilterState[listId] = chip.getAttribute('data-otd-filter') || 'all';
+            otdApplyFilter(listId);
+        });
+
+        // Relative due date, rendered the same way the Blade rows render it.
+        function otdDueChip(raw) {
+            if (!raw) return '';
+            var p = String(raw).split('-');
+            if (p.length < 3) return '';
+
+            var due = new Date(+p[0], +p[1] - 1, +p[2]);
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            var days = Math.round((due - today) / 86400000);
+            var cls = '', txt;
+
+            if (days < 0)        { cls = 'is-over'; txt = 'Overdue ' + Math.abs(days) + 'd'; }
+            else if (days === 0) { cls = 'is-soon'; txt = 'Due today'; }
+            else if (days <= 3)  { cls = 'is-soon'; txt = 'Due in ' + days + 'd'; }
+            else {
+                var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                txt = 'Due ' + p[2] + ' ' + m[+p[1] - 1];
+            }
+
+            return '<span class="otd-tag ' + cls + '"><i class="far fa-clock"></i> ' + txt + '</span>';
+        }
+
+        // Stat tiles count up once on load. Guarded on every side: it only
+        // touches .otd-stat-n, it bails on anything that is not a plain integer,
+        // and it always lands on the exact value the server rendered.
+        function otdCountUp() {
+            if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+            Array.prototype.forEach.call(document.querySelectorAll('.otd-stat-n'), function (el) {
+                var target = parseInt(el.textContent.trim(), 10);
+                if (!isFinite(target) || String(target) !== el.textContent.trim() || target === 0) return;
+
+                if (!window.requestAnimationFrame) return;
+
+                var started = null;
+                var done    = false;
+                var dur     = Math.min(900, 260 + target * 45);
+
+                // Safety net. A KPI tile must never be left showing a number
+                // that is not the one the server rendered, so if the frame loop
+                // is throttled or dropped (backgrounded tab, for one) this snaps
+                // the real value back regardless.
+                var settle = setTimeout(function () {
+                    if (!done) { done = true; el.textContent = target; }
+                }, dur + 1500);
+
+                function step(ts) {
+                    if (done) return;
+                    if (started === null) started = ts;
+
+                    var p = Math.min(1, (ts - started) / dur);
+                    // easeOutCubic, so it decelerates into the final number.
+                    el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+
+                    if (p < 1) { requestAnimationFrame(step); return; }
+                    done = true;
+                    clearTimeout(settle);
+                    el.textContent = target;
+                }
+
+                // Only blank it once the loop is actually running, so a browser
+                // that never fires the callback keeps the server-rendered value.
+                requestAnimationFrame(function (ts) {
+                    if (done) return;
+                    el.textContent = '0';
+                    started = ts;
+                    requestAnimationFrame(step);
+                });
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', otdCountUp);
+        } else {
+            otdCountUp();
+        }
+
+        // ── Office ToDos: rename, re-prioritise and delete a checklist item ──────
+        // All three hit endpoints that touch ONE row and only the columns named.
+        // Nothing here goes through update()/syncChecklists(), which reconcile
+        // the whole list and delete whatever the payload leaves out.
+        function otdClItemUrl(id) {
+            return dashTodoBaseUrl + '/' + window._dashDetailTodoId + '/checklists/' + id;
+        }
+
+        function otdClToast(icon, text) {
+            if (typeof Swal === 'undefined') return;
+            Swal.fire({ icon: icon, title: text, timer: 1600, showConfirmButton: false, toast: true, position: 'top-end' });
+        }
+
+        // Rename happens in place: the label becomes an input, and the original
+        // text is kept so Escape can put it back untouched.
+        function otdClStartRename(id) {
+            var panel = document.querySelector('.otd-row.is-open .otd-panel');
+            if (!panel) return;
+
+            var li = panel.querySelector('.dash-cl-node[data-checklist-id="' + id + '"]');
+            if (!li) return;
+
+            var label = li.querySelector('.dash-cl-label');
+            if (!label || label.querySelector('input')) return;
+
+            var original = label.textContent.trim();
+            var input    = document.createElement('input');
+            input.type      = 'text';
+            input.className = 'otd-cl-renameinput';
+            input.value     = original;
+            input.maxLength = 255;
+
+            label.textContent = '';
+            label.appendChild(input);
+            input.focus();
+            input.select();
+
+            var closed = false;
+
+            function restore(text) {
+                if (closed) return;
+                closed = true;
+                label.textContent = text;
+            }
+
+            function commit() {
+                if (closed) return;
+
+                var next = input.value.trim();
+                if (!next || next === original) { restore(original); return; }
+
+                restore(next);   // optimistic, so the row does not flicker
+
+                $.ajax({
+                    url:    otdClItemUrl(id),
+                    method: 'POST',
+                    data:   { _token: todoListCsrf, _method: 'PATCH', title: next },
+                    success: function (res) {
+                        if (!res || !res.success) {
+                            label.textContent = original;
+                            otdClToast('error', (res && res.message) ? res.message : 'Could not rename that item.');
+                        }
+                    },
+                    error: function (xhr) {
+                        label.textContent = original;
+                        var m = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : null;
+                        otdClToast('error', m || 'Could not rename that item.');
+                    }
+                });
+            }
+
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+                if (e.key === 'Escape') { e.preventDefault(); restore(original); }
+            });
+            input.addEventListener('blur', commit);
+        }
+
+        function otdClDeleteItem(id, kidCount) {
+            var n    = parseInt(kidCount, 10) || 0;
+            var body = n > 0
+                ? 'This heading and its ' + n + ' sub-task' + (n === 1 ? '' : 's') + ' will be deleted.'
+                : 'This task will be deleted.';
+
+            function go() {
+                $.ajax({
+                    url:    otdClItemUrl(id),
+                    method: 'POST',
+                    data:   { _token: todoListCsrf, _method: 'DELETE' },
+                    success: function (res) {
+                        if (!res || !res.success) {
+                            otdClToast('error', (res && res.message) ? res.message : 'Could not delete that item.');
+                            return;
+                        }
+                        otdClToast('success', res.deleted > 1 ? (res.deleted + ' items deleted') : 'Task deleted');
+                        refreshTodoList();
+                    },
+                    error: function (xhr) {
+                        var m = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : null;
+                        otdClToast('error', m || 'Could not delete that item.');
+                    }
+                });
+            }
+
+            if (typeof Swal === 'undefined') {
+                if (confirm(body)) go();
+                return;
+            }
+
+            Swal.fire({
+                icon: 'warning',
+                title: n > 0 ? 'Delete this heading?' : 'Delete this task?',
+                text: body,
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#dc2626',
+                cancelButtonText: 'Keep it'
+            }).then(function (r) { if (r.isConfirmed) go(); });
+        }
+
+        $(document).on('click', '.otd-cl-ren', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            otdClStartRename($(this).data('id'));
+        });
+
+        $(document).on('click', '.otd-cl-del', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            otdClDeleteItem($(this).data('id'), $(this).data('kids'));
+        });
+
+        $(document).on('change', '.otd-cl-prio-sel', function () {
+            var $sel = $(this);
+            var id   = $sel.data('id');
+            var next = $sel.val();
+            var prev = $sel.data('prev') || 'medium';
+
+            var paint = {
+                high:   'background:#fff7ed;color:#ea580c;',
+                medium: 'background:#fefce8;color:#ca8a04;',
+                low:    'background:#f0fdf4;color:#16a34a;'
+            };
+            $sel.attr('style', paint[next] || paint.medium);
+
+            $.ajax({
+                url:    otdClItemUrl(id),
+                method: 'POST',
+                data:   { _token: todoListCsrf, _method: 'PATCH', priority: next },
+                success: function (res) {
+                    if (res && res.success) { $sel.data('prev', next); return; }
+                    $sel.val(prev).attr('style', paint[prev] || paint.medium);
+                    otdClToast('error', (res && res.message) ? res.message : 'Could not change the priority.');
+                },
+                error: function () {
+                    $sel.val(prev).attr('style', paint[prev] || paint.medium);
+                    otdClToast('error', 'Could not change the priority.');
+                }
+            });
+        });
+
+        // ── Office ToDos: keep the checklist open across a rebuild ────────────────
+        // Marking an item done, adding one, or reordering all call
+        // refreshTodoList(), which re-renders the panel from scratch — and
+        // renderClNode() emits every parent folded. Without this the parent you
+        // were working inside snaps shut under you every single time.
+        window.otdOpenParents    = window.otdOpenParents || {};
+        window.otdFocusChecklist = window.otdFocusChecklist || null;
+
+        function otdClDirectChild(li, selector) {
+            for (var i = 0; i < li.children.length; i++) {
+                if (li.children[i].matches && li.children[i].matches(selector)) return li.children[i];
+            }
+            return null;
+        }
+
+        function otdClUnfold(li) {
+            li.setAttribute('data-collapsed', '0');
+
+            var kids = otdClDirectChild(li, '.dash-cl-children');
+            if (kids) kids.style.display = 'block';
+
+            var head  = otdClDirectChild(li, 'div');
+            var caret = head ? head.querySelector('.dash-cl-caret') : null;
+            if (caret) caret.style.transform = 'rotate(0deg)';
+        }
+
+        // Called before the list is thrown away, so it records what was open.
+        function otdClCaptureFolds() {
+            var panel = document.querySelector('.otd-row.is-open .otd-panel');
+            if (!panel || !window._dashDetailTodoId) return;
+
+            var open = [];
+            Array.prototype.forEach.call(panel.querySelectorAll('.dash-cl-parent-row'), function (li) {
+                if (li.getAttribute('data-collapsed') === '0') open.push(li.getAttribute('data-checklist-id'));
+            });
+
+            window.otdOpenParents[window._dashDetailTodoId] = open;
+        }
+
+        // Called once the panel has been rebuilt.
+        function otdClRestoreFolds() {
+            var panel = document.querySelector('.otd-row.is-open .otd-panel');
+            if (!panel || !window._dashDetailTodoId) return;
+
+            var open = window.otdOpenParents[window._dashDetailTodoId] || [];
+            open.forEach(function (id) {
+                var li = panel.querySelector('.dash-cl-parent-row[data-checklist-id="' + id + '"]');
+                if (li) otdClUnfold(li);
+            });
+
+            // A freshly added item: open its parent, bring it into view, flash it.
+            var focusId = window.otdFocusChecklist;
+            window.otdFocusChecklist = null;
+            if (!focusId) return;
+
+            var item = panel.querySelector('.dash-cl-node[data-checklist-id="' + focusId + '"]');
+            if (!item) return;
+
+            var parentLi = item.parentElement ? item.parentElement.closest('.dash-cl-parent-row') : null;
+            if (parentLi) otdClUnfold(parentLi);
+
+            item.classList.add('otd-cl-fresh');
+            setTimeout(function () { item.classList.remove('otd-cl-fresh'); }, 2400);
+
+            // Let the unfold lay out before measuring where to scroll.
+            requestAnimationFrame(function () {
+                try { item.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+                catch (e) { item.scrollIntoView(false); }
+            });
+        }
+
+        // ── Office ToDos: add a checklist task / sub-task ─────────────────────────
+        // There is exactly one composer per panel and it is MOVED to wherever it
+        // is needed, rather than one being created per row. That keeps a single
+        // input in the DOM, so there is no id collision and no stale half-typed
+        // form left behind somewhere the user cannot see.
+        function otdClForm() {
+            return document.querySelector('.otd-panel .otd-cl-form');
+        }
+
+        function otdClError(msg) {
+            var box = document.querySelector('.otd-panel .otd-cl-err');
+            if (!box) return;
+
+            if (!msg) { box.hidden = true; box.textContent = ''; return; }
+            box.textContent = msg;
+            box.hidden = false;
+        }
+
+        function otdClCloseForm() {
+            var form = otdClForm();
+            if (!form) return;
+
+            form.hidden = true;
+            form.querySelector('.otd-cl-title').value = '';
+            form.setAttribute('data-parent', '');
+            otdClError(null);
+        }
+
+        function otdClOpenForm(parentId, anchorEl) {
+            var form = otdClForm();
+            if (!form) return;
+
+            otdClError(null);
+            form.setAttribute('data-parent', parentId || '');
+
+            // Under the row for a sub-task, at the end of the list for a task.
+            if (parentId && anchorEl) {
+                var li = anchorEl.closest('.dash-cl-node');
+                if (li) {
+                    li.appendChild(form);
+                    // A folded parent would hide the composer it just opened.
+                    if (li.getAttribute('data-collapsed') === '1') otdClUnfold(li);
+                }
+            } else {
+                var list = document.querySelector('.otd-panel #dashClList');
+                if (list && list.parentNode) list.parentNode.insertBefore(form, list.nextSibling);
+            }
+
+            form.hidden = false;
+            form.querySelector('.otd-cl-title').focus();
+        }
+
+        function otdClSubmit() {
+            var form = otdClForm();
+            if (!form) return;
+
+            var titleEl = form.querySelector('.otd-cl-title');
+            var title   = titleEl.value.trim();
+
+            if (!title) { otdClError('Give the task a name first.'); titleEl.focus(); return; }
+            if (!window._dashDetailTodoId) { otdClError('Reopen the todo and try again.'); return; }
+
+            var saveBtn  = form.querySelector('.otd-cl-save');
+            var parentId = form.getAttribute('data-parent') || '';
+
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding';
+            otdClError(null);
+
+            $.ajax({
+                url:    dashTodoBaseUrl + '/' + window._dashDetailTodoId + '/checklists',
+                method: 'POST',
+                data:   {
+                    _token:    todoListCsrf,
+                    title:     title,
+                    priority:  form.querySelector('.otd-cl-priority').value,
+                    parent_id: parentId
+                },
+                success: function (res) {
+                    if (!res || !res.success) {
+                        otdClError((res && res.message) ? res.message : 'Could not add that item.');
+                        return;
+                    }
+
+                    // Reopen the parent it went into and scroll to it once the
+                    // panel comes back, instead of leaving the user at the top.
+                    if (res.item && res.item.id) window.otdFocusChecklist = String(res.item.id);
+                    if (parentId) {
+                        var openList = window.otdOpenParents[window._dashDetailTodoId] || [];
+                        if (openList.indexOf(String(parentId)) === -1) openList.push(String(parentId));
+                        window.otdOpenParents[window._dashDetailTodoId] = openList;
+                    }
+
+                    otdClCloseForm();
+                    // Rebuilding through the normal refresh keeps the numbering,
+                    // the drag handles and the derived parent statuses in the one
+                    // code path that already gets them right.
+                    refreshTodoList();
+                },
+                error: function (xhr) {
+                    var m = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : null;
+                    if (!m && xhr.status === 404) m = 'The add-item route is not available on this server yet.';
+                    otdClError(m || 'Could not add that item.');
+                },
+                complete: function () {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-check"></i> Add';
+                }
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+
+            var opener = e.target.closest('[data-otd-add-parent]');
+            if (opener) {
+                e.preventDefault();
+                e.stopPropagation();
+                otdClOpenForm(opener.getAttribute('data-otd-add-parent'), opener);
+                return;
+            }
+
+            if (e.target.closest('.otd-cl-save'))   { e.preventDefault(); e.stopPropagation(); otdClSubmit();     return; }
+            if (e.target.closest('.otd-cl-cancel')) { e.preventDefault(); e.stopPropagation(); otdClCloseForm();  return; }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (!e.target || !e.target.classList || !e.target.classList.contains('otd-cl-title')) return;
+
+            if (e.key === 'Enter')  { e.preventDefault(); otdClSubmit(); }
+            if (e.key === 'Escape') { e.preventDefault(); otdClCloseForm(); }
+        });
+
+        // ── Office ToDos: inline expand ───────────────────────────────────────────
+        // Clicking a row opens its details in place instead of in a modal.
+        // Exactly ONE panel is open at a time, and that is a correctness
+        // requirement rather than a style choice: the checklist editor built by
+        // buildDashDetailHtml() is keyed on the single ids #dashClList,
+        // #dashClProgress and #dashClBar and on the global _dashDetailTodoId, so
+        // two panels in the DOM at once would write into each other. The
+        // accordion is what lets all of that code stay untouched.
+        window.otdOpenTodoId = window.otdOpenTodoId || null;
+
+        function otdClearPanel(row) {
+            row.classList.remove('is-open');
+            var panel = row.querySelector('.otd-panel');
+            if (panel) panel.innerHTML = '';
+
+            var list = row.closest('.otd-list');
+            if (list && !list.querySelector('.otd-row.is-open')) list.classList.remove('has-open');
+        }
+
+        function otdCollapseAll() {
+            Array.prototype.forEach.call(document.querySelectorAll('.otd-row.is-open'), otdClearPanel);
+        }
+
+        function otdCollapseRow(row) {
+            otdClearPanel(row);
+            if (window.otdOpenTodoId === row.getAttribute('data-todo-id')) {
+                window.otdOpenTodoId = null;
+            }
+        }
+
+        function otdExpandRow(row) {
+            var id    = row.getAttribute('data-todo-id');
+            var panel = row.querySelector('.otd-panel');
+            if (!id || !panel) return;
+
+            otdCollapseAll();
+            row.classList.add('is-open');
+            window.otdOpenTodoId = id;
+
+            var list = row.closest('.otd-list');
+            if (list) list.classList.add('has-open');
+
+            panel.innerHTML = '<div class="otd-skel"><span></span><span></span><span></span><span></span></div>';
+
+            $.get(dashTodoBaseUrl + '/' + id + '/edit', function (res) {
+                // The user may have collapsed it, or opened another, while this
+                // was in flight — in that case the response is stale, drop it.
+                if (!row.classList.contains('is-open')) return;
+
+                if (!res.success) {
+                    panel.innerHTML = '<div class="otd-panel-msg is-err"><i class="fas fa-triangle-exclamation"></i> Failed to load details.</div>';
+                    return;
+                }
+
+                panel.innerHTML = buildDashDetailHtml(res.data);
+                dashClRenumber();
+                dashClInitSortable();
+                otdClRestoreFolds();
+            }).fail(function () {
+                if (row.classList.contains('is-open')) {
+                    panel.innerHTML = '<div class="otd-panel-msg is-err"><i class="fas fa-triangle-exclamation"></i> Error loading details.</div>';
+                }
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!e.target || !e.target.closest) return;
+
+            // Status and Edit still open their own modals.
+            if (e.target.closest('[data-otd-stop]')) return;
+            // A click inside an open panel belongs to the panel, not the row.
+            if (e.target.closest('.otd-panel')) return;
+
+            var row = e.target.closest('.otd-row');
+            if (!row) return;
+
+            if (row.classList.contains('is-open')) otdCollapseRow(row);
+            else otdExpandRow(row);
+        });
+
+        // The list is re-rendered wholesale after a status change or a checklist
+        // reorder, which throws the open panel away. Put it back so the user is
+        // not bounced out of the todo they were reading.
+        function otdRestoreOpenRow() {
+            if (!window.otdOpenTodoId) return;
+
+            var row = document.querySelector('.otd-row[data-todo-id="' + window.otdOpenTodoId + '"]');
+            if (row) otdExpandRow(row);
+            else window.otdOpenTodoId = null;
+        }
+
         function refreshTodoList() {
+            // Remember which parents are open before the rebuild throws them away.
+            if (typeof otdClCaptureFolds === 'function') otdClCaptureFolds();
+
             $.getJSON(todoListUrl, function (res) {
                 if (!res.success) return;
                 const items = res.data;
 
                 const priorityColors = {
-                    high:   { left: '#f97316', iconBg: '#fff7ed', iconColor: '#f97316', icon: 'fas fa-exclamation-circle', badge: 'background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;' },
-                    medium: { left: '#f59e0b', iconBg: '#fefce8', iconColor: '#f59e0b', icon: 'fas fa-clipboard',          badge: 'background:#fefce8;color:#ca8a04;border:1px solid #fde68a;' },
-                    low:    { left: '#22c55e', iconBg: '#f0fdf4', iconColor: '#22c55e', icon: 'fas fa-check',              badge: 'background:#f0fdf4;color:#16a34a;border:1px solid #86efac;' },
+                    high:   { left: '#f97316', iconBg: '#fff7ed', icon: 'fas fa-exclamation-circle', badge: 'background:#fff7ed;color:#ea580c;border-color:#fed7aa;' },
+                    medium: { left: '#f59e0b', iconBg: '#fefce8', icon: 'fas fa-clipboard',          badge: 'background:#fefce8;color:#ca8a04;border-color:#fde68a;' },
+                    low:    { left: '#22c55e', iconBg: '#f0fdf4', icon: 'fas fa-check',              badge: 'background:#f0fdf4;color:#16a34a;border-color:#86efac;' },
                 };
-                const urgentColor = { left: '#dc2626', iconBg: '#fee2e2', iconColor: '#dc2626', icon: 'fas fa-fire', badge: 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca;' };
+                const urgentColor = { left: '#dc2626', iconBg: '#fee2e2', icon: 'fas fa-fire', badge: 'background:#fef2f2;color:#dc2626;border-color:#fecaca;' };
                 const statusStyles = {
                     completed:   'background:#dcfce7;color:#16a34a;',
                     in_progress: 'background:#dbeafe;color:#1d4ed8;',
@@ -4183,74 +5452,92 @@
 
                 let html = '';
                 if (!items || items.length === 0) {
-                    html = `<div style="padding:36px 20px;text-align:center;color:#94a3b8;font-size:13px;">
-                        <i class="fas fa-check-double" style="font-size:28px;color:#22c55e;display:block;margin-bottom:10px;"></i>
+                    html = `<div class="otd-empty">
+                        <i class="fas fa-check-double"></i>
                         All caught up! No active issues.
                     </div>`;
                 } else {
                     items.forEach(function (issue) {
-                        const cfg       = issue.urgent ? urgentColor : (priorityColors[issue.priority] || priorityColors.low);
-                        const badge     = issue.urgent ? 'URGENT' : String(issue.priority || 'low').toUpperCase();
-                        const stStyle   = statusStyles[issue.status] || statusStyles.pending;
-                        const stLabel   = statusLabels[issue.status] || 'Pending';
-                        const meta      = 'Reported by: <strong style="color:#64748b;">' + (issue.creator || 'Unknown') + '</strong>'
+                        const cfg     = issue.urgent ? urgentColor : (priorityColors[issue.priority] || priorityColors.low);
+                        const badge   = issue.urgent ? 'URGENT' : String(issue.priority || 'low').toUpperCase();
+                        const stStyle = statusStyles[issue.status] || statusStyles.pending;
+                        const stLabel = statusLabels[issue.status] || 'Pending';
+                        const meta    = 'Reported by <strong>' + (issue.creator || 'Unknown') + '</strong>'
                             + (issue.time_ago   ? ' &middot; ' + issue.time_ago   : '')
                             + (issue.department ? ' &middot; ' + issue.department : '');
 
-                        let assigneesHtml = '';
-                        if (!issue.is_self && issue.assignees && issue.assignees.length) {
-                            assigneesHtml = '<div style="display:flex;align-items:center;gap:2px;margin-top:7px;flex-wrap:wrap;"><span style="font-size:10px;color:#94a3b8;margin-right:3px;">Assigned:</span>';
+                        const hasAssignees = !issue.is_self && issue.assignees && issue.assignees.length;
+                        let peopleHtml = '';
+                        if (issue.is_self) {
+                            peopleHtml = '<span class="otd-tag"><i class="fas fa-user"></i> Personal</span>';
+                        } else if (!hasAssignees) {
+                            peopleHtml = '<span class="otd-tag is-soon"><i class="fas fa-user-slash"></i> Unassigned</span>';
+                        } else {
+                            peopleHtml = '<span class="otd-avs">';
                             issue.assignees.slice(0, 5).forEach(function (a) {
                                 const av = a.image || ('https://ui-avatars.com/api/?name=' + encodeURIComponent(a.name) + '&size=22&background=4f46e5&color=fff');
-                                assigneesHtml += `<img src="${av}" style="width:22px;height:22px;border-radius:50%;border:1.5px solid white;object-fit:cover;margin-right:-4px;" title="${a.name}">`;
+                                peopleHtml += `<img src="${av}" alt="${a.name}" title="${a.name}">`;
                             });
                             if (issue.assignees.length > 5) {
-                                assigneesHtml += `<span style="width:22px;height:22px;border-radius:50%;background:#e5e7eb;color:#374151;font-size:9px;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid white;font-weight:700;margin-right:4px;">+${issue.assignees.length - 5}</span>`;
+                                peopleHtml += `<b>+${issue.assignees.length - 5}</b>`;
                             }
-                            assigneesHtml += '</div>';
+                            peopleHtml += '</span>';
                         }
 
-                        const clPct = issue.checklists_total
-                            ? Math.round(issue.checklists_checked / issue.checklists_total * 100)
-                            : 0;
-                        const clBadge = (issue.checklists_total > 0)
-                            ? `<span onclick="openDashDetailsModal(${issue.id})" style="display:inline-flex;align-items:center;gap:5px;margin-top:5px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#eef2ff;color:#4f46e5;cursor:pointer;border:1px solid #c7d2fe;">
-                                <i class="fas fa-list-check"></i> ${issue.checklists_checked}/${issue.checklists_total} done
-                                <span style="display:inline-block;width:38px;height:4px;background:#c7d2fe;border-radius:999px;overflow:hidden;vertical-align:middle;">
-                                    <span style="display:block;height:100%;width:${clPct}%;background:${clPct === 100 ? '#16a34a' : '#4f46e5'};"></span>
-                                </span>
-                                ${clPct}%
+                        const clTotal = issue.checklists_total || 0;
+                        const clDone  = issue.checklists_checked || 0;
+                        const clPct   = clTotal ? Math.round(clDone / clTotal * 100) : 0;
+                        const clChip  = clTotal > 0
+                            ? `<span class="otd-tag otd-tag-prog" title="Show checklist">
+                                   <i class="fas fa-list-check"></i> ${clDone}/${clTotal}
+                                   <span class="otd-bar"><span class="${clPct === 100 ? 'is-full' : ''}" style="width:${clPct}%;"></span></span>
+                                   ${clPct}%
                                </span>`
                             : '';
 
-                        html += `<div style="padding:14px 20px;border-bottom:1px solid #f8fafc;border-left:3px solid ${cfg.left};">
-                            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
-                                <div style="display:flex;align-items:flex-start;gap:12px;min-width:0;flex:1;">
-                                    <div style="width:38px;height:38px;border-radius:11px;background:${cfg.iconBg};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-                                        <i class="${cfg.icon}" style="color:${cfg.iconColor};font-size:15px;"></i>
-                                    </div>
-                                    <div style="min-width:0;flex:1;">
-                                        <div style="font-size:13px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${issue.title}</div>
-                                        <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${meta}</div>
-                                        ${clBadge}
-                                        ${assigneesHtml}
-                                    </div>
-                                </div>
-                                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-                                    <span style="font-size:10px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap;letter-spacing:.4px;${cfg.badge}">${badge}</span>
-                                    <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;${stStyle}">${stLabel}</span>
-                                    <div style="display:flex;gap:5px;margin-top:2px;">
-                                        <button onclick="openDashStatusModal(${issue.id}, '${issue.status}')" style="font-size:11px;font-weight:600;color:#4f46e5;background:#eef2ff;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;"><i class="fas fa-sync-alt"></i> Status</button>
-                                        <button onclick="openDashDetailsModal(${issue.id})" style="font-size:11px;font-weight:600;color:#374151;background:#f1f5f9;border:none;border-radius:6px;padding:3px 9px;cursor:pointer;"><i class="fas fa-eye"></i> Details</button>
-                                    </div>
+                        const dueRaw     = issue.due_date || null;
+                        const isOverdue  = dueRaw ? (new Date(dueRaw.split('-')[0], +dueRaw.split('-')[1] - 1, +dueRaw.split('-')[2]) < new Date(new Date().setHours(0, 0, 0, 0))) : false;
+                        const unassigned = (!issue.is_self && (!issue.assignees || !issue.assignees.length)) ? 1 : 0;
+
+                        html += `<div class="otd-row" data-todo-id="${issue.id}"
+                             style="--otd-accent:${cfg.left};--otd-soft:${cfg.iconBg};"
+                             data-priority="${issue.priority || 'low'}"
+                             data-overdue="${isOverdue ? 1 : 0}"
+                             data-urgent="${issue.urgent ? 1 : 0}"
+                             data-unassigned="${unassigned}">
+                            <div class="otd-ico"><i class="${cfg.icon}"></i></div>
+                            <div class="otd-body">
+                                <div class="otd-title" title="${issue.title}">${issue.title}</div>
+                                <div class="otd-meta">${meta}</div>
+                                <div class="otd-tags">${otdDueChip(dueRaw)}${clChip}${peopleHtml}</div>
+                            </div>
+                            <div class="otd-side">
+                                <span class="otd-badge" style="${cfg.badge}">${badge}</span>
+                                <span class="otd-st" style="${stStyle}">${stLabel}</span>
+                                <div class="otd-acts">
+                                    <button type="button" class="otd-act otd-act-go" data-otd-stop onclick="openDashStatusModal(${issue.id}, '${issue.status}')"><i class="fas fa-sync-alt"></i> Status</button>
+                                    <button type="button" class="otd-act otd-act-toggle"><i class="fas fa-chevron-down otd-caret"></i> Details</button>
+                                    ${otdCanEdit ? `<button type="button" class="otd-act otd-act-edit" data-otd-stop onclick="openDashEditModal(${issue.id})"><i class="fas fa-edit"></i> Edit</button>` : ''}
                                 </div>
                             </div>
+                            <div class="otd-panel"></div>
                         </div>`;
                     });
                 }
 
+                html += '<div class="otd-none"><i class="fas fa-filter"></i> Nothing matches this filter.</div>';
+
                 $('#admin-todo-active-list').html(html);
                 $('#emp-todo-active-list').html(html);
+
+                // Whichever list exists on this page: refresh its chip counts and
+                // re-apply the filter the user had selected before the reload.
+                ['admin-todo-active-list', 'emp-todo-active-list'].forEach(function (id) {
+                    otdSyncCounts(id);
+                    otdApplyFilter(id);
+                });
+
+                otdRestoreOpenRow();
             });
         }
 
@@ -4594,7 +5881,7 @@
             // The sub-item list sits inside the parent now, so a click on a
             // sub-item, the drag grip or a status control would otherwise bubble
             // up here and fold the parent out from under the user.
-            if ($(e.target).closest('.dash-cl-children, .dash-cl-handle, select, option').length) return;
+            if ($(e.target).closest('.dash-cl-children, .dash-cl-handle, .otd-cl-form, .otd-cl-subbtn, .otd-cl-rowacts, .otd-cl-renameinput, select, option, input, button').length) return;
 
             const $row      = $(this);
             const collapsed = $row.attr('data-collapsed') === '1';
@@ -4617,42 +5904,156 @@
             });
         }
 
+        // The add row is not a checklist item, so it must never drift into the
+        // middle of a group after a drop.
+        function dashClPinAddRows() {
+            $('#dashClList').find('.dash-cl-children').each(function () {
+                for (var i = 0; i < this.children.length; i++) {
+                    var el = this.children[i];
+                    if (el.classList.contains('otd-cl-addrow') && el !== this.lastElementChild) {
+                        this.appendChild(el);
+                        break;
+                    }
+                }
+            });
+        }
+
         function dashClPersistOrder() {
-            const ids = [];
+            // Sends {id, parent_id} pairs rather than a flat id list, because a
+            // row can now be dragged OUT of one group and INTO another — the flat
+            // shape could only ever express a reorder, never a move.
+            const items = [];
+
             $('#dashClList').children('.dash-cl-node').each(function () {
-                ids.push($(this).data('checklist-id'));
+                const topId = $(this).data('checklist-id');
+                items.push({ id: topId, parent_id: '' });
+
                 $(this).children('.dash-cl-children').children('.dash-cl-node').each(function () {
-                    ids.push($(this).data('checklist-id'));
+                    items.push({ id: $(this).data('checklist-id'), parent_id: topId });
                 });
             });
 
             $.ajax({
                 url: dashTodoBaseUrl + '/' + window._dashDetailTodoId + '/checklists/reorder',
                 method: 'POST',
-                data: { _token: todoListCsrf, _method: 'PATCH', order: ids },
-                success: function () { refreshTodoList(); },
-                error: function () { alert('Could not save the new order. Reopen the todo to see the stored arrangement.'); }
+                data: { _token: todoListCsrf, _method: 'PATCH', items: items },
+                success: function (res) {
+                    if (!res || res.success === false) {
+                        alert((res && res.message) || 'Could not save the new arrangement.');
+                        refreshTodoList();
+                        return;
+                    }
+
+                    // Repaint what actually changed rather than re-fetching and
+                    // re-rendering the panel. A rebuild of a 200-row checklist after
+                    // every drop is what made this feel sluggish.
+                    otdClRepaintAfterReorder(res);
+                },
+                error: function (xhr) {
+                    var m = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : null;
+                    alert(m || 'Could not save the new order. Reopen the todo to see the stored arrangement.');
+                    // Put the list back to whatever the server actually holds,
+                    // rather than leaving the screen showing a move that failed.
+                    refreshTodoList();
+                }
             });
+        }
+
+        function otdClRepaintAfterReorder(res) {
+            var panel = document.querySelector('.otd-row.is-open .otd-panel');
+            if (!panel) return;
+
+            // A heading that lost its last sub-item is no longer a heading: it needs
+            // a status select where its derived badge is, and only a re-render gives
+            // it one. That is rare, so it is the only case that pays for a rebuild.
+            var emptied = panel.querySelectorAll('.dash-cl-parent-row');
+            for (var i = 0; i < emptied.length; i++) {
+                if (!emptied[i].querySelector('.dash-cl-children > .dash-cl-node')) {
+                    refreshTodoList();
+                    return;
+                }
+            }
+
+            (res.parents || []).forEach(function (p) {
+                var badge = panel.querySelector('.dash-cl-parent-badge[data-id="' + p.id + '"]');
+                if (!badge) return;
+                badge.setAttribute('style', 'font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;' + (DASH_CL_ST[p.status] || DASH_CL_ST.pending));
+                badge.textContent = DASH_CL_LB[p.status] || 'Pending';
+            });
+
+            var t = res.totals || {};
+            if (typeof t.total !== 'number') return;
+
+            var pct = t.total ? Math.round(t.checked / t.total * 100) : 0;
+
+            var prog = panel.querySelector('#dashClProgress');
+            if (prog) prog.innerHTML = t.checked + '/' + t.total + ' done · <span>' + pct + '%</span>';
+
+            var bar = panel.querySelector('#dashClBar');
+            if (bar) { bar.style.width = pct + '%'; bar.style.background = pct === 100 ? '#16a34a' : '#4f46e5'; }
+
+            // The collapsed row above the panel carries the same numbers.
+            var row  = panel.closest('.otd-row');
+            var chip = row ? row.querySelector('.otd-tag-prog') : null;
+            if (!chip) return;
+
+            var fill = chip.querySelector('.otd-bar span');
+            chip.childNodes[2].nodeValue = ' ' + t.checked + '/' + t.total + ' ';
+            chip.lastChild.nodeValue = ' ' + pct + '% ';
+            if (fill) { fill.style.width = pct + '%'; fill.className = pct === 100 ? 'is-full' : ''; }
         }
 
         function dashClInitSortable() {
             if (typeof Sortable === 'undefined') return;
 
+            // One shared group across every list, so any row can be grabbed and
+            // moved anywhere: reordered where it sits, dropped into another
+            // group, or pulled back out to the top level. put() is the only thing
+            // holding the tree to two levels, which is what the renderer, the
+            // renumbering and storeChecklist() all assume.
+            const group = {
+                name: 'dash-cl',
+                pull: true,
+                put: function (to, from, dragged) {
+                    const intoGroup = to.el && to.el.classList.contains('dash-cl-children');
+                    if (!intoGroup) return true;
+
+                    // A row that carries sub-items of its own would become the
+                    // third level, so it may only ever land at the top.
+                    return !dragged.querySelector('.dash-cl-children > .dash-cl-node');
+                }
+            };
+
             const opts = {
-                handle: '.dash-cl-handle',
-                animation: 150,
+                // No `handle`: the whole row is the grab surface, so a task can be
+                // picked up anywhere on it rather than only by the grip. `filter`
+                // carves out the controls that must keep behaving as controls, and
+                // preventOnFilter:false is what stops Sortable calling
+                // preventDefault() on them — without it the selects would not open.
+                filter: '.otd-cl-addrow, .otd-cl-rowacts, .otd-cl-form, .otd-cl-subbtn, select, option, input, textarea, button, a',
+                preventOnFilter: false,
+                animation: 110,
+                easing: 'cubic-bezier(.22,.61,.36,1)',
+                delay: 0,
+                touchStartThreshold: 4,
                 ghostClass: 'cl-ghost',
+                chosenClass: 'otd-cl-chosen',
+                dragClass: 'otd-cl-drag',
                 fallbackOnBody: true,
-                onEnd: function () { dashClRenumber(); dashClPersistOrder(); }
+                swapThreshold: 0.7,
+                emptyInsertThreshold: 16,
+                onEnd: function () {
+                    dashClPinAddRows();
+                    dashClRenumber();
+                    dashClPersistOrder();
+                }
             };
 
             const list = document.getElementById('dashClList');
-            if (list) Sortable.create(list, $.extend({ group: 'dash-cl-top' }, opts));
+            if (list) Sortable.create(list, $.extend({ group: group }, opts));
 
-            // A group name per parent is what keeps a sub-item inside its own
-            // parent for now.
             $('#dashClList').find('.dash-cl-children').each(function () {
-                Sortable.create(this, $.extend({ group: 'dash-cl-kids-' + $(this).data('parent') }, opts));
+                Sortable.create(this, $.extend({ group: group }, opts));
             });
         }
 
@@ -4744,13 +6145,33 @@
                 assigneesHtml = '<div style="font-size:12px;color:#94a3b8;padding:10px 0;">No assignees</div>';
             }
 
-            const dueDateStr   = d.due_date   ? `<div style="padding:10px 14px;background:#f8fafc;border-radius:10px;"><div style="font-size:10px;color:#94a3b8;font-weight:600;margin-bottom:3px;">DUE DATE</div><div style="font-size:13px;font-weight:600;color:#1e293b;">${d.due_date}</div></div>` : '';
-            const startDateStr = d.start_date ? `<div style="padding:10px 14px;background:#f8fafc;border-radius:10px;"><div style="font-size:10px;color:#94a3b8;font-weight:600;margin-bottom:3px;">START DATE</div><div style="font-size:13px;font-weight:600;color:#1e293b;">${d.start_date}</div></div>` : '';
+            // The /edit endpoint returns the model as-is, so these arrive as full
+            // ISO timestamps. The date cast stores midnight Dhaka, which serialises
+            // as 18:00 the PREVIOUS day in UTC — slicing the first 10 characters
+            // would print the wrong day, so read it back through the local clock,
+            // exactly as the due-date chip on the row does.
+            const dashDay = function (v) {
+                if (!v) return '';
+                var dt = new Date(v);
+                if (isNaN(dt.getTime())) return String(v).substr(0, 10);
+                var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                return String(dt.getDate()).padStart(2, '0') + ' ' + m[dt.getMonth()] + ' ' + dt.getFullYear();
+            };
+
+            const dueDateStr   = d.due_date   ? `<div style="padding:10px 14px;background:#f8fafc;border-radius:10px;"><div style="font-size:10px;color:#94a3b8;font-weight:600;margin-bottom:3px;">DUE DATE</div><div style="font-size:13px;font-weight:600;color:#1e293b;">${dashDay(d.due_date)}</div></div>` : '';
+            const startDateStr = d.start_date ? `<div style="padding:10px 14px;background:#f8fafc;border-radius:10px;"><div style="font-size:10px;color:#94a3b8;font-weight:600;margin-bottom:3px;">START DATE</div><div style="font-size:13px;font-weight:600;color:#1e293b;">${dashDay(d.start_date)}</div></div>` : '';
             const creatorName  = (d.creator && d.creator.name) ? d.creator.name : 'Unknown';
             const deptName     = (d.department && d.department.name) ? d.department.name : '—';
 
             let checklistHtml = '';
-            if (d.checklists && d.checklists.length) {
+
+            // The checklist header renders whether or not there are items yet,
+            // otherwise a todo with an empty checklist offers no way to start one.
+            var clHasItems = !!(d.checklists && d.checklists.length);
+            var itemsHtml  = '';
+            var total = 0, checked = 0, pct = 0;
+
+            if (clHasItems) {
                 const clDay    = function (v) { return v ? String(v).substr(0, 10) : ''; };
                 const clStatus = function (it) { return it.is_checked ? 'completed' : (it.status || 'pending'); };
 
@@ -4758,9 +6179,9 @@
                 const hasChild = {};
                 d.checklists.forEach(function (it) { if (it.parent_id) hasChild[it.parent_id] = true; });
                 const leaves  = d.checklists.filter(function (it) { return !hasChild[it.id]; });
-                const total   = leaves.length;
-                const checked = leaves.filter(function (c) { return clStatus(c) === 'completed'; }).length;
-                const pct     = total ? Math.round((checked / total) * 100) : 0;
+                total   = leaves.length;
+                checked = leaves.filter(function (c) { return clStatus(c) === 'completed'; }).length;
+                pct     = total ? Math.round((checked / total) * 100) : 0;
 
                 const byId = {}, roots = [];
                 d.checklists.forEach(function (it) { byId[it.id] = { item: it, children: [] }; });
@@ -4803,51 +6224,85 @@
                     // Sub-items are nested inside their parent, so dragging a
                     // parent takes its own sub-items along and one can never be
                     // dropped above the parent it belongs to.
+                    const kidsAdd = `<li class="otd-cl-addrow"><button type="button" class="otd-cl-addsub" data-otd-add-parent="${item.id}"><i class="fas fa-plus"></i> Add sub-task</button></li>`;
+
+                    // The add row is not a .dash-cl-node, so renumbering and the
+                    // drag-order payload both skip it, and it has no drag handle.
                     const kids = isParent
-                        ? `<ul class="dash-cl-children" data-parent="${item.id}" style="list-style:none;margin:8px 0 0 22px;padding:0;display:none;">${node.children.map(function (c) { return renderClNode(c, depth + 1); }).join('')}</ul>`
+                        ? `<ul class="dash-cl-children" data-parent="${item.id}" style="list-style:none;margin:8px 0 0 22px;padding:0;display:none;">${node.children.map(function (c) { return renderClNode(c, depth + 1); }).join('')}${kidsAdd}</ul>`
                         : '';
 
-                    return `<li class="dash-cl-node${isParent ? ' dash-cl-parent-row' : ''}" data-checklist-id="${item.id}"${isParent ? ` data-parent="${item.id}" data-collapsed="1"` : ''} style="padding:8px 10px;border-radius:8px;border:1px solid #f1f5f9;margin-bottom:6px;${depth ? 'border-left:3px solid #e0e7ff;' : ''}background:#fff;transition:background .15s;">
+                    // Rename and delete sit on every row at every level. They stay
+                    // faint until the row is hovered so a long checklist is not a
+                    // wall of icons.
+                    const rowActions = `<span class="otd-cl-rowacts"><button type="button" class="otd-cl-ren" data-id="${item.id}" title="Rename"><i class="fas fa-pen"></i></button><button type="button" class="otd-cl-del" data-id="${item.id}" data-kids="${node.children.length}" title="Delete"><i class="fas fa-trash-can"></i></button></span>`;
+
+                    // Only top-level rows offer it — storeChecklist() refuses a
+                    // third level, so the control must not appear where it would fail.
+                    const addSub = depth === 0
+                        ? `<button type="button" class="otd-cl-subbtn" data-otd-add-parent="${item.id}" title="Add a sub-task under this"><i class="fas fa-plus"></i> Sub</button>`
+                        : '';
+
+                    return `<li class="dash-cl-node${isParent ? ' dash-cl-parent-row' : ''}" data-checklist-id="${item.id}"${isParent ? ` data-parent="${item.id}" data-collapsed="1"` : ''} style="${depth ? 'border-left:3px solid #e0e7ff;' : ''}">
                         <div style="display:flex;align-items:flex-start;gap:10px;">
-                            <i class="fas fa-grip-vertical dash-cl-handle" style="color:#cbd5e1;font-size:11px;margin-top:4px;cursor:grab;flex-shrink:0;"></i>
+                            <i class="fas fa-grip-vertical dash-cl-handle" title="Drag to move"></i>
                             <span class="dash-cl-serial" style="font-size:11px;font-weight:700;color:#94a3b8;margin-top:2px;min-width:26px;flex-shrink:0;"></span>
                             ${caret}
                             <div style="flex:1;min-width:0;">
                                 <div class="dash-cl-label" style="font-size:13px;${lineThrough}${isParent ? 'font-weight:600;' : ''}">${item.title}</div>
                                 <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:4px;">
-                                    <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;${pColors[ipr] || pColors.medium}">${ipr.toUpperCase()}</span>
+                                                    <select class="otd-cl-prio-sel" data-id="${item.id}" data-prev="${ipr}" title="Priority" style="${pColors[ipr] || pColors.medium}">
+                                        <option value="low" ${ipr === 'low' ? 'selected' : ''}>LOW</option>
+                                        <option value="medium" ${ipr === 'medium' ? 'selected' : ''}>MEDIUM</option>
+                                        <option value="high" ${ipr === 'high' ? 'selected' : ''}>HIGH</option>
+                                    </select>
                                     ${dates}
                                     ${subCount}
                                 </div>
                             </div>
+                            ${rowActions}
+                            ${addSub}
                             ${control}
                         </div>
                         ${kids}
                     </li>`;
                 };
 
-                let itemsHtml = roots.map(function (n) { return renderClNode(n, 0); }).join('');
-                checklistHtml = `
-                    <div style="margin-bottom:16px;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                            <div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;"><i class="fas fa-list-check" style="color:#4f46e5;margin-right:4px;"></i>Checklist</div>
-                            <div style="font-size:11px;color:#64748b;font-weight:600;" id="dashClProgress">${checked}/${total} done · <span style="color:#4f46e5;">${pct}%</span></div>
-                        </div>
-                        <div style="height:6px;background:#f1f5f9;border-radius:999px;margin-bottom:10px;overflow:hidden;">
-                            <div id="dashClBar" style="height:100%;width:${pct}%;background:${pct === 100 ? '#16a34a' : '#4f46e5'};border-radius:999px;transition:width .3s;"></div>
-                        </div>
-                        <ul style="list-style:none;padding:0;margin:0;" id="dashClList">${itemsHtml}</ul>
-                    </div>`;
+                itemsHtml = roots.map(function (n) { return renderClNode(n, 0); }).join('');
             }
 
-            return `
-                <div style="margin-bottom:16px;">
-                    <div style="font-size:17px;font-weight:800;color:#0f172a;margin-bottom:8px;">${d.title}</div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${pColors[d.priority] || pColors.low}">${(d.priority || 'low').toUpperCase()}</span>
-                        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;${stColors[d.status] || stColors.pending}">${stLabels[d.status] || 'Pending'}</span>
+            checklistHtml = `
+                <div class="otd-cl">
+                    <div class="otd-cl-head">
+                        <div class="otd-cl-label"><i class="fas fa-list-check"></i> Checklist</div>
+                        <div class="otd-cl-prog" id="dashClProgress">${checked}/${total} done · <span>${pct}%</span></div>
+                        <button type="button" class="otd-cl-addbtn" data-otd-add-parent="">
+                            <i class="fas fa-circle-plus"></i> Add task
+                        </button>
                     </div>
-                </div>
+                    <div class="otd-cl-track">
+                        <div id="dashClBar" style="width:${pct}%;background:${pct === 100 ? '#16a34a' : '#4f46e5'};"></div>
+                    </div>
+                    <ul id="dashClList">${itemsHtml}</ul>
+                    ${clHasItems ? '' : '<div class="otd-cl-none">No checklist yet — add the first task.</div>'}
+
+                    <div class="otd-cl-form" data-parent="" hidden>
+                        <i class="fas fa-turn-up otd-cl-form-hint"></i>
+                        <input type="text" class="otd-cl-title" maxlength="255" placeholder="What needs doing?">
+                        <select class="otd-cl-priority" title="Priority">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                        <button type="button" class="otd-cl-save"><i class="fas fa-check"></i> Add</button>
+                        <button type="button" class="otd-cl-cancel" title="Cancel"><i class="fas fa-xmark"></i></button>
+                    </div>
+                    <div class="otd-cl-err" hidden></div>
+                </div>`;
+
+            // No title or status badges here: the collapsed row directly above
+            // already shows the title, the priority and the status.
+            return `
                 ${d.description ? `<div style="margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:10px;font-size:13px;color:#374151;line-height:1.6;">${d.description}</div>` : ''}
                 ${checklistHtml}
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -5015,9 +6470,7 @@
                             <label>Bank Account <span style="color:red;">*</span></label>
                             <select name="bank_id" id="dashMpBank" required style="width:100%;padding:8px 11px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;">
                                 <option value="">— Select Bank —</option>
-                                @foreach($banks as $bank)
-                                    <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                @endforeach
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                             </select>
                         </div>
                         <div class="dash-form-group">
@@ -5152,5 +6605,108 @@
             form.action = '/' + _dashRole + '/payment-schedules/' + id + '/cancel';
             form.submit();
         }
+
+        @if(Auth::user()->is_super_admin || Auth::user()->hasRole('super admin'))
+        var maBaseUrl = @json(url('/' . request()->route('role') . '/manual-attendance-requests'));
+        var maCsrf = @json(csrf_token());
+
+        function maEscape(value) {
+            return String(value == null ? '' : value).replace(/[&<>'"]/g, function(char) {
+                return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char];
+            });
+        }
+
+        function maOpen() {
+            var modal = document.getElementById('manualAttendanceModal');
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            maLoad();
+        }
+
+        function maClose() {
+            var modal = document.getElementById('manualAttendanceModal');
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        function maLoad() {
+            var list = document.getElementById('maRequestList');
+            list.innerHTML = '<div class="ma-empty">Loading requests...</div>';
+            fetch(maBaseUrl + '?status=pending&_=' + Date.now(), {
+                cache:'no-store',
+                headers:{'Accept':'application/json','Cache-Control':'no-cache'}
+            })
+                .then(function(response) {
+                    return response.json().catch(function() { return {}; }).then(function(payload) {
+                        if (!response.ok) throw new Error(payload.message || 'Could not load requests.');
+                        return payload;
+                    });
+                })
+                .then(function(payload) {
+                    var rows = payload.data || [];
+                    document.getElementById('maPendingCount').textContent = rows.length;
+                    if (!rows.length) {
+                        list.innerHTML = '<div class="ma-empty"><i class="fas fa-check-circle" style="font-size:25px;color:#22c55e;display:block;margin-bottom:8px;"></i>No pending manual attendance requests.</div>';
+                        return;
+                    }
+                    list.innerHTML = rows.map(function(item) {
+                        var date = String(item.submitted_date || '').slice(0, 10);
+                        var time = String(item.submitted_time || '').slice(0, 5);
+                        var requestedDate = String(item.requested_date || '').slice(0, 10);
+                        var requestedTime = String(item.requested_time || '').slice(0, 5);
+                        var action = item.action === 'check_out' ? 'Check-out' : 'Check-in';
+                        var employee = item.user || {};
+                        return '<div class="ma-request" id="ma-request-' + item.id + '">' +
+                            '<div class="ma-request-top"><div><div class="ma-name">' + maEscape(employee.name || 'Employee') + '</div>' +
+                            '<div class="ma-meta">' + maEscape(employee.employee_id_no || '') + ' &middot; Server received: ' + maEscape(item.created_at || '') + '<br>Employee requested: ' + maEscape(requestedDate + ' ' + requestedTime) + '</div></div>' +
+                            '<span class="ma-pill">' + action + '</span></div>' +
+                            '<div class="ma-form"><div class="ma-field"><label>Approval date (maximum 3 days back)</label><input type="date" class="ma-date" min="{{ now()->subDays(3)->toDateString() }}" max="{{ now()->toDateString() }}" value="' + maEscape(date) + '"></div>' +
+                            '<div class="ma-field"><label>Approval time (defaults to server time)</label><input type="time" class="ma-time" value="' + maEscape(time) + '"></div>' +
+                            '<div class="ma-field ma-field-wide"><label>Reason / note (required when changing time or rejecting)</label><textarea class="ma-note" rows="2" placeholder="Write a reason when necessary"></textarea></div>' +
+                            '<div class="ma-actions"><button type="button" class="ma-reject" onclick="maReview(' + item.id + ',\'reject\')">Reject</button>' +
+                            '<button type="button" class="ma-approve" onclick="maReview(' + item.id + ',\'approve\')">Approve</button></div></div></div>';
+                    }).join('');
+                })
+                .catch(function(error) { list.innerHTML = '<div class="ma-empty" style="color:#dc2626;">' + maEscape(error.message) + '</div>'; });
+        }
+
+        function maReview(id, decision) {
+            var card = document.getElementById('ma-request-' + id);
+            var body = {review_note: card.querySelector('.ma-note').value.trim()};
+            if (decision === 'reject' && !body.review_note) {
+                Swal.fire('Reason required', 'Please write a reason before rejecting.', 'warning'); return;
+            }
+            if (decision === 'approve') {
+                body.approved_date = card.querySelector('.ma-date').value;
+                body.approved_time = card.querySelector('.ma-time').value;
+                if (!body.approved_date || !body.approved_time) {
+                    Swal.fire('Date and time required', '', 'warning'); return;
+                }
+            }
+            var buttons = card.querySelectorAll('button');
+            buttons.forEach(function(button) { button.disabled = true; });
+            fetch(maBaseUrl + '/' + id + '/' + decision, {
+                method:'PATCH', headers:{'Accept':'application/json','Content-Type':'application/json','X-CSRF-TOKEN':maCsrf}, body:JSON.stringify(body)
+            }).then(function(response) {
+                return response.json().then(function(payload) {
+                    var errors = Object.values(payload.errors || {});
+                    var detail = errors.length ? (Array.isArray(errors[0]) ? errors[0][0] : errors[0]) : null;
+                    if (!response.ok) throw new Error(detail || payload.message || 'Request failed.');
+                    return payload;
+                });
+            }).then(function(payload) {
+                Swal.fire({icon:'success',title:decision === 'approve' ? 'Approved' : 'Rejected',text:payload.message,timer:1600,showConfirmButton:false});
+                maLoad();
+            }).catch(function(error) {
+                buttons.forEach(function(button) { button.disabled = false; });
+                Swal.fire('Unable to continue', error.message, 'error');
+            });
+        }
+
+        document.getElementById('manualAttendanceModal').addEventListener('click', function(event) {
+            if (event.target === this) maClose();
+        });
+        if (window.location.hash === '#manual-attendance-requests') maOpen();
+        @endif
     </script>
 @endsection

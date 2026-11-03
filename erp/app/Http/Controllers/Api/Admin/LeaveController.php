@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class LeaveController extends Controller
 {
@@ -78,13 +79,20 @@ class LeaveController extends Controller
      */
     public function store(Request $request)
     {
+        $leaveType = LeaveType::find($request->leave_type_id);
+
         $validator = Validator::make($request->all(), [
             'user_id' => 'required',
-            'leave_type_id' => 'required',
+            'leave_type_id' => 'required|exists:leave_types,id',
             'company_id' => 'required',
             'start_date' => 'required',
             'end_date' => 'required',
-            'status' => 'required'    
+            'status' => 'required',
+            'leave_time' => [
+                Rule::requiredIf((bool) ($leaveType->requires_time ?? false)),
+                'nullable',
+                'date_format:H:i,H:i:s',
+            ],
         ]);
 
         // If validation fails
@@ -96,7 +104,11 @@ class LeaveController extends Controller
             ]);
         }
 
-        if (Carbon::parse($request->end_date)->lt(Carbon::parse($request->start_date))) {
+        $leaveType = LeaveType::findOrFail($request->leave_type_id);
+
+        $endDate = ($leaveType->requires_time ?? false) ? $request->start_date : $request->end_date;
+
+        if (Carbon::parse($endDate)->lt(Carbon::parse($request->start_date))) {
             return response()->json([
                 'success' => false,
                 'message' => 'End date cannot be earlier than start date.'
@@ -106,12 +118,12 @@ class LeaveController extends Controller
         $exists = Leave::where('user_id', $request->user_id)
             // ->where('leave_type_id', $request->leave_type_id)
             ->where('status', 'pending')
-            ->where(function ($q) use ($request) {
-                $q->whereBetween('start_date', [$request->start_date, $request->end_date])
-                    ->orWhereBetween('end_date', [$request->start_date, $request->end_date])
-                    ->orWhere(function ($q2) use ($request) {
+            ->where(function ($q) use ($request, $endDate) {
+                $q->whereBetween('start_date', [$request->start_date, $endDate])
+                    ->orWhereBetween('end_date', [$request->start_date, $endDate])
+                    ->orWhere(function ($q2) use ($request, $endDate) {
                         $q2->where('start_date', '<=', $request->start_date)
-                            ->where('end_date', '>=', $request->end_date);
+                            ->where('end_date', '>=', $endDate);
                     });
             })
             ->exists();
@@ -128,7 +140,8 @@ class LeaveController extends Controller
             'leave_type_id' => $request->leave_type_id,
             'company_id' => $request->company_id,
             'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'end_date' => $endDate,
+            'leave_time' => ($leaveType->requires_time ?? false) ? $request->leave_time : null,
             'reason' => $request->reason,
             'status' => $request->status
         ]);
@@ -156,21 +169,33 @@ class LeaveController extends Controller
                 'message' => 'Data Info Not Found!'
             ]);
         }
+        $leaveType = LeaveType::find($request->leave_type_id);
+
         $validated = $request->validate([
             'user_id' => 'required',
-            'leave_type_id' => 'required',
+            'leave_type_id' => 'required|exists:leave_types,id',
             'company_id' => 'required',
             'start_date' => 'required',
             'end_date' => 'required',
-            'status' => 'required'
+            'status' => 'required',
+            'leave_time' => [
+                Rule::requiredIf((bool) ($leaveType->requires_time ?? false)),
+                'nullable',
+                'date_format:H:i,H:i:s',
+            ],
         ]);
+
+        $leaveType = LeaveType::findOrFail($request->leave_type_id);
+
+        $endDate = ($leaveType->requires_time ?? false) ? $request->start_date : $request->end_date;
 
         $data->update([
             'user_id' => $request->user_id,
             'leave_type_id' => $request->leave_type_id,
             'company_id' => $request->company_id,
             'start_date' => $request->start_date,
-            'end_date' => $request->end_date,
+            'end_date' => $endDate,
+            'leave_time' => ($leaveType->requires_time ?? false) ? $request->leave_time : null,
             'reason' => $request->reason,
             'status' => $request->status
         ]);

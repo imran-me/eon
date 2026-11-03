@@ -385,6 +385,16 @@ class PettyCashService
                     : 'Petty cash returned by ' . $custodian,
             ]);
 
+            // Issuing cash takes it out of the drawer or a bank, so the pot has to
+            // be able to cover it. A RETURN puts money back and is never refused.
+            if ($isIssue) {
+                \App\Models\Bank::assertCanCover(
+                    (int) $counterAccountId,
+                    (float) $amount,
+                    optional(\App\Models\Account::find($counterAccountId))->name ?: 'That cash account'
+                );
+            }
+
             // The float side always carries the party, because that is the only
             // thing separating one custodian's money from another's.
             JournalItem::create([

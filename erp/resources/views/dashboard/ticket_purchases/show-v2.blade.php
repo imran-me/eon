@@ -482,6 +482,7 @@
     <div class="signature-section">
         <div class="sig-container">
             <div style="font-family: cursive; font-size: 22px; color: var(--text-color);"></div>
+            <x-signature :company="$company" />
             <div class="sig-line">Authorized Signatory</div>
             <div style="font-size: 11px; margin-top: 5px; font-family: var(--text-font);">For, {{ $company->name }}</div>
         </div>

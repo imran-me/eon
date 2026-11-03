@@ -7,6 +7,7 @@
     @include('dashboard.ticket_purchases.edit-css')
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
 
     <div class="states-table bg-white rounded-lg shadow-md overflow-hidden" style="margin-top: 0">
         <div class="states-table-container">
@@ -50,7 +51,8 @@
                                 <label for="trip_type" class="block text-gray-700 text-sm font-bold mb-2">Trip Type*</label>
                                 <select id="trip_type" required name="trip_type" class="form-select w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 select2" style="width: 100%">
                                     <option value="one-way" {{ $data->trip_type == 'one-way' ? 'selected' : '' }}>One-way</option>
-                                    <option value="two-way" {{ $data->trip_type == 'two-way' ? 'selected' : '' }}>Two-way</option>    
+                                    <option value="two-way" {{ $data->trip_type == 'two-way' ? 'selected' : '' }}>Two-way</option>
+                                    <option value="multi-city" {{ $data->trip_type == 'multi-city' ? 'selected' : '' }}>Multi-city</option>
                                 </select>
                             </div>
                             <div class="mb-2">
@@ -61,7 +63,20 @@
                                     <option value="cancelled" {{ $data->status == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                     <option value="draft" {{ $data->status == 'draft' ? 'selected' : '' }}>Draft</option>
                                 </select>
-                            </div>                            
+                                @if($data->status === 'cancelled')
+                                    <p class="text-xs text-red-600 mt-1">Cancelled{{ $data->refund_amount !== null ? ' — airline refund ৳' . number_format((float) $data->refund_amount, 2) . ', penalty ৳' . number_format((float) $data->amount - (float) $data->refund_amount, 2) : '' }}. A cancelled ticket cannot be reopened.</p>
+                                @endif
+                            </div>
+                            @if($data->status !== 'cancelled')
+                            {{-- Shown when Status is switched to Cancelled: what the airline
+                                 gives back. Blank = the whole amount. The rest is the penalty;
+                                 nothing already posted is deleted (2026-09-28). --}}
+                            <div class="mb-2" id="refundBox" style="display:none;">
+                                <label for="refund_amount" class="block text-gray-700 text-sm font-bold mb-2">Airline refund</label>
+                                <input type="number" step="0.01" min="0" max="{{ (float) $data->amount }}" id="refund_amount" name="refund_amount" value="{{ number_format((float) $data->amount, 2, '.', '') }}" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Ticket cost ৳{{ number_format((float) $data->amount, 2) }}. Penalty = cost − refund. The refund is added to the vendor's balance (or the portal wallet); nothing already posted is removed.</p>
+                            </div>
+                            @endif
                             <div class="mb-2">
                                 <label for="currency" class="block text-gray-700 text-sm font-bold mb-2">Currency*</label>
                                 <input type="text" id="currency" required value="{{ $data->currency ?? '৳' }}" name="currency" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -73,6 +88,10 @@
                             <div class="mb-2">
                                 <label for="ticket_no" class="block text-gray-700 text-sm font-bold mb-2">Ticket No*</label>
                                 <input type="text" name="ticket_no" required value="{{ $data->ticket_no }}" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div class="mb-2">
+                                <label for="name_ticket_no" class="block text-gray-700 text-sm font-bold mb-2">Name Ticket No.</label>
+                                <input type="text" id="name_ticket_no" name="name_ticket_no" maxlength="100" value="{{ $data->name_ticket_no ?? '' }}" placeholder="e.g. 997-2345678901" class="form-input w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
                             </div>                            
                             <div class="mb-2">
                                 <label for="attachment" class="block text-gray-700 text-sm font-bold mb-2">Attachment</label>
@@ -172,9 +191,7 @@
                                             <label for="bank_id" class="block text-sm font-medium text-gray-700 mb-1"><strong>Payment Account</strong></label>
                                             <select name="bank_id" id="bank_id" class="form-control select2" style="width: 100%" {{ !empty($data->portal_id) ? 'disabled' : '' }}>
                                                 <option value="">Select</option>
-                                                @foreach ($banks as $bank)                                                    
-                                                    <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                                @endforeach
+                                                @include('partials.bank-options', ['banks' => $banks, 'selected' => $data->bank_id])
                                             </select>
                                         </div>
                                     </div>
@@ -199,6 +216,13 @@
                             </div>                                                        
                         </div>
                         
+                        <!-- Route Legs -->
+                        <div class="section-divider pt-4 pb-2 flex items-center justify-between">
+                            <h2 class="text-xl font-semibold text-gray-800">Route Legs <span class="text-sm font-normal text-gray-500">(optional — break a multi-city itinerary into priced segments)</span></h2>
+                            <button type="button" onclick="addLegRow()" class="btn btn-sm px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md hover:bg-blue-100 text-sm"><i class="fas fa-plus mr-1"></i> Add Leg</button>
+                        </div>
+                        <div id="legsContainer" class="space-y-3 mb-4"></div>
+
                         <div class="flex justify-end pt-2">
                             <button id="createpurchaseBtn" type="button" class="btn btn-success px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition duration-200" style="cursor: pointer">
                                 Submit
@@ -221,11 +245,33 @@
 
         $(document).ready(function() {
             $('.select2').select2();
+            // Airline refund: only while Status reads Cancelled on a live ticket.
+            const toggleRefund = () => $('#refundBox').toggle($('#status').val() === 'cancelled');
+            $('#status').on('change', toggleRefund);
+            toggleRefund();
             $.ajaxSetup({
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 }
             });
+
+            @php
+                // Precomputed as a plain variable first — @json(expr) splits expr
+                // on every top-level comma (it also accepts optional
+                // $options/$depth args), so an array literal with 3+ keys inlined
+                // directly gets silently truncated.
+                // travel_date has no Carbon cast on TicketLeg — it's a plain
+                // string, so optional(...)->format() would silently null it.
+                $existingLegsForJs = $data->legs->map(fn ($leg) => [
+                    'from_location' => $leg->from_location,
+                    'to_location' => $leg->to_location,
+                    'travel_date' => $leg->travel_date,
+                    'seat_number' => $leg->seat_number,
+                    'cost' => $leg->cost,
+                ]);
+            @endphp
+            const existingLegs = @json($existingLegsForJs);
+            existingLegs.forEach(function (leg) { addLegRow(leg); });
         });
 
 
@@ -335,8 +381,8 @@
             calculatePaidAmount()
         }
 
-        function manageMethod() {      
-            var isBankSelected = $('#bank_id').val();        
+        function manageMethod() {
+            var isBankSelected = $('#bank_id').val();
             var isPortalSelected = $('#isPortalSelected').val();
             if (isPortalSelected) {
                 $('#bank_id').val('').trigger('change').prop('disabled', true);
@@ -345,5 +391,30 @@
             }
         }
 
-    </script>    
+        // ── Route legs ──────────────────────────────────────────────────
+        let legIndex = 0;
+        function addLegRow(prefill) {
+            prefill = prefill || {};
+            const i = legIndex++;
+            const row = $(
+                '<div class="leg-row bg-gray-50 border border-gray-200 rounded-md p-3 grid grid-cols-1 md:grid-cols-6 gap-3 items-end" data-leg-index="' + i + '">' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">From</label>' +
+                        '<input type="text" name="legs[' + i + '][from_location]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" placeholder="e.g. DAC" value="' + (prefill.from_location || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">To</label>' +
+                        '<input type="text" name="legs[' + i + '][to_location]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" placeholder="e.g. IST" value="' + (prefill.to_location || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Travel Date</label>' +
+                        '<input type="text" data-dt name="legs[' + i + '][travel_date]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.travel_date || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Seat No</label>' +
+                        '<input type="text" name="legs[' + i + '][seat_number]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.seat_number || '') + '"></div>' +
+                    '<div><label class="block text-xs font-medium text-gray-600 mb-1">Cost (৳)</label>' +
+                        '<input type="number" min="0" step="0.01" name="legs[' + i + '][cost]" class="form-input w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm" value="' + (prefill.cost ?? '') + '"></div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<button type="button" onclick="$(this).closest(\'.leg-row\').remove()" class="text-red-600 hover:text-red-800 text-sm"><i class="fas fa-trash"></i> Remove</button>' +
+                    '</div>' +
+                '</div>'
+            );
+            $('#legsContainer').append(row);
+        }
+    </script>
+@include('partials.datetime-picker'){{-- date + optional time on operational date boxes (2026-09-30) --}}
 @endsection

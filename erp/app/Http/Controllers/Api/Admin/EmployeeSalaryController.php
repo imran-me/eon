@@ -10,6 +10,7 @@ use App\Models\Payslip;
 use App\Models\Payment;
 use App\Models\SalaryTemplate;
 use App\Models\User;
+use App\Traits\PostsEmployeeLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -20,6 +21,8 @@ use Auth;
 
 class EmployeeSalaryController extends Controller
 {
+    use PostsEmployeeLedger;
+
     /**
      * Display a listing of the resource.
      *
@@ -108,6 +111,29 @@ class EmployeeSalaryController extends Controller
             DB::transaction(function () use ($request) {
                 [$year, $month] = explode('-', $request->date);
                 $user = User::find($request->user_id);
+
+                // Derived, never trusted from the request — same rule as
+                // PayrollService::createEmployeeSalaryRecord() and both
+                // update() paths, so no client can file a net salary its own
+                // gross and deductions do not add up to.
+                $totalDeductions = round(
+                    (float) ($request->loan_deduction ?? 0)
+                        + (float) ($request->advance_salary_deduction ?? 0)
+                        + (float) ($request->absent_deduction ?? 0)
+                        + (float) ($request->leave_deduction ?? 0)
+                        + (float) ($request->late_deduction ?? 0)
+                        + (float) ($request->early_leave_deduction ?? 0),
+                    2
+                );
+
+                $netSalary = ceil(
+                    (float) ($request->gross_salary ?? 0)
+                        + (float) ($request->overtime_salary ?? 0)
+                        + (float) ($request->bonus_amount ?? 0)
+                        + (float) ($request->salary_adjustment ?? 0)
+                        - $totalDeductions
+                );
+
                 $empSalary = EmployeeSalary::create(
                     [
                         'user_id' => $request->user_id,
@@ -128,8 +154,8 @@ class EmployeeSalaryController extends Controller
                         'leave_deduction' => $request->leave_deduction ?? 0,
                         'late_deduction' => $request->late_deduction ?? 0,
                         'salary_adjustment' => $request->salary_adjustment ?? 0,
-                        'total_deductions' => $request->total_deductions ?? 0,
-                        'net_salary' => $request->net_salary ?? 0,
+                        'total_deductions' => $totalDeductions,
+                        'net_salary' => $netSalary,
                         'salary_generation_date' => $request->salary_generation_date,
                         'payment_method' => $request->payment_method,
                         'status' => $request->status,
@@ -191,6 +217,10 @@ class EmployeeSalaryController extends Controller
                 'message' => 'Employee salary created successfully.'
             ]);
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $th->getMessage()
@@ -226,17 +256,86 @@ class EmployeeSalaryController extends Controller
         try {
             DB::transaction(function () use ($request, $empSalary) {
                 [$year, $month] = explode('-', $request->date);
+
+                // ── AMOUNTS ───────────────────────────────────────────────
+                // Derived, never trusted from the request — the same rule the
+                // web controller and PayrollService follow. A client that
+                // posts its own net salary would otherwise be able to file a
+                // figure its own gross and deductions do not add up to, and
+                // the journal, schedule and ledger would all inherit it.
+                // Anything not sent keeps the value already on the row.
+                $posted = fn (string $field) => $request->filled($field)
+                    ? (float) $request->input($field)
+                    : (float) $empSalary->{$field};
+
+                $grossSalary      = $posted('gross_salary');
+                $overtimeSalary   = $posted('overtime_salary');
+                $bonusAmount      = $posted('bonus_amount');
+                $salaryAdjustment = $posted('salary_adjustment');
+                $loanDeduction = (float) $empSalary->loan_deduction;
+                $advanceDeduction = (float) $empSalary->advance_salary_deduction;
+                $absentDeduction = $posted('absent_deduction');
+                $leaveDeduction = $posted('leave_deduction');
+                $lateDeduction = $posted('late_deduction');
+                $earlyLeaveDeduction = $posted('early_leave_deduction');
+
+                if ($empSalary->user?->fixed_salary) {
+                    $absentDeduction = 0;
+                    $leaveDeduction = 0;
+                    $lateDeduction = 0;
+                    $earlyLeaveDeduction = 0;
+                }
+
+                $totalDeductions = round(
+                    $loanDeduction
+                        + $advanceDeduction
+                        + $absentDeduction
+                        + $leaveDeduction
+                        + $lateDeduction
+                        + $earlyLeaveDeduction,
+                    2
+                );
+
+                $netSalary = ceil(
+                    $grossSalary + $overtimeSalary + $bonusAmount + $salaryAdjustment - $totalDeductions
+                );
+                // ── END AMOUNTS ───────────────────────────────────────────
+
                 $empSalary->update([
                     'user_id' => $request->user_id,
                     'salary_template_id' => $request->salary_template_id,
                     'month' => (string) $month,
                     'year' => (int) $year,
-                    'gross_salary' => $request->gross_salary,
-                    'total_deductions' => $request->total_deductions ?? 0,
-                    'net_salary' => $request->net_salary ?? 0,
+                    'gross_salary' => $grossSalary,
+                    'overtime_salary' => $overtimeSalary,
+                    'bonus_amount' => $bonusAmount,
+                    'salary_adjustment' => $salaryAdjustment,
+                    'total_deductions' => $totalDeductions,
+                    'net_salary' => $netSalary,
                     'payment_date' => $request->payment_date,
                     'status' => $request->status
                 ]);
+
+                // ── EMPLOYEE LEDGER (auto) ────────────────────────────────
+                // The ledger is what the employee profile's "Company Owes"
+                // reads. Editing here used to move the salary row, the journal
+                // and the schedule while leaving it behind, so the balance and
+                // the payslips disagreed from that point on.
+                $this->syncEmployeeLedgerRow(
+                    $empSalary,
+                    'salary_earned',
+                    (int) $empSalary->user_id,
+                    [
+                        'entry_date' => optional($empSalary->salary_generation_date)->toDateString()
+                            ?? optional($empSalary->created_at)->toDateString()
+                            ?? now()->toDateString(),
+                        'reference' => \Carbon\Carbon::createFromDate((int) $empSalary->year, (int) $empSalary->month, 1)
+                            ->format('F Y') . ' salary (net of deductions)',
+                        'debit' => $empSalary->net_salary,
+                        'credit' => 0,
+                    ]
+                );
+                // ── END EMPLOYEE LEDGER ───────────────────────────────────
 
                 // ── JOURNAL UPDATE (auto) ─────────────────────────────────
                 $salaryExpenseAccount = \App\Models\Account::where('code', config('accounts.salary_expense'))->firstOrFail();
@@ -282,6 +381,12 @@ class EmployeeSalaryController extends Controller
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    \App\Models\Bank::assertCanCover(
+                        (int) $bank->account_id,
+                        (float) $empSalary->net_salary,
+                        $bank->name
+                    );
+
                     \App\Models\JournalItem::create([
                         'journal_entry_id' => $journal->id,
                         'account_id'       => $bank->account_id,
@@ -326,6 +431,10 @@ class EmployeeSalaryController extends Controller
                 }
             });
         } catch (\Throwable $th) {
+            if ($th instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $th;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => $th->getMessage()
@@ -382,6 +491,12 @@ class EmployeeSalaryController extends Controller
                     \App\Models\EmployeeLedger::where('source_type', EmployeeSalary::class)
                         ->where('source_id', $item->id)
                         ->forceDelete();
+
+                    // Same reason as the web controller's destroy(): the
+                    // running balance is stored per row, so removing one
+                    // leaves every later row — and the employee's "Company
+                    // Owes" — on the old arithmetic.
+                    $this->rebuildEmployeeLedgerBalances((int) $item->user_id);
                     // ── END EMPLOYEE LEDGER ─────────────────────────────────
 
                     Payment::where('user_id', $item->user_id)
@@ -493,12 +608,16 @@ class EmployeeSalaryController extends Controller
                 })->get();
             // Fetch Approved Leaves for this user
             $leaves = \DB::table('leaves')
-                ->where('user_id', $userId)
-                ->where('status', 'approved')
+                ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+                ->where('leaves.user_id', $userId)
+                ->where('leaves.status', 'approved')
+                ->whereNull('leaves.deleted_at')
                 ->where(function ($query) use ($startDate, $endDate) {
-                    $query->whereBetween('start_date', [$startDate, $endDate])
-                        ->orWhereBetween('end_date', [$startDate, $endDate]);
-                })->get();
+                    $query->whereBetween('leaves.start_date', [$startDate, $endDate])
+                        ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
+                })
+                ->select('leaves.*', 'leave_types.exempts_late_deduction')
+                ->get();
 
             foreach ($period as $date) {
                 $dateString = $date->format('Y-m-d');
@@ -506,6 +625,7 @@ class EmployeeSalaryController extends Controller
 
                 if (isset($dbAttendances[$dateString])) {
                     $record = $dbAttendances[$dateString];
+                    $approvedLateIn = $leaves->first(fn($l) => $l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date);
 
                     // --- CONSISTENT LATE CALCULATION ---
                     if ($record->check_in && $record->attendence_setting) {
@@ -516,7 +636,7 @@ class EmployeeSalaryController extends Controller
                             ->addMinutes($minutes);
                         // late min count
                         $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
-                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0) {
+                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0 && !$approvedLateIn) {
                             $record->status = 'Late ' . $lateMinutes . ' mins';
                             $summary['late']++;    // Increment Late
                             $summary['present']++; // Also increment Present (as they are physically there)
@@ -524,6 +644,9 @@ class EmployeeSalaryController extends Controller
                         } else {
                             $record->status = 'Present';
                             $summary['present']++;
+                        }
+                        if ($approvedLateIn) {
+                            $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                         }
                         if ($record->check_out && $record->attendence_setting) {
                             $checkOutTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_out);
@@ -575,7 +698,7 @@ class EmployeeSalaryController extends Controller
                             $summary[$status]++;
                         }
                     }
-                } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+                } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                     $record = (object)[
                         'date' => $dateString,
                         'shift' => $defaultShift,
@@ -636,20 +759,45 @@ class EmployeeSalaryController extends Controller
             $loan = \DB::table('loans')
                 ->where('user_id', $userId)
                 ->where('status', 'running')
+                ->where('remaining_amount', '>', 0)
                 ->where(function ($query) use ($startDate, $endDate) {
                     $query->where('start_date', '<=', $endDate)
-                        ->where('end_date', '>=', $startDate);
+                        ->where(function ($dates) use ($startDate) {
+                            $dates->whereNull('end_date')->orWhere('end_date', '>=', $startDate);
+                        });
                 })
+                ->orderBy('start_date')
+                ->orderBy('id')
                 ->first();
+            $loanDeduction = $loan
+                ? min((float) $loan->monthly_deduction, (float) $loan->remaining_amount)
+                : 0;
             $advance_salary = AdvanceSalary::where('user_id', $userId)
                 ->where('status', 'Approved')
                 ->where(function ($query) use ($dateInput) {
                     $query->where('month', $dateInput);
                 })
                 ->first();
-            $totalDeductions = $absent_deduction + $leave_deduction + $lateDeduction + $earlyOutDeduction + ($loan ? $loan->monthly_deduction : 0) + ($advance_salary ? $advance_salary->amount : 0);
+            // Fixed-salary employees are never docked for attendance — the
+            // same rule the web payroll applies in
+            // PayrollService::calculateAttendanceDeductions(). This endpoint
+            // keeps its own copy of that calculation, so the flag has to be
+            // honoured here too or the mobile app would quote a deduction
+            // the saved payslip will not contain. Loan and advance
+            // instalments still stand: they repay money already advanced.
+            $fixedSalary = (bool) ($user->fixed_salary ?? false);
+
+            if ($fixedSalary) {
+                $absent_deduction = 0;
+                $leave_deduction = 0;
+                $lateDeduction = 0;
+                $earlyOutDeduction = 0;
+            }
+
+            $totalDeductions = $absent_deduction + $leave_deduction + $lateDeduction + $earlyOutDeduction + $loanDeduction + ($advance_salary ? $advance_salary->amount : 0);
             return response()->json([
                 'summary' => $summary,
+                'fixed_salary' => $fixedSalary,
                 'advance_salary_id' => $advance_salary ? $advance_salary->id : null,
                 'loan_id' => $loan ? $loan->id : null,
                 'daily_salary' => $dailySalary,
@@ -659,7 +807,7 @@ class EmployeeSalaryController extends Controller
                 'late_deduction' => $lateDeduction,
                 'early_out_deduction' => $earlyOutDeduction,
                 'total_deductions' => round($totalDeductions, 2),
-                'loan_deduction' => $loan ? $loan->monthly_deduction : 0,
+                'loan_deduction' => $loanDeduction,
                 'advance_salary' => $advance_salary ? $advance_salary->amount : 0,
             ]);
         }

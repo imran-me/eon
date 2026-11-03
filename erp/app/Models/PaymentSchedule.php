@@ -38,6 +38,11 @@ class PaymentSchedule extends Model
         return $this->belongsTo(\App\Models\ProjectCategory::class);
     }
 
+    public function party()
+    {
+        return $this->belongsTo(User::class, 'party_id');
+    }
+
     public function schedulable()
     {
         return $this->morphTo();
@@ -88,10 +93,29 @@ class PaymentSchedule extends Model
      */
     public const NON_SETTLING_STATUSES = ['cancelled'];
 
+    /**
+     * Statuses that still expect money to move — a schedule in any of these
+     * is "open" and must be visible to anything that settles a payment.
+     *
+     * 'pending' alone is not enough: schedules:mark-overdue flips every
+     * past-due pending row to 'overdue' each night, and approve() moves a row
+     * to 'approved'. Matching only 'pending' therefore makes a schedule
+     * invisible the morning after its due date — which is how two ৳50,000
+     * salary payments in August 2026 bypassed every payslip they were meant
+     * to settle and became unattributed ledger credits.
+     */
+    public const OPEN_STATUSES = ['pending', 'overdue', 'approved'];
+
     /** Query form — restrict to schedules whose paid_amount is real money. */
     public function scopeSettled($q)
     {
         return $q->whereNotIn('status', self::NON_SETTLING_STATUSES);
+    }
+
+    /** Query form — schedules still waiting for money. */
+    public function scopeOpen($q)
+    {
+        return $q->whereIn('status', self::OPEN_STATUSES);
     }
 
     /**

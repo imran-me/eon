@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Http\Controllers\Controller;
 use App\Models\Log\CustomerLog;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\PartyAssignmentService;
 use App\Traits\ExportsPartyList;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class CustomerRoleController implements HasMiddleware
 {
@@ -25,7 +27,7 @@ class CustomerRoleController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view customer|view all customer', only: ['index', 'exportExcel', 'exportPdf']),
+            new Middleware('permission:view customer|view all customer', only: ['index', 'print']),
             new Middleware('permission:create customer', only: ['create', 'store']),
             new Middleware('permission:edit customer', only: ['edit', 'update']),
             new Middleware('permission:delete customer', only: ['destroy']),
@@ -39,17 +41,21 @@ class CustomerRoleController implements HasMiddleware
 
             if ($request->filled('search')) {
                 $query->where(function ($q) use ($request) {
-                    $q->where('name', 'like', '%' . $request->search . '%')
-                    ->orWhere('email', 'like', '%' . $request->search . '%')
-                    ->orWhere('phone', 'like', '%' . $request->search . '%');
+                    $q->where('name', 'like', '%'.$request->search.'%')
+                        ->orWhere('email', 'like', '%'.$request->search.'%')
+                        ->orWhere('phone', 'like', '%'.$request->search.'%');
                 });
+            }
+
+            if ($request->filled('service_category')) {
+                $query->whereJsonContains('service_categories', $request->service_category);
             }
 
             $query->whereHas('roles', function ($q) {
                 $q->where('name', 'customer');
             });
 
-            $customers = $query->latest()->paginate(10);
+            $customers = $query->latest()->paginate(10)->withQueryString();
 
             $balances = $this->latestBalances($customers->pluck('id'));
 
@@ -76,7 +82,7 @@ class CustomerRoleController implements HasMiddleware
     public function create()
     {
         try {
-            return view('dashboard.customer.create');
+            return view('dashboard.customer.create', PartyAssignmentService::formData(null, 'client'));
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to load create form.']);
         }
@@ -85,34 +91,44 @@ class CustomerRoleController implements HasMiddleware
     public function store(Request $request)
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), array_merge([
                 'name' => 'required|string|max:255',
                 'contact_person' => 'nullable|string|max:255',
-                'email' => 'required|email|unique:users,email',
+                'email' => 'nullable|email|unique:users,email',
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:500',
-                'password' => 'required|string|min:6|confirmed',
-            ]);
+                'service_categories' => in_array(2, array_map('intval', $request->input('company_ids', [])), true) ? 'required|array|min:1' : 'nullable|array',
+                'service_categories.*' => 'required|in:ticket,visa,flight,file,instructor,others|distinct',
+            ], PartyAssignmentService::rules()));
 
             if ($validator->fails()) {
                 return redirect()->back()->with('error', 'Please fix the validation errors.')->withErrors($validator)->withInput();
             }
 
+            DB::beginTransaction();
+
             $user = User::create([
                 'name' => $request->name,
-                'company_id' => 2,
+                'company_id' => null,
                 'contact_person' => $request->contact_person,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'address' => $request->address,
-                'password' => Hash::make($request->password ?? '1234568'),
+                'service_categories' => $request->service_categories,
+                'password' => Hash::make(Str::random(40)),
             ]);
 
             $user->assignRole('customer');
+            PartyAssignmentService::sync($user, 'client', $request->company_ids, $request->project_ids ?? []);
+            DB::commit();
 
             return redirect()->back()->with('success', 'Customer created successfully.');
 
         } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             return redirect()->back()->with('error', 'Please fix the validation errors.')->withErrors(['error' => 'Failed to create customer.'])->withInput();
         }
     }
@@ -126,7 +142,8 @@ class CustomerRoleController implements HasMiddleware
     {
         try {
             $customer = User::findOrFail($id);
-            return view('dashboard.customer.edit', compact('customer'));
+
+            return view('dashboard.customer.edit', compact('customer') + PartyAssignmentService::formData($customer, 'client'));
         } catch (\Exception $e) {
             return redirect()->back()->withErrors(['error' => 'Failed to load edit form.']);
         }
@@ -135,33 +152,35 @@ class CustomerRoleController implements HasMiddleware
     public function update(Request $request, string $role, User $customer)
     {
         try {
-            $validator = Validator::make($request->all(), [
+            $validator = Validator::make($request->all(), array_merge([
                 'name' => 'required|string|max:255',
                 'contact_person' => 'nullable|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $customer->id,
+                'email' => 'nullable|email|unique:users,email,'.$customer->id,
                 'phone' => 'nullable|string|max:20',
                 'address' => 'nullable|string|max:500',
-                'password' => 'nullable|string|min:6|confirmed',
-            ]);
+                'service_categories' => in_array(2, array_map('intval', $request->input('company_ids', [])), true) ? 'required|array|min:1' : 'nullable|array',
+                'service_categories.*' => 'required|in:ticket,visa,flight,file,instructor,others|distinct',
+            ], PartyAssignmentService::rules()));
 
             if ($validator->fails()) {
                 return redirect()->back()->with('error', 'Please fix the validation errors.')->withErrors($validator)->withInput();
             }
 
+            DB::beginTransaction();
+
             $before = $customer->only(['name', 'email', 'phone', 'address']);
 
             $customer->name = $request->name;
-            $customer->company_id = 2;
+            $customer->company_id = null;
             $customer->contact_person = $request->contact_person;
             $customer->email = $request->email;
             $customer->phone = $request->phone;
             $customer->address = $request->address;
-
-            if ($request->filled('password')) {
-                $customer->password = Hash::make($request->password);
-            }
+            $customer->service_categories = $request->service_categories;
 
             $customer->save();
+            PartyAssignmentService::sync($customer, 'client', $request->company_ids, $request->project_ids ?? []);
+            DB::commit();
 
             $after = $customer->only(['name', 'email', 'phone', 'address']);
 
@@ -175,6 +194,10 @@ class CustomerRoleController implements HasMiddleware
 
             return redirect()->back()->with('success', 'Customer updated successfully.');
         } catch (\Exception $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+
             return redirect()->back()->with('error', $e->getMessage())->withErrors(['error' => 'Failed to update customer.'])->withInput();
         }
     }
@@ -184,6 +207,7 @@ class CustomerRoleController implements HasMiddleware
         try {
             $customer = User::findOrFail($id);
             $customer->delete();
+
             return redirect()->back()->with('success', 'Customer deleted successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to delete customer.');
@@ -195,6 +219,7 @@ class CustomerRoleController implements HasMiddleware
         $log = CustomerLog::findOrFail($logId);
         $customer = User::findOrFail($log->customer_id);
         $customer->update($log->before);
+
         return back()->with('success', 'Customer restored to selected version.');
     }
 
@@ -203,6 +228,7 @@ class CustomerRoleController implements HasMiddleware
         $customer = User::findOrFail($id);
         $customer->status = $customer->status === 'active' ? 'inactive' : 'active';
         $customer->save();
+
         return back()->with('success', 'Customer status updated successfully.');
     }
 }

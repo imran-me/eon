@@ -14,7 +14,7 @@
 
     Shared by the create and edit modals so the two cannot drift.
 --}}
-<div class="exp-source" data-prefix="{{ $prefix }}">
+<div class="exp-source exp-payment-layout" data-prefix="{{ $prefix }}">
 
     {{-- payment_mode is still what the database stores; the cards set it. --}}
     <select id="{{ $prefix }}_payment_mode" name="payment_mode" class="hidden" tabindex="-1" aria-hidden="true">
@@ -49,25 +49,17 @@
     <input type="hidden" id="{{ $prefix }}_reimburse_to_user_id" name="reimburse_to_user_id"
            value="{{ $showCash ? '' : auth()->id() }}">
 
-    <div class="exp-source-cards" style="grid-template-columns:repeat({{ $cardCount }},1fr)">
+    <div class="exp-paid-from">
+        <label for="{{ $prefix }}_source_picker" class="block text-sm font-semibold text-gray-700 mb-1.5">Paid From</label>
+        <select id="{{ $prefix }}_source_picker" class="form-select w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="width:100%">
         @if ($showCash)
-        <button type="button" class="exp-source-card is-active" id="{{ $prefix }}_source_cash" data-source="cash">
-            <span class="exp-source-title"><i class="fas fa-wallet"></i> Petty Cash</span>
-            <span class="exp-source-sub">{{ $mayUsePot ? 'Cash someone is holding, or the drawer' : 'The float you are holding' }}</span>
-        </button>
+            <option value="cash">Cash / Petty Cash</option>
         @endif
-
-        <button type="button" class="exp-source-card {{ $showCash ? '' : 'is-active' }}" id="{{ $prefix }}_source_own" data-source="own">
-            <span class="exp-source-title"><i class="fas fa-hand-holding-dollar"></i> My Own Pocket</span>
-            <span class="exp-source-sub">You paid — the company owes you back</span>
-        </button>
-
+            <option value="own" {{ $showCash ? '' : 'selected' }}>My Own Pocket — Reimbursement</option>
         @if ($mayUseBank)
-        <button type="button" class="exp-source-card" id="{{ $prefix }}_source_bank" data-source="bank">
-            <span class="exp-source-title"><i class="fas fa-building-columns"></i> Bank Account</span>
-            <span class="exp-source-sub">Large expense / site payment</span>
-        </button>
+            <option value="bank">Bank Account</option>
         @endif
+        </select>
     </div>
 
     {{-- ── Own pocket branch ── --}}
@@ -182,7 +174,7 @@
              offered (Mobile Banking cannot spend from a current account), so asking
              for the bank first put the answer before the question that narrows it.
              Same reason Department now precedes Company upstairs. --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="exp-bank-fields grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label for="{{ $prefix }}_method" class="block text-sm font-semibold text-gray-700 mb-1.5">Payment Method</label>
                 <select id="{{ $prefix }}_method"
@@ -209,14 +201,48 @@
                     {{-- data-type is the account's own kind (bank / mobile_banking /
                          digital_wallet / cash). The payment method filters on it, so
                          choosing Mobile Banking cannot offer a current account. --}}
-                    @foreach ($banks as $bank)
-                        <option value="{{ $bank->id }}"
-                                data-company="{{ $bank->company_id }}"
-                                data-type="{{ $bank->type }}">{{ $bank->name }} ({{ $bank->account_number }})</option>
-                    @endforeach
+                    {{-- data-company-name rides along so the cross-company warning
+                         below can name the paying company without a second lookup.
+                         Optional relation, so it degrades to the id rather than
+                         throwing on a bank whose company row has gone. --}}
+                    @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                 </select>
                 <p id="{{ $prefix }}_bank_msg" class="text-red-500 text-xs mt-1 hidden error-message">Choose the account the money left</p>
+                {{-- Only ever shown when the chosen account belongs to a company
+                     other than the one being charged — invisible for every
+                     ordinary expense. Written by flagCrossCompanyBank(). --}}
+                <p id="{{ $prefix }}_bank_cross_note"
+                   class="hidden mt-1.5 text-[11px] leading-snug text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5"></p>
             </div>
         </div>
+
+        @php $defaultBankChargeAccount = collect($accounts ?? [])->firstWhere('code', '8510'); @endphp
+        <details id="{{ $prefix }}_bank_charge_details" class="exp-bank-charge rounded-lg border border-gray-200 bg-white p-4">
+            <summary class="text-xs font-semibold text-gray-600 cursor-pointer">
+                <i class="fas fa-receipt mr-1"></i> Bank Charge <span class="font-normal normal-case text-amber-600">(optional)</span>
+            </summary>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                <div>
+                    <label for="{{ $prefix }}_bank_charge_amount" class="block text-sm font-semibold text-gray-700 mb-1.5">Charge Amount</label>
+                    <input type="number" id="{{ $prefix }}_bank_charge_amount" name="bank_charge_amount"
+                        step="0.01" min="0" value="0.00" placeholder="0.00"
+                        class="form-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm">
+                    <p class="text-[11px] text-gray-500 mt-1">Added to the amount deducted from the selected bank.</p>
+                </div>
+                <div>
+                    <label for="{{ $prefix }}_bank_charge_account_id" class="block text-sm font-semibold text-gray-700 mb-1.5">Charge Posts To</label>
+                    <select id="{{ $prefix }}_bank_charge_account_id" name="bank_charge_account_id"
+                        class="form-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-400 text-sm" style="width:100%">
+                        <option value="">— Select Account —</option>
+                        @foreach(collect($accounts ?? []) as $account)
+                            <option value="{{ $account->id }}" @selected($defaultBankChargeAccount?->id === $account->id)>
+                                {{ $account->name }} ({{ $account->code }})
+                            </option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-gray-500 mt-1">Defaults to 8510 Bank Charges when available.</p>
+                </div>
+            </div>
+        </details>
     </div>
 </div>

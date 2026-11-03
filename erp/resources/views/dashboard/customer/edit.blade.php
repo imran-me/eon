@@ -6,6 +6,7 @@
 
 @section('main-content')
 <div class="min-h-screen bg-gray-50 p-6">
+    @include('layout.manage-parties-tabs')
 
     {{-- Page Header --}}
     <div class="flex items-center justify-between mb-6">
@@ -138,7 +139,10 @@
                     </div>
                 </div>
 
-                {{-- Change Password Card --}}
+                @include('dashboard.partials.party-assignments')
+                @include('dashboard.partials.party-service-categories', ['party' => $customer])
+
+                @if(false)
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
                         <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -192,6 +196,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
                 {{-- Activity Log Card --}}
                 @php $logs = $customer->customerLogs()->latest()->get(); @endphp

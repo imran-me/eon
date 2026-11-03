@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class LeaveController extends Controller
 {
@@ -127,11 +128,17 @@ class LeaveController extends Controller
     public function apply(Request $request)
     {
         $user = Auth::user();
+        $leaveType = LeaveType::find($request->leave_type_id);
 
         $validator = Validator::make($request->all(), [
             'leave_type_id' => 'required|integer|exists:leave_types,id',
             'start_date' => 'required|date',
             'end_date' => 'required|date',
+            'leave_time' => [
+                Rule::requiredIf((bool) ($leaveType->requires_time ?? false)),
+                'nullable',
+                'date_format:H:i,H:i:s',
+            ],
             'reason' => 'nullable|string',
         ]);
 
@@ -144,7 +151,9 @@ class LeaveController extends Controller
         }
 
         $startDate = Carbon::parse($request->start_date)->startOfDay();
-        $endDate = Carbon::parse($request->end_date)->endOfDay();
+        $endDate = ($leaveType->requires_time ?? false)
+            ? $startDate->copy()->endOfDay()
+            : Carbon::parse($request->end_date)->endOfDay();
 
         if ($endDate->lt($startDate)) {
             return response()->json([
@@ -209,6 +218,7 @@ class LeaveController extends Controller
             'company_id' => $user->company_id,
             'start_date' => $startDate->toDateString(),
             'end_date' => $endDate->toDateString(),
+            'leave_time' => ($leaveType->requires_time ?? false) ? $request->leave_time : null,
             'reason' => $request->reason,
             'status' => 'pending',
         ]);
@@ -216,7 +226,7 @@ class LeaveController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Leave applied successfully.',
-            'data' => $leave->load('leave_type:id,name,max_leaves_count'),
+            'data' => $leave->load('leave_type:id,name,max_leaves_count,requires_time,exempts_early_out_deduction,exempts_late_deduction'),
         ], 201);
     }
 
@@ -227,7 +237,7 @@ class LeaveController extends Controller
     {
         $userId = Auth::id();
         $query = Leave::query()
-            ->with('leave_type:id,name,max_leaves_count')
+            ->with('leave_type:id,name,max_leaves_count,requires_time,exempts_early_out_deduction,exempts_late_deduction')
             ->where('user_id', $userId)
             ->orderBy('start_date', 'desc');
 
@@ -262,7 +272,14 @@ class LeaveController extends Controller
      */
     public function types()
     {
-        $data = LeaveType::orderBy('name', 'asc')->get(['id', 'name', 'max_leaves_count']);
+        $data = LeaveType::orderBy('name', 'asc')->get([
+            'id',
+            'name',
+            'max_leaves_count',
+            'requires_time',
+            'exempts_early_out_deduction',
+            'exempts_late_deduction',
+        ]);
 
         return response()->json([
             'success' => true,

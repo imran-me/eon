@@ -32,16 +32,28 @@ trait PostsBalancedJournal
         string $debitNote,
         string $creditNote,
         ?string $partyType = null,
-        ?int $partyId = null
+        ?int $partyId = null,
+        ?string $entryTime = null,
+        ?string $beneficiary = null,
+        ?int $beneficiaryPartyId = null,
+        ?string $beneficiaryMethod = null,
+        ?string $beneficiaryBank = null,
+        ?string $beneficiaryRef = null
     ): JournalEntry {
         $journal = JournalEntry::create([
             'company_id'  => $companyId,
             'created_by'  => auth()->id(),
             'date'        => $date,
+            'entry_time'  => $entryTime,
             'reference'   => $reference,
             'source'      => $source,
             'source_id'   => $sourceId,
             'description' => $description,
+            'beneficiary' => $beneficiary,
+            'beneficiary_party_id' => $beneficiaryPartyId,
+            'beneficiary_method' => $beneficiaryMethod,
+            'beneficiary_bank' => $beneficiaryBank,
+            'beneficiary_ref' => $beneficiaryRef,
         ]);
 
         JournalItem::create([

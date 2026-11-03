@@ -146,10 +146,9 @@ class PayrollReportController extends Controller
     private function overviewNote(?string $section): string
     {
         return match ($section) {
-            'encashment' => 'This app pays leave encashment once a year in February: one month\'s gross plus a refund '
-                . 'of the leave deducted over the service year. The value here is the pro-rata of that payout — how far '
-                . 'through the current February–January cycle each employee is, plus the leave already deducted inside '
-                . 'it. "Eligible" means a full year of effective service is complete and the payout can be made; '
+            'encashment' => 'Each completed payroll month earns two leave-encashment days. Approved leave consumes earned days, '
+                . 'and its exact salary deduction is refunded. Unused-day value plus refunds settle in March or on exit. '
+                . '"Eligible" means a full year of effective service is complete and the annual payout can be made; '
                 . '"Accruing" means it cannot be made yet. Current staff only: someone who has left accrues nothing further.',
             'salary-due' => 'Outstanding is the net salary less whatever has been paid against it through the payment '
                 . 'schedule, so a part-paid month counts for what is left rather than for the whole net. People who have '
@@ -318,7 +317,7 @@ class PayrollReportController extends Controller
 
     private function salaryPaidSubquery()
     {
-        return PaymentSchedule::settledTotalsSubquery(EmployeeSalary::class);
+        return \App\Models\EmployeePaymentAllocation::postedTotalsSubquery();
     }
 
     private function salaryBaseQuery(array $f)
@@ -499,7 +498,7 @@ class PayrollReportController extends Controller
             ->orderByDesc('employee_salaries.year')
             ->orderByRaw('CAST(employee_salaries.month AS UNSIGNED) DESC')
             ->orderBy('users.name')
-            ->selectRaw('payslips.id, payslips.payslip_number, payslips.issue_date, payslips.pdf_path')
+            ->selectRaw('payslips.id, payslips.employee_salary_id, payslips.payslip_number, payslips.issue_date, payslips.pdf_path')
             ->selectRaw('users.name as employee_name, users.id as user_id, users.employee_id_no')
             ->selectRaw('employee_salaries.year, employee_salaries.month, employee_salaries.status')
             ->selectRaw('employee_salaries.gross_salary, employee_salaries.total_deductions, employee_salaries.net_salary')

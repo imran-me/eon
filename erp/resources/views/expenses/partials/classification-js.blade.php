@@ -417,6 +417,14 @@
             changed();
         });
 
+        document.addEventListener('expense-classification:created', function (e) {
+            const list = e.detail.type === 'sub' ? GRAPH.subCategories : GRAPH.categories;
+            if (!list.some(item => String(item.id) === String(e.detail.item.id))) list.push(e.detail.item);
+            const catValue = el.cat.value, subValue = el.sub.value;
+            refreshCategories(catValue);
+            refreshSubCategories(subValue);
+        });
+
         refreshDepartments();
         refreshCategories();
         changed();

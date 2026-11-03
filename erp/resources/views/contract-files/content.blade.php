@@ -11,6 +11,14 @@
   <button type="button" class="create-btn rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-2 text-xs font-semibold text-emerald-700"><i class="fas fa-plus mr-1"></i>New File</button>
  </header>
 
+ <section class="flex gap-3 overflow-x-auto pb-2" aria-label="Files by agent or client">
+ @foreach($clientSummary as $group)
+ @if($group['client_id'])
+ <a href="{{ route('role.contract-files.index',['role'=>$role,'client_id'=>$group['client_id']]) }}" class="min-w-[210px] rounded-xl border {{ request('client_id')==$group['client_id']?'border-blue-500 bg-blue-50':'border-slate-200 bg-white' }} p-3 shadow-sm"><b class="block text-xs text-blue-700">{{ $group['name'] }}</b><span class="mt-1 block text-[11px] text-slate-500">{{ $group['total'] }} files · Charge ৳{{ number_format($group['charge']) }}</span><span class="mt-1 block text-xs text-red-600">Due ৳{{ number_format($group['due']) }}</span></a>
+ @endif
+ @endforeach
+ </section>
+
  {{-- Stat Cards --}}
  <section class="grid grid-cols-2 gap-3 lg:grid-cols-4">
   <div class="rounded-xl bg-blue-50 p-4">
@@ -104,12 +112,12 @@
       @foreach(['File #','Applicant','Category','Country','Vendor','Submit Date','Expected Out','Status'] as $h)
       <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">{{ $h }}</th>
       @endforeach
-      <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Action</th>
+      <th class="px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500" style="width:1%;white-space:nowrap">Action</th>
      </tr>
     </thead>
     <tbody class="divide-y divide-slate-100">
      @forelse($datas as $file)
-     @php $statusColors=['doc_collection'=>'bg-red-100 text-red-700','submitted'=>'bg-amber-100 text-amber-700','under_process'=>'bg-blue-100 text-blue-700','approved'=>'bg-emerald-100 text-emerald-700','delivered'=>'bg-violet-100 text-violet-700']; @endphp
+     @php $statusColors=['file_received'=>'bg-slate-100 text-slate-700','documents_pending'=>'bg-amber-100 text-amber-700','submitted_to_vendor'=>'bg-indigo-100 text-indigo-700','under_process'=>'bg-blue-100 text-blue-700','approved'=>'bg-emerald-100 text-emerald-700','delivered'=>'bg-violet-100 text-violet-700','case_closed'=>'bg-green-100 text-green-700']; @endphp
      <tr class="hover:bg-slate-50">
       <td class="px-4 py-3 font-mono text-xs text-blue-700">{{ $file->file_number }}</td>
       <td class="px-4 py-3">
@@ -122,14 +130,16 @@
       <td class="px-4 py-3 text-xs text-slate-600">{{ optional($file->submit_date)->format('d M Y') ?? '-' }}</td>
       <td class="px-4 py-3 text-xs text-slate-600">{{ optional($file->expected_out_date)->format('d M Y') ?? '-' }}</td>
       <td class="px-4 py-3"><span class="rounded-full px-2 py-1 text-[10px] font-semibold {{ $statusColors[$file->status] ?? 'bg-slate-100 text-slate-600' }}">{{ $file->status_label }}</span></td>
-      <td class="px-4 py-3">
-       <div class="flex justify-end gap-1.5">
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" onclick="viewFile({{ $file->id }})" title="View"><i class="fas fa-eye text-xs"></i></button>
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" onclick="editFile({{ $file->id }})" title="Edit"><i class="fas fa-pen text-xs"></i></button>
+      <td class="px-2 py-3">
+       <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
+        <a href="{{ route('role.contract-files.show',['role'=>$role,'contractFile'=>$file]) }}" class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600" title="File journey" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-route text-xs" style="font-size:11px;margin:0"></i></a>
+        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" onclick="editFile({{ $file->id }})" title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-pen text-xs" style="font-size:11px;margin:0"></i></button>
         @if($file->due_amount > 0)
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100" onclick="openPayVendorModal({{ $file->id }}, '{{ addslashes($file->file_number) }}', '{{ addslashes($file->vendor?->name ?? 'Vendor (unassigned)') }}', {{ $file->due_amount }})" title="Pay Vendor"><i class="fas fa-money-bill-wave text-xs"></i></button>
+        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100" onclick="openPayVendorModal({{ $file->id }}, '{{ addslashes($file->file_number) }}', '{{ addslashes($file->vendor?->name ?? 'Vendor (unassigned)') }}', {{ $file->due_amount }})" title="Pay Vendor" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-money-bill-wave text-xs" style="font-size:11px;margin:0"></i></button>
         @endif
-        <button class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete({{ $file->id }},'{{ addslashes($file->file_number) }}')" title="Delete"><i class="fas fa-trash text-xs"></i></button>
+        @can('delete contract file')
+        <button type="button" class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" onclick="confirmDelete({{ $file->id }}, @js($file->file_number.' · '.$file->applicant_name))" title="Delete wrong file entry" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px"><i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i></button>
+        @endcan
        </div>
       </td>
      </tr>

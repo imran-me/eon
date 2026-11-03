@@ -2,9 +2,8 @@
     Bank toolbar — one row of tabs across the whole bank desk.
 
     Same job as layout/expense-tabs.blade.php: the tabs mirror what the sidebar
-    used to hide behind a "Manage Banks" dropdown, with the same permission gate
-    ('view bank', exactly as the sidebar group used), so a user never sees a tab
-    for a page the sidebar would have refused them.
+    used to hide behind a "Manage Banks" dropdown. Each page has its own
+    permission gate, so a user only sees the bank sections they may open.
 
     The sidebar dropdown is gone. Three pages behind a fold meant two clicks and
     no sense of where you were; a tab row shows all three and marks the current
@@ -25,14 +24,14 @@
             'label'      => 'Accounts Dashboard',
             'icon'       => 'fa-chart-pie',
             'route'      => 'role.banks.dashboard',
-            'permission' => 'view bank',
+            'permissions' => ['view bank', 'view all bank'],
             'active'     => ['role.banks.dashboard'],
         ],
         [
             'label'      => 'All Banks',
             'icon'       => 'fa-list',
             'route'      => 'role.banks.index',
-            'permission' => 'view bank',
+            'permissions' => ['view bank account', 'view all bank account'],
             // The statement / show / edit screens are drill-downs of the list,
             // so the list stays lit while you are inside one.
             'active'     => [
@@ -47,7 +46,7 @@
             'label'      => 'Bank Transfers',
             'icon'       => 'fa-exchange-alt',
             'route'      => 'role.bank_transfers.index',
-            'permission' => 'view bank',
+            'permissions' => ['view bank transfer', 'view all bank transfer'],
             'active'     => ['role.bank_transfers.*'],
         ],
     ];
@@ -56,7 +55,7 @@
     $bankTabCurrent = null;
 
     foreach ($bankTabItems as $bankTabItem) {
-        if ($bankTabItem['permission'] && ! $bankTabUser?->can($bankTabItem['permission'])) {
+        if (! $bankTabUser?->canAny($bankTabItem['permissions'])) {
             continue;
         }
 

@@ -177,7 +177,7 @@
     {{-- Summary strip ── --}}
     <div class="summary-strip">
         <div class="sum-card">
-            <div class="sum-label">Total Net Salary</div>
+            <div class="sum-label">Total Net Pay</div>
             <div class="sum-value">৳{{ number_format($totalNet, 2) }}</div>
         </div>
         <div class="sum-card">
@@ -194,10 +194,10 @@
     <table class="ledger">
         <thead>
             <tr>
-                <th width="16%">Month</th>
-                <th class="r" width="14%">Gross (৳)</th>
+                <th width="16%">Period</th>
+                <th class="r" width="14%">Earnings (৳)</th>
                 <th class="r" width="15%">Deductions (৳)</th>
-                <th class="r" width="15%">Net Salary (৳)</th>
+                <th class="r" width="15%">Net Pay (৳)</th>
                 <th class="r" width="13%">Paid (৳)</th>
                 <th class="r" width="13%">Due (৳)</th>
                 <th width="14%">Status</th>
@@ -213,8 +213,8 @@
                 };
             @endphp
             <tr>
-                <td>{{ \Carbon\Carbon::createFromDate((int) $slip->year, (int) $slip->month, 1)->format('F Y') }}</td>
-                <td class="r mono">{{ number_format($slip->gross_salary, 2) }}</td>
+                <td>{{ $slip->period_label }}@if($slip->encashment_amount > 0)<br><small>Includes leave encashment ({{ number_format($slip->encashment_earned_days, 1) }} accrued days): ৳{{ number_format($slip->encashment_amount, 2) }}</small>@endif</td>
+                <td class="r mono">{{ number_format($slip->earnings_amount, 2) }}</td>
                 <td class="r mono debit">{{ number_format($slip->total_deductions, 2) }}</td>
                 <td class="r mono">{{ number_format($slip->net_salary, 2) }}</td>
                 <td class="r mono credit">{{ number_format($slip->paid_amount, 2) }}</td>
@@ -255,13 +255,13 @@
 
             <div class="sh">Note:</div>
             <div class="nb" style="font-size:11px;color:#64748b;">
-                This report was generated on {{ now()->format('d M Y \a\t H:i') }} and reflects every monthly salary sheet row generated for {{ $employee->name }} from inception to date.
+                This report was generated on {{ now()->format('d M Y \a\t H:i') }} and reflects every monthly salary and posted leave-encashment document for {{ $employee->name }}.
             </div>
         </div>
         <div>
             <div class="sh">Summary:</div>
             <table class="amt-tbl">
-                <tr><td>Total Net Salary</td><td class="n">৳{{ number_format($totalNet, 2) }}</td></tr>
+                <tr><td>Total Net Pay</td><td class="n">৳{{ number_format($totalNet, 2) }}</td></tr>
                 <tr class="cr-row"><td>Total Paid</td><td class="n">৳{{ number_format($totalPaid, 2) }}</td></tr>
                 <tr class="grand">
                     <td>Total Due</td>
@@ -274,6 +274,7 @@
     {{-- Signature ── --}}
     <div class="sig">
         <div class="sig-c">
+            <x-signature :company="$company" />
             <div class="sig-l">Authorized Signatory</div>
             <div style="font-size:10px;margin-top:3px;">For, {{ optional($company)->name ?? config('app.name') }}</div>
         </div>

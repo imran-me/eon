@@ -885,7 +885,20 @@ class SaleController implements HasMiddleware
             }
 
             DB::transaction(function () use ($item) {
-                
+                $item->transactions
+                    ->filter(fn ($transaction) => $transaction->account_id && (float) $transaction->credit > 0)
+                    ->groupBy('account_id')
+                    ->each(function ($transactions, $bankId) {
+                        $bank = Bank::find($bankId);
+                        if ($bank?->account_id) {
+                            Bank::assertCanCover(
+                                (int) $bank->account_id,
+                                (float) $transactions->sum('credit'),
+                                $bank->name
+                            );
+                        }
+                    });
+
                 // remove transactions
                 foreach ($item->transactions as $transaction) {
                     $bank = Bank::find($transaction->account_id);

@@ -109,6 +109,20 @@
                         </div>
                     </div>
 
+                    <!-- Account Signature -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div>
+                            <label class="block text-gray-700 text-sm font-medium mb-2">Current Account Signature</label>
+                            <img id="preview_signature" src="" alt="Signature" style="width:120px;height:50px;object-fit:contain;border:1px solid #e5e7eb;border-radius:6px;padding:4px;background:#f9fafb;">
+                        </div>
+                        <div>
+                            <label for="edit_signature" class="block text-gray-700 text-sm font-medium mb-2">Change Account Signature <span class="text-gray-400 text-xs">(shown on invoices instead of "Authorized Signatory")</span></label>
+                            <input type="file" id="edit_signature" name="signature" accept="image/*" style="padding: 10px"
+                                class="block w-full text-sm text-gray-700 border-2 border-gray-200 rounded-md cursor-pointer bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition duration-150">
+                            <p class="text-gray-400 text-xs mt-1">Leave empty to keep current</p>
+                        </div>
+                    </div>
+
                     <!-- Status -->
                     <div class="mt-4">
                         <label class="flex items-center">

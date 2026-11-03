@@ -42,8 +42,23 @@ export const TaskApi = {
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Failed to save task');
+      const e = new Error(err.message || 'Failed to save task');
+      e.errors = err.errors || null; // per-field validation messages (422)
+      throw e;
     }
+    return res.json();
+  },
+
+  /* ── Mark a task as seen by the current user ──
+   * Clears that person's admin ribbon on the board and nothing else. Fire and
+   * forget: opening a task must not depend on it, so the caller does not wait
+   * on the response and a failure costs only a ribbon that lingers.
+   */
+  async markSeen(role, taskId) {
+    const res = await fetch(`/${role}/tasks/${taskId}/seen`, {
+      method: 'POST',
+      headers: headers(),
+    });
     return res.json();
   },
 
@@ -183,6 +198,19 @@ export const TaskApi = {
       headers: headers(),
       body: JSON.stringify({ parent_id: parentId }),
     });
+    return res.json();
+  },
+
+  /* ── Sub-work item timer: action is 'start' | 'pause' | 'done' ── */
+  async timerAction(role, taskId, action) {
+    const res = await fetch(`/${role}/tasks/${taskId}/timer/${action}`, {
+      method: 'POST',
+      headers: headers(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || 'Timer update failed');
+    }
     return res.json();
   },
 

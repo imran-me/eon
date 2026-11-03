@@ -11,8 +11,17 @@ class TicketReissue extends Model
 
     protected $table = 'ticket_reissues';
 
+    // Who bears the re-issue charge — same vocabulary and meaning as
+    // ContractFlightPassenger::REISSUE_BEARERS. 'agent' bills the agent the
+    // full new_sale_price as before; 'company' means we absorb it and the
+    // agent is never charged for this re-issue.
+    const REISSUE_BEARERS = [
+        'agent'   => 'Bill the agent',
+        'company' => 'We bear it',
+    ];
+
     protected $fillable = [
-        'company_id', 'original_sale_id', 'original_purchase_id', 'agent_id',
+        'company_id', 'original_sale_id', 'original_purchase_id', 'agent_id', 'bearer',
         'new_ticket_id', 'new_vendor_id', 'new_portal_id', 'bank_id',
         'original_invoice', 'new_ticket_no', 'new_trip_type',
         'reissue_date', 'new_travel_date', 'new_purchase_date',
@@ -38,7 +47,7 @@ class TicketReissue extends Model
 
     public function newTicket()
     {
-        return $this->belongsTo(Ticket::class, 'new_ticket_id');
+        return $this->belongsTo(Ticket::class, 'new_ticket_id')->withTrashed();
     }
 
     public function bank()

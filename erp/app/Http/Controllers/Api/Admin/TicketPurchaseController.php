@@ -213,6 +213,12 @@ class TicketPurchaseController extends Controller
                 if (!$bank || !$bank->account_id) {
                     throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover(
+                    (int) $bank->account_id,
+                    (float) $ticketPurchase->paid_amount,
+                    $bank->name
+                );
+
                 $journalItems[] = [
                     'account_id' => $bank->account_id,
                     'debit'      => 0,
@@ -224,6 +230,12 @@ class TicketPurchaseController extends Controller
                 if (!$portal || !$portal->account_id) {
                     throw new \Exception('Portal is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover(
+                    (int) $portal->account_id,
+                    (float) $ticketPurchase->paid_amount,
+                    $portal->name
+                );
+
                 $journalItems[] = [
                     'account_id' => $portal->account_id,
                     'debit'      => 0,
@@ -301,6 +313,12 @@ class TicketPurchaseController extends Controller
                 if (!$bank || !$bank->account_id) {
                     throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover(
+                    (int) $bank->account_id,
+                    (float) $ticketPurchase->paid_amount,
+                    $bank->name
+                );
+
                 $journalItems[] = [
                     'account_id' => $bank->account_id,
                     'debit'      => 0,
@@ -312,6 +330,12 @@ class TicketPurchaseController extends Controller
                 if (!$portal || !$portal->account_id) {
                     throw new \Exception('Portal is not linked to a chart-of-accounts account.');
                 }
+                Bank::assertCanCover(
+                    (int) $portal->account_id,
+                    (float) $ticketPurchase->paid_amount,
+                    $portal->name
+                );
+
                 $journalItems[] = [
                     'account_id' => $portal->account_id,
                     'debit'      => 0,
@@ -437,6 +461,10 @@ class TicketPurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($e instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $e;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create ticket purchase: ' . $e->getMessage()
@@ -660,6 +688,10 @@ class TicketPurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($e instanceof \App\Exceptions\SettlementSourceOverdrawnException) {
+                throw $e;
+            }
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to update ticket purchase: ' . $e->getMessage()

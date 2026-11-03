@@ -440,12 +440,15 @@ $role = \Illuminate\Support\Str::slug(Auth::user()->getRoleNames()->first());
 $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_format($n, 0);
 @endphp
 
+@include('layout.contract-flight-tabs')
+
 <div class="dash-page-band">
     <div class="dash-page-band-ic"><i class="fas fa-briefcase"></i></div>
     <div class="dash-page-band-info">
         <div class="dash-page-band-title">Flight Sales &amp; Bookings</div>
         <div class="dash-page-band-sub">Client / agent-wise multi-flight vouchers - one invoice can include several contract flights</div>
     </div>
+    <a href="{{ route('role.contract-flights.index', ['role' => $role, 'open' => 'create']) }}" class="dash-page-band-tag" style="background:#dbeafe;color:#1d4ed8;"><i class="fas fa-plus"></i> Add Flight</a>
     <button class="dash-page-band-tag create-btn"><i class="fas fa-plus"></i> New Booking</button>
 </div>
 
@@ -498,7 +501,7 @@ $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_forma
     </form>
 
     <div class="tk-table-wrap">
-        <table class="tk-table">
+        <table class="tk-table" data-cf-sort>
             <thead>
                 <tr>
                     <th>Voucher #</th>
@@ -511,7 +514,7 @@ $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_forma
                     <th>Paid</th>
                     <th>Due</th>
                     <th>Status</th>
-                    <th>Action</th>
+                    <th data-nosort>Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -573,6 +576,7 @@ $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_forma
 @include('contract-flight-sales.view-modal')
 @endsection
 @section('js')
+@include('contract-flights.partials.table-sort')
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -643,6 +647,7 @@ $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_forma
             $('#create_paid_amount').val(0);
             $('#create_payment_method').val('cash');
             $('#create_bank_id').val('');
+            $('#create_payment_instruction_bank_id').val('');
             toggleFlightBankField('create');
             renderFlightBundle('create');
             recalculateVoucher('create');
@@ -667,6 +672,7 @@ $fmt = fn($n) => $n >= 100000 ? number_format($n / 100000, 1).'L' : number_forma
             $('#edit_receivable_date').val(b.receivable_date ? b.receivable_date.substring(0, 10) : '');
             $('#edit_payment_method').val(b.payment_method || 'cash');
             $('#edit_bank_id').val(b.bank_id || '');
+            $('#edit_payment_instruction_bank_id').val(b.payment_instruction_bank_id || '');
             toggleFlightBankField('edit');
             $('#edit_notes').val(b.notes);
             (b.items || []).forEach(item => {

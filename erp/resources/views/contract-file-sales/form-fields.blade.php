@@ -89,9 +89,11 @@
             </select></div>
         <div id="{{ $prefix }}_bank_field"><label class="lbl">Payment Account (Bank)</label><select id="{{ $prefix }}_bank_id" name="bank_id" class="sel">
                 <option value="">— Select bank —</option>
-                @foreach($banks as $bank)
-                    <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                @endforeach
+                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
+            </select></div>
+        <div><label class="lbl">Pay Due To (shown on voucher)</label><select id="{{ $prefix }}_payment_instruction_bank_id" name="payment_instruction_bank_id" class="sel">
+                <option value="">— Do not show payment instructions —</option>
+                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
             </select></div>
     </div>
 </div>

@@ -42,6 +42,14 @@ class AirportController extends Controller
             });
         }
 
+        // The list bar's date range: the day the airport was added.
+        if ($request->filled('from_date')) {
+            $query->whereDate('airports.created_at', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('airports.created_at', '<=', $request->to_date);
+        }
+
         // Paginate
         $datas = $query->paginate(30);
 

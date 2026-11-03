@@ -292,8 +292,6 @@
             'create flight schedule',
             'view contract flight',
             'view all contract flight',
-            'view contract flight sale',
-            'view all contract flight sale',
             'view flight category',
             'view all flight category',
             'view passport holder',
@@ -325,7 +323,12 @@
         // fall back to the first company on every page except the literal
         // Company Dashboard), else the user's own company, else the first
         // visible company.
-        $routeCompanyId = request()->route('company') ?? request()->query('company');
+        $routeCompanyId = request()->route('company')
+            ?? request()->query('company')
+            ?? request()->query('company_id');
+        $constructionProjectJournal = request()->routeIs('role.journals.*')
+            && (int) request()->query('company_id') === 3
+            && request()->filled('project_id');
         // Wood Art module routes (role.woodart.*) carry no {company} param —
         // they ARE company-6 context. Guarded addition: the condition is false
         // on every non-Wood-Art route, so nothing else changes. Without it a
@@ -333,6 +336,64 @@
         // company's panel under Wood Art content.
         if (!$routeCompanyId && request()->routeIs('role.woodart.*')) {
             $routeCompanyId = 6;
+        }
+        // Epal Constructions' Project Accounts (role.construction.*) is company-3
+        // context, for the same reason: its in-page links carry no ?company=, so
+        // without this the rail dropped to the first company and the construction
+        // icon was not highlighted. The condition is false on every other route.
+        if (!$routeCompanyId && request()->routeIs('role.construction.*')) {
+            $routeCompanyId = 3;
+        }
+        // Same reasoning for Contract Flight (Travels, company 2): its routes
+        // carry no {company} param, so reaching one from the section's own top
+        // tab band — which, unlike a sidebar link, never gets ?company= stamped
+        // onto it by app.blade.php — dropped the rail back to the first company
+        // and hid the panel holding this trail. Keep this route list in step
+        // with the two copies further down that highlight/expand the group.
+        if (!$routeCompanyId && request()->routeIs(
+            'role.flight-schedules.*', 'role.contract-flights.*',
+            'role.contract-flight-board.*',
+            'role.flight-categories.*', 'role.flight-category-types.*',
+            'role.flight-price-presets.*', 'role.flight-officers.*'
+        )) {
+            $routeCompanyId = 2;
+        }
+        // Ticket Purchase / Ticketing (Travels, company 2) — same gap. The
+        // merged screen's own buttons (New Ticket Purchase, Edit, Pay,
+        // Invoice) link straight to ticket-direct-sale.* / ticket-purchase.*
+        // from inside the page content, not the sidebar, so none of them
+        // carry ?company=. Without this, opening any of them from a bare
+        // URL or one of those buttons dropped the rail to the first company
+        // and replaced the whole Ticketing menu with that company's own.
+        if (!$routeCompanyId && request()->routeIs('role.ticket-direct-sale.*', 'role.ticket-purchase.*', 'role.ticket-bookings.*')) {
+            $routeCompanyId = 2;
+        }
+        // The shared Party Management desk belongs to EPAL Group (company 4).
+        // Travel keeps only its company-filtered Party Statement shortcut.
+        if (!$routeCompanyId && request()->routeIs(
+            'role.vendor.*', 'role.agent.*', 'role.customer.*',
+            'role.report.monthly-profit*'
+        )) {
+            $routeCompanyId = 4;
+        }
+        // No company filter means the Group-wide Party Statement.
+        if (!$routeCompanyId && request()->routeIs('role.party-statement.*')) {
+            $routeCompanyId = 4;
+        }
+        // The rest of the Travels menu (owner, 2026-09-21): every one of these
+        // screens lands here without ?company= after a save, a filter or a
+        // redirect (Airport Management ?name_code=…, Country, States, Airlines,
+        // Ticket Manage, Manage Sales, Passport, Portal, Visa, Contract File…)
+        // and the rail dropped to the first company. Same list the Travels
+        // section itself is keyed on ($isTravelSectionActive below).
+        if (!$routeCompanyId && request()->routeIs(
+            'role.portal-management.*', 'role.passport-holder.*', 'role.passport-holder-category.*',
+            'role.visa.*', 'role.visa-dashboard', 'role.visa-accounts.*', 'role.visa-sales.*', 'role.other-visa-services.*', 'role.other-service-types.*', 'role.visa-category.*',
+            'role.countries.*', 'role.states.*', 'role.airlines.*', 'role.airport.*',
+            'role.ticketing.*', 'role.tickets.*', 'role.ticket-sales.*', 'role.ticket-quick-create-route',
+            'role.flight-schedules.*', 'role.contract-file-categories.*', 'role.contract-files.*', 'role.contract-file-sales.*'
+        )) {
+            $routeCompanyId = 2;
         }
         $activeCompanyId = $routeCompanyId
             ? (int) $routeCompanyId
@@ -356,6 +417,23 @@
                 // through to the original button rather than offer a 403 link.
                 $canMotherDash  = auth()->user()?->can('view dashboard');
             @endphp
+            {{-- Each tile carries its classes STATICALLY as well as through
+                 Alpine. The class list used to come from the :class binding
+                 alone, so between first paint and Alpine booting (deferred,
+                 46 KB) the tiles had no class at all — no 40px box, no radius,
+                 no border, and .rail-icon-btn i never applied, so the glyphs
+                 painted tiny and near-black before snapping into place. That
+                 pop was visible on every navigation, since every page outside
+                 Wood Art is still a full document load.
+
+                 $activeCompanyId is the same value x-init hands Alpine below,
+                 so the server-rendered class list is byte-identical to what
+                 Alpine settles on — the tile's appearance is unchanged, it
+                 simply arrives on the first frame instead of the second.
+                 The binding stays, in object form, so rail clicks still move
+                 the highlight without a page load; it now only toggles
+                 'active' rather than supplying the whole class list.
+                 Do not collapse these back into a single :class. --}}
             @foreach($allCompanies as $c)
                 @php $railIcon = company_icon($c); @endphp
                 @if($c->id == 6)
@@ -371,7 +449,8 @@
                      not "fix" that asymmetry by turning them all into links. --}}
                 <a href="{{ route('role.company.dashboard', ['role' => $role, 'company' => $c->id]) }}"
                     @click="activeCompanyId = {{ $c->id }}"
-                    :class="activeCompanyId === {{ $c->id }} ? 'rail-icon-btn active' : 'rail-icon-btn'"
+                    class="rail-icon-btn {{ $activeCompanyId == $c->id ? 'active' : '' }}"
+                    :class="{ 'active': activeCompanyId === {{ $c->id }} }"
                     style="--rail-accent:{{ $railIcon['accent'] }};--rail-tint:{{ $railIcon['tint'] }};"
                     title="{{ $c->name }}">
                     <i class="{{ $railIcon['class'] }}"></i>
@@ -390,7 +469,8 @@
                      companies anywhere outside Wood Art. --}}
                 <a href="{{ route('role.dashboard', ['role' => $role, 'company' => $c->id]) }}"
                     @click="activeCompanyId = {{ $c->id }}"
-                    :class="activeCompanyId === {{ $c->id }} ? 'rail-icon-btn active' : 'rail-icon-btn'"
+                    class="rail-icon-btn {{ $activeCompanyId == $c->id ? 'active' : '' }}"
+                    :class="{ 'active': activeCompanyId === {{ $c->id }} }"
                     style="--rail-accent:{{ $railIcon['accent'] }};--rail-tint:{{ $railIcon['tint'] }};"
                     title="{{ $c->name }}">
                     <i class="{{ $railIcon['class'] }}"></i>
@@ -398,7 +478,8 @@
                 @else
                 <button type="button"
                     @click="activeCompanyId = {{ $c->id }}"
-                    :class="activeCompanyId === {{ $c->id }} ? 'rail-icon-btn active' : 'rail-icon-btn'"
+                    class="rail-icon-btn {{ $activeCompanyId == $c->id ? 'active' : '' }}"
+                    :class="{ 'active': activeCompanyId === {{ $c->id }} }"
                     style="--rail-accent:{{ $railIcon['accent'] }};--rail-tint:{{ $railIcon['tint'] }};"
                     title="{{ $c->name }}">
                     <i class="{{ $railIcon['class'] }}"></i>
@@ -426,6 +507,33 @@
             </a>
         @endcan
 
+        {{-- SHORTCUTS — the user's own pinned links, added by right-clicking
+             any sidebar link ("Add to Shortcut Menu"). Per user, not per
+             company, so it sits above the company panels. The wrapper is
+             always rendered (hidden when empty) so layout/shortcuts.blade.php
+             can fill it on a live page without a reload; that partial also
+             owns the erp-sc-menu-* styles and the × removal. user_shortcuts()
+             cannot throw — before its migration runs this is an empty,
+             hidden div. --}}
+        @php $scMenu = user_shortcuts(\App\Models\UserShortcut::KIND_MENU); $scHere = '/' . ltrim(request()->path(), '/'); @endphp
+        <div data-shortcut-menu @if($scMenu->isEmpty()) hidden @endif>
+            <div class="sidebar-section-label" x-show="!search" style="color:#7c3aed;">Shortcuts</div>
+            <div data-shortcut-menu-list>
+                @foreach($scMenu as $s)
+                    @php $sPath = parse_url($s->url, PHP_URL_PATH) ?: $s->url; @endphp
+                    <a href="{{ $s->url }}"
+                       x-show="!search || {{ Js::from(Str::lower($s->label)) }}.includes(search.toLowerCase())"
+                       class="sidebar-item erp-sc-menu-item {{ $sPath === $scHere ? 'active' : '' }}"
+                       data-shortcut-id="{{ $s->id }}" data-shortcut-kind="menu" data-shortcut-url="{{ $s->url }}"
+                       title="{{ $s->label }}">
+                        <div class="sidebar-icon-box"><i class="{{ $s->icon ?: 'fas fa-bookmark' }}"></i></div>
+                        <span class="erp-sc-menu-label">{{ $s->label }}</span>
+                        <span class="erp-sc-menu-x" data-shortcut-remove role="button" title="Remove from Shortcut menu" aria-label="Remove from Shortcut menu">&times;</span>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+
         {{-- COMPANIES --}}
         @if($allCompanies->isNotEmpty())
         @if($showCompanyRail)
@@ -438,21 +546,29 @@
             $colors = ['#3b82f6','#8b5cf6','#06b6d4','#f59e0b','#10b981','#f43f5e','#6366f1','#a16207'];
             $color  = $colors[$c->id % count($colors)];
             $isActive = request()->route('company') == $c->id;
-            $isTravelSectionActive = $c->id == 2 && request()->routeIs('role.vendor.*', 'role.customer.*', 'role.portal-management.*','role.passport-holder.*','role.passport-holder-category.*','role.visa.*','role.visa-sales.*', 'role.other-visa-services.*','role.other-service-types.*','role.visa-category.*','role.countries.*','role.states.*','role.airlines.*','role.ticket-direct-sale.*','role.ticket-purchase.*','role.airport.*','role.ticket-sales.*','role.agent.*','role.tickets.*','role.flight-categories.*','role.flight-category-types.*','role.flight-price-presets.*','role.flight-officers.*','role.flight-schedules.*','role.contract-flight-sales.*','role.contract-flights.*','role.contract-file-categories.*','role.contract-files.*','role.contract-file-sales.*');
+            $isTravelPartyStatement = request()->routeIs('role.party-statement.*') && (int) request()->query('company') === 2;
+            $isTravelSectionActive = $c->id == 2 && ($isTravelPartyStatement || request()->routeIs('role.portal-management.*','role.passport-holder.*','role.passport-holder-category.*','role.visa.*','role.visa-dashboard','role.visa-accounts.*','role.visa-sales.*', 'role.other-visa-services.*','role.other-service-types.*','role.visa-category.*','role.countries.*','role.states.*','role.airlines.*','role.ticketing.*','role.ticket-direct-sale.*','role.ticket-purchase.*','role.airport.*','role.ticket-sales.*','role.tickets.*','role.flight-categories.*','role.flight-category-types.*','role.flight-price-presets.*','role.flight-officers.*','role.flight-schedules.*','role.contract-flights.*','role.contract-file-categories.*','role.contract-files.*','role.contract-file-sales.*'));
         @endphp
-        {{-- First paint on a WOOD ART page must already show the correct menu.
+        {{-- First paint must already show the correct company menu.
 
-             All panels are x-cloak'd until Alpine boots (deferred, from a CDN),
-             so on a cold cache the sidebar shows no company menu for up to a
-             second. That flash predates Wood Art everywhere, but only Wood Art
-             pages actually land users on it (its rail icon navigates), so ONLY
-             the Wood Art context ($activeCompanyId == 6) gets the fix: the
-             active panel renders visible, the rest inline-hidden, and Alpine's
-             x-show takes over from exactly that state. Every other context
-             keeps the original x-cloak byte-for-byte (CLAUDE.md: no unguarded
-             change to a shared line). The same flash on other companies' pages
-             is a pre-existing issue — reported, deliberately not fixed here. --}}
-        <div @if($showCompanyRail) x-show="activeCompanyId === {{ $c->id }}" @if($activeCompanyId == 6) @if($c->id != $activeCompanyId) style="display:none" @endif @else x-cloak @endif @endif>
+             These panels used to be x-cloak'd ([x-cloak]{display:none} above),
+             so until Alpine booted — deferred, and only after the whole 1,800
+             line sidebar had parsed — NO company menu was on screen: the
+             "Companies" heading sat over empty space, then the menu appeared.
+             On every navigation outside Wood Art (still a full document load)
+             that read as the sidebar rebuilding itself mid-transition.
+
+             Wood Art carried the fix alone since 2026-08; generalised to every
+             company on the owner's instruction, 2026-08-20. The active panel
+             now renders visible and the rest inline-hidden, and Alpine's
+             x-show picks up from exactly that state.
+
+             This cannot diverge: $activeCompanyId is resolved server-side
+             above and is the same value x-init hands Alpine, so the panel the
+             server shows is the panel Alpine would have shown. Nothing about
+             the menu's content, order or styling changes — only the frame it
+             appears on. --}}
+        <div @if($showCompanyRail) x-show="activeCompanyId === {{ $c->id }}" @if($c->id != $activeCompanyId) style="display:none" @endif @endif>
         @if($c->id == 2)
         @php
             $companyLogoUrl = null;
@@ -493,32 +609,123 @@
                     <span>Company Dashboard</span>
                 </a>
 
+                {{-- SERVICES --}}
+                <div class="sidebar-section-label" style="padding:8px 4px 2px;font-size:9px;letter-spacing:1.2px;color:#9ca3af;">SERVICES</div>
+
+                {{-- Ticketing — a single link, no submenu (owner, 2026-10-04). The
+                     section navigates through its own tab band
+                     (layout.ticketing-tabs), so the sidebar only lands the user on
+                     the first Ticketing page their permissions allow — the same
+                     order as the band. try/catch: a route missing on a lagging
+                     server hides the link instead of breaking the shared sidebar. --}}
+                @canany(['view airline','view all airline','view ticket','view all ticket','view ticket purchase','view all ticket purchase','view ticket direct sale','view all ticket direct sale','create ticket direct sale','view ticket sale','view all ticket sale','view geography','view all geography'])
+                @php
+                    $tkLanding = null;
+                    try {
+                        foreach ([
+                            [['view ticket purchase','view all ticket purchase','view ticket direct sale','view all ticket direct sale'], 'role.ticketing.dashboard', []],
+                            [['view ticket','view all ticket'], 'role.tickets.index', []],
+                            [['view ticket purchase','view all ticket purchase'], 'role.ticket-purchase.index', []],
+                            [['create ticket purchase','create ticket direct sale'], 'role.ticket-direct-sale.create', ['ops' => 1]],
+                            [['view ticket sale','view all ticket sale'], 'role.ticket-sales.index', []],
+                            [['view airline','view all airline'], 'role.airlines.index', []],
+                            [['view geography','view all geography'], 'role.airport.index', []],
+                        ] as [$tkPerms, $tkRoute, $tkParams]) {
+                            if (auth()->user()->canAny($tkPerms) && \Illuminate\Support\Facades\Route::has($tkRoute)) {
+                                $tkLanding = route($tkRoute, ['role' => $role] + $tkParams);
+                                break;
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        $tkLanding = null;
+                    }
+                @endphp
+                @if($tkLanding)
+                <a href="{{ $tkLanding }}"
+                   x-show="!search || 'air ticketing ticket dashboard manage orders services manage sales airline airport country states'.includes(search.toLowerCase())"
+                   class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.ticketing.*','role.airlines.*','role.tickets.*','role.ticket-purchase.*','role.ticket-direct-sale.*','role.ticket-bookings.*','role.ticket-sales.*','role.airport.*','role.countries.*','role.states.*') ? 'active' : '' }}">
+                    <div class="sidebar-icon-box"><i class="fas fa-ticket-alt"></i></div>
+                    <span>Ticketing</span>
+                </a>
+                @endif
+                @endcanany
+
+                {{-- Visa Processing --}}
+                @canany(['view visa','view all visa'])
+                <a href="{{ \Illuminate\Support\Facades\Route::has('role.visa-dashboard') ? route('role.visa-dashboard', ['role' => $role]) : route('role.visa.index', ['role' => $role]) }}"
+                    x-show="!search || 'visa processing application board sales services category'.includes(search.toLowerCase())"
+                    class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.visa.*','role.visa-dashboard','role.visa-accounts.*','role.visa-category.*','role.visa-sales.*','role.other-visa-services.*','role.other-service-types.*') ? 'active' : '' }}">
+                    <div class="sidebar-icon-box"><i class="fas fa-passport"></i></div>
+                    <span>Visa Processing</span>
+                </a>
+                @endcanany
+
+                {{-- Contract Flight — a single link, no submenu. The section
+                     navigates through its own tab band
+                     (layout.contract-flight-tabs), so the sidebar only needs to
+                     land the user on it: the Flight Dashboard, or the first
+                     section page their permissions allow. Dropdown removed on
+                     the owner's instruction, 2026-09-14. --}}
+                @canany(['view flight schedule','view all flight schedule','create flight schedule','view contract flight','view all contract flight','view flight category','view all flight category'])
+                @php
+                    $cfLanding = null;
+                    try {
+                        if (auth()->user()->canAny(['view contract flight','view all contract flight'])) {
+                            $cfLanding = \Illuminate\Support\Facades\Route::has('role.contract-flights.dashboard')
+                                ? route('role.contract-flights.dashboard', ['role' => $role])
+                                : route('role.contract-flights.index', ['role' => $role]);
+                        } elseif (auth()->user()->canAny(['view flight schedule','view all flight schedule','create flight schedule'])) {
+                            $cfLanding = route('role.flight-schedules.index', ['role' => $role]);
+                        } else {
+                            $cfLanding = route('role.flight-categories.index', ['role' => $role]);
+                        }
+                    } catch (\Throwable $e) {
+                        $cfLanding = null;
+                    }
+                @endphp
+                @if($cfLanding)
+                <a href="{{ $cfLanding }}"
+                   x-show="!search || 'contract flight'.includes(search.toLowerCase())"
+                   class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.flight-categories.*','role.flight-category-types.*','role.flight-price-presets.*','role.flight-officers.*','role.flight-schedules.*','role.contract-flights.*','role.contract-flight-board.*','role.contract-flight-passengers.*') ? 'active' : '' }}">
+                    <div class="sidebar-icon-box"><i class="fas fa-file-signature"></i></div>
+                    <span>Contract Flight</span>
+                </a>
+                @endif
+                @endcanany
+
+                {{-- Contract File — one section link; its pages are exposed by
+                     layout.contract-file-tabs. New File remains a page action. --}}
+                @canany(['view contract file category','view all contract file category','view contract file','view all contract file','create contract file','view contract file sale','view all contract file sale'])
+                @php
+                    if (auth()->user()->canAny(['view contract file','view all contract file'])) {
+                        $contractFileLanding = \Illuminate\Support\Facades\Route::has('role.contract-files.dashboard')
+                            ? route('role.contract-files.dashboard', ['role' => $role])
+                            : route('role.contract-files.index', ['role' => $role]);
+                    } elseif (auth()->user()->canAny(['view contract file category','view all contract file category'])) {
+                        $contractFileLanding = route('role.contract-file-categories.index', ['role' => $role]);
+                    } elseif (auth()->user()->canAny(['view contract file sale','view all contract file sale'])) {
+                        $contractFileLanding = route('role.contract-file-sales.index', ['role' => $role]);
+                    } else {
+                        $contractFileLanding = route('role.contract-files.index', ['role' => $role, 'open' => 'create']);
+                    }
+                @endphp
+                <a href="{{ $contractFileLanding }}"
+                   x-show="!search || 'contract file category applications sales'.includes(search.toLowerCase())"
+                   class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.contract-file-categories.*','role.contract-files.*','role.contract-file-sales.*') ? 'active' : '' }}">
+                    <div class="sidebar-icon-box"><i class="fas fa-folder"></i></div>
+                    <span>Contract File</span>
+                </a>
+                @endcanany
+
                 {{-- OPERATIONS --}}
                 <div class="sidebar-section-label" style="padding:8px 4px 2px;font-size:9px;letter-spacing:1.2px;color:#9ca3af;">OPERATIONS</div>
 
-                @canany(['view vendor','view all vendor','create vendor','edit vendor','delete vendor','view customer','view all customer','create customer','edit customer','delete customer'])
-                <div class="sidebar-item" x-show="!search || 'party management vendor agent customer'.includes(search.toLowerCase())">
-                    <button onclick="toggleSubmenu('vendorSubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
-                        <div class="flex items-center gap-2.5">
-                            <div class="sidebar-icon-box {{ request()->routeIs('role.vendor.*','role.agent.*','role.customer.*','role.party-statement.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-users"></i></div>
-                            <span class="text-sm font-medium">Party Management</span>
-                        </div>
-                        <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-                    </button>
-                    <div id="vendorSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.vendor.*','role.agent.*','role.customer.*','role.party-statement.*') ? '' : 'hidden' }}">
-                        @canany(['view vendor','view all vendor'])
-                        <a href="{{ route('role.vendor.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.vendor.index') ? 'active' : '' }}"><i class="fas fa-list text-xs w-3"></i> Manage Vendor</a>
-                        @endcanany
-                        @canany(['view vendor','view all vendor'])
-                        <a href="{{ route('role.agent.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.agent.index') ? 'active' : '' }}"><i class="fas fa-list text-xs w-3"></i> Manage Agent</a>
-                        @endcanany
-                        @canany(['view customer','view all customer'])
-                        <a href="{{ route('role.customer.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.customer.index') ? 'active' : '' }}"><i class="fas fa-list text-xs w-3"></i> Manage Customer</a>
-                        @endcanany
-                        <a href="{{ route('role.party-statement.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.party-statement.*') ? 'active' : '' }}"><i class="fas fa-book text-xs w-3"></i> Party Statement</a>
-                    </div>
-                </div>
-                @endcanany
+                <a href="{{ route('role.party-statement.index', ['role' => $role, 'company' => 2]) }}"
+                   x-show="!search || 'party statement travel'.includes(search.toLowerCase())"
+                   class="sidebar-item flex items-center gap-2.5 {{ $isTravelPartyStatement ? 'active' : '' }}">
+                    <div class="sidebar-icon-box"><i class="fas fa-book"></i></div>
+                    <span>Party Statement</span>
+                </a>
 
                 @canany(['view portal','view all portal','create portal','edit portal','delete portal','manage portal'])
                 <div class="sidebar-item" x-show="!search || 'portal management'.includes(search.toLowerCase())">
@@ -557,128 +764,6 @@
 
                 @endcanany
 
-                {{-- SERVICES --}}
-                <div class="sidebar-section-label" style="padding:8px 4px 2px;font-size:9px;letter-spacing:1.2px;color:#9ca3af;">SERVICES</div>
-
-                {{-- Air Ticketing --}}
-                @canany(['view airline','view all airline','view ticket','view all ticket','view ticket purchase','view all ticket purchase','view ticket direct sale','view all ticket direct sale','create ticket direct sale','view ticket sale','view all ticket sale','view geography','view all geography'])
-                <div class="sidebar-item" x-show="!search || 'air ticketing airline'.includes(search.toLowerCase())">
-                    <button onclick="toggleSubmenu('airTicketingSubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
-                        <div class="flex items-center gap-2.5">
-                            <div class="sidebar-icon-box {{ request()->routeIs('role.airlines.*','role.tickets.*','role.ticket-purchase.*','role.ticket-direct-sale.*','role.ticket-sales.*','role.airport.*','role.countries.*','role.states.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-ticket-alt"></i></div>
-                            <span class="text-sm font-medium">Air Ticketing</span>
-                        </div>
-                        <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-                    </button>
-                    <div id="airTicketingSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.airlines.*','role.tickets.*','role.ticket-purchase.*','role.ticket-direct-sale.*','role.ticket-sales.*','role.airport.*','role.countries.*','role.states.*') ? '' : 'hidden' }}">
-                        @canany(['view ticket','view all ticket'])
-                        <a href="{{ route('role.tickets.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.tickets.*') ? 'active' : '' }}"><i class="fas fa-ticket-alt text-xs w-3"></i> Ticket Manage</a>
-                        @endcanany
-                        @canany(['view ticket purchase','view all ticket purchase'])
-                        <a href="{{ route('role.ticket-purchase.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.ticket-purchase.*') ? 'active' : '' }}"><i class="fas fa-shopping-cart text-xs w-3"></i> Ticket Purchase</a>
-                        @endcanany
-                        @can('create ticket direct sale')
-                        <a href="{{ route('role.ticket-direct-sale.create', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.ticket-direct-sale.*') ? 'active' : '' }}"><i class="fas fa-ticket-alt text-xs w-3"></i> Ticketing</a>
-                        @endcan
-                        @canany(['view ticket sale','view all ticket sale'])
-                        <a href="{{ route('role.ticket-sales.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.ticket-sales.*') ? 'active' : '' }}"><i class="fas fa-list text-xs w-3"></i> Manage Sales</a>
-                        @endcanany
-                        @canany(['view airline','view all airline'])
-                        <a href="{{ route('role.airlines.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.airlines.*') ? 'active' : '' }}"><i class="fas fa-plane text-xs w-3"></i> Airlines</a>
-                        @endcanany
-                        @canany(['view geography','view all geography'])
-                        <a href="{{ route('role.airport.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.airport.index') ? 'active' : '' }}"><i class="fas fa-plane-departure text-xs w-3"></i> Airport Management</a>
-                        <a href="{{ route('role.countries.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.countries.index') ? 'active' : '' }}"><i class="fas fa-flag text-xs w-3"></i> Country</a>
-                        <a href="{{ route('role.states.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.states.index') ? 'active' : '' }}"><i class="fas fa-city text-xs w-3"></i> States</a>
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
-
-                {{-- Contract Flight --}}
-                @canany(['view flight schedule','view all flight schedule','create flight schedule','view contract flight','view all contract flight','view contract flight sale','view all contract flight sale','view flight category','view all flight category'])
-                <div class="sidebar-item" x-show="!search || 'contract flight'.includes(search.toLowerCase())">
-                    <button onclick="toggleSubmenu('contractFlightSubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
-                        <div class="flex items-center gap-2.5">
-                            <div class="sidebar-icon-box {{ request()->routeIs('role.flight-categories.*','role.flight-category-types.*','role.flight-price-presets.*','role.flight-officers.*','role.flight-schedules.*','role.contract-flight-sales.*','role.contract-flights.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-file-signature"></i></div>
-                            <span class="text-sm font-medium">Contract Flight</span>
-                        </div>
-                        <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-                    </button>
-                    <div id="contractFlightSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.flight-categories.*','role.flight-category-types.*','role.flight-price-presets.*','role.flight-officers.*','role.flight-schedules.*','role.contract-flight-sales.*','role.contract-flights.*') ? '' : 'hidden' }}">
-                        @canany(['view flight schedule','view all flight schedule'])
-                        <a href="{{ route('role.flight-schedules.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.flight-schedules.*') ? 'active' : '' }}"><i class="fas fa-calendar-alt text-xs w-3"></i> Flight Schedule</a>
-                        @endcanany
-                        @can('create flight schedule')
-                        <a href="{{ route('role.flight-schedules.index', ['role' => $role, 'open' => 'create']) }}" class="submenu-item"><i class="fas fa-plus text-xs w-3"></i> Add Flight</a>
-                        @endcan
-                        @canany(['view contract flight','view all contract flight'])
-                        <a href="{{ route('role.contract-flights.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.contract-flights.*') ? 'active' : '' }}"><i class="fas fa-suitcase text-xs w-3"></i> Manage Flight</a>
-                        @endcanany
-                        @canany(['view contract flight sale','view all contract flight sale'])
-                        <a href="{{ route('role.contract-flight-sales.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.contract-flight-sales.*') ? 'active' : '' }}"><i class="fas fa-briefcase text-xs w-3"></i> Manage Sales</a>
-                        @endcanany
-                        @canany(['view flight category','view all flight category'])
-                        <a href="{{ route('role.flight-categories.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.flight-categories.*') ? 'active' : '' }}"><i class="fas fa-tags text-xs w-3"></i> Flight Category</a>
-                        <a href="{{ route('role.flight-category-types.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.flight-category-types.*') ? 'active' : '' }}"><i class="fas fa-tag text-xs w-3"></i> Flight Category Type</a>
-                        <a href="{{ route('role.flight-price-presets.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.flight-price-presets.*') ? 'active' : '' }}"><i class="fas fa-coins text-xs w-3"></i> Price Presets</a>
-                        <a href="{{ route('role.flight-officers.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.flight-officers.*') ? 'active' : '' }}"><i class="fas fa-user-shield text-xs w-3"></i> Officers</a>
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
-
-                {{-- Contract File --}}
-                @canany(['view contract file category','view all contract file category','view contract file','view all contract file','create contract file','view contract file sale','view all contract file sale'])
-                <div class="sidebar-item" x-show="!search || 'contract file'.includes(search.toLowerCase())">
-                    <button onclick="toggleSubmenu('contractFileSubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
-                        <div class="flex items-center gap-2.5">
-                            <div class="sidebar-icon-box {{ request()->routeIs('role.contract-file-categories.*','role.contract-files.*','role.contract-file-sales.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-folder"></i></div>
-                            <span class="text-sm font-medium">Contract File</span>
-                        </div>
-                        <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-                    </button>
-                    <div id="contractFileSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.contract-file-categories.*','role.contract-files.*','role.contract-file-sales.*') ? '' : 'hidden' }}">
-                        @canany(['view contract file category','view all contract file category'])
-                        <a href="{{ route('role.contract-file-categories.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.contract-file-categories.*') ? 'active' : '' }}"><i class="fas fa-folder text-xs w-3"></i> File Category</a>
-                        @endcanany
-                        @can('create contract file')
-                        <a href="{{ route('role.contract-files.index', ['role' => $role, 'open' => 'create']) }}" class="submenu-item"><i class="fas fa-plus text-xs w-3"></i> New File</a>
-                        @endcan
-                        @canany(['view contract file','view all contract file'])
-                        <a href="{{ route('role.contract-files.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.contract-files.*') ? 'active' : '' }}"><i class="fas fa-clipboard-list text-xs w-3"></i> Applications Board</a>
-                        @endcanany
-                        @canany(['view contract file sale','view all contract file sale'])
-                        <a href="{{ route('role.contract-file-sales.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.contract-file-sales.*') ? 'active' : '' }}"><i class="fas fa-briefcase text-xs w-3"></i> Manage Sales</a>
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
-
-                {{-- Visa Processing --}}
-                @canany(['view visa','view all visa'])
-                <div class="sidebar-item" x-show="!search || 'visa processing'.includes(search.toLowerCase())">
-                    <button onclick="toggleSubmenu('visaProcessingSubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
-                        <div class="flex items-center gap-2.5">
-                            <div class="sidebar-icon-box {{ request()->routeIs('role.visa.*','role.visa-category.*','role.visa-sales.*','role.other-visa-services.*','role.other-service-types.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-passport"></i></div>
-                            <span class="text-sm font-medium">Visa Processing</span>
-                        </div>
-                        <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-                    </button>
-                    <div id="visaProcessingSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.visa.*','role.visa-category.*','role.visa-sales.*','role.other-visa-services.*','role.other-service-types.*') ? '' : 'hidden' }}">
-                        @canany(['view visa','view all visa'])
-                        <a href="{{ route('role.visa.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.visa.index') ? 'active' : '' }}"><i class="fas fa-th-large text-xs w-3"></i> Application Board</a>
-                        <a href="{{ route('role.visa-sales.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.visa-sales.*') ? 'active' : '' }}"><i class="fas fa-receipt text-xs w-3"></i> Manage Sales</a>
-                        <a href="{{ route('role.other-visa-services.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.other-visa-services.*') ? 'active' : '' }}"><i class="fas fa-puzzle-piece text-xs w-3"></i> Other Services</a>
-                        <a href="{{ route('role.other-service-types.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.other-service-types.*') ? 'active' : '' }}"><i class="fas fa-tags text-xs w-3"></i> Service Types</a>
-                    {{-- <a href="{{ route('role.visa.create', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.visa.create') ? 'active' : '' }}"><i class="fas fa-plus text-xs w-3"></i> New Application</a> --}}
-                        <a href="{{ route('role.visa-category.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.visa-category.*') ? 'active' : '' }}"><i class="fas fa-folder text-xs w-3"></i> Visa Category</a>
-                    {{-- <a href="{{ route('role.visa.doc-tracker', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.visa.doc-tracker') ? 'active' : '' }}"><i class="fas fa-file-alt text-xs w-3"></i> Docs Tracker</a> --}}
-                        @endcanany
-                    </div>
-                </div>
-                @endcanany
-
                 {{-- FINANCE & HR — relocated here so Travel's manager has everything
                      (operations + accounts + payroll) under one company menu instead
                      of a separate global section. Same permission checks as before,
@@ -691,15 +776,15 @@
                     @canany(['view expense','view bank','view general ledger report','view trial balance report','view profit loss report','view balance sheet report','view account ledger report','view account statement report','view journal entry report','view account balance report'])
                     <div>
                         <button onclick="toggleSubmenu('travelAccountsMenu', this)"
-                            class="submenu-group-btn {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? 'is-active' : '' }}">
+                            class="submenu-group-btn {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.party-types.*','role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? 'is-active' : '' }}">
                             <div class="flex items-center gap-2"><div class="sidebar-icon-box"><i class="fas fa-coins"></i></div><span>Accounts</span></div>
                             <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
                         </button>
-                        <div id="travelAccountsMenu" class="submenu space-y-0.5 {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? '' : 'hidden' }}">
+                        <div id="travelAccountsMenu" class="submenu space-y-0.5 {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.party-types.*','role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? '' : 'hidden' }}">
                             @can('view expense')
                             <a href="{{ route('role.expenses.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.expense*','role.petty-cash.*') ? 'active' : '' }}"><i class="fas fa-money-bill-wave text-xs w-3"></i> Expenses</a>
                             @endcan
-                            <a href="{{ route('role.accounts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.accounts.index') ? 'active' : '' }}"><i class="fas fa-user-circle text-xs w-3"></i> Manage Accounts</a>
+                            <a href="{{ route('role.accounts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.accounts.index') ? 'active' : '' }}"><i class="fas fa-sitemap text-xs w-3"></i> Chart of Accounts</a>
                             <a href="{{ route('role.journals.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.journals.index') ? 'active' : '' }}"><i class="fas fa-book text-xs w-3"></i> Manage Journals</a>
                             @can('view payment schedule')
                                 <a href="{{ route('role.payment-schedules.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.payment-schedules.*') ? 'active' : '' }}"><i class="fas fa-calendar-alt text-xs w-3"></i> Payment Schedules</a>
@@ -720,7 +805,7 @@
                             </div>
                             @endcan
                             @canany(['view general ledger report', 'view trial balance report', 'view profit loss report', 'view balance sheet report', 'view account ledger report', 'view account statement report', 'view journal entry report', 'view account balance report'])
-                            <a href="{{ route('role.report.general-ledger', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? 'active' : '' }}"><i class="fas fa-chart-pie text-xs w-3"></i> Account Reports</a>
+                            <a href="{{ route('role.report.general-ledger', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? 'active' : '' }}"><i class="fas fa-chart-pie text-xs w-3"></i> Account Reports</a>
                             @endcanany
                         </div>
                     </div>
@@ -768,11 +853,11 @@
                     @canany(['view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
                     <div>
                         <button onclick="toggleSubmenu('travelPayrollSubmenu', this)"
-                            class="submenu-group-btn {{ request()->routeIs('role.salary-templates.*','role.employee-salaries.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*') ? 'is-active' : '' }}">
+                            class="submenu-group-btn {{ request()->routeIs('role.salary-templates.*','role.employee-salaries.*','role.employee-ledger.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*') ? 'is-active' : '' }}">
                             <div class="flex items-center gap-2"><div class="sidebar-icon-box"><i class="fas fa-money-check-alt"></i></div><span>Payroll Travel</span></div>
                             <i class="fas fa-chevron-down text-xs transition-transform duration-300"></i>
                         </button>
-                        <div id="travelPayrollSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.salary-templates.*','role.employee-salaries.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*') ? '' : 'hidden' }}">
+                        <div id="travelPayrollSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.salary-templates.*','role.employee-salaries.*','role.employee-ledger.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*') ? '' : 'hidden' }}">
                             @can('view salary template')
                             <a href="{{ route('role.salary-templates.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.salary-templates.index') ? 'active' : '' }}"><i class="fas fa-file-invoice-dollar text-xs w-3"></i> Salary Template</a>
                             @endcan
@@ -835,7 +920,7 @@
                     ['procurement',  'Procurement',    'cart-fill', [['orders','Purchase Orders'],['vendors','Vendors'],['spend','Spend']]],
                 ],
                 'MONEY & REPORTING' => [
-                    ['accounts',  'Accounts',  'cash-stack', [['overview','Overview'],['income','Income'],['expenses','Expenses'],['payables','Payables'],['pnl','Project P&L'],['payroll','Payroll'],['recurring','Recurring'],['banks','Banks'],['cash','Manage Cash'],['journals','Journals'],['schedules','Schedules']]],
+                    ['accounts',  'Project Accounts', 'cash-stack', [['overview','Overview'],['expenses','Expenses'],['payables','Payables'],['pnl','Project Cost'],['parties','Vendors & Clients']]],
                     ['payroll',   'Payroll',   'cash-coin',              []],
                     ['ledgers',   'Ledgers',   'journal-text',           []],
                     ['hrm',       'HRM',       'people-fill',            []],
@@ -1216,11 +1301,194 @@
             @if($isActive)
             <span style="margin-left:auto;background:#2563eb;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700;">ACTIVE</span>
             @endif
+        </a>@if($c->id == 3 && \Illuminate\Support\Facades\Route::has('role.construction.accounts'))
+        {{-- EPAL CONSTRUCTIONS only: one link to its Project Accounts (project cost,
+             client due sheet, supplier dues) — the same screens Wood Art uses, over
+             company 3's own books, so it does not have to wait for a dashboard of
+             its own. Guarded on the company AND on the route existing: a server that
+             lags the repo renders this company's menu exactly as before.
+             The @if opens on the SAME line as the </a> above on purpose: for every
+             other company nothing at all is emitted, not even a blank line, so their
+             HTML is byte-identical to what it was. --}}
+        <a href="{{ route('role.construction.accounts', ['role' => $role, 'section' => 'projects']) }}"
+           x-show="!search || 'project accounts construction project cost due'.includes(search.toLowerCase())"
+           class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.construction.accounts*') || $constructionProjectJournal ? 'active' : '' }}">
+            <span style="width:25px;height:25px;border-radius:5px;background:#eef2ff;color:#4f46e5;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;"><i class="fas fa-hard-hat"></i></span>
+            <span class="truncate">Project Accounts</span>
+        </a>@endif
+        @if($c->id == 3 && \Illuminate\Support\Facades\Route::has('role.party-statement.vendors'))
+        <div class="sidebar-section-label" x-show="!search" style="padding-top:10px;">Operations</div>
+        <a href="{{ route('role.party-statement.vendors', ['role' => $role, 'company' => 3]) }}"
+           x-show="!search || 'party statement supplier vendor construction'.includes(search.toLowerCase())"
+           class="sidebar-item flex items-center gap-2.5 {{ request()->routeIs('role.party-statement.*') && (int) request()->query('company') === 3 ? 'active' : '' }}">
+            <div class="sidebar-icon-box"><i class="fas fa-book"></i></div>
+            <span>Party Statement</span>
         </a>
+        @endif
+        @if($c->id == 4 && \Illuminate\Support\Facades\Route::has('role.party-statement.index'))
+        <div class="sidebar-section-label" x-show="!search" style="padding-top:10px;">Operations</div>
+        @canany(['view vendor','view all vendor','view agent','view all agent','view customer','view all customer','view party statement','view all party statement','view party transaction import','view all party transaction import','view party invoice import','view all party invoice import'])
+        <div class="sidebar-item" x-show="!search || 'party management vendor agent customer statement profit import excel transaction'.includes(search.toLowerCase())">
+            <button onclick="toggleSubmenu('groupPartySubmenu', this)" class="sidebar-top-btn w-full flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.vendor.*','role.agent.*','role.customer.*','role.party-transaction-import.*','role.party-invoice-import.*') || (request()->routeIs('role.party-statement.*') && !request()->filled('company')) ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-users"></i></div>
+                    <span class="text-sm font-medium">Party Management</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
+            </button>
+            <div id="groupPartySubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.vendor.*','role.agent.*','role.customer.*','role.party-transaction-import.*','role.party-invoice-import.*') || (request()->routeIs('role.party-statement.*') && !request()->filled('company')) ? '' : 'hidden' }}">
+                @php
+                    $managePartiesRoute = auth()->user()?->canAny(['view vendor', 'view all vendor'])
+                        ? 'role.vendor.index'
+                        : (auth()->user()?->canAny(['view agent', 'view all agent'])
+                            ? 'role.agent.index'
+                            : (auth()->user()?->canAny(['view customer', 'view all customer'])
+                                ? 'role.customer.index'
+                                : null));
+                @endphp
+                @if($managePartiesRoute)
+                <a href="{{ route($managePartiesRoute, ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.vendor.*','role.agent.*','role.customer.*') ? 'active' : '' }}"><i class="fas fa-address-book text-xs w-3"></i> Manage Parties</a>
+                @endif
+                @canany(['view party statement','view all party statement'])
+                <a href="{{ route('role.party-statement.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.party-statement.*') && !request()->filled('company') ? 'active' : '' }}"><i class="fas fa-file-invoice-dollar text-xs w-3"></i> Party Statement</a>
+                @endcanany
+                @canany(['view party transaction import','view all party transaction import'])
+                <a href="{{ route('role.party-transaction-import.index', ['role' => $role, 'import' => 'transactions']) }}" class="submenu-item {{ request()->routeIs('role.party-transaction-import.*') && request('import','transactions') === 'transactions' ? 'active' : '' }}"><i class="fas fa-money-bill-transfer text-xs w-3"></i> Import Transactions</a>
+                @endcanany
+                @canany(['view party invoice import','view all party invoice import'])
+                <a href="{{ route('role.party-transaction-import.index', ['role' => $role, 'import' => 'invoices']) }}" class="submenu-item {{ request()->routeIs('role.party-invoice-import.*') || (request()->routeIs('role.party-transaction-import.*') && request('import') === 'invoices') ? 'active' : '' }}"><i class="fas fa-file-invoice text-xs w-3"></i> Import Custom Invoices</a>
+                @endcanany
+            </div>
+        </div>
+        @endcanany
+        @endif
         @endif
         </div>
         @endforeach
         @endif
+
+        {{-- FINANCE & HR — hidden here for Travel users, who get this same content consolidated inside their own company submenu above instead. --}}
+        @canany(['view expense','view bank','view all bank','view bank account','view all bank account','view bank transfer','view all bank transfer','view payment entry','view payment schedule','view financing','view journal','view account','view general ledger report','view trial balance report','view profit loss report','view balance sheet report','view account ledger report','view account statement report','view journal entry report','view account balance report','view department','view designation','view attendance','view attendance settings','view shift','view holidays','view leave','view leaves','view attendances','view resignation','view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
+        <div class="sidebar-section-label" x-show="!search">Finance & HR</div>
+
+        @canany(['view expense','view bank','view all bank','view bank account','view all bank account','view bank transfer','view all bank transfer','view payment entry','view payment schedule','view financing','view journal','view account','view general ledger report','view trial balance report','view profit loss report','view balance sheet report','view account ledger report','view account statement report','view journal entry report','view account balance report'])
+        <div class="sidebar-item"
+             x-show="!search || 'accounts finance expenses banks journals ledger transfers schedules payment'.includes(search.toLowerCase())">
+            <button onclick="toggleSubmenu('accountsMenu', this)"
+                class="sidebar-top-btn w-full flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.financing.*','role.party-types.*','role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-coins"></i></div>
+                    <span class="text-sm font-medium">Accounts</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
+            </button>
+            <div id="accountsMenu"
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.financing.*','role.party-types.*','role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? '' : 'hidden' }}">
+                @canany(['view bank','view all bank','view bank account','view all bank account','view bank transfer','view all bank transfer'])
+                {{-- One link, not a dropdown: the three bank pages are reached from
+                     the tab bar on the pages themselves (layout/bank-tabs). --}}
+                <a href="{{ route('role.banks.dashboard', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.banks.*','role.bank_transfers.*') && !request()->routeIs('role.banks.payment-entry') ? 'active' : '' }}"><i class="fas fa-building-columns text-xs w-3"></i> Manage Banks</a>
+                @endcanany
+                @if(\Illuminate\Support\Facades\Route::has('role.banks.payment-entry'))
+                @canany(['view payment entry','view all payment entry'])
+                <a href="{{ route('role.banks.payment-entry', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.banks.payment-entry') ? 'active' : '' }}"><i class="fas fa-money-bill-transfer text-xs w-3"></i> Payment Entry</a>
+                @endcanany
+                @endif
+                @can('view expense')
+                {{-- One link, not a dropdown: the seven expense pages are reached from
+                     the tab bar on the pages themselves (layout/expense-tabs). --}}
+                <a href="{{ route('role.expenses.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.expense*','role.petty-cash.*') ? 'active' : '' }}"><i class="fas fa-money-bill-wave text-xs w-3"></i> Expenses</a>
+                @endcan
+                @can('view payment schedule')
+                    <a href="{{ route('role.payment-schedules.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.payment-schedules.*') ? 'active' : '' }}"><i class="fas fa-calendar-alt text-xs w-3"></i> Payment Schedules</a>
+                @endcan
+                {{-- Capital & Financing — the loan book (lent out, borrowed, and the
+                     payroll employee book mirrored read-only).
+
+                     Route::has() before route(): this desk may be deployed before the
+                     server's route cache is rebuilt, and an unresolvable route name
+                     inside the SHARED sidebar would throw while rendering every page
+                     for every company — the exact outage the isolation rule exists to
+                     prevent. If the route is absent the link simply does not render. --}}
+                @canany(['view financing', 'view all financing'])
+                @if(\Illuminate\Support\Facades\Route::has('role.financing.index'))
+                <a href="{{ route('role.financing.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.financing.*') ? 'active' : '' }}"><i class="fas fa-scale-balanced text-xs w-3"></i> Capital &amp; Financing</a>
+                @endif
+                @endcanany
+                @canany(['view journal','view all journal'])
+                <a href="{{ route('role.journals.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.journals.index') ? 'active' : '' }}"><i class="fas fa-book text-xs w-3"></i> Manage Journals</a>
+                @endcanany
+                @canany(['view account','view all account'])
+                <a href="{{ route('role.accounts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.accounts.index') ? 'active' : '' }}"><i class="fas fa-sitemap text-xs w-3"></i> Chart of Accounts</a>
+                @endcanany
+                @canany(['view general ledger report', 'view trial balance report', 'view profit loss report', 'view balance sheet report', 'view account ledger report', 'view account statement report', 'view journal entry report', 'view account balance report'])
+                <a href="{{ route('role.report.general-ledger', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.report.monthly-profit*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances','role.report.profit-loss.*','role.report.balance-sheet.*','role.report.cash-flow*','role.report.expenses-by-category*','role.report.ar-aging*','role.report.ap-aging*','role.report.monthly-report*') ? 'active' : '' }}"><i class="fas fa-chart-pie text-xs w-3"></i> Account Reports</a>
+                @endcanany
+            </div>
+        </div>
+        @endcanany
+
+        @php
+            // Payroll now lives inside HRM as its own group, so both menus'
+            // routes decide whether the HRM parent shows as open/active.
+            $payrollRoutes = ['role.salary-templates.*','role.employee-salaries.*','role.employee-ledger.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*'];
+            $hrmOwnRoutes  = ['role.departments.*','role.designations.*','role.holidays.*','role.shifts.*','role.leaves.*','role.attendances.*','role.leave-types.*','role.attendence-settings.*','role.resignations.*'];
+
+            $payrollActive = request()->routeIs(...$payrollRoutes);
+            $hrmActive     = $payrollActive || request()->routeIs(...$hrmOwnRoutes);
+        @endphp
+
+        @canany(['view department','view designation','view attendance','view attendance settings','view shift','view holidays','view leave','view leaves','view attendances','view resignation','view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
+        <div class="sidebar-item"
+             x-show="!search || 'hrm human resource department designation attendance shift holiday leave resignation payroll salary loan payslip advance commission'.includes(search.toLowerCase())">
+            <button onclick="toggleSubmenu('hrmSubmenu', this)"
+                class="sidebar-top-btn w-full flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <div class="sidebar-icon-box {{ $hrmActive ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-users"></i></div>
+                    <span class="text-sm font-medium">HRM</span>
+                </div>
+                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
+            </button>
+            <div id="hrmSubmenu" class="submenu space-y-0.5 {{ $hrmActive ? '' : 'hidden' }}">
+
+                {{-- Payroll — single entry; the six screens are reached from the in-page tab bar. --}}
+                @canany(['view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
+                    @include('layout.payroll-menu-link')
+                @endcanany
+
+                @can('view department')
+                <a href="{{ route('role.departments.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.departments.index') ? 'active' : '' }}"><i class="fas fa-building text-xs w-3"></i> Department</a>
+                @endcan
+                @can('view designation')
+                <a href="{{ route('role.designations.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.designations.index') ? 'active' : '' }}"><i class="fas fa-id-badge text-xs w-3"></i> Designation</a>
+                @endcan
+                @can('view attendance settings')
+                <a href="{{ route('role.attendence-settings.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.attendence-settings.index') ? 'active' : '' }}"><i class="fas fa-cog text-xs w-3"></i> Attendance Settings</a>
+                @endcan
+                @can('view shift')
+                <a href="{{ route('role.shifts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.shifts.index') ? 'active' : '' }}"><i class="fas fa-clock text-xs w-3"></i> Shift</a>
+                @endcan
+                @can('view holiday')
+                <a href="{{ route('role.holidays.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.holidays.index') ? 'active' : '' }}"><i class="fas fa-calendar text-xs w-3"></i> Holidays</a>
+                @endcan
+                @can('view leave type')
+                <a href="{{ route('role.leave-types.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.leave-types.index') ? 'active' : '' }}"><i class="fas fa-calendar-minus text-xs w-3"></i> Leave Types</a>
+                @endcan
+                @can('view leave')
+                <a href="{{ route('role.leaves.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.leaves.index') ? 'active' : '' }}"><i class="fas fa-calendar-check text-xs w-3"></i> All Leaves</a>
+                @endcan
+                @can('view resignation')
+                <a href="{{ route('role.resignations.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.resignations.index') ? 'active' : '' }}"><i class="fas fa-sign-out-alt text-xs w-3"></i> Resignations</a>
+                @endcan
+                @can('view attendance')
+                <a href="{{ route('role.attendances.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.attendances.index') ? 'active' : '' }}"><i class="fas fa-fingerprint text-xs w-3"></i> All Attendances</a>
+                @endcan
+            </div>
+        </div>
+        @endcanany
+
+
+        @endcanany
 
         {{-- BUSINESS --}}
         @canany(['view users','view product','view purchase','view sales','view stock transfer','view stock movement','view return reference'])
@@ -1232,13 +1500,13 @@
             <button onclick="toggleSubmenu('userSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.user.*','role.promotions.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-user-friends"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.user.*','role.promotions.*','role.user-role-settings.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-user-friends"></i></div>
                     <span class="text-sm font-medium">User Management</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
             <div id="userSubmenu"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.user.create','role.user.index','role.user.documents','role.user.summary','role.promotions.*') ? '' : 'hidden' }}">
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.user.*','role.promotions.*','role.user-role-settings.*') ? '' : 'hidden' }}">
                 @can('create users')
                 <a href="{{ route('role.user.create', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.user.create') ? 'active' : '' }}"><i class="fas fa-plus text-xs w-3"></i> Add User</a>
                 @endcan
@@ -1301,23 +1569,36 @@
                 @endif
                 @endcan
                 <a href="{{ route('role.promotions.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.promotions.index') ? 'active' : '' }}"><i class="fas fa-trophy text-xs w-3"></i> User Promotions</a>
+                {{-- User Role Setting (owner, 2026-11-01): the new, separate role-permission system — super admin
+                     only. Its page is not built yet: inert until the route exists, so the menu can never throw. --}}
+                @if(auth()->user()?->is_super_admin)
+                @php $ursRoute = \Illuminate\Support\Facades\Route::has('role.user-role-settings.index'); @endphp
+                <a href="{{ $ursRoute ? route('role.user-role-settings.index', ['role' => $role]) : 'javascript:void(0)' }}"
+                   class="submenu-item {{ $ursRoute && request()->routeIs('role.user-role-settings.*') ? 'active' : '' }}"><i class="fas fa-user-shield text-xs w-3"></i> User Role Setting</a>
+                @endif
             </div>
         </div>
         @endcan
 
-        @canany(['view product','view purchase','view sales','view stock transfer','view stock movement','view return reference'])
+        @canany(['view operation tracker','view all operation tracker','view product','view purchase','view sales','view stock transfer','view stock movement','view return reference'])
         <div class="sidebar-item"
-             x-show="!search || 'business operations products inventory sales purchase stock customers suppliers'.includes(search.toLowerCase())">
+             x-show="!search || 'business operations status tracker control tower visa file ticket products inventory sales purchase stock customers suppliers'.includes(search.toLowerCase())">
             <button onclick="toggleSubmenu('businessOpsSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.units.*','role.brands.*','role.categories.*','role.sub-categories.*','role.products.*','role.sales.*','role.purchases.*','role.stock-transfers.*','role.stock-movements.*','role.return-refs.*','role.customers.*','role.suppliers.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-building"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.operation-status-tracker.*','role.units.*','role.brands.*','role.categories.*','role.sub-categories.*','role.products.*','role.sales.*','role.purchases.*','role.stock-transfers.*','role.stock-movements.*','role.return-refs.*','role.customers.*','role.suppliers.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-building"></i></div>
                     <span class="text-sm font-medium">Business Operations</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
             <div id="businessOpsSubmenu"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.units.*','role.brands.*','role.categories.*','role.sub-categories.*','role.products.*','role.sales.*','role.purchases.*','role.stock-transfers.*','role.stock-movements.*','role.return-refs.*','role.customers.*','role.suppliers.*') ? '' : 'hidden' }}">
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.operation-status-tracker.*','role.units.*','role.brands.*','role.categories.*','role.sub-categories.*','role.products.*','role.sales.*','role.purchases.*','role.stock-transfers.*','role.stock-movements.*','role.return-refs.*','role.customers.*','role.suppliers.*') ? '' : 'hidden' }}">
+                @canany(['view operation tracker','view all operation tracker'])
+                @if(\Illuminate\Support\Facades\Route::has('role.operation-status-tracker.index'))
+                <a href="{{ route('role.operation-status-tracker.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.operation-status-tracker.*') ? 'active' : '' }}"><i class="fas fa-chart-line text-xs w-3"></i> Status Tracker</a>
+                @endif
+                @endcanany
+
                 @can('view product')
                 <div>
                     <button onclick="toggleSubmenu('productsSubmenu', this)"
@@ -1382,127 +1663,6 @@
         @endcanany
         @endcanany
 
-        {{-- FINANCE & HR — hidden here for Travel users, who get this same content consolidated inside their own company submenu above instead. --}}
-        @canany(['view expense','view bank','view department','view designation','view attendance','view attendance settings','view shift','view holidays','view leave','view leaves','view attendances','view resignation','view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
-        <div class="sidebar-section-label" x-show="!search">Finance & HR</div>
-
-        @canany(['view expense','view bank','view general ledger report','view trial balance report','view profit loss report','view balance sheet report','view account ledger report','view account statement report','view journal entry report','view account balance report'])
-        <div class="sidebar-item"
-             x-show="!search || 'accounts finance expenses banks journals ledger transfers schedules payment'.includes(search.toLowerCase())">
-            <button onclick="toggleSubmenu('accountsMenu', this)"
-                class="sidebar-top-btn w-full flex justify-between items-center">
-                <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-coins"></i></div>
-                    <span class="text-sm font-medium">Accounts</span>
-                </div>
-                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-            </button>
-            <div id="accountsMenu"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.expense*','role.petty-cash.*','role.accounts.*','role.banks.*','role.bank_transfers.*','role.journals.*','role.payment-schedules.*','role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? '' : 'hidden' }}">
-                @can('view expense')
-                {{-- One link, not a dropdown: the seven expense pages are reached from
-                     the tab bar on the pages themselves (layout/expense-tabs). --}}
-                <a href="{{ route('role.expenses.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.expense*','role.petty-cash.*') ? 'active' : '' }}"><i class="fas fa-money-bill-wave text-xs w-3"></i> Expenses</a>
-                @endcan
-                @canany(['view account','view all account'])
-                <a href="{{ route('role.accounts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.accounts.index') ? 'active' : '' }}"><i class="fas fa-user-circle text-xs w-3"></i> Manage Accounts</a>
-                @endcanany
-                @canany(['view journal','view all journal'])
-                <a href="{{ route('role.journals.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.journals.index') ? 'active' : '' }}"><i class="fas fa-book text-xs w-3"></i> Manage Journals</a>
-                @endcanany
-                @can('view payment schedule')
-                    <a href="{{ route('role.payment-schedules.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.payment-schedules.*') ? 'active' : '' }}"><i class="fas fa-calendar-alt text-xs w-3"></i> Payment Schedules</a>
-                @endcan
-                @canany(['view account','view all account'])
-                <a href="{{ route('role.party-types.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.party-types.*') ? 'active' : '' }}"><i class="fas fa-tags text-xs w-3"></i> Party Types</a>
-                @endcanany
-                @can('view bank')
-                {{-- One link, not a dropdown: the three bank pages are reached from
-                     the tab bar on the pages themselves (layout/bank-tabs). --}}
-                <a href="{{ route('role.banks.dashboard', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.banks.*','role.bank_transfers.*') ? 'active' : '' }}"><i class="fas fa-building-columns text-xs w-3"></i> Manage Banks</a>
-                @endcan
-                {{-- Capital & Financing — the loan book (lent out, borrowed, and the
-                     payroll employee book mirrored read-only).
-
-                     Route::has() before route(): this desk may be deployed before the
-                     server's route cache is rebuilt, and an unresolvable route name
-                     inside the SHARED sidebar would throw while rendering every page
-                     for every company — the exact outage the isolation rule exists to
-                     prevent. If the route is absent the link simply does not render. --}}
-                @canany(['view financing', 'view all financing'])
-                @if(\Illuminate\Support\Facades\Route::has('role.financing.index'))
-                <a href="{{ route('role.financing.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.financing.*') ? 'active' : '' }}"><i class="fas fa-scale-balanced text-xs w-3"></i> Capital &amp; Financing</a>
-                @endif
-                @endcanany
-                @canany(['view general ledger report', 'view trial balance report', 'view profit loss report', 'view balance sheet report', 'view account ledger report', 'view account statement report', 'view journal entry report', 'view account balance report'])
-                <a href="{{ route('role.report.general-ledger', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.report.general-ledger','role.report.trial-balance','role.report.profit-loss','role.report.balance-sheet','role.report.account-ledger','role.report.account-statement','role.report.journal-entries','role.report.account-balances') ? 'active' : '' }}"><i class="fas fa-chart-pie text-xs w-3"></i> Account Reports</a>
-                @endcanany
-            </div>
-        </div>
-        @endcanany
-
-        @php
-            // Payroll now lives inside HRM as its own group, so both menus'
-            // routes decide whether the HRM parent shows as open/active.
-            $payrollRoutes = ['role.salary-templates.*','role.employee-salaries.*','role.loans.*','role.payslips.*','role.advance-salaries.*','role.commissions.*','role.report.payroll','role.report.payroll.*'];
-            $hrmOwnRoutes  = ['role.departments.*','role.designations.*','role.holidays.*','role.shifts.*','role.leaves.*','role.attendances.*','role.leave-types.*','role.attendence-settings.*','role.resignations.*'];
-
-            $payrollActive = request()->routeIs(...$payrollRoutes);
-            $hrmActive     = $payrollActive || request()->routeIs(...$hrmOwnRoutes);
-        @endphp
-
-        @canany(['view department','view designation','view attendance','view attendance settings','view shift','view holidays','view leave','view leaves','view attendances','view resignation','view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
-        <div class="sidebar-item"
-             x-show="!search || 'hrm human resource department designation attendance shift holiday leave resignation payroll salary loan payslip advance commission'.includes(search.toLowerCase())">
-            <button onclick="toggleSubmenu('hrmSubmenu', this)"
-                class="sidebar-top-btn w-full flex justify-between items-center">
-                <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ $hrmActive ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-users"></i></div>
-                    <span class="text-sm font-medium">HRM</span>
-                </div>
-                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
-            </button>
-            <div id="hrmSubmenu" class="submenu space-y-0.5 {{ $hrmActive ? '' : 'hidden' }}">
-
-                {{-- Payroll — single entry; the six screens are reached from the in-page tab bar. --}}
-                @canany(['view salary template','view salary','view loan','view payslip','view advance salary','view commission'])
-                    @include('layout.payroll-menu-link')
-                @endcanany
-
-                @can('view department')
-                <a href="{{ route('role.departments.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.departments.index') ? 'active' : '' }}"><i class="fas fa-building text-xs w-3"></i> Department</a>
-                @endcan
-                @can('view designation')
-                <a href="{{ route('role.designations.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.designations.index') ? 'active' : '' }}"><i class="fas fa-id-badge text-xs w-3"></i> Designation</a>
-                @endcan
-                @can('view attendance settings')
-                <a href="{{ route('role.attendence-settings.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.attendence-settings.index') ? 'active' : '' }}"><i class="fas fa-cog text-xs w-3"></i> Attendance Settings</a>
-                @endcan
-                @can('view shift')
-                <a href="{{ route('role.shifts.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.shifts.index') ? 'active' : '' }}"><i class="fas fa-clock text-xs w-3"></i> Shift</a>
-                @endcan
-                @can('view holiday')
-                <a href="{{ route('role.holidays.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.holidays.index') ? 'active' : '' }}"><i class="fas fa-calendar text-xs w-3"></i> Holidays</a>
-                @endcan
-                @can('view leave type')
-                <a href="{{ route('role.leave-types.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.leave-types.index') ? 'active' : '' }}"><i class="fas fa-calendar-minus text-xs w-3"></i> Leave Types</a>
-                @endcan
-                @can('view leave')
-                <a href="{{ route('role.leaves.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.leaves.index') ? 'active' : '' }}"><i class="fas fa-calendar-check text-xs w-3"></i> All Leaves</a>
-                @endcan
-                @can('view resignation')
-                <a href="{{ route('role.resignations.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.resignations.index') ? 'active' : '' }}"><i class="fas fa-sign-out-alt text-xs w-3"></i> Resignations</a>
-                @endcan
-                @can('view attendance')
-                <a href="{{ route('role.attendances.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.attendances.index') ? 'active' : '' }}"><i class="fas fa-fingerprint text-xs w-3"></i> All Attendances</a>
-                @endcan
-            </div>
-        </div>
-        @endcanany
-
-
-        @endcanany
-
         {{-- CRM / TASK / REPORT --}}
         @canany(['view lead source','view lead manager','view lead followup','view lead reminder','view contract','view deal','view proposal','view estimate','view lead project category','view all lead project category','view lead project','view all lead project','view task'])
         <div class="sidebar-section-label" x-show="!search">Operations</div>
@@ -1513,13 +1673,13 @@
             <button onclick="toggleSubmenu('crmSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.lead-source.*','role.lead-followup.*','role.lead-reminders.*','role.lead-manager.*','role.project-categories.*','role.contract-types.*','role.deals.*','role.proposals.*','role.projects.*','role.contracts.*','role.estimates.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-handshake"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.crm.dashboard','role.lead-source.*','role.lead-followup.*','role.lead-reminders.*','role.lead-manager.*','role.project-categories.*','role.contract-types.*','role.deals.*','role.proposals.*','role.projects.*','role.contracts.*','role.estimates.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-handshake"></i></div>
                     <span class="text-sm font-medium">CRM</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
             <div id="crmSubmenu"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.lead-source.*','role.lead-followup.*','role.lead-reminders.*','role.lead-manager.*','role.project-categories.*','role.contract-types.*','role.deals.*','role.proposals.*','role.projects.*','role.contracts.*','role.estimates.*') ? '' : 'hidden' }}">
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.crm.dashboard','role.lead-source.*','role.lead-followup.*','role.lead-reminders.*','role.lead-manager.*','role.project-categories.*','role.contract-types.*','role.deals.*','role.proposals.*','role.projects.*','role.contracts.*','role.estimates.*') ? '' : 'hidden' }}">
                 @canany(['view lead source','view lead manager','view lead followup','view lead reminder'])
                 @can('view deal')
                 <a href="{{ route('role.crm.dashboard', ['role' => $role]) }}"
@@ -1535,7 +1695,7 @@
                     </button>
                     <div id="crmLeadSubmenu" class="submenu space-y-0.5 {{ request()->routeIs('role.lead-source.*','role.lead-manager.*','role.lead-followup.*','role.lead-reminders.*') ? '' : 'hidden' }}">
                         @can('view lead source')
-                        
+
                         <a href="{{ route('role.lead-source.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.lead-source.index') ? 'active' : '' }}"><i class="fas fa-bullseye text-xs w-3"></i> Lead Source</a>
                         @endcan
                         @can('view lead manager')
@@ -1592,7 +1752,7 @@
             <button onclick="toggleSubmenu('projectMainSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.project-categories.*','role.projects.*','role.require-types.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-diagram-project"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.project-categories.*','role.projects.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-diagram-project"></i></div>
                     <span class="text-sm font-medium">Project</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
@@ -1604,7 +1764,7 @@
                 @endcanany
                 @canany(['view lead project','view all lead project'])
                 <a href="{{ route('role.projects.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.projects.index') ? 'active' : '' }}"><i class="fas fa-briefcase text-xs w-3"></i> Projects</a>
-                
+
                 @endcanany
             </div>
         </div>
@@ -1616,7 +1776,7 @@
             <button onclick="toggleSubmenu('empRequestSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.employee-requests.*','role.require-assignments.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-inbox"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.employee-requests.*','role.require-assignments.*','role.require-types.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-inbox"></i></div>
                     <span class="text-sm font-medium">Require</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
@@ -1643,7 +1803,7 @@
                 </a> --}}
                 @endcan
                 {{-- @canany(['verify require assignment','escalate require assignment']) --}}
-                
+
                 {{-- @endcanany --}}
             </div>
         </div>
@@ -1651,17 +1811,17 @@
 
         @canany(['view task','view task project','view all task project'])
         <div class="sidebar-item"
-             x-show="!search || 'task workspace board column label project category'.includes(search.toLowerCase())">
+             x-show="!search || 'task workspace board column label project category oversight employee'.includes(search.toLowerCase())">
             <button onclick="toggleSubmenu('taskSubmenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.workspace-users.*','role.boards.*','role.columns.*','role.labels.*','role.tasks.*','role.project-categories.*','role.projects.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-list-check"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.workspace-users.*','role.boards.*','role.columns.*','role.labels.*','role.tasks.*','role.task-oversight.*','role.eon.*','role.task-projects.*','role.project-categories.*','role.projects.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-list-check"></i></div>
                     <span class="text-sm font-medium">Task</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
             <div id="taskSubmenu"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.workspace-users.*','role.boards.*','role.columns.*','role.labels.*','role.tasks.*','role.project-categories.*','role.projects.*') ? '' : 'hidden' }}">
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.workspace-users.*','role.boards.*','role.columns.*','role.labels.*','role.tasks.*','role.task-oversight.*','role.eon.*','role.task-projects.*','role.project-categories.*','role.projects.*') ? '' : 'hidden' }}">
                 @can('view workspace')
                 <a href="{{ route('role.workspace-users.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.workspace-users.index') ? 'active' : '' }}"><i class="fas fa-people-group text-xs w-3"></i> Workspace</a>
                 @endcan
@@ -1675,6 +1835,29 @@
                 @can('view task')
                 <a href="{{ route('role.tasks.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.tasks.index','role.tasks.board') ? 'active' : '' }}"><i class="fas fa-tasks text-xs w-3"></i> My Tasks</a>
                 @endcan
+                {{-- Employee Task Oversight — super admin only.
+
+                     Route::has() first, and it is not a formality: this file is
+                     the shared sidebar every company renders, and on 2026-08-10
+                     an unguarded route() call in exactly this spot threw
+                     RouteNotFoundException on a server whose route cache was
+                     stale and 500'd every superadmin page. If the route is not
+                     registered the link simply is not drawn. --}}
+                @if(Route::has('role.task-oversight.index') && (auth()->user()->is_super_admin || auth()->user()->hasRole('super admin')))
+                <a href="{{ route('role.task-oversight.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.task-oversight.*') ? 'active' : '' }}"><i class="fas fa-user-shield text-xs w-3"></i> Employee Task Oversight</a>
+                @endif
+                {{-- EON — employee intelligence. Super admin only.
+
+                     Route::has() first, for the same reason as the line above:
+                     this is the shared sidebar every company renders, EON is a
+                     module whose provider the server may not have autoloaded
+                     yet, and an unguarded route() call here threw
+                     RouteNotFoundException on 2026-08-10 and 500'd every
+                     superadmin page. If EON is not registered, the link simply
+                     is not drawn and nothing else about this file changes. --}}
+                @if(Route::has('role.eon.index') && (auth()->user()->is_super_admin || auth()->user()->hasRole('super admin')))
+                <a href="{{ route('role.eon.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.eon.*') ? 'active' : '' }}"><i class="fas fa-brain text-xs w-3"></i> EON Intelligence</a>
+                @endif
                 @canany(['view task project','view all task project'])
                 <div>
                     <button onclick="toggleSubmenu('taskProjectSubmenu', this)"
@@ -1697,16 +1880,12 @@
             <button onclick="toggleSubmenu('reportMenu', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.report.monthly-profit*','role.report.monthly-attendances','role.report.task.reports') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-chart-bar"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.report.monthly-attendances','role.report.task.reports') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-chart-bar"></i></div>
                     <span class="text-sm font-medium">Report</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
-            <div id="reportMenu" class="submenu space-y-0.5 {{ request()->routeIs('role.report.monthly-profit*','role.report.monthly-attendances','role.report.task.reports') ? '' : 'hidden' }}">
-                <a href="{{ route('role.report.monthly-profit', ['role' => $role]) }}"
-                   class="submenu-item {{ request()->routeIs('role.report.monthly-profit*') ? 'active' : '' }}">
-                    <i class="fas fa-chart-line text-xs w-3"></i> Monthly Profit Sheet
-                </a>
+            <div id="reportMenu" class="submenu space-y-0.5 {{ request()->routeIs('role.report.monthly-attendances','role.report.task.reports') ? '' : 'hidden' }}">
                 @can('view monthly attendance report')
                 <a href="{{ route('role.report.monthly-attendances', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.report.monthly-attendances') ? 'active' : '' }}"><i class="fas fa-calendar-check text-xs w-3"></i> Monthly Attendance</a>
                 @endcan
@@ -1793,13 +1972,13 @@
             <button onclick="toggleSubmenu('setting', this)"
                 class="sidebar-top-btn w-full flex justify-between items-center">
                 <div class="flex items-center gap-2.5">
-                    <div class="sidebar-icon-box {{ request()->routeIs('role.sms_templates.*','role.site-settings.*','role.company-settings.*','role.device-settings.*','role.invoice-templates.*','role.role-permission.*','role.demo-data.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-cog"></i></div>
+                    <div class="sidebar-icon-box {{ request()->routeIs('role.sms_templates.*','role.site-settings.*','role.company-settings.*','role.device-settings.*','role.invoice-templates.*','role.role-permission.*','role.demo-data.*','role.eon-ai.*') ? '!bg-blue-100 !text-blue-700' : '' }}"><i class="fas fa-cog"></i></div>
                     <span class="text-sm font-medium">Settings</span>
                 </div>
                 <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-300"></i>
             </button>
             <div id="setting"
-                 class="submenu space-y-0.5 {{ request()->routeIs('role.sms_templates.*','role.site-settings.*','role.company-settings.*','role.device-settings.*','role.invoice-templates.*','role.role-permission.*','role.demo-data.*') ? '' : 'hidden' }}">
+                 class="submenu space-y-0.5 {{ request()->routeIs('role.sms_templates.*','role.site-settings.*','role.company-settings.*','role.device-settings.*','role.invoice-templates.*','role.role-permission.*','role.demo-data.*','role.eon-ai.*') ? '' : 'hidden' }}">
                 <a href="{{ route('role.sms_templates.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.sms_templates.*') ? 'active' : '' }}"><i class="fas fa-list text-xs w-3"></i> SMS Templates</a>
                 <a href="{{ route('role.site-settings.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.site-settings.*') ? 'active' : '' }}"><i class="fas fa-sitemap text-xs w-3"></i> Site Settings</a>
                 <a href="{{ route('role.company-settings.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.company-settings.*') ? 'active' : '' }}"><i class="fas fa-building text-xs w-3"></i> Company Settings</a>
@@ -1807,6 +1986,11 @@
                 <a href="{{ route('role.invoice-templates.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.invoice-templates.*') ? 'active' : '' }}"><i class="fas fa-file-invoice text-xs w-3"></i> Invoice Settings</a>
                 <a href="{{ route('role.role-permission.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.role-permission.*') ? 'active' : '' }}"><i class="fas fa-shield-alt text-xs w-3"></i> Role Settings</a>
                 <a href="{{ route('role.demo-data.index', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.demo-data.*') ? 'active' : '' }}"><i class="fas fa-trash-alt text-xs w-3"></i> Demo Data</a>
+                {{-- EON AI connection point (Modules/EonAi). Route::has()-guarded: if the
+                     module is not loaded, nothing renders and nothing can throw. --}}
+                @if(Route::has('role.eon-ai.connection') && (auth()->user()->is_super_admin || auth()->user()->hasRole('super admin')))
+                <a href="{{ route('role.eon-ai.connection', ['role' => $role]) }}" class="submenu-item {{ request()->routeIs('role.eon-ai.*') ? 'active' : '' }}"><i class="fas fa-plug text-xs w-3"></i> EON Connection</a>
+                @endif
             </div>
         </div>
         @endcan
@@ -1842,3 +2026,34 @@
     </div>
 
 </aside>
+
+{{-- ── Sidebar scroll position: restored here, before the first paint ──
+
+     The full save/restore logic lives in layout/app.blade.php, but that script
+     block sits *below* a render-blocking CDN <script> (sweetalert2). The parser
+     stalls there on every page load, the browser paints the sidebar at the top,
+     and the later correction is therefore seen as a visible jump — the sidebar
+     appears to scroll on its own when you move from, say, Manage Banks to
+     Expenses.
+
+     Running it here — immediately after the panel's own markup, while the parser
+     is still inside <body> and nothing has painted yet — means the first paint
+     already shows the position you left. app.blade.php still re-applies it once
+     Alpine has settled, which is a no-op when nothing shifted.
+
+     The key string is duplicated from SIDEBAR_SCROLL_KEY in app.blade.php (that
+     constant is not declared until later in the document); keep the two in sync.
+
+     Guarded: sessionStorage throws in some privacy modes and this file renders
+     for every company, so it must not be able to break a page. --}}
+<script>
+    (function () {
+        try {
+            var panel = document.getElementById('sidebarPanel');
+            if (!panel) return;
+            var saved = sessionStorage.getItem('sidebarNavScrollTop');
+            if (saved === null) return;
+            panel.scrollTop = Number(saved) || 0;
+        } catch (e) {}
+    })();
+</script>

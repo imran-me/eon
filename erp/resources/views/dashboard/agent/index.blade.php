@@ -7,6 +7,7 @@
 @section('main-content')
 
 <div class="min-h-screen bg-gray-50 p-6">
+    @include('layout.manage-parties-tabs')
 
     {{-- Page Header --}}
     <div class="mb-6">
@@ -17,7 +18,7 @@
     <div class="bg-white rounded-xl shadow-sm border border-gray-100">
 
         {{-- Toolbar --}}
-        <div class="flex flex-wrap items-center gap-3 p-4 border-gray-100">
+        <div class="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
             {{-- Search --}}
             <form method="GET" action="{{ route('role.agent.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}"
                   class="flex items-center gap-3 flex-1 flex-wrap">
@@ -28,37 +29,36 @@
                                   d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
                         </svg>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}"
+                    <input type="text" name="search" value="{{ request('search') }}" data-live-party-search
                            placeholder="Search agent, ID, email..."
                            class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-50">
                 </div>
+                <select name="service_category" class="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500">
+                    <option value="">All services</option>
+                    @foreach(['ticket' => 'Ticket', 'visa' => 'Visa', 'flight' => 'Flight', 'file' => 'File', 'instructor' => 'Instructor', 'others' => 'Others'] as $value => $label)
+                        <option value="{{ $value }}" @selected(request('service_category') === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
                 <button type="submit"
-                        class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                        class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
                     </svg>
                     Filter
                 </button>
+                <a href="{{ route('role.agent.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}"
+                   class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition">
+                    <i class="fas fa-rotate-left text-xs"></i> Reset
+                </a>
             </form>
 
             {{-- Right buttons --}}
             <div class="flex items-center gap-2 ml-auto">
-                <a href="{{ route('role.agent.export.excel', array_merge(['role' => Str::slug(Auth::user()->getRoleNames()->first())], request()->only('search'))) }}"
+                <a href="{{ route('role.agent.print', array_merge(['role' => Str::slug(Auth::user()->getRoleNames()->first())], request()->only('search', 'service_category'))) }}"
+                   target="_blank"
                    class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                    </svg>
-                    Export Excel
-                </a>
-                <a href="{{ route('role.agent.export.pdf', array_merge(['role' => Str::slug(Auth::user()->getRoleNames()->first())], request()->only('search'))) }}"
-                   class="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">
-                    <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                    </svg>
-                    Export PDF
+                    <i class="fas fa-print text-indigo-600"></i> Print
                 </a>
                 <a href="{{ route('role.agent.create', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}"
                    class="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-sm">
@@ -77,12 +77,13 @@
                     <tr class="bg-gray-50 border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         <th class="px-5 py-3 text-left">Agent ID</th>
                         <th class="px-5 py-3 text-left">Agent Name</th>
+                        <th class="px-5 py-3 text-left">Services</th>
                         <th class="px-5 py-3 text-left">Contact</th>
                         <th class="px-5 py-3 text-left">Address</th>
                         <th class="px-5 py-3 text-left">Balance / Receivable</th>
                         <th class="px-5 py-3 text-left">Last Transaction</th>
                         <th class="px-5 py-3 text-left">Status</th>
-                        <th class="px-5 py-3 text-center">Actions</th>
+                        <th class="px-2 py-3 text-center" style="width:1%;white-space:nowrap">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-50">
@@ -90,27 +91,38 @@
                         @php
                             $agentId = 'EP-AG-' . str_pad($agent->id, 3, '0', STR_PAD_LEFT);
                             $status  = $agent->status ?? 'inactive';
+                            $statementUrl = route('role.party-statement.index', [
+                                'role' => Str::slug(Auth::user()->getRoleNames()->first()),
+                                'party_id' => $agent->id,
+                            ]);
                         @endphp
                         <tr class="hover:bg-blue-50/30 transition-colors">
 
                             {{-- Agent ID --}}
                             <td class="px-5 py-3.5">
-                                <span class="font-mono text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-1 rounded">
+                                <a href="{{ $statementUrl }}" title="Open {{ $agent->name }} party statement"
+                                   class="font-mono text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-1 rounded hover:bg-violet-100 hover:underline">
                                     {{ $agentId }}
-                                </span>
+                                </a>
                             </td>
 
                             {{-- Agent Name --}}
                             <td class="px-5 py-3.5">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                    <a href="{{ $statementUrl }}" aria-label="Open {{ $agent->name }} party statement"
+                                       class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 hover:ring-2 hover:ring-violet-200">
                                         {{ strtoupper(substr($agent->name, 0, 1)) }}
-                                    </div>
+                                    </a>
                                     <div>
-                                        <p class="font-semibold text-gray-800 leading-tight">{{ $agent->name }}</p>
+                                        <a href="{{ $statementUrl }}" title="Open detailed party statement"
+                                           class="font-semibold text-gray-800 leading-tight hover:text-violet-600 hover:underline">{{ $agent->name }}</a>
                                         <p class="text-xs text-gray-400 mt-0.5">{{ $agent->email }}</p>
                                     </div>
                                 </div>
+                            </td>
+
+                            <td class="px-5 py-3.5">
+                                @include('dashboard.partials.party-service-badges', ['party' => $agent])
                             </td>
 
                             {{-- Contact --}}
@@ -139,9 +151,8 @@
                             {{-- Balance / Payable --}}
                             @php $ledger = $balances[$agent->id] ?? null; @endphp
                             <td class="px-5 py-3.5">
-                                <a href="{{ route('role.party-statement.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'party_id' => $agent->id]) }}"
-                                   class="inline-flex items-center gap-1 text-xs font-bold hover:underline
-                                       {{ !$ledger || $ledger->balance == 0 ? 'text-gray-400' : ($ledger->balance > 0 ? 'text-red-600' : 'text-emerald-600') }}"
+                                <a href="{{ $statementUrl }}"
+                                   class="inline-flex items-center gap-1 text-xs font-bold hover:underline {{ !$ledger || $ledger->balance == 0 ? 'text-gray-400' : ($ledger->balance > 0 ? 'text-red-600' : 'text-emerald-600') }}"
                                    title="Open party statement">
                                     <i class="fas fa-taka-sign text-[10px]"></i>
                                     {{ $ledger ? number_format(abs($ledger->balance)) : '0' }}
@@ -179,14 +190,14 @@
                             </td>
 
                             {{-- Actions --}}
-                            <td class="px-5 py-3.5">
-                                <div class="flex items-center justify-center gap-1">
+                            <td class="px-2 py-3.5">
+                                <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
 
                                     {{-- Eye / View --}}
                                     <a href="{{ route('role.agent.edit', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'agent' => $agent->id]) }}"
                                        class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-500 bg-blue-50 hover:bg-blue-100 transition"
-                                       title="View">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       title="View" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin:0">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -197,8 +208,8 @@
                                     {{-- Edit --}}
                                     <a href="{{ route('role.agent.edit', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'agent' => $agent->id]) }}"
                                        class="w-8 h-8 flex items-center justify-center rounded-lg text-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition"
-                                       title="Edit">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                       title="Edit" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin:0">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                   d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                                         </svg>
@@ -213,14 +224,14 @@
                                             data-agent-id="{{ $agent->id }}"
                                             data-agent-status="{{ $status }}"
                                             onclick="openConfirmModal(this)"
-                                            title="{{ $status === 'active' ? 'Deactivate' : 'Activate' }}">
+                                            title="{{ $status === 'active' ? 'Deactivate' : 'Activate' }}" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
                                         @if($status === 'active')
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin:0">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                       d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
                                             </svg>
                                         @else
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin:0">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                             </svg>
@@ -233,8 +244,8 @@
                                             data-delete-id="{{ $agent->id }}"
                                             data-delete-name="{{ e($agent->name) }}"
                                             onclick="openDeleteModal(this)"
-                                            title="Delete Agent">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            title="Delete Agent" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width:13px;height:13px;margin:0">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                   d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
                                         </svg>
@@ -244,7 +255,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-16 text-center">
+                            <td colspan="9" class="py-16 text-center">
                                 <div class="flex flex-col items-center gap-2 text-gray-400">
                                     <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -374,5 +385,7 @@
         document.getElementById('deleteModal').classList.add('hidden');
         document.getElementById('deleteModal').classList.remove('flex');
     }
+
+    @include('dashboard.partials.live-party-search')
 </script>
 @endsection

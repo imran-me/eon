@@ -110,6 +110,19 @@ export function openTaskDrawer(config, taskId, title, description, assignedTo, s
     // Bind taskId to all drawer dropdowns
     bindDrawerTaskId(taskId);
 
+    // Sub-work items / Links / Attachments always start closed, so a task opens
+    // on its description instead of on three stacked lists. The drawer markup is
+    // reused for every task, so a section the user opened on the last task would
+    // otherwise still be open on this one.
+    collapseDrawerSections();
+
+    // Opening the task is what "I have read it" means, so the admin ribbon goes
+    // now — locally first, so the corner clears on the card behind the drawer,
+    // and the stamp is written server side for the next load. Failure is silent
+    // on purpose: a task must open whether or not the stamp lands.
+    clearAlertRibbon(taskId);
+    if (config?.role) TaskApi.markSeen(config.role, taskId).catch(() => {});
+
     // Show
     $('#taskDrawerBackdrop').removeClass('hidden');
     $('#taskDrawer').removeClass('hidden');
@@ -127,6 +140,18 @@ export function closeTaskDrawer() {
     currentDrawerTaskId = null;
     $('#taskDrawerBackdrop').addClass('hidden');
     $('#taskDrawer').addClass('hidden');
+}
+
+/** Take the "New"/"Comment" band off a card, and the slot with it if the
+ *  slot is only holding that one band. */
+function clearAlertRibbon(taskId) {
+    document.querySelectorAll(`.task-item[data-id="${taskId}"]`).forEach(card => {
+        const slot = card.querySelector('[data-role="ribbon-slot"]');
+        if (!slot) return;
+
+        slot.querySelector('[data-role="ribbon-alert"]')?.remove();
+        if (!slot.querySelector('[data-role="ribbon-priority"]')) slot.remove();
+    });
 }
 
 /* ═══════════ Tabs ═══════════ */
@@ -153,6 +178,16 @@ export function showDrawerTab(tab) {
 }
 
 /* ═══════════ Toggle collapsible sections ═══════════ */
+/** Put the three collapsible sections back to their closed default. */
+function collapseDrawerSections() {
+    ['drawerSubtasksBody', 'drawerLinksBody', 'drawerAttachmentsBody'].forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) section.classList.add('hidden');
+        const caret = document.getElementById(sectionId.replace('Body', 'Caret'));
+        if (caret) caret.classList.remove('rotate-180');
+    });
+}
+
 export function toggleSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (!section) return;

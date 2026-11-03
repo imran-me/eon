@@ -471,6 +471,46 @@ class UserController extends Controller
     }
 
     /**
+     * Map the "User Status" dropdown onto the users.status column.
+     *
+     * The dropdown posts 1 / 0 / "resigned". Anything that is not the literal
+     * string "resigned" keeps the original truthy check, so every existing
+     * caller (the API sending true/false or 1/0) behaves exactly as before.
+     */
+    private function resolveUserStatus($isActive): string
+    {
+        if (is_string($isActive) && strtolower(trim($isActive)) === 'resigned') {
+            return 'resigned';
+        }
+
+        return $isActive ? 'active' : 'inactive';
+    }
+
+    /**
+     * `users.device_id` is meant to hold a JSON array of device ids, but some
+     * legacy rows hold a bare scalar ("1"). json_decode() turns that into an
+     * int, which array_map() then rejects — a 500 on the edit page for every
+     * such user. Normalise whatever is stored into a list of ints.
+     */
+    private function normalizeDeviceIds($deviceId): array
+    {
+        if ($deviceId === null || $deviceId === '') {
+            return [];
+        }
+
+        $decoded = json_decode((string) $deviceId, true);
+
+        if (!is_array($decoded)) {
+            // A bare scalar, or not JSON at all — treat it as a single id
+            $decoded = [$decoded ?? $deviceId];
+        }
+
+        $numeric = array_filter($decoded, fn($id) => is_numeric($id));
+
+        return array_values(array_map('intval', $numeric));
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
@@ -534,7 +574,7 @@ class UserController extends Controller
                 'shift_id'        => $request->shift_id,
                 'address'         => $request->address,
                 'password'        => bcrypt($request->password),
-                'status'       => $request->is_active ? 'active' : 'inactive',
+                'status'       => $this->resolveUserStatus($request->is_active),
             ]);
 
             // 2. Handle Image Upload (Optional: belongs to User or Profile? usually User)
@@ -610,8 +650,7 @@ class UserController extends Controller
     {
         // Logic to show user edit form
         $data = User::findOrFail($id);
-        $deviceIds = json_decode($data->device_id, true) ?? [];
-        $data->device_ids = array_map('intval', $deviceIds);
+        $data->device_ids = $this->normalizeDeviceIds($data->device_id);
         $devices = DeviceSetting::get();
         $device_users = DeviceUser::where('user_id', $data->id)->get();
         $salaryTemplates = SalaryTemplate::where('status',  1)->get();
@@ -685,7 +724,7 @@ class UserController extends Controller
                 'salary_template_id' => $request->salary_template_id,
                 'shift_id'        => $request->shift_id,
                 'address'         => $request->address,
-                'status'       => $request->is_active ? 'active' : 'inactive',
+                'status'       => $this->resolveUserStatus($request->is_active),
             ];
 
             // Update password only if provided

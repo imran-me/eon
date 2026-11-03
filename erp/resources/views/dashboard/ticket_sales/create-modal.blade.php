@@ -1,11 +1,11 @@
-<div id="tsCreateModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-start justify-center p-6 overflow-y-auto">
-    <div class="w-full max-w-2xl bg-white rounded-2xl overflow-hidden shadow-2xl">
-        <div class="flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-blue-500 px-5 py-4">
-            <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0">
+<div id="tsCreateModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-center justify-center p-4 overflow-hidden">
+    <div class="ts-create-shell w-full max-w-6xl bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        <div class="ts-create-header flex items-center gap-4 px-6 py-4 flex-shrink-0">
+            <div class="h-11 w-11 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0 shadow-inner">
                 <i class="fas fa-ticket-alt"></i>
             </div>
             <div class="flex-1">
-                <h2 class="text-sm font-bold text-white">Create Ticket Sale</h2>
+                <h2 class="text-base font-bold text-white">Create Ticket Sale</h2>
                 <p class="text-xs text-blue-100 mt-0.5">Bundle one or more confirmed tickets into one invoice</p>
             </div>
             <button type="button" onclick="tsCloseCreate()" class="ml-auto h-8 w-8 rounded-full bg-white/20 border-0 text-white cursor-pointer flex items-center justify-center">
@@ -13,17 +13,17 @@
             </button>
         </div>
 
-        <div class="p-5 max-h-[calc(100vh-160px)] overflow-y-auto">
+        <div class="ts-create-body p-6 overflow-y-auto">
             <form id="tsCreateForm" method="POST" action="{{ route('role.ticket-sales.store', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}">
                 @csrf
 
                 {{-- Sale Information --}}
                 <div class="mb-5">
-                    <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <div class="ts-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700">
                         <i class="fas fa-info-circle"></i> Sale Information
                     </div>
                     <input type="hidden" id="ts_create_client_id" name="client_id">
-                    <div class="grid grid-cols-2 gap-3 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Select Agent / Vendor</label>
                             <select id="ts_create_agent_picker" class="select2 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500" style="width:100%">
@@ -42,15 +42,10 @@
                                 @endforeach
                             </select>
                         </div>
-                    </div>
-                    <p id="ts_create_client_id_msg" class="text-red-500 text-xs mt-1 mb-3 hidden">Please select an agent, vendor, or customer</p>
-                    <div class="grid grid-cols-2 gap-3 mb-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Sale Date <sup class="text-red-500">*</sup></label>
                             <input type="date" id="ts_create_date" name="sale_date" value="{{ date('Y-m-d') }}" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
                         </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Status <sup class="text-red-500">*</sup></label>
                             <select name="status" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
@@ -60,19 +55,27 @@
                                 <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-600 mb-1">Currency <sup class="text-red-500">*</sup></label>
-                            <input type="text" name="currency" value="৳" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
-                        </div>
                     </div>
+                    <input type="hidden" name="currency" value="৳">
+                    <p id="ts_create_client_id_msg" class="text-red-500 text-xs mt-1 hidden">Please select an agent, vendor, or customer</p>
                 </div>
 
                 {{-- Select Ticket Purchases --}}
                 <div class="mb-5">
-                    <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <div class="ts-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700">
                         <i class="fas fa-suitcase-rolling"></i> Select Tickets to Bundle
                     </div>
-                    <div class="overflow-hidden rounded-xl bg-slate-50 max-h-72 overflow-y-auto" id="tsTicketsTableWrap">
+                    <div class="relative mb-3">
+                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none"></i>
+                        <input type="search" id="tsTicketSearch" autocomplete="off"
+                            placeholder="Search by PNR, ticket number, passenger, passport or route..."
+                            class="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-9 text-sm outline-none focus:border-blue-500"
+                            oninput="tsFilterTickets(this.value)">
+                        <button type="button" id="tsTicketSearchClear" onclick="tsClearTicketSearch()"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 hidden border-0 bg-transparent p-0 text-slate-400 hover:text-slate-700"
+                            aria-label="Clear ticket search"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm max-h-80 overflow-y-auto" id="tsTicketsTableWrap">
                         <table class="tk-table w-full">
                             <thead class="bg-slate-100 sticky top-0">
                                 <tr>
@@ -101,10 +104,10 @@
 
                 {{-- Payment Information --}}
                 <div class="mb-5">
-                    <div class="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                    <div class="ts-create-section mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-700">
                         <i class="fas fa-wallet"></i> Payment Information
                     </div>
-                    <div class="grid grid-cols-3 gap-3 mb-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Total Amount</label>
                             <input type="text" id="tsTotalDisplay" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none bg-slate-50 font-bold text-blue-700" readonly value="0.00">
@@ -117,14 +120,12 @@
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Due Amount</label>
                             <input type="text" id="tsDueDisplay" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none bg-amber-50 font-bold text-amber-600" readonly value="0.00">
                         </div>
-                    </div>
-                    <div class="grid grid-cols-3 gap-3 mb-3">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Receivable Date <span class="font-normal text-slate-400">(customer থেকে নিবে)</span></label>
                             <input type="date" name="due_date" id="tsReceivableDate" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Method <sup class="text-red-500">*</sup></label>
                             <select id="tsPaymentMethod" name="payment_method" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500" onchange="tsToggleBankField()">
@@ -141,17 +142,23 @@
                             <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Account (Bank)</label>
                             <select id="tsBank" name="bank_id" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
                                 <option value="">— Select bank —</option>
-                                @foreach ($banks as $bank)
-                                    <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                                @endforeach
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                             </select>
                         </div>
                     </div>
                     <input type="hidden" name="payment_status" id="ts_create_payment_status" value="due">
+                    <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                        <label class="block text-xs font-semibold text-amber-900 mb-1">Pay Due To (shown on invoice)</label>
+                        <select name="payment_instruction_bank_id" class="w-full rounded-xl border border-amber-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-500">
+                            <option value="">— Do not show payment instructions —</option>
+                            @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
+                        </select>
+                        <p class="mt-1 text-[10px] text-amber-700">Choose the bank, cash, or mobile account where the client should pay the remaining balance.</p>
+                    </div>
                 </div>
 
-                <div class="flex gap-3 justify-end mt-2 pt-4">
-                    <button type="button" onclick="tsCloseCreate()" class="rounded-xl border border-slate-200 bg-slate-100 text-slate-700 px-4 py-2 text-sm font-semibold cursor-pointer">Cancel</button>
+                <div class="flex gap-3 justify-end bg-transparent pt-1">
+                    <button type="button" onclick="tsCloseCreate()" class="rounded-xl border border-slate-200 bg-white text-slate-700 px-4 py-2 text-sm font-semibold cursor-pointer">Cancel</button>
                     <button type="button" id="tsCreateSubmit" class="rounded-xl bg-blue-600 text-white px-5 py-2 text-sm font-semibold cursor-pointer flex items-center gap-2">
                         <i class="fas fa-save"></i> Save Sale
                     </button>

@@ -77,6 +77,13 @@
             'active'     => ['role.expenses.budget-setup'],
         ],
         [
+            'label'      => 'Recurring Expenses',
+            'icon'       => 'fa-calendar-check',
+            'route'      => 'role.expenses.recurring.index',
+            'permission' => 'view expense',
+            'active'     => ['role.expenses.recurring.*'],
+        ],
+        [
             'label'      => 'Expense Report',
             'icon'       => 'fa-chart-line',
             'route'      => 'role.expenses.report',

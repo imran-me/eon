@@ -260,13 +260,15 @@
             }
         }
     </style>
+    @include('panel.users.form-modern-styles')
 @endsection
 @section('main-content')
     <div class="manage-user-container">
         <div class="form-card">
             <div class="form-header">
-                <h2>Update User</h2>
-                <p>Enter the employee's personal and professional details.</p>
+                <span class="form-header-icon"><i class="fas fa-user-pen"></i></span>
+                <div class="form-header-copy"><h2>Update User</h2><p>Edit {{ $data->name }}'s personal, employment and access profile.</p></div>
+                <a class="header-back" href="{{ old('return_url', $returnUrl) }}"><i class="fas fa-arrow-left"></i><span>Back to Users</span></a>
             </div>
 
             <div class="form-body">
@@ -286,10 +288,11 @@
                 @endif
 
                 <form
-                    action="{{ route('role.user.update', ['role' => \Illuminate\Support\Str::slug($data->getRoleNames()->first()), 'user' => $data->id]) }}"
+                    action="{{ route('role.user.update', ['role' => request()->route('role'), 'user' => $data->id]) }}"
                     method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
+                    <input type="hidden" name="return_url" value="{{ old('return_url', $returnUrl) }}">
 
                     <div class="form-section">
                         <h3>Basic Information</h3>
@@ -323,10 +326,24 @@
                                 @endif
                             </div>
                             <div class="form-group">
-                                <label for="image">User Status</label>
+                                <label for="is_active">User Status</label>
+                                @php
+                                    // Preselect the status the user actually has. Without this the
+                                    // dropdown always showed "Active", so saving an inactive or
+                                    // resigned employee silently reactivated them.
+                                    $currentStatus = in_array($data->status, ['inactive', 'resigned'], true)
+                                        ? $data->status
+                                        : 'active';
+                                    $statusValue = (string) old('is_active', [
+                                        'active' => '1',
+                                        'inactive' => '0',
+                                        'resigned' => 'resigned',
+                                    ][$currentStatus]);
+                                @endphp
                                 <select name="is_active" class="select2" id="is_active" required>
-                                    <option value="1" selected>Active</option>
-                                    <option value="0">Inactive</option>
+                                    <option value="1" {{ $statusValue === '1' ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ $statusValue === '0' ? 'selected' : '' }}>Inactive</option>
+                                    <option value="resigned" {{ $statusValue === 'resigned' ? 'selected' : '' }}>Resigned</option>
                                 </select>
                             </div>
                         </div>
@@ -346,14 +363,38 @@
                                     @endforeach
                                 </select>
                             </div>
+                            @php
+                                // Departments and designations are soft-deleted, and the lists below
+                                // hide trashed rows. An employee still assigned to an archived one had
+                                // no matching <option>, so the field rendered as "Select ..." — and
+                                // since both are required, saving then failed validation or silently
+                                // reassigned them. Keep the employee's current record in the list.
+                                $departments = \App\Models\Department::all();
+                                $currentDepartmentId = $data->profile?->department_id;
+                                if ($currentDepartmentId && !$departments->contains('id', $currentDepartmentId)) {
+                                    $archivedDepartment = \App\Models\Department::withTrashed()->find($currentDepartmentId);
+                                    if ($archivedDepartment) {
+                                        $departments = $departments->push($archivedDepartment);
+                                    }
+                                }
+
+                                $designations = \App\Models\Designation::all();
+                                $currentDesignationId = $data->profile?->designation_id;
+                                if ($currentDesignationId && !$designations->contains('id', $currentDesignationId)) {
+                                    $archivedDesignation = \App\Models\Designation::withTrashed()->find($currentDesignationId);
+                                    if ($archivedDesignation) {
+                                        $designations = $designations->push($archivedDesignation);
+                                    }
+                                }
+                            @endphp
                             <div class="form-group">
                                 <label for="department_id">Department *</label>
                                 <select name="department_id" class="select2" id="department_id" required>
                                     <option value="">Select Department</option>
-                                    @foreach (\App\Models\Department::all() as $dept)
+                                    @foreach ($departments as $dept)
                                         <option value="{{ $dept->id }}"
                                             {{ $data->profile?->department_id == $dept->id ? 'selected' : '' }}>
-                                            {{ $dept->name }}</option>
+                                            {{ $dept->name }}{{ $dept->trashed() ? ' (archived)' : '' }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -361,10 +402,10 @@
                                 <label for="designation_id">Designation *</label>
                                 <select name="designation_id" class="select2" id="designation_id" required>
                                     <option value="">Select Designation</option>
-                                    @foreach (\App\Models\Designation::all() as $desig)
+                                    @foreach ($designations as $desig)
                                         <option value="{{ $desig->id }}"
                                             {{ $data->profile?->designation_id == $desig->id ? 'selected' : '' }}>
-                                            {{ $desig->name }}</option>
+                                            {{ $desig->name }}{{ $desig->trashed() ? ' (archived)' : '' }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -466,7 +507,7 @@
                         <textarea name="address" id="address" rows="2">{{ $data->address }}</textarea>
                     </div>
 
-                    <div class="form-section">
+                    <div class="form-section permissions-section">
                         <h3>Permissions</h3>
                         <div class="form-grid">
                             <div class="form-group">
@@ -481,6 +522,28 @@
                                 <small style="display: block; margin-top: 0.5rem; color: #6b7280;" id="status-text">
                                     {{ $data->allow_manual_attendance ? '✓ Currently enabled' : '✗ Currently disabled' }}
                                 </small>
+                                <small style="display:block;margin-top:0.35rem;color:#94a3b8;line-height:1.45;">
+                                    Allows mobile manual attendance requests. Every request requires Super Admin approval before attendance is recorded.
+                                </small>
+                            </div>
+                            <div class="form-group" id="manual-attendance-recipients-group" style="{{ $data->allow_manual_attendance ? '' : 'display:none;' }}">
+                                <label for="manual_attendance_recipient_ids">Notify Users</label>
+                                <select name="manual_attendance_recipient_ids[]" id="manual_attendance_recipient_ids" class="select2" multiple="multiple" style="width:100%;">
+                                    @php
+                                        $selectedManualRecipients = collect(old('manual_attendance_recipient_ids', $manualAttendanceRecipientIds ?? []))->map(fn($id) => (int) $id);
+                                    @endphp
+                                    @foreach(($manualAttendanceRecipients ?? collect()) as $recipient)
+                                        <option value="{{ $recipient->id }}" {{ $selectedManualRecipients->contains((int) $recipient->id) ? 'selected' : '' }}>
+                                            {{ $recipient->name }}{{ $recipient->device_tokens_count ? ' — mobile registered' : '' }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small style="display:block;margin-top:0.35rem;color:#6b7280;line-height:1.3;">
+                                    Empty selection notifies active Super Admins.
+                                </small>
+                                @error('manual_attendance_recipient_ids.*')
+                                    <small style="display:block;margin-top:0.35rem;color:#dc2626;">{{ $message }}</small>
+                                @enderror
                             </div>
                             <div class="form-group">
                                 <label style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1rem;">
@@ -508,11 +571,31 @@
                                     {{ $data->auto_payslip_enabled ? '✓ Currently enabled' : '✗ Currently disabled' }}
                                 </small>
                             </div>
+                            <div class="form-group">
+                                <label style="margin-bottom: 0.75rem; display: flex; align-items: center; gap: 1rem;">
+                                    <span>Fixed Salary (No Addition / Deduction)</span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="fixed_salary" name="fixed_salary"
+                                            value="1" {{ ($data->fixed_salary ?? false) ? 'checked' : '' }}>
+                                        <span class="slider"></span>
+                                    </div>
+                                </label>
+                                <small style="display: block; margin-top: 0.5rem; color: #6b7280;" id="fixed-salary-status-text">
+                                    {{ ($data->fixed_salary ?? false) ? '✓ Currently enabled' : '✗ Currently disabled' }}
+                                </small>
+                                <small style="display: block; margin-top: 0.35rem; color: #9ca3af; line-height: 1.5;">
+                                    Always paid the full gross salary. Absent, leave, late and early-out
+                                    deductions are all skipped, and no annual leave encashment is paid.
+                                    Loan and advance-salary instalments are still recovered, and overtime
+                                    is still added when "Overtime Salary Eligible" above is on.
+                                </small>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-footer">
-                        <button type="submit" class="btn-save">Save User Profile</button>
+                        <a class="btn-back" href="{{ old('return_url', $returnUrl) }}"><i class="fas fa-arrow-left"></i>Back</a>
+                        <button type="submit" class="btn-save"><i class="fas fa-check"></i>Save User Profile</button>
                     </div>
                 </form>
             </div>
@@ -689,6 +772,10 @@
             let isEnabled = this.checked;
             let statusText = isEnabled ? '✓ Currently enabled' : '✗ Currently disabled';
             document.getElementById('status-text').textContent = statusText;
+            document.getElementById('manual-attendance-recipients-group').style.display = isEnabled ? '' : 'none';
+            if (!isEnabled) {
+                $('#manual_attendance_recipient_ids').val(null).trigger('change');
+            }
         });
 
         // Overtime Eligible Permission Toggle
@@ -703,6 +790,13 @@
             let isEnabled = this.checked;
             let statusText = isEnabled ? '✓ Currently enabled' : '✗ Currently disabled';
             document.getElementById('auto-payslip-status-text').textContent = statusText;
+        });
+
+        // Fixed Salary (no attendance addition/deduction) Toggle
+        document.getElementById('fixed_salary').addEventListener('change', function(e) {
+            let isEnabled = this.checked;
+            let statusText = isEnabled ? '✓ Currently enabled' : '✗ Currently disabled';
+            document.getElementById('fixed-salary-status-text').textContent = statusText;
         });
     </script>
     <script>

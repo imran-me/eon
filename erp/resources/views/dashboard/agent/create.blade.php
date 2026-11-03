@@ -6,6 +6,7 @@
 
 @section('main-content')
 <div class="min-h-screen bg-gray-50 p-6">
+    @include('layout.manage-parties-tabs')
 
     {{-- Page Header --}}
     <div class="flex items-center justify-between mb-6">
@@ -105,6 +106,7 @@
                             @enderror
                         </div>
 
+
                         {{-- Phone --}}
                         <div>
                             <label for="phone" class="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
@@ -145,6 +147,9 @@
                         </div>
                     </div>
                 </div>
+
+                @include('dashboard.partials.party-assignments')
+                @include('dashboard.partials.party-service-categories', ['party' => null])
 
             </div>
 

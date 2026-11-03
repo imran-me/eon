@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Admin;
 
+use App\Exceptions\BankOverdrawnException;
 use App\Http\Controllers\Controller;
 use App\Models\Account;
 use App\Models\Bank;
@@ -68,29 +69,33 @@ class JournalController extends Controller
         $this->validateJournal($request);
         $this->assertBalanced($request->items);
 
-        DB::beginTransaction();
         try {
-            $entry = JournalEntry::create([
-                'company_id'  => Auth::user()->company_id ?? 2,
-                'created_by'  => Auth::id(),
-                'date'        => $request->date,
-                'reference'   => $request->reference,
-                'source'      => $request->source,
-                'source_id'   => $request->source_id,
-                'description' => $request->description,
-            ]);
+            $entry = DB::transaction(function () use ($request) {
+                $this->assertMoneyAccountReductions($request->items);
 
-            $this->syncItems($entry, $request->items);
+                $entry = JournalEntry::create([
+                    'company_id'  => Auth::user()->company_id ?? 2,
+                    'created_by'  => Auth::id(),
+                    'date'        => $request->date,
+                    'reference'   => $request->reference,
+                    'source'      => $request->source,
+                    'source_id'   => $request->source_id,
+                    'description' => $request->description,
+                ]);
 
-            DB::commit();
+                $this->syncItems($entry, $request->items);
+
+                return $entry;
+            });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Journal entry created successfully.',
                 'data'   => $entry->load('items.account', 'createdBy'),
             ]);
+        } catch (BankOverdrawnException $e) {
+            return $this->overdrawnResponse($e);
         } catch (\Throwable $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -98,45 +103,66 @@ class JournalController extends Controller
         }
     }
 
+    public function show(JournalEntry $journal)
+    {
+        return response()->json([
+            'success' => true,
+            'message' => 'Journal entry retrieved successfully.',
+            'data' => $journal->load('items.account', 'createdBy'),
+        ]);
+    }
+
     /**
      * Update journal entry and replace items.
      */
-    public function update(Request $request, $role, JournalEntry $journal)
+    public function update(Request $request, JournalEntry $journal)
     {
         // dd($request->all());
         $this->validateJournal($request);
         $this->assertBalanced($request->items);
 
-        // Prevent editing auto-generated entries (non-manual sources)
-        if ($journal->source !== 'manual') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only manual journal entries can be edited here.',
-            ], 422);
-        }
-
-        DB::beginTransaction();
         try {
-            $journal->update([
-                'date'        => $request->date,
-                'reference'   => $request->reference,
-                'source'      => $request->source,
-                'description' => $request->description,
-            ]);
+            $journal = DB::transaction(function () use ($request, $journal) {
+                $journal = JournalEntry::query()
+                    ->whereKey($journal->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-            // Delete old items and recreate
-            $journal->items()->delete();
-            $this->syncItems($journal, $request->items);
+                if ($journal->source !== 'manual') {
+                    abort(422, 'Only manual journal entries can be edited here.');
+                }
 
-            DB::commit();
+                $oldItems = $journal->items()
+                    ->get(['account_id', 'debit', 'credit'])
+                    ->map(fn ($item) => $item->toArray())
+                    ->all();
+
+                // Check the net reduction versus the journal currently in the
+                // ledger. Replacing an old cash debit can reduce cash just as a
+                // new cash credit can, so both sides must be considered.
+                $this->assertMoneyAccountReductions($request->items, $oldItems);
+
+                $journal->update([
+                    'date'        => $request->date,
+                    'reference'   => $request->reference,
+                    'source'      => $request->source,
+                    'description' => $request->description,
+                ]);
+
+                $journal->items()->delete();
+                $this->syncItems($journal, $request->items);
+
+                return $journal;
+            });
 
             return response()->json([
                 'success' => true,
                 'message' => 'Journal entry updated successfully.',
                 'data'   => $journal->fresh('items.account', 'createdBy'),
             ]);
+        } catch (BankOverdrawnException $e) {
+            return $this->overdrawnResponse($e);
         } catch (\Throwable $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
@@ -147,17 +173,34 @@ class JournalController extends Controller
     /**
      * Soft-delete journal entry and cascade to items.
      */
-    public function destroy($role, JournalEntry $journal)
+    public function destroy(JournalEntry $journal)
     {
-        if ($journal->source !== 'manual') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only manual journal entries can be deleted.',
-            ], 422);
-        }
+        try {
+            DB::transaction(function () use ($journal) {
+                $journal = JournalEntry::query()
+                    ->whereKey($journal->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-        $journal->items()->delete();
-        $journal->delete();
+                if ($journal->source !== 'manual') {
+                    abort(422, 'Only manual journal entries can be deleted.');
+                }
+
+                $oldItems = $journal->items()
+                    ->get(['account_id', 'debit', 'credit'])
+                    ->map(fn ($item) => $item->toArray())
+                    ->all();
+
+                // Deleting a debit from a money account removes money from the
+                // ledger. Refuse the delete if later spending already used it.
+                $this->assertMoneyAccountReductions([], $oldItems);
+
+                $journal->items()->delete();
+                $journal->delete();
+            });
+        } catch (BankOverdrawnException $e) {
+            return $this->overdrawnResponse($e);
+        }
 
         return response()->json([
             'success' => true,
@@ -223,5 +266,51 @@ class JournalController extends Controller
                 'note'             => $item['note'] ?? null,
             ]);
         }
+    }
+
+    /**
+     * Guard the amount by which a create/update/delete would reduce each cash,
+     * bank or portal account. All checks happen inside the caller's transaction
+     * and acquire account locks in a stable order.
+     */
+    private function assertMoneyAccountReductions(array $newItems, array $oldItems = []): void
+    {
+        $contributions = static function (array $items): array {
+            $totals = [];
+
+            foreach ($items as $item) {
+                $accountId = (int) $item['account_id'];
+                $totals[$accountId] = ($totals[$accountId] ?? 0)
+                    + (float) ($item['debit'] ?? 0)
+                    - (float) ($item['credit'] ?? 0);
+            }
+
+            return $totals;
+        };
+
+        $old = $contributions($oldItems);
+        $new = $contributions($newItems);
+        $accountIds = array_unique(array_merge(array_keys($old), array_keys($new)));
+        sort($accountIds, SORT_NUMERIC);
+
+        foreach ($accountIds as $accountId) {
+            $reduction = round(($old[$accountId] ?? 0) - ($new[$accountId] ?? 0), 2);
+
+            if ($reduction <= 0 || ! Bank::isMoneyHoldingAccount((int) $accountId)) {
+                continue;
+            }
+
+            $accountName = Account::whereKey($accountId)->value('name') ?? 'Money account';
+            Bank::assertCanCover((int) $accountId, $reduction, $accountName);
+        }
+    }
+
+    private function overdrawnResponse(BankOverdrawnException $e)
+    {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage(),
+            'errors' => ['amount' => [$e->getMessage()]],
+        ], 422);
     }
 }

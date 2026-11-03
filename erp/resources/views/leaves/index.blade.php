@@ -70,7 +70,7 @@
     .filter-card-body { padding: 20px; }
     .filter-grid-form {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 16px;
         align-items: end;
     }
@@ -131,7 +131,8 @@
 
     .manage-user-container .btn-view,
     .manage-user-container .btn-edit,
-    .manage-user-container .btn-delete {
+    .manage-user-container .btn-delete,
+    .manage-user-container .btn-approve {
         color: #fff;
         border: none;
         padding: 5px 10px;
@@ -149,6 +150,8 @@
     .manage-user-container .btn-edit:hover { background: #2563eb; color: #fff; }
     .manage-user-container .btn-delete { background: #ef4444; }
     .manage-user-container .btn-delete:hover { background: #dc2626; color: #fff; }
+    .manage-user-container .btn-approve { background:#16a34a; }
+    .manage-user-container .btn-approve:hover { background:#15803d; color:#fff; }
 
     .emp-name { font-weight: 600; color: #1e293b; }
     .emp-sub { font-size: .75rem; color: #94a3b8; }
@@ -161,6 +164,69 @@
         background: #dbeafe;
         color: #1d4ed8;
     }
+
+    /* Compact report-style leave filters */
+    .filter-card-container { border-radius: 9px; margin-bottom: 14px; }
+    .filter-card-header { display: none; }
+    .filter-card-body { padding: 10px 12px; }
+    .filter-grid-form {
+        grid-template-columns: 220px minmax(165px,1fr) minmax(145px,.9fr) minmax(130px,.8fr) 120px 135px auto;
+        gap: 8px;
+    }
+    .filter-field-group { gap: 3px; min-width: 0; }
+    .filter-label { font-size: 10px; line-height: 1.1; letter-spacing: .035em; }
+    .filter-input { height: 34px; padding: 5px 9px; border-radius: 5px; font-size: 12px; }
+    .filter-card-container .select2-container .select2-selection--single { height: 34px; }
+    .filter-card-container .select2-selection__rendered { line-height: 32px !important; padding-left: 9px !important; font-size: 12px; }
+    .filter-card-container .select2-selection__arrow { height: 32px !important; }
+    .filter-actions-group { grid-column: auto; gap: 7px; padding: 0; border: 0; }
+    .btn-submit, .btn-reset { height: 34px; min-width: 72px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 10px; border-radius: 5px; font-size: 11px; line-height: 1; white-space: nowrap; }
+    .pending-stat-link { display:block; color:inherit; text-decoration:none; border-radius:10px; }
+    .pending-stat-link .stat-card { height:100%; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; cursor:pointer; }
+    .pending-stat-link:hover .stat-card { transform:translateY(-2px); border-color:#f59e0b; box-shadow:0 8px 22px rgba(217,119,6,.14); }
+
+    /* Shared Add/Edit Leave modal language */
+    #createModal .modal-container, #editModal .modal-container {
+        width: min(94vw, 720px); max-width: 720px; max-height: 92vh;
+        border-radius: 14px; overflow-y: auto; box-shadow: 0 24px 70px rgba(15,23,42,.28);
+    }
+    #createModal .modal-content, #editModal .modal-content { padding: 0; }
+    #createModal .modal-header, #editModal .modal-header {
+        position: sticky; top: 0; z-index: 4; padding: 15px 18px;
+        border: 0; background: linear-gradient(135deg,#1d4ed8,#2563eb); color: #fff;
+    }
+    #createModal .modal-header h3, #editModal .modal-header h3 { margin: 0; font-size: 16px; font-weight: 800; }
+    #createModal .modal-header h3 small, #editModal .modal-header h3 small { display:block; margin-top:2px; color:#dbeafe; font-size:10px; font-weight:500; }
+    #createModal .modal-close-create, #editModal .modal-close-edit { width:30px; height:30px; border-radius:7px; color:#fff; background:rgba(255,255,255,.14); }
+    #createModal .modal-body, #editModal .modal-body { padding: 16px 18px 6px; background:#f8fafc; }
+    #createModal .modal-body form, #editModal .modal-body form { padding:14px; border:1px solid #dbe4f0; border-radius:10px; background:#fff; }
+    #createModal .mb-4, #editModal .mb-4 { margin-bottom: 10px; }
+    #createModal label, #editModal label { margin-bottom:4px; color:#475569; font-size:11px; font-weight:700; }
+    #createModal input, #createModal select, #createModal textarea,
+    #editModal input, #editModal select, #editModal textarea { border-color:#cbd5e1; border-radius:6px; font-size:12px; }
+    #createModal textarea, #editModal textarea { min-height:72px; }
+    #createModal .modal-footer, #editModal .modal-footer {
+        position:sticky; bottom:0; z-index:4; padding:11px 18px; border-top:1px solid #e2e8f0; background:#fff;
+    }
+    #createModal .modal-footer button, #editModal .modal-footer button { min-height:34px; padding:0 14px; border-radius:6px; font-size:11px; font-weight:700; }
+    #createModal .select2-container, #editModal .select2-container { width:100% !important; }
+    #createModal .select2-selection--single, #editModal .select2-selection--single { height:36px !important; }
+    #createModal .select2-selection__rendered, #editModal .select2-selection__rendered { line-height:34px !important; font-size:12px; }
+    #createModal .select2-selection__arrow, #editModal .select2-selection__arrow { height:34px !important; }
+
+    #leaveReasonModal .reason-modal-panel { width:min(92vw,560px); border-radius:14px; overflow:hidden; background:#fff; box-shadow:0 24px 70px rgba(15,23,42,.3); }
+    #leaveReasonModal .reason-modal-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(135deg,#1d4ed8,#2563eb); color:#fff; }
+    #leaveReasonModal .reason-modal-head h3 { margin:0; font-size:15px; font-weight:800; }
+    #leaveReasonModal .reason-modal-head .reason-modal-close { width:30px; height:30px; padding:0; border:0; border-radius:7px; background:rgba(255,255,255,.14); color:#fff; cursor:pointer; }
+    #leaveReasonModal .reason-modal-body { padding:18px; }
+    #leaveReasonModal .reason-employee { margin:0 0 10px; color:#64748b; font-size:11px; }
+    #leaveReasonModal .reason-text { min-height:110px; margin:0; padding:14px; border:1px solid #dbe4f0; border-left:3px solid #2563eb; border-radius:7px; background:#f8fafc; color:#1e293b; font-size:13px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+    #leaveReasonModal .reason-modal-foot { display:flex; justify-content:flex-end; padding:11px 16px; border-top:1px solid #e2e8f0; background:#fff; }
+    #leaveReasonModal .reason-modal-foot button { position:static; width:auto; min-width:72px; height:34px; margin:0; padding:0 14px; transform:none; display:inline-flex; align-items:center; justify-content:center; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#475569; font-size:11px; font-weight:700; line-height:1; }
+
+    @media (max-width:1400px) { .filter-grid-form { grid-template-columns:repeat(4,minmax(150px,1fr)); } }
+    @media (max-width:900px) { .filter-grid-form { grid-template-columns:repeat(2,minmax(140px,1fr)); } }
+    @media (max-width:600px) { .filter-grid-form { grid-template-columns:1fr; } .filter-actions-group { justify-content:flex-end; } }
 </style>
 @endsection
 @section('main-content')
@@ -173,13 +239,16 @@
                 <h3>{{ $totalCount ?? $datas->total() }}</h3>
             </div>
         </div>
-        <div class="stat-card">
-            <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
-            <div class="stat-info">
-                <p>Pending</p>
-                <h3>{{ $pendingCount ?? 0 }}</h3>
+        <a class="pending-stat-link" title="Show pending leave requests"
+            href="{{ route('role.leaves.index', array_merge(['role' => Str::slug(Auth::user()->getRoleNames()->first())], request()->except('page'), ['status' => 'pending'])) }}">
+            <div class="stat-card">
+                <div class="stat-icon yellow"><i class="fas fa-clock"></i></div>
+                <div class="stat-info">
+                    <p>Pending <i class="fas fa-arrow-right ml-1"></i></p>
+                    <h3>{{ $pendingCount ?? 0 }}</h3>
+                </div>
             </div>
-        </div>
+        </a>
         <div class="stat-card">
             <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
             <div class="stat-info">
@@ -196,7 +265,7 @@
         </div>
     </div>
 
-    @if('employee' != Str::slug(Auth::user()->getRoleNames()->first()))
+    @php($canViewAllLeaves = Auth::user()->hasPermissionTo('view all leave'))
     <div class="filter-card-container">
         <div class="filter-card-header">
             <h5 class="filter-card-title">
@@ -204,11 +273,11 @@
             </h5>
         </div>
         <div class="filter-card-body">
-            <form action="{{ route('role.leaves.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" method="GET" class="filter-grid-form">
+            <form id="leaveFilterForm" action="{{ route('role.leaves.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" method="GET" class="filter-grid-form">
                 <div class="filter-field-group">
                     <label for="user_id" class="filter-label">Employee</label>
-                    <select id="user_id" name="user_id" class="filter-input select2">
-                        <option value="">All Employees</option>
+                    <select id="user_id" name="user_id" class="filter-input select2" {{ $canViewAllLeaves ? '' : 'disabled' }}>
+                        <option value="">{{ $canViewAllLeaves ? 'All Employees' : 'My Leaves' }}</option>
                         @foreach ($users as $user)
                             <option value="{{ $user->id }}" {{ $user->id == request('user_id') ? 'selected' : '' }}>{{ $user->name }}</option>
                         @endforeach
@@ -217,8 +286,8 @@
 
                 <div class="filter-field-group">
                     <label for="company_id" class="filter-label">Company</label>
-                    <select id="company_id" name="company_id" class="filter-input select2">
-                        <option value="">All Companies</option>
+                    <select id="company_id" name="company_id" class="filter-input select2" {{ $canViewAllLeaves ? '' : 'disabled' }}>
+                        <option value="">{{ $canViewAllLeaves ? 'All Companies' : 'My Company' }}</option>
                         @foreach ($companies as $company)
                             <option value="{{ $company->id }}" {{ $company->id == request('company_id') ? 'selected' : '' }}>{{ $company->name }}</option>
                         @endforeach
@@ -246,6 +315,16 @@
                 </div>
 
                 <div class="filter-field-group">
+                    <label for="month" class="filter-label">Month</label>
+                    <select id="month" name="month" class="filter-input select2">
+                        <option value="">All Months</option>
+                        @foreach ($months as $monthValue => $monthLabel)
+                            <option value="{{ $monthValue }}" {{ request('month') === $monthValue ? 'selected' : '' }}>{{ $monthLabel }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="filter-field-group">
                     <label for="date" class="filter-label">Leave Date</label>
                     <input type="date" name="date" value="{{ request('date') }}" id="date" class="filter-input">
                 </div>
@@ -259,7 +338,6 @@
             </form>
         </div>
     </div>
-    @endif
 
     <div class="states-table bg-white rounded-lg shadow-md overflow-hidden">
         <div class="states-table-container">
@@ -285,6 +363,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>	                                                                                             	
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>	                                                                                             	
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>	                                                                                             	
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Request Time</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 @canany(['view leave', 'edit leave', 'delete leave'])
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -317,6 +396,14 @@
                                         {{ \Carbon\Carbon::parse($value->end_date)->format('d M Y') }}
                                     </td>                                                     
                                     <td class="px-6 py-4 whitespace-nowrap">
+                                        @if ($value->created_at)
+                                            <div>{{ $value->created_at->format('d M Y') }}</div>
+                                            <div class="text-xs text-gray-500">{{ $value->created_at->format('h:i A') }}</div>
+                                        @else
+                                            <span class="text-gray-400">—</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
                                         @if ($value->status == 'approved')
                                         <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                                             <i class="fas fa-check mr-1"></i>Approved
@@ -334,12 +421,22 @@
                                     @canany(['view leave', 'edit leave', 'delete leave'])
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex gap-0">
+                                            @if($value->status === 'pending')
+                                                @can('approve leave')
+                                                <button type="button" class="btn-approve quick-approve-btn"
+                                                    data-url="{{ route('role.leaves.approve', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'leave' => $value->id]) }}"
+                                                    data-employee="{{ $value->user?->name }}" title="Approve Leave">
+                                                    <i class="fas fa-check mr-1"></i>Approve
+                                                </button>
+                                                @endcan
+                                            @endif
                                             @can('view leave')
-                                            <a href="{{ route('role.leaves.show', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'leaf' => $value->id]) }}"
-                                                class="btn-view"
+                                            <button type="button" class="btn-view view-reason-btn"
+                                                data-employee="{{ $value->user?->name }}"
+                                                data-reason="{{ $value->reason }}"
                                                 title="View Leave">
                                                 View
-                                            </a>
+                                            </button>
                                             @endcan
                                             @can('edit leave')
                                             <button class="btn-edit edit-item-btn"
@@ -390,6 +487,23 @@
     @include('leaves.edit-modal')
     @include('leaves.delete-modal')
 
+    <div id="leaveReasonModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="reason-modal-backdrop fixed inset-0 bg-black opacity-50"></div>
+        <div class="reason-modal-panel relative z-10">
+            <div class="reason-modal-head">
+                <h3><i class="fas fa-align-left mr-2"></i>Leave Reason</h3>
+                <button type="button" class="reason-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="reason-modal-body">
+                <p id="leaveReasonEmployee" class="reason-employee"></p>
+                <div id="leaveReasonText" class="reason-text"></div>
+            </div>
+            <div class="reason-modal-foot">
+                <button type="button" class="reason-modal-close">Close</button>
+            </div>
+        </div>
+    </div>
+
 @endsection
 @section('js')
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
@@ -402,13 +516,29 @@
             // initialized select2
             $('.select2').select2();
 
+            $('#user_id').on('change.leaveAutoLoad', function() {
+                const form = document.getElementById('leaveFilterForm');
+                const filterButton = form?.querySelector('.btn-submit');
+
+                if (filterButton) {
+                    filterButton.disabled = true;
+                    filterButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading';
+                }
+
+                if (form) {
+                    form.requestSubmit ? form.requestSubmit() : form.submit();
+                }
+            });
+
             // Show/hide the Leave Time field based on the selected leave type's requires_time flag
             function toggleLeaveTimeField(prefix) {
                 const selected = $('#' + prefix + '_leave_type_id option:selected');
                 const requiresTime = selected.length && Number(selected.data('requires-time')) === 1;
+                const isLateIn = selected.length && Number(selected.data('late-in')) === 1;
                 const $wrapper = $('#' + prefix + '_leave_time_wrapper');
                 $wrapper.toggleClass('hidden', !requiresTime);
                 $('#' + prefix + '_leave_time').prop('required', requiresTime);
+                $('#' + prefix + '_leave_time_label').text(isLateIn ? 'Expected Arrival Time' : 'Leave Time');
                 if (!requiresTime) {
                     $('#' + prefix + '_leave_time').val('');
                 }
@@ -498,6 +628,19 @@
                 $('#edit_reason').val(reason);
                 $('#edit_status').val(status).trigger('change'); 
                 $('#editModal').removeClass('hidden'); 
+            });
+
+            $('.view-reason-btn').on('click', function() {
+                const employee = this.dataset.employee || 'Employee';
+                const reason = (this.dataset.reason || '').trim() || 'No reason was provided.';
+
+                $('#leaveReasonEmployee').text('Submitted by ' + employee);
+                $('#leaveReasonText').text(reason);
+                $('#leaveReasonModal').removeClass('hidden').addClass('flex');
+            });
+
+            $('.reason-modal-close, .reason-modal-backdrop').on('click', function() {
+                $('#leaveReasonModal').addClass('hidden').removeClass('flex');
             });
 
             // Close modals
@@ -649,6 +792,36 @@
                         });
                     }
                 });  
+            });
+
+            $('.quick-approve-btn').on('click', function() {
+                const button = this;
+                const employee = button.dataset.employee || 'this employee';
+
+                Swal.fire({
+                    icon: 'question',
+                    title: 'Approve leave request?',
+                    text: 'This will approve the pending request for ' + employee + '.',
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a',
+                    confirmButtonText: 'Yes, approve',
+                }).then((result) => {
+                    if (!result.isConfirmed) return;
+
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    $.post(button.dataset.url)
+                        .done((response) => {
+                            Swal.fire({ icon:'success', title:'Approved', text:response.message, timer:1200, showConfirmButton:false });
+                            setTimeout(() => window.location.reload(), 700);
+                        })
+                        .fail((xhr) => {
+                            button.disabled = false;
+                            button.innerHTML = '<i class="fas fa-check mr-1"></i>Approve';
+                            Swal.fire({ icon:'error', title:'Unable to approve', text:xhr.responseJSON?.message || 'Something went wrong.' });
+                        });
+                });
             });
         });
 

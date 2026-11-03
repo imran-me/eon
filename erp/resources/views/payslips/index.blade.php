@@ -184,72 +184,26 @@
             </div>
 
             <div class="states-table-content">
-                {{-- ── Status quick filter ── --}}
-                @php $activeStatus = request('status'); @endphp
-                <div class="px-4 pt-4 flex flex-wrap items-center gap-2">
-                    @foreach([null => 'All', 'accrued' => 'Accrued', 'paid' => 'Paid', 'partial' => 'Partial'] as $value => $chipLabel)
-                        @php
-                            $isOn = (string) $activeStatus === (string) $value;
-                            $chipUrl = request()->fullUrlWithQuery(['status' => $value ?: null, 'page' => null]);
-                        @endphp
-                        <a href="{{ $chipUrl }}"
-                           class="px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors
-                                  {{ $isOn ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400 hover:text-blue-600' }}">
-                            {{ $chipLabel }}
-                            @if($value){{ ' (' . ($summary['by_status'][$value] ?? 0) . ')' }}@endif
-                        </a>
-                    @endforeach
-                </div>
-
-                {{-- ── Filters ── --}}
-                <form action="" method="get">
-                    @if(request('company_id'))
+                {{-- ── Filters ── the Manage Flights filter strip, one row:
+                     search, month, status. Payslips are monthly, so the Month
+                     select is the date filter — no day range. --}}
+                <form action="{{ route('role.payslips.index', ['role' => $role]) }}" method="get">
+                    @if(request()->filled('company_id'))
                         <input type="hidden" name="company_id" value="{{ request('company_id') }}">
                     @endif
-                    @if(request('status'))
-                        <input type="hidden" name="status" value="{{ request('status') }}">
-                    @endif
-                    <div class="filter-container">
-                        <div class="filter-header {{ request()->hasAny(['user_id', 'period', 'search']) ? 'active' : '' }}">
-                            <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
+                    <x-payroll-filter-bar placeholder="Search employee, ID or payslip no…" :dates="false"
+                        :segments="[['name' => 'status', 'label' => 'Status', 'options' => ['accrued' => 'Accrued', 'partial' => 'Partial', 'paid' => 'Paid']]]"
+                        :reset="route('role.payslips.index', ['role' => $role])" :keep="['company_id']" :total="$register->total()">
+                        <div class="pfb-field">
+                            <label>Month</label>
+                            <select name="period">
+                                <option value="">All months</option>
+                                @foreach($periods as $period)
+                                    <option value="{{ $period }}" {{ $period === request('period') ? 'selected' : '' }}>{{ $book->periodLabel($period) }}</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <div class="filter-content {{ request()->hasAny(['user_id', 'period', 'search']) ? 'active' : '' }}">
-                            <div class="closest filter-row">
-                                <div class="filter-group">
-                                    <label for="search">Employee / Payslip No.</label>
-                                    <input type="text" id="search" name="search" class="form-control"
-                                           value="{{ request('search') }}" placeholder="e.g. EG25 109" style="width:100%">
-                                </div>
-                                <div class="filter-group">
-                                    <label for="user_id">Employee</label>
-                                    <select id="user_id" name="user_id" class="form-control select2" style="width: 100%"
-                                            onchange="getEmpSalaries(this, '#employee_salary_id')"
-                                            data-action="{{ route('role.get-employee-salary', ['role' => $role]) }}">
-                                        <option value="">All</option>
-                                        @foreach ($users as $user)
-                                            <option value="{{ $user->id }}" {{ $user->id == request('user_id') ? 'selected' : '' }}>{{ $user->name }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="filter-group">
-                                    <label for="period">Month</label>
-                                    <select id="period" name="period" class="form-control select2" style="width: 100%">
-                                        <option value="">All</option>
-                                        @foreach($periods as $period)
-                                            <option value="{{ $period }}" {{ $period === request('period') ? 'selected' : '' }}>
-                                                {{ $book->periodLabel($period) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="filter-actions">
-                                <button type="button" class="reset-btn">Reset</button>
-                                <button type="submit" class="apply-btn">Apply Filters</button>
-                            </div>
-                        </div>
-                    </div>
+                    </x-payroll-filter-bar>
                 </form>
 
                 <div class="table-responsive overflow-x-auto" style="padding: 15px">
@@ -293,7 +247,7 @@
                                     <i class="fas fa-file-pdf mr-1 text-gray-400"></i>Slip
                                 </th>
                                 @if($canManage)
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:8%">
+                                    <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                         <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                     </th>
                                 @endif
@@ -375,31 +329,35 @@
                                             <i class="fas {{ $chipIcon }} text-xs"></i> {{ ucfirst($status) }}
                                         </span>
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <div class="flex items-center justify-center gap-1">
+                                    <td class="px-2 py-3 whitespace-nowrap text-center">
+                                        <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                             <a href="{{ $statementUrl }}" target="_blank" rel="noopener"
                                                onclick="event.stopPropagation()"
-                                               class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150"
+                                               class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150"
                                                title="Open the statement — print it or save it as a PDF">
-                                                <i class="fas fa-print"></i>
-                                                <span>Print</span>
+                                                <i class="fas fa-print" style="font-size:11px"></i>
                                             </a>
-                                            @if($value->pdf_path)
-                                                <a href="{{ asset($value->pdf_path) }}" target="_blank" rel="noopener"
-                                                   onclick="event.stopPropagation()"
-                                                   class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150"
-                                                   title="The uploaded slip file">
-                                                    <i class="fas fa-paperclip text-xs"></i>
+                                            @if($salary)
+                                                <a href="{{ route('role.employee-salaries.action', ['role' => $role, 'id' => $salary->id, 'action' => 'download']) }}"
+                                                   target="_blank" rel="noopener" onclick="event.stopPropagation()"
+                                                   class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white transition-colors duration-150"
+                                                   title="Download the latest PDF from the current payroll values">
+                                                    <i class="fas fa-file-pdf" style="font-size:11px"></i>
                                                 </a>
+                                            @else
+                                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-gray-50 text-gray-300 border border-gray-200 cursor-not-allowed"
+                                                      title="Salary record is unavailable">
+                                                    <i class="fas fa-file-pdf" style="font-size:11px"></i>
+                                                </span>
                                             @endif
                                         </div>
                                     </td>
                                     @if($canManage)
-                                        <td class="px-4 py-3 whitespace-nowrap text-center">
-                                            <div class="flex items-center justify-center gap-1">
+                                        <td class="px-2 py-3 whitespace-nowrap text-center">
+                                            <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                                 @can('edit payslip')
                                                     <button
-                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
+                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
                                                         onclick="event.stopPropagation()"
                                                         data-item_id="{{ $value->id }}"
                                                         data-user_id="{{ $value->user_id }}"
@@ -409,7 +367,7 @@
                                                         data-pdf_path="{{ $value->pdf_path }}"
                                                         data-get_target_action="{{ route('role.get-employee-salary', ['role' => $role]) }}"
                                                         title="Edit this payslip">
-                                                        <i class="fas fa-edit text-xs"></i>
+                                                        <i class="fas fa-edit" style="font-size:11px"></i>
                                                     </button>
                                                 @endcan
                                             </div>
@@ -867,32 +825,6 @@
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const filterHeader = document.querySelector('.filter-container .filter-header');
-            const filterContent = document.querySelector('.filter-container .filter-content');
-            
-            filterHeader.addEventListener('click', function() {
-                this.classList.toggle('active');
-                filterContent.classList.toggle('active');
-            });
-            
-            // Reset button functionality
-            document.querySelector('.filter-container .reset-btn').addEventListener('click', function() {
-                const inputs = document.querySelectorAll('.filter-container select, .filter-container input');
-                inputs.forEach(input => {
-                    if (input.type === 'date') {
-                        input.value = '';
-                    } else {
-                        input.selectedIndex = 0;
-                    }
-                });
-            });
-            document.querySelector('.reset-btn').addEventListener('click', function (e) {
-                e.preventDefault();
-                // Company stays: it is a payroll-wide context set by the toolbar,
-                // not one of this page's own filters.
-                window.location = '{{ route('role.payslips.index', array_filter(['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'company_id' => request('company_id')])) }}';
-            });
-
             // A row opens that payslip's statement, the way a loan row opens its
             // history. The actions inside the row stop the event so a print or
             // edit click is not also a row click.

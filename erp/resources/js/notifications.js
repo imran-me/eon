@@ -204,7 +204,7 @@ class NotificationManager {
         const tabSuffix = n.type === 'comment_added' ? '&tab=activity' : '';
         const taskUrl = n.task_id && n.board_id
             ? `${this.baseUrl}/board/${n.board_id}?task=${n.task_id}${tabSuffix}`
-            : '#';
+            : (n.url || '#');
 
         const unreadDot = !n.is_read
             ? `<span class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-0.5"></span>`

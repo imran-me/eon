@@ -5,6 +5,7 @@
 @endsection
 
 @section('main-content')
+@include('layout.ticketing-tabs')
     <div class="rounded-2xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
         <div class="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 md:flex-row md:items-center md:justify-between">
             <div>
@@ -19,34 +20,26 @@
             @endcan
         </div>
 
-        <div class="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <form method="GET" class="grid gap-4 md:grid-cols-3">
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700" for="name">Name</label>
-                    <input type="text" id="name" name="name" value="{{ request('name') }}" placeholder="Search by name" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                </div>
+        {{-- The Manage Banks filter bar. The date range reads the day an
+             airline was added — the only date the table has. --}}
+        <form method="GET">
+            <x-ticketing-filter-bar search="name" placeholder="Search airline name…"
+                               :reset="route('role.airlines.index', ['role' => $role])"
+                               :total="$airlines->total()">
+                <select id="status" name="status" onchange="this.form.requestSubmit()" aria-label="Status">
+                    <option value="">All statuses</option>
+                    <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
+                    <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
+                </select>
+            </x-ticketing-filter-bar>
+        </form>
 
-                <div>
-                    <label class="mb-2 block text-sm font-medium text-gray-700" for="status">Status</label>
-                    <select id="status" name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                        <option value="">All</option>
-                        <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
-                        <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
-                    </select>
-                </div>
-
-                <div class="flex items-end gap-3">
-                    <button type="submit" class="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800">Filter</button>
-                    <a href="{{ route('role.airlines.index', ['role' => $role]) }}" class="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50">Reset</a>
-                </div>
-            </form>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
+        <div class="overflow-x-auto" data-tfb-swap>
+            <table class="min-w-full divide-y divide-gray-200" data-cf-sort>
                 <thead class="bg-white">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">SL</th>
+                        <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Logo</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Name</th>
                         <th class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500">Status</th>
                         @canany(['edit airline', 'delete airline'])
@@ -58,6 +51,7 @@
                     @forelse ($airlines as $key => $airline)
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4 text-sm text-gray-600">{{ ($airlines->currentPage() - 1) * $airlines->perPage() + $key + 1 }}</td>
+                            <td class="px-6 py-3"><img data-airline-logo="{{ $airline->name }}" alt="" style="height:26px;max-width:80px;object-fit:contain;display:none;"><span data-airline-nologo style="font-size:11px;color:#cbd5e1;">—</span></td>
                             <td class="px-6 py-4 text-sm font-medium text-gray-900">{{ $airline->name }}</td>
                             <td class="px-6 py-4 text-sm">
                                 @if ($airline->status)
@@ -89,7 +83,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-10 text-center text-sm text-gray-500">No airlines found.</td>
+                            <td colspan="5" class="px-6 py-10 text-center text-sm text-gray-500">No airlines found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -97,7 +91,19 @@
         </div>
 
         <div class="border-t border-gray-100 px-6 py-4">
-            {{ $airlines->links() }}
+            <div data-tfb-swap>{{ $airlines->links() }}</div>
         </div>
     </div>
+<script>
+(function () {
+@include('contract-flights.partials.airline-brands-script')
+    const BASE = @json(asset('airline-logos'));
+    document.querySelectorAll('img[data-airline-logo]').forEach(function (img) {
+        const b = airlineBrand(img.dataset.airlineLogo);
+        if (!b.slug) return;
+        img.onload = function () { img.style.display = ''; const n = img.nextElementSibling; if (n) n.style.display = 'none'; };
+        img.src = BASE + '/' + b.slug + '.png';
+    });
+})();
+</script>
 @endsection

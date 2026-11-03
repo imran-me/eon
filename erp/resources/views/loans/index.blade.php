@@ -69,11 +69,62 @@
         @can('create loan')
             <div class="flex flex-wrap items-center gap-2">
                 <button class="create-new-btn inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
-                    <i class="fas fa-plus"></i> Disburse Loan
+                    <i class="fas fa-plus"></i> {{ Auth::user()->hasRole('employee') && !Auth::user()->can('view all loan') ? 'Request Loan' : 'Disburse Loan' }}
                 </button>
             </div>
         @endcan
     </div>
+
+    @if(Auth::user()->hasRole('employee') && !Auth::user()->can('view all loan') && $myLoanRequests->isNotEmpty())
+        <div class="rounded-xl border border-blue-100 bg-white shadow-sm overflow-hidden">
+            <div class="px-4 py-3 border-b border-blue-50"><h2 class="text-sm font-bold text-gray-800">My Loan Requests</h2><p class="text-xs text-gray-500">Approval status before payment is added to your loan ledger.</p></div>
+            <div class="divide-y divide-gray-100">
+                @foreach($myLoanRequests as $loanRequest)
+                    <div class="px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div><p class="text-sm font-semibold text-gray-800">৳ {{ number_format($loanRequest->amount, 2) }}</p><p class="text-xs text-gray-500">Preferred EMI: ৳ {{ number_format((float) data_get($loanRequest->metadata, 'monthly_deduction'), 2) }} · {{ $loanRequest->reason }}</p></div>
+                        <span class="inline-flex self-start px-2.5 py-1 rounded-full text-xs font-semibold {{ $loanRequest->status === 'approved' ? 'bg-green-50 text-green-700' : ($loanRequest->status === 'rejected' ? 'bg-red-50 text-red-700' : ($loanRequest->status === 'fulfilled' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700')) }}">{{ \Illuminate\Support\Str::headline($loanRequest->status) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
+    @if(!(Auth::user()->hasRole('employee') && !Auth::user()->can('view all loan')) && $loanRequests->isNotEmpty())
+        <div class="rounded-xl border border-amber-200 bg-white shadow-sm overflow-hidden">
+            <div class="px-5 py-4 border-b border-amber-100 bg-amber-50/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div><h2 class="text-base font-bold text-gray-800"><i class="fas fa-clock text-amber-500 mr-1.5"></i>Loan Requests Awaiting Action</h2><p class="text-xs text-gray-500 mt-0.5">Requested loans appear here until approved and paid; they are not included in disbursed/outstanding totals.</p></div>
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">{{ $loanRequests->count() }} awaiting</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-100">
+                    <thead class="bg-gray-50"><tr>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase">Employee</th>
+                        @if($loanRequests->pluck('employee.company_id')->filter()->unique()->count() > 1)<th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase">Company</th>@endif
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-gray-500 uppercase">Requested</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-gray-500 uppercase">Preferred EMI</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase">Needed By</th>
+                        <th class="px-4 py-2.5 text-left text-xs font-bold text-gray-500 uppercase">Reason</th>
+                        <th class="px-4 py-2.5 text-center text-xs font-bold text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-2.5 text-right text-xs font-bold text-gray-500 uppercase">Action</th>
+                    </tr></thead>
+                    <tbody class="divide-y divide-gray-100">
+                        @foreach($loanRequests as $loanRequest)
+                            <tr class="hover:bg-amber-50/30">
+                                <td class="px-4 py-3 text-sm font-semibold text-gray-800">{{ $loanRequest->employee?->name ?: 'Employee' }}<div class="text-[11px] font-normal text-gray-400">{{ $loanRequest->employee?->employee_id_no }}</div></td>
+                                @if($loanRequests->pluck('employee.company_id')->filter()->unique()->count() > 1)<td class="px-4 py-3 text-xs text-gray-600">{{ $loanRequest->employee?->company?->short_name ?: $loanRequest->employee?->company?->name }}</td>@endif
+                                <td class="px-4 py-3 text-right text-sm font-bold text-gray-800">৳ {{ number_format($loanRequest->amount, 2) }}</td>
+                                <td class="px-4 py-3 text-right text-sm font-semibold text-blue-700">৳ {{ number_format((float) data_get($loanRequest->metadata, 'monthly_deduction'), 2) }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">{{ $loanRequest->deadline?->format('d M Y') ?: 'Flexible' }}</td>
+                                <td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="{{ $loanRequest->reason }}">{{ $loanRequest->reason }}</td>
+                                <td class="px-4 py-3 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ $loanRequest->status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700' }}">{{ \Illuminate\Support\Str::headline($loanRequest->status) }}</span></td>
+                                <td class="px-4 py-3 text-right"><a href="{{ route('role.employee-requests.index', ['role' => $role, 'category' => 'request', 'request_type' => 'loan', 'status' => $loanRequest->status, 'employee_id' => $loanRequest->employee_id]) }}" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700"><i class="fas fa-clipboard-check"></i>{{ $loanRequest->status === 'approved' ? 'Pay' : 'Review' }}</a></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    @endif
 
     {{-- ── Summary Cards ──
          All four read off the same scoped book, so "Repaid" is always exactly
@@ -141,7 +192,7 @@
                         <i class="fas fa-users mr-2 text-blue-500"></i>Employees with Loans
                     </h2>
                     <p class="text-xs text-gray-400 mt-0.5">
-                        taken · paid · still due, per person{{ $showCompany ? ', across every company' : '' }}{{ $canCollect ? ' · click a row to record a repayment' : '' }}
+                        taken · paid · still due, per person{{ $showCompany ? ', across every company' : '' }}{{ $canCollect ? ' · click a row to record a repayment' : '' }} · dates = taken on
                     </p>
                 </div>
                 <div class="flex items-center gap-3 shrink-0">
@@ -151,61 +202,20 @@
             </div>
 
             <div class="states-table-content">
-                {{-- ── Filters ──
-                     One panel for the whole page: all three tables read the same
+                {{-- ── Filters ── the Manage Flights filter strip.
+                     One bar for the whole page: all three tables read the same
                      scoped book, so a filter that only narrowed one of them would
                      leave the three disagreeing about what is on the desk. --}}
-                @if('employee' != Str::slug(Auth::user()->getRoleNames()->first()))
-                    <form action="" method="get">
-                        @if(request('company_id'))
-                            <input type="hidden" name="company_id" value="{{ request('company_id') }}">
-                        @endif
-                        <div class="filter-container">
-                            <div class="filter-header {{ request()->hasAny(['user_id', 'status', 'search', 'start_date', 'end_date']) ? 'active' : '' }}">
-                                <h3><i class="fas fa-filter mr-2"></i>Filter Options</h3>
-                                <i class="fas fa-chevron-down toggle-icon"></i>
-                            </div>
-                            <div class="filter-content {{ request()->hasAny(['user_id', 'status', 'search', 'start_date', 'end_date']) ? 'active' : '' }}">
-                                <div class="closest filter-row">
-                                    <div class="filter-group">
-                                        <label for="search">Employee ID / Name</label>
-                                        <input type="text" id="search" name="search" class="form-control"
-                                               value="{{ request('search') }}" placeholder="e.g. EG25 109" style="width:100%">
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="user_id">Employee</label>
-                                        <select id="user_id" name="user_id" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            @foreach ($users as $user)
-                                                <option value="{{ $user->id }}" {{ $user->id == request('user_id') ? 'selected' : '' }}>{{ $user->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="status">Status</label>
-                                        <select id="status" name="status" class="form-control select2" style="width: 100%">
-                                            <option value="">All</option>
-                                            <option value="running" {{ request('status') === 'running' ? 'selected' : '' }}>Running</option>
-                                            <option value="cleared" {{ request('status') === 'cleared' ? 'selected' : '' }}>Cleared</option>
-                                        </select>
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="start_date">Taken from</label>
-                                        <input type="month" name="start_date" value="{{ request('start_date') }}" id="start_date" class="form-control">
-                                    </div>
-                                    <div class="filter-group">
-                                        <label for="end_date">Taken up to</label>
-                                        <input type="month" name="end_date" value="{{ request('end_date') }}" id="end_date" class="form-control">
-                                    </div>
-                                </div>
-                                <div class="filter-actions">
-                                    <button type="button" class="reset-btn">Reset</button>
-                                    <button type="submit" class="apply-btn">Apply Filters</button>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                @endif
+                <form action="{{ route('role.loans.index', ['role' => $role]) }}" method="get">
+                    @if(request()->filled('company_id'))
+                        <input type="hidden" name="company_id" value="{{ request('company_id') }}">
+                    @endif
+                    <x-payroll-filter-bar placeholder="Search employee name or ID…" date-label="Taken"
+                        :segments="[['name' => 'status', 'label' => 'Status', 'options' => ['running' => 'Running', 'cleared' => 'Cleared']]]"
+                        :reset="route('role.loans.index', ['role' => $role])" :keep="['company_id']"
+                        :pages="['page', 'emp_page', 'reg_page', 'txn_page']" :total="$register->total()">
+                    </x-payroll-filter-bar>
+                </form>
 
                 <div class="table-responsive overflow-x-auto" style="padding: 15px">
                     <table class="table table-hover min-w-full divide-y divide-gray-200">
@@ -236,7 +246,7 @@
                                     <i class="fas fa-calendar-check mr-1 text-teal-400"></i>Monthly EMI
                                 </th>
                                 @if($canCollect)
-                                    <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:8%">
+                                    <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                         <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                     </th>
                                 @endif
@@ -294,13 +304,13 @@
                                         @endif
                                     </td>
                                     @if($canCollect)
-                                        <td class="px-4 py-3 whitespace-nowrap text-center">
-                                            <div class="flex items-center justify-center gap-1">
+                                        <td class="px-2 py-3 whitespace-nowrap text-center">
+                                            <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                                 <button type="button"
-                                                    class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 repay-btn"
+                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-600 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 repay-btn"
                                                     data-repay-user="{{ $row['user_id'] }}"
                                                     title="Record a repayment">
-                                                    <i class="fas fa-rotate-left text-xs"></i>
+                                                    <i class="fas fa-rotate-left" style="font-size:11px"></i>
                                                 </button>
                                             </div>
                                         </td>
@@ -411,7 +421,7 @@
                                 <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:11%">
                                     <i class="fas fa-tag mr-1 text-yellow-400"></i>Status
                                 </th>
-                                <th class="px-4 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:10%">
+                                <th class="px-2 py-3 text-center text-xs font-bold text-gray-600 uppercase tracking-wider" style="width:1%">
                                     <i class="fas fa-cogs mr-1 text-gray-400"></i>Actions
                                 </th>
                             </tr>
@@ -496,18 +506,17 @@
                                             </p>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3 whitespace-nowrap text-center">
-                                        <div class="flex items-center justify-center gap-1">
+                                    <td class="px-2 py-3 whitespace-nowrap text-center">
+                                        <div class="grid gap-1 mx-auto" style="grid-template-columns:repeat(2,24px);width:max-content" data-pay-actions>
                                             <button type="button"
-                                                class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 loan-view-btn"
+                                                class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white transition-colors duration-150 loan-view-btn"
                                                 data-loan-id="{{ $loan->id }}" title="Open this loan">
-                                                <i class="fas fa-eye"></i>
-                                                <span>View</span>
+                                                <i class="fas fa-eye" style="font-size:11px"></i>
                                             </button>
                                             @can('edit loan')
                                                 @if($loan->paid_amount == 0)
                                                     <button
-                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
+                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-yellow-50 text-yellow-600 border border-yellow-200 hover:bg-yellow-500 hover:text-white transition-colors duration-150 edit-item-btn"
                                                         data-item_id="{{ $loan->id }}"
                                                         data-user_id="{{ $loan->user_id }}"
                                                         data-bank_id="{{ $loan->bank_id }}"
@@ -518,17 +527,17 @@
                                                         data-start_date="{{ $loan->start_date }}"
                                                         data-end_date="{{ $loan->end_date }}"
                                                         title="Edit this loan">
-                                                        <i class="fas fa-edit text-xs"></i>
+                                                        <i class="fas fa-edit" style="font-size:11px"></i>
                                                     </button>
                                                 @endif
                                             @endcan
                                             @can('delete loan')
                                                 @if($loan->paid_amount == 0)
                                                     <button type="button"
-                                                        class="inline-flex items-center justify-center w-7 h-7 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
+                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white transition-colors duration-150"
                                                         onclick="event.stopPropagation(); confirmDelete('{{ $loan->id }}', 'this loan')"
                                                         title="Delete this loan">
-                                                        <i class="fas fa-trash text-xs"></i>
+                                                        <i class="fas fa-trash" style="font-size:11px"></i>
                                                     </button>
                                                 @endif
                                             @endcan
@@ -986,7 +995,7 @@
                     contentType: false,
                     success: function (response) {
                         if (response.success) {
-                            Swal.fire({ icon: 'success', title: 'Done', text: 'Loan disbursed.' });
+                            Swal.fire({ icon: 'success', title: 'Done', text: response.message || 'Saved successfully.' });
                             $('#createModal').addClass('hidden');
                             $('#createForm')[0].reset();
                             setTimeout(() => window.location.reload(), 800);
@@ -996,7 +1005,7 @@
                     },
                     error: function (xhr) {
                         console.error(xhr.responseText);
-                        Swal.fire({ icon: 'error', title: 'Error!', text: 'Failed to disburse the loan.' });
+                        Swal.fire({ icon: 'error', title: 'Error!', text: xhr.responseJSON?.message || 'The loan request could not be saved.' });
                     }
                 });
             });
@@ -1051,6 +1060,9 @@
         });
 
         function validateCreateForm() {
+            if ($('#employeeLoanRequestMode').length) {
+                return document.getElementById('createForm').reportValidity();
+            }
             let isValid = true;
             $('#createForm .error-message').addClass('hidden');
             $('#createForm .form-select, #createForm .form-input').removeClass('border-red-500');
@@ -1101,28 +1113,5 @@
             $('#confirmDeleteBtn').data('item-id', id);
             $('#deleteModal').removeClass('hidden');
         }
-    </script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const filterHeader = document.querySelector('.filter-container .filter-header');
-            const filterContent = document.querySelector('.filter-container .filter-content');
-
-            if (filterHeader && filterContent) {
-                filterHeader.addEventListener('click', function() {
-                    this.classList.toggle('active');
-                    filterContent.classList.toggle('active');
-                });
-            }
-
-            const resetBtn = document.querySelector('.filter-container .reset-btn');
-            if (resetBtn) {
-                resetBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    // Company stays: it is a payroll-wide context set by the
-                    // toolbar, not one of this page's own filters.
-                    window.location = '{{ route('role.loans.index', array_filter(['role' => $role, 'company_id' => request('company_id')])) }}';
-                });
-            }
-        });
     </script>
 @endsection

@@ -5,13 +5,14 @@
 @endsection
 
 @section('main-content')
+@include('layout.ticketing-tabs')
     <div class="mx-auto max-w-2xl rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
         <div class="border-b border-gray-100 px-6 py-4">
             <h1 class="text-xl font-semibold text-gray-900">Create Airline</h1>
             <p class="mt-1 text-sm text-gray-500">Add a new airline master record.</p>
         </div>
 
-        <form action="{{ route('role.airlines.store', ['role' => $role]) }}" method="POST" class="px-6 py-6">
+        <form action="{{ route('role.airlines.store', ['role' => $role]) }}" method="POST" enctype="multipart/form-data" class="px-6 py-6">
             @csrf
             @include('airlines._form', ['airline' => null])
 

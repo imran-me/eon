@@ -4,9 +4,93 @@
     <title>Capital &amp; Financing</title>
 @endsection
 
+@section('css')
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* select2 sits inside .fin-modal, a fixed overlay at z-index 1000, so its
+           list has to render into the modal box or it opens behind the sheet. The
+           height rules only match the native control this page already uses. */
+        .fin-modal .select2-container{ z-index:1200; width:100% !important; }
+        .select2-container--default .select2-selection--single{
+            height:2.45rem; border:1px solid var(--fin-line,#e5e7eb); border-radius:.55rem; }
+        .select2-container--default .select2-selection--single .select2-selection__rendered{
+            line-height:2.45rem; font-size:.85rem; color:#111827; padding-left:.7rem; }
+        .select2-container--default .select2-selection--single .select2-selection__arrow{ height:2.35rem; }
+        .select2-results__option{ font-size:.85rem; }
+        html.dark .select2-container--default .select2-selection--single{ background:#0f172a; border-color:#334155; }
+        html.dark .select2-container--default .select2-selection--single .select2-selection__rendered{ color:#e2e8f0; }
+        html.dark .select2-dropdown{ background:#1e293b; border-color:#334155; color:#e2e8f0; }
+        /* Capital register filter follows the Manage Banks transaction bar. */
+        .cap-lf-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 14px;background:#f8fafc;border-bottom:1px solid #e2e8f0}
+        .cap-lf-search{position:relative;flex:1 1 260px;min-width:200px}.cap-lf-search>i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;pointer-events:none}
+        .cap-lf-search input{width:100%;height:34px;padding:0 30px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;font-size:12.5px;color:#1e293b;outline:none}.cap-lf-search input:focus{border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12)}.cap-lf-search input::placeholder{color:#a3adbb}
+        .cap-lf-kind,.cap-lf-dates input{height:34px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;padding:0 9px;font-size:12px;color:#334155;outline:none}.cap-lf-kind{min-width:150px}.cap-lf-kind:focus,.cap-lf-dates input:focus{border-color:#6366f1}
+        .cap-lf-seg{display:flex;flex:0 0 auto;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff}.cap-lf-seg a{display:inline-flex;align-items:center;height:34px;padding:0 11px;border-left:1px solid #e2e8f0;color:#64748b;font-size:11.5px;font-weight:600;text-decoration:none;white-space:nowrap}.cap-lf-seg a:first-child{border-left:0}.cap-lf-seg a:hover{background:#f1f5f9;color:#334155}.cap-lf-seg a.is-on{background:#eef2ff;color:#4338ca;font-weight:700}
+        .cap-lf-dates{display:flex;flex:0 0 auto;align-items:center;gap:6px}.cap-lf-dates span{font-size:11px;color:#94a3b8}.cap-lf-go{height:34px;padding:0 12px;border:0;border-radius:8px;background:#4f46e5;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer}.cap-lf-go:hover{background:#4338ca}
+        .cap-lf-action{height:34px;padding:0 12px;border:1px solid #e2e8f0;border-radius:8px;display:inline-flex;align-items:center;gap:6px;background:#fff;color:#475569;font-size:11.5px;font-weight:700;text-decoration:none}.cap-lf-action:hover{background:#f8fafc;color:#334155;border-color:#cbd5e1;text-decoration:none}
+        html.dark .cap-lf-bar{background:#0f172a;border-color:#334155}html.dark .cap-lf-search input,html.dark .cap-lf-kind,html.dark .cap-lf-dates input,html.dark .cap-lf-seg,html.dark .cap-lf-action{background:#1e293b;color:#e2e8f0;border-color:#334155}
+        /* Capital desk: one visual language for the overview and owner sheet. */
+        .fin-scope-capital:not(.fin-owner-sheet)>.fin-hero{padding:18px 20px;margin-bottom:14px;border-radius:16px;background:linear-gradient(135deg,#253a9b 0%,#4f46e5 55%,#7c3aed 100%);box-shadow:0 10px 24px rgba(67,56,202,.16)}
+        .fin-scope-capital:not(.fin-owner-sheet)>.fin-hero h2,.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero p{color:#fff}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero p{opacity:.78}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero .fin-sep{background:rgba(255,255,255,.3)}
+        .fin-scope-capital:not(.fin-owner-sheet)>.fin-hero .fin-btn-primary,.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero .fin-btn{height:38px;border:0;box-shadow:none}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero .fin-btn-primary{background:#dcfce7;color:#15803d}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero .fin-btn{background:#fff1f2;color:#be123c}
+        .fin-scope-capital:not(.fin-owner-sheet)>.grid{gap:12px!important;margin-bottom:14px!important}.fin-scope-capital:not(.fin-owner-sheet)>.grid>div{border-radius:14px!important;border-color:#e2e8f0!important;box-shadow:0 3px 10px rgba(15,23,42,.04)!important}
+        .fin-scope-capital:not(.fin-owner-sheet)>.fin-note{border-radius:11px;margin-bottom:14px;background:#eff6ff;border-color:#bfdbfe}
+        .fin-scope-capital:not(.fin-owner-sheet)>.fin-card{border-radius:15px;border:1px solid #e2e8f0;box-shadow:0 4px 16px rgba(15,23,42,.05);overflow:hidden}
+        .fin-scope-capital:not(.fin-owner-sheet) .fin-card-head{padding:15px 16px!important;margin:0!important;background:#fff;border-bottom:1px solid #e2e8f0}
+        .fin-scope-capital:not(.fin-owner-sheet) .fin-table thead th{background:#f1f5f9;color:#475569;padding:11px 12px}.fin-scope-capital:not(.fin-owner-sheet) .fin-table tbody td{padding:12px;border-color:#e2e8f0}.fin-scope-capital:not(.fin-owner-sheet) .fin-table tbody tr:hover{background:#f8fafc}
+        .fin-scope-capital:not(.fin-owner-sheet) .fin-table .fin-strong{font-size:12.5px}.fin-scope-capital:not(.fin-owner-sheet) .fin-table .fin-sub{line-height:1.45}
+        /* Capital entry sheet: grouped fields, more breathing room, clear route. */
+        /* The base .fin-modal-box (styles.blade.php) is itself
+           max-height:92vh + overflow-y:auto, scrolling head+body+foot as one
+           unit. This modal ALSO capped .fin-modal-body to its own max-height
+           + overflow-y:auto below — two nested scroll regions fighting over
+           the same wheel events. On a short viewport the outer box needed its
+           own scroll to reach the footer, but hovering the form (the inner
+           region) routed scrolling to the body instead, so Save was reachable
+           only by scrolling with the cursor somewhere outside the form —
+           indistinguishable from "the button is gone". Fixed by making the
+           box a column flexbox with ONE scroller (the body); head and foot
+           stay fixed size and the footer is always visible without hunting
+           for the right spot to scroll. */
+        #finCapModal .fin-modal-box{width:min(920px,calc(100vw - 28px));max-width:920px;border-radius:18px;box-shadow:0 28px 70px rgba(15,23,42,.3);display:flex;flex-direction:column;overflow:hidden}
+        /* .fin-modal-head/.fin-modal-body/.fin-modal-foot are children of
+           #finCapForm, not of .fin-modal-box directly — the form itself
+           (a plain block element) broke the flex-column chain, so their
+           flex:0/flex:1/overflow-y:auto rules below never had any effect:
+           .fin-modal-body just grew to fit all its content with nothing to
+           scroll, and once that pushed the whole box past max-height:92vh,
+           .fin-modal-box's overflow:hidden silently clipped the footer off
+           with no way to reach it. The form itself must be the flex column. */
+        #finCapModal .fin-modal-box>form{display:flex;flex-direction:column;min-height:0;flex:1 1 auto;overflow:hidden}
+        /* .fin-modal-head is a plain block (styles.blade.php) — this modal is
+           the only one in the file that puts a close button inside it, and
+           margin-left:auto does nothing without a flex row to push against,
+           so the X fell to its own line below the title instead of sitting
+           top-right for both Investment and Drawing. */
+        #finCapModal .fin-modal-head{padding:20px 24px;background:linear-gradient(135deg,#253a9b,#5b4ce0);color:#fff;border:0;flex:0 0 auto;display:flex;align-items:flex-start;justify-content:space-between;gap:16px}#finCapModal .fin-modal-head h3{font-size:19px;color:#fff}#finCapModal .fin-modal-head p{color:#dbeafe}
+        #finCapModal .fin-cap-close{flex:0 0 auto;width:34px;height:34px;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer}#finCapModal .fin-cap-close:hover{background:rgba(255,255,255,.22)}
+        #finCapModal.is-drawing .fin-modal-head{background:linear-gradient(135deg,#991b1b,#e11d48)}
+        #finCapModal .fin-modal-body{padding:20px 24px;background:#f8fafc;flex:1 1 auto;min-height:0;overflow-y:auto}#finCapModal .fin-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px}
+        #finCapModal .fin-field label{font-size:10px;letter-spacing:.035em;color:#475569}#finCapModal .fin-field input,#finCapModal .fin-field select,#finCapModal .fin-field textarea{background:#fff;height:40px;border-radius:8px}#finCapModal .fin-field textarea{height:auto}
+        #finCapModal .fin-cap-section-title{grid-column:1/-1;display:flex;align-items:center;gap:8px;margin:3px 0 -2px;padding-bottom:8px;border-bottom:1px solid #dbe3ef;color:#334155;font-size:11px;font-weight:850;text-transform:uppercase;letter-spacing:.07em}#finCapModal .fin-cap-section-title i{color:#4f46e5}
+        #finCapModal .fin-modal-body>.fin-field{margin-top:14px}#finCapModal .fin-hint{margin-top:14px;background:#eef2ff;border-color:#c7d2fe;color:#475569}#finCapModal .fin-modal-foot{padding:14px 24px;background:#fff;flex:0 0 auto}
+        @media(max-width:760px){#finCapModal .fin-grid{grid-template-columns:1fr 1fr}}@media(max-width:520px){#finCapModal .fin-grid{grid-template-columns:1fr}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero{align-items:flex-start}.fin-scope-capital:not(.fin-owner-sheet)>.fin-hero>div:last-child{width:100%;flex-wrap:wrap}}
+        .cap-print-options{display:grid;gap:8px;text-align:left}.cap-print-choice{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;border:1px solid #dbe3ef;border-radius:9px;background:#fff;cursor:pointer}.cap-print-choice:hover{border-color:#818cf8;background:#f8faff}.cap-print-choice>span:first-child{display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap}.cap-print-choice b{font-size:13px;color:#334155}.cap-print-choice small{display:block;width:100%;padding-left:21px;color:#94a3b8;font-size:10px}.cap-print-choice input[type=date]{height:31px;border:1px solid #cbd5e1;border-radius:6px;padding:0 7px;font-size:11px}.cap-print-range{display:flex;align-items:center;gap:5px}.cap-print-range em{font-style:normal;color:#94a3b8;font-size:10px}
+    </style>
+@endsection
+
 @section('main-content')
 @php
     $role = request()->route('role') ?: \Illuminate\Support\Str::slug(auth()->user()->getRoleNames()->first() ?? '');
+    $capitalPrintBaseUrl = route('role.financing.capital.print', array_filter([
+        'role' => $role,
+        'owner_id' => $capitalOwnerId ?? null,
+        'person' => ($capitalOwnerId ?? null) ? null : ($capitalPerson ?? null),
+        'kind' => request('kind'),
+        'date_from' => request('date_from'),
+        'date_to' => request('date_to'),
+        'q' => request('q'),
+    ], static fn ($value) => $value !== null && $value !== ''));
 
     // Totals for the tiles. Read from the rows on this page only when the list
     // is paginated, which is why the labels say so — an honest "this page"
@@ -14,7 +98,7 @@
     $rows = $book === 'employee' ? $staffLoans : $loans;
 @endphp
 
-<div class="fin-scope fin-scope-{{ $book }}">
+<div class="fin-scope fin-scope-{{ $book }} {{ $book === 'capital' && $capitalOwner ? 'fin-owner-sheet' : '' }}">
 
 @include('layout.financing-tabs')
 
@@ -36,8 +120,12 @@
         'capital'  => ['Capital & Drawings', 'Money put into the company, and profit taken out.', 'fa-sack-dollar', 'Owner money'],
         'employee' => ['Employee Loans', 'Mirrored from Payroll › Loan Management — read-only here.', 'fa-user-shield', 'Payroll mirror'],
         'categories' => ['Categories', 'How loans are classified. A sub-category inherits its parent’s book.', 'fa-sliders', 'Setup'],
+        'liability'  => ['Liability', 'Internal dues — who owes whom, and what is still unpaid.', 'fa-right-left', 'Between companies'],
     ];
-    [$finTitle, $finBlurb, $finIcon, $finBadge] = $finMeta[$book];
+    // Fall back rather than index blindly: a book added to the tab bar but not
+    // to this array would take the whole desk down with an undefined index, for
+    // every company, on a page that was working a moment ago.
+    [$finTitle, $finBlurb, $finIcon, $finBadge] = $finMeta[$book] ?? $finMeta['borrowed'];
 @endphp
 
 {{-- Header and KPI cards follow the payroll Loan Management desk exactly: the
@@ -67,9 +155,10 @@
              "not employee" test let Categories fall through to the loan button. --}}
         @if($book === 'capital')
             @can('create financing')
-                <button type="button" class="fin-btn-primary" onclick="document.getElementById('finCapModal').style.display='flex'">
-                    <i class="fas fa-plus"></i> Record Money In / Out
-                </button>
+                <div style="display:flex;align-items:center;gap:.55rem;">
+                    <button type="button" class="fin-btn-primary" onclick="openCapitalModal('investment')"><i class="fas fa-arrow-down"></i> Add Investment</button>
+                    <button type="button" class="fin-btn" onclick="openCapitalModal('drawings')"><i class="fas fa-arrow-up"></i> Record Drawing</button>
+                </div>
             @endcan
         @elseif($book === 'borrowed' || $book === 'lent')
             @can('create financing')
@@ -83,25 +172,33 @@
                     <i class="fas fa-plus"></i> Add Category
                 </button>
             @endcan
+        @elseif($book === 'liability')
+            {{-- Which KIND of liability. Cross-company is the only one built;
+                 the rest are named here on purpose, so the shape of the desk is
+                 visible before the work lands and nobody designs a second home
+                 for the next kind. Rendered as disabled buttons rather than
+                 links — a chip that navigates to an empty page is worse than one
+                 that plainly says it is not ready. --}}
+            @include('financing.partials.liability-switch', ['role' => $role])
         @endif
 </div>{{-- /.fin-hero — everything below is a normal block --}}
 
 @if($book === 'capital')
     @php
-        $capIn  = $capital->where('kind', 'investment')->sum('amount');
-        $capOut = $capital->where('kind', 'drawings')->sum('amount');
+        $capIn = $capitalTotals['investment'];
+        $capOut = $capitalTotals['drawings'];
     @endphp
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         @include('payroll.partials.kpi', ['label' => 'Put In', 'value' => '৳ ' . $taka($capIn),
             'icon' => 'fa-arrow-down', 'iconBg' => '#dcfce7', 'iconText' => '#16a34a',
-            'valueTone' => 'text-green-600', 'foot' => 'investment, this page'])
+            'valueTone' => 'text-green-600', 'foot' => 'investment, filtered register'])
         @include('payroll.partials.kpi', ['label' => 'Taken Out', 'value' => '৳ ' . $taka($capOut),
             'icon' => 'fa-arrow-up', 'iconBg' => '#fee2e2', 'iconText' => '#dc2626',
-            'valueTone' => 'text-red-600', 'foot' => 'drawings, this page'])
+            'valueTone' => 'text-red-600', 'foot' => 'drawings, filtered register'])
         @include('payroll.partials.kpi', ['label' => 'Net Position', 'value' => '৳ ' . $taka($capIn - $capOut),
             'icon' => 'fa-scale-balanced', 'iconBg' => '#ede9fe', 'iconText' => '#7c3aed',
-            'foot' => 'in less out, this page'])
-        @include('payroll.partials.kpi', ['label' => 'Entries', 'value' => number_format($capital->total()),
+            'foot' => 'in less out, filtered register'])
+        @include('payroll.partials.kpi', ['label' => 'Entries', 'value' => number_format($capitalTotals['count']),
             'icon' => 'fa-list', 'iconBg' => '#dbeafe', 'iconText' => '#2563eb',
             'foot' => 'all owner movements'])
     </div>
@@ -153,6 +250,43 @@
         @include('payroll.partials.kpi', ['label' => 'Switched Off', 'value' => number_format($catOff),
             'icon' => 'fa-eye-slash', 'iconBg' => '#f3f4f6', 'iconText' => '#6b7280',
             'foot' => 'hidden from new loans'])
+    </div>
+@elseif($book === 'liability')
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        @include('payroll.partials.kpi', [
+            'label'     => 'Still Owed',
+            'value'     => '৳ ' . $taka($liabilityTotals['outstanding']),
+            'icon'      => 'fa-right-left',
+            'iconBg'    => '#fee2e2',
+            'iconText'  => '#dc2626',
+            'valueTone' => $liabilityTotals['outstanding'] > 0 ? 'text-red-600' : 'text-green-600',
+            'goodDown'  => true,
+            'foot'      => $liabilityTotals['active'] . ' active of ' . $liabilityTotals['count'],
+        ])
+        @include('payroll.partials.kpi', [
+            'label'    => 'Raised In All',
+            'value'    => '৳ ' . $taka($liabilityTotals['raised']),
+            'icon'     => 'fa-money-bill-transfer',
+            'iconBg'   => '#dbeafe',
+            'iconText' => '#2563eb',
+            'foot'     => 'every cross-company payment on record',
+        ])
+        @include('payroll.partials.kpi', [
+            'label'    => 'Settled So Far',
+            'value'    => '৳ ' . $taka($liabilityTotals['settled']),
+            'icon'     => 'fa-circle-check',
+            'iconBg'   => '#dcfce7',
+            'iconText' => '#16a34a',
+            'foot'     => 'paid back between companies',
+        ])
+        @include('payroll.partials.kpi', [
+            'label'    => 'Company Pairs',
+            'value'    => number_format($liabilityTotals['pairs']),
+            'icon'     => 'fa-building',
+            'iconBg'   => '#ede9fe',
+            'iconText' => '#7c3aed',
+            'foot'     => $liabilityTotals['pairs'] === 1 ? 'one pair owes' : 'pairs with something outstanding',
+        ])
     </div>
 @endif
 
@@ -314,30 +448,138 @@
 
 {{-- ── Capital & drawings: a plain register, no schedule ─────────────── --}}
 @elseif($book === 'capital')
+    @if($capitalOwner)
+        @include('financing.partials.owner-statement')
+    @else
     <div class="fin-note">
         <i class="fas fa-circle-info"></i>
-        This is the record of the arrangement. Enter the money itself as a deposit or
-        withdrawal in Manage Banks — that is what puts it on the books. Recording it in
-        both places would count the same taka twice.
+        Bank and cash movements recorded here post automatically. Do not enter the same movement again in Manage Banks.
     </div>
 
     <div class="fin-card">
-        <form method="GET" class="fin-filter">
+        @php
+            $today = now()->toDateString();
+            $yesterday = now()->subDay()->toDateString();
+            $lastWeekFrom = now()->subDays(6)->toDateString();
+            $all14From = now()->subDays(13)->toDateString();
+            $capQuery = request()->except('page');
+            $capQuickUrl = fn ($from = null, $to = null) => route('role.financing.index', ['role' => $role] + array_filter(
+                array_merge($capQuery, ['book' => 'capital', 'date_from' => $from, 'date_to' => $to]),
+                fn ($value) => $value !== null && $value !== ''
+            ));
+            $capPrintUrl = route('role.financing.capital.print', ['role' => $role] + array_filter(
+                array_merge($capQuery, ['book' => 'capital']),
+                fn ($value) => $value !== null && $value !== ''
+            ));
+        @endphp
+        <form method="GET" class="cap-lf-bar">
             <input type="hidden" name="book" value="capital">
-            <input type="search" name="q" value="{{ request('q') }}" placeholder="Search person, reason or reference…">
-            <select name="kind" onchange="this.form.submit()">
+            @if($capitalPerson)
+                @if($capitalOwnerId)
+                    <input type="hidden" name="owner_id" value="{{ $capitalOwnerId }}">
+                @else
+                    <input type="hidden" name="person" value="{{ $capitalPerson }}">
+                @endif
+            @endif
+            <div class="cap-lf-search">
+                <i class="fas fa-magnifying-glass"></i>
+                <input type="search" name="q" value="{{ request('q') }}" placeholder="Search person, reason or reference…">
+            </div>
+            <select name="kind" class="cap-lf-kind" onchange="this.form.submit()">
                 <option value="">Money in and out</option>
                 <option value="investment" {{ request('kind') === 'investment' ? 'selected' : '' }}>Money in — investment</option>
                 <option value="drawings" {{ request('kind') === 'drawings' ? 'selected' : '' }}>Money out — drawings</option>
             </select>
-            {{-- Dropdowns apply on change; this is only for the text box, which
-                 must not fire a request per keystroke. Enter works too. --}}
-            <button type="submit" class="fin-btn"><i class="fas fa-magnifying-glass"></i> Search</button>
-            @if(request('q') || request('kind'))
-                <a href="{{ route('role.financing.index', ['role' => $role, 'book' => 'capital']) }}" class="fin-btn-ghost">Reset</a>
-            @endif
+            <div class="cap-lf-seg">
+                <a href="{{ $capQuickUrl($today, $today) }}" class="{{ request('date_from') === $today && request('date_to') === $today ? 'is-on' : '' }}">Today</a>
+                <a href="{{ $capQuickUrl($yesterday, $yesterday) }}" class="{{ request('date_from') === $yesterday && request('date_to') === $yesterday ? 'is-on' : '' }}">Yesterday</a>
+                <a href="{{ $capQuickUrl($lastWeekFrom, $today) }}" class="{{ request('date_from') === $lastWeekFrom && request('date_to') === $today ? 'is-on' : '' }}">Last Week</a>
+                <a href="{{ $capQuickUrl($all14From, $today) }}" class="{{ request('date_from') === $all14From && request('date_to') === $today ? 'is-on' : '' }}">All 14 Days</a>
+            </div>
+            <div class="cap-lf-dates">
+                <input type="date" name="date_from" value="{{ request('date_from') }}" aria-label="From date">
+                <span>to</span>
+                <input type="date" name="date_to" value="{{ request('date_to') }}" aria-label="To date">
+                <button type="submit" class="cap-lf-go">Apply</button>
+            </div>
+            <button type="button" onclick="openCapitalPrint()" class="cap-lf-action"><i class="fas fa-print"></i> Print</button>
+            <a href="{{ route('role.financing.index', ['role' => $role, 'book' => 'capital']) }}" class="cap-lf-action"><i class="fas fa-rotate-left"></i> Reset</a>
         </form>
 
+        @if($capitalPeople->count())
+            <div class="fin-card-head" style="padding:1rem 0 .75rem;margin-top:.5rem;">
+                <div>
+                    <h2 class="text-gray-800 text-base font-bold" style="margin:0;">
+                        <i class="fas fa-address-book mr-2 text-blue-500"></i>Personal Sheets
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-0.5" style="margin:0;">
+                        Boss, Nayeem, Parvez style owner-wise capital position
+                    </p>
+                </div>
+                @if($capitalPerson)
+                    <span class="fin-chip fin-chip-active">
+                        Showing {{ $capitalPerson }}
+                        @if($capitalOwner?->employee_id_no) · {{ $capitalOwner->employee_id_no }} @endif
+                    </span>
+                @else
+                    <span class="text-xs text-gray-400">{{ $capitalPeople->count() }} {{ \Illuminate\Support\Str::plural('person', $capitalPeople->count()) }}</span>
+                @endif
+            </div>
+            <div style="overflow-x:auto;margin-bottom:1rem;">
+                <table class="fin-table">
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th style="text-align:right;">Put In</th>
+                            <th style="text-align:right;">Taken Out</th>
+                            <th style="text-align:right;">Net Balance</th>
+                            <th style="text-align:center;">Entries</th>
+                            <th>Last Movement</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach($capitalPeople as $personRow)
+                        @php
+                            $pIn = (float) $personRow->investment_total;
+                            $pOut = (float) $personRow->drawings_total;
+                            $pNet = $pIn - $pOut;
+                            $personOwner = $personRow->party_id
+                                ? $capitalOwnerUsers->firstWhere('id', (int) $personRow->party_id)
+                                : $capitalOwnerUsers->firstWhere('name', $personRow->person_name);
+                            $personUrl = route('role.financing.index', array_filter([
+                                'role' => $role,
+                                'book' => 'capital',
+                                'owner_id' => $personOwner?->id,
+                                'person' => $personOwner ? null : $personRow->person_name,
+                                'q' => request('q') ?: null,
+                            ], fn ($value) => $value !== null && $value !== ''));
+                        @endphp
+                        <tr>
+                            <td>
+                                <a href="{{ $personUrl }}" class="fin-strong" style="color:#2563eb;">{{ $personRow->person_name }}</a>
+                                @if($personOwner?->employee_id_no)
+                                    <div><a href="{{ $personUrl }}" class="fin-sub" style="color:#4f46e5;font-family:monospace;">{{ $personOwner->employee_id_no }}</a></div>
+                                @endif
+                            </td>
+                            <td style="text-align:right;" class="text-emerald-600 font-semibold">৳{{ number_format($pIn, 2) }}</td>
+                            <td style="text-align:right;" class="text-red-600 font-semibold">৳{{ number_format($pOut, 2) }}</td>
+                            <td style="text-align:right;" class="font-bold {{ $pNet < 0 ? 'text-red-600' : 'text-gray-800' }}">৳{{ number_format($pNet, 2) }}</td>
+                            <td style="text-align:center;">{{ number_format((int) $personRow->movement_count) }}</td>
+                            <td>{{ $personRow->last_movement_at ? \Carbon\Carbon::parse($personRow->last_movement_at)->format('d M Y') : '—' }}</td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        <div class="fin-card-head" style="margin:0!important;border-top:1px solid #e2e8f0;">
+            <div>
+                <h2 class="text-gray-800 text-base font-bold" style="margin:0;"><i class="fas fa-clock-rotate-left mr-2 text-indigo-500"></i>Recent Capital Movements</h2>
+                <p class="text-xs text-gray-400 mt-0.5" style="margin:0;">Investments and drawings across all owners</p>
+            </div>
+            <span class="text-xs text-gray-400">{{ number_format($capital->total()) }} entries</span>
+        </div>
         <div style="overflow-x:auto;">
             <table class="fin-table">
                 <thead>
@@ -348,6 +590,7 @@
                         <th>Person</th>
                         <th>Reason</th>
                         <th>Method</th>
+                        <th>Posting</th>
                         <th style="text-align:right;">Amount</th>
                         <th></th>
                     </tr>
@@ -355,37 +598,92 @@
                 <tbody>
                 @forelse($capital as $i => $c)
                     <tr>
-                        <td><span class="fin-idx">{{ $capital->firstItem() + $i }}</span></td>
-                        <td>@include('partials.date-time-cell', ['date' => $c->date, 'recordedAt' => $c->created_at])</td>
+                        <td><label style="display:flex;align-items:center;gap:7px;"><input type="checkbox" class="capital-print-row" value="{{ $c->id }}" aria-label="Select transaction"><span class="fin-idx">{{ $capital->firstItem() + $i }}</span></label></td>
+                        <td>
+                            <span class="dtc-date">{{ \Carbon\Carbon::parse($c->date)->format('Y-m-d') }}</span>
+                            @if($c->transaction_time)
+                                <div class="dtc-time">{{ \Carbon\Carbon::parse($c->transaction_time)->format('h:i A') }}</div>
+                            @endif
+                        </td>
                         <td>
                             <span class="fin-chip {{ $c->kind === 'investment' ? 'fin-chip-paid' : 'fin-chip-written_off' }}">
                                 {{ $c->kind === 'investment' ? 'money in' : 'money out' }}
                             </span>
                         </td>
-                        <td><span class="fin-strong">{{ $c->person_name }}</span>
+                        @php
+                            $ownerUrl = route('role.financing.index', array_filter([
+                                'role' => $role,
+                                'book' => 'capital',
+                                'owner_id' => $c->party_id,
+                                'person' => $c->party_id ? null : $c->person_name,
+                            ], fn ($value) => $value !== null && $value !== ''));
+                        @endphp
+                        <td><a href="{{ $ownerUrl }}" class="fin-strong" style="color:#2563eb;">{{ $c->person_name }}</a>
+                            @if($c->owner?->employee_id_no)
+                                <div><a href="{{ $ownerUrl }}" class="fin-sub" style="color:#4f46e5;font-family:monospace;">{{ $c->owner->employee_id_no }}</a></div>
+                            @endif
                             @if($c->reference)<div class="fin-sub">{{ $c->reference }}</div>@endif
                         </td>
-                        <td>{{ $c->reason ?: '—' }}</td>
-                        <td>{{ ucfirst($c->method) }}
+                        <td>
+                            <span class="fin-strong">{{ $c->reason }}</span>
+                            @if($c->notes)<div class="fin-sub">{{ $c->notes }}</div>@endif
+                        </td>
+                        <td>
+                            {{ $c->method === 'bank' ? 'Company Bank' : ($c->method === 'cash' ? 'Office Cash' : 'Non-cash Adjustment') }}
                             @if($c->bank)<div class="fin-sub">{{ $c->bank->name }}</div>@endif
+                            @if($c->method !== 'adjustment' && $c->counterparty_method)
+                                <div class="fin-sub">
+                                    {{ $c->kind === 'investment' ? 'Received via' : 'Paid via' }}
+                                    {{ $c->counterparty_method === 'bank' ? 'bank transfer' : $c->counterparty_method }}
+                                    @if($c->counterparty_bank) · {{ $c->counterparty_bank }} @endif
+                                    @if($c->counterparty_ref) · {{ $c->counterparty_ref }} @endif
+                                </div>
+                            @endif
+                        </td>
+                        <td>
+                            @php $posting = $capitalPosting->get($c->id); @endphp
+                            @if($posting?->reversedBy)
+                                <span class="fin-chip fin-chip-cancelled">Reversed</span>
+                            @elseif($posting)
+                                <span class="fin-chip fin-chip-paid">Posted</span>
+                                <div class="fin-sub">{{ $posting->reference }}</div>
+                            @elseif($c->method === 'adjustment')
+                                <span class="fin-chip fin-chip-waived">Non-cash</span>
+                            @else
+                                <span class="fin-chip fin-chip-due">Not posted</span>
+                            @endif
                         </td>
                         <td style="text-align:right;" class="fin-strong">
                             {{ $c->kind === 'drawings' ? '−' : '' }}৳{{ number_format((float) $c->amount, 2) }}
                         </td>
                         <td style="text-align:right;">
                             @can('delete financing')
-                            <form method="POST" action="{{ route('role.financing.capital.destroy', ['role' => $role, 'capital' => $c->id]) }}"
-                                  onsubmit="return confirm('Remove this entry?')">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="fin-btn-ghost" style="height:28px;padding:0 9px;font-size:.7rem;">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                                @if($posting?->reversedBy)
+                                    <button type="button" class="fin-btn-ghost" disabled style="height:28px;padding:0 9px;font-size:.7rem;opacity:.55;cursor:not-allowed;">
+                                        <i class="fas fa-rotate-left"></i> Reversed
+                                    </button>
+                                @elseif($posting)
+                                    <form method="POST" action="{{ route('role.financing.capital.destroy', ['role' => $role, 'capital' => $c->id]) }}"
+                                          onsubmit="return confirm('Reverse this capital/drawing entry? This will create an audit reversal and keep the original row visible.')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="fin-btn-ghost" style="height:28px;padding:0 9px;font-size:.7rem;color:#dc2626;">
+                                            <i class="fas fa-rotate-left"></i> Reverse
+                                        </button>
+                                    </form>
+                                @else
+                                    <form method="POST" action="{{ route('role.financing.capital.destroy', ['role' => $role, 'capital' => $c->id]) }}"
+                                          onsubmit="return confirm('Remove this non-posted entry?')">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="fin-btn-ghost" style="height:28px;padding:0 9px;font-size:.7rem;">
+                                            <i class="fas fa-trash"></i> Remove
+                                        </button>
+                                    </form>
+                                @endif
                             @endcan
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="fin-empty">Nothing recorded yet.</td></tr>
+                    <tr><td colspan="9" class="fin-empty">Nothing recorded yet.</td></tr>
                 @endforelse
                 </tbody>
             </table>
@@ -395,44 +693,26 @@
         @endif
     </div>
 
+    @endif
     @can('create financing')
     <div class="fin-modal" id="finCapModal">
         <div class="fin-modal-box">
-            <form method="POST" action="{{ route('role.financing.capital.store', ['role' => $role]) }}">
+            <form method="POST" id="finCapForm" action="{{ route('role.financing.capital.store', ['role' => $role]) }}">
                 @csrf
+                <input type="hidden" name="kind" id="finCapKind" value="investment">
                 <div class="fin-modal-head">
-                    <h3>Record money in or out</h3>
-                    <p>The owner putting money in, or taking profit out.</p>
+                    <div><h3 id="finCapTitle">Add Investment</h3><p id="finCapSubtitle">The owner is putting money into the company.</p></div>
+                    <button type="button" class="fin-cap-close" onclick="document.getElementById('finCapModal').style.display='none'" aria-label="Close"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="fin-modal-body">
                     <div class="fin-grid">
-                        <div class="fin-field">
+                        <div class="fin-cap-section-title"><i class="fas fa-user-tie"></i> Owner &amp; transaction details</div>
+                        <div class="fin-field" style="display:none;">
                             <label>Direction <span>*</span></label>
-                            <select name="kind" required>
+                            <select id="finCapKindDisplay" disabled>
                                 <option value="investment">Money IN — investment</option>
                                 <option value="drawings">Money OUT — profit / drawings</option>
                             </select>
-                        </div>
-                        <div class="fin-field">
-                            <label>Company <span>*</span></label>
-                            <select name="company_id" required>
-                                @foreach($companies as $c)
-                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="fin-field">
-                            <label>Person <span>*</span></label>
-                            <input type="text" name="person_name" required placeholder="Who put it in or took it out">
-                        </div>
-                        <div class="fin-field">
-                            <label>Reason</label>
-                            <input type="text" name="reason" list="finReasons" placeholder="Working capital">
-                            <datalist id="finReasons">
-                                <option value="Working capital"><option value="Cover negative balance">
-                                <option value="New project funding"><option value="Asset purchase">
-                                <option value="Profit withdrawal"><option value="Dividend"><option value="Personal use">
-                            </datalist>
                         </div>
                         <div class="fin-field">
                             <label>Amount (৳) <span>*</span></label>
@@ -443,26 +723,85 @@
                             <input type="date" name="date" required value="{{ date('Y-m-d') }}">
                         </div>
                         <div class="fin-field">
-                            <label>Method <span>*</span></label>
-                            <select name="method" required>
-                                <option value="bank">Bank</option>
-                                <option value="cash">Cash</option>
-                                <option value="adjustment">Adjustment</option>
-                            </select>
+                            <label>Custom Time <span>*</span></label>
+                            <input type="hidden" name="transaction_time" id="finCapTime">
+                            <div class="fin-time">
+                                <select id="finCapHour" required aria-label="Hour">
+                                    <option value="">hh</option>
+                                    @for($h = 1; $h <= 12; $h++)<option value="{{ $h }}">{{ str_pad($h, 2, '0', STR_PAD_LEFT) }}</option>@endfor
+                                </select>
+                                <b>:</b>
+                                <select id="finCapMinute" required aria-label="Minute">
+                                    <option value="">mm</option>
+                                    @for($m = 0; $m < 60; $m++)<option value="{{ $m }}">{{ str_pad($m, 2, '0', STR_PAD_LEFT) }}</option>@endfor
+                                </select>
+                                <select id="finCapAmPm" required aria-label="AM or PM">
+                                    <option value="AM">AM</option><option value="PM">PM</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="fin-field">
-                            <label>Bank</label>
-                            <select name="bank_id">
-                                <option value="">—</option>
-                                @foreach($banks as $b)
-                                    <option value="{{ $b->id }}">{{ $b->name }}</option>
+                            <label>Company <span>*</span></label>
+                            <select name="company_id" id="finCapCompany" required onchange="filterCapitalBanks();">
+                                @foreach($companies as $c)
+                                    <option value="{{ $c->id }}">{{ $c->name }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <div class="fin-field">
+                            <label>Person <span>*</span></label>
+                            <select name="owner_user_id" id="finCapPerson" required>
+                                <option value="">Choose person</option>
+                                @foreach($capitalOwnerUsers as $ownerUser)
+                                    <option value="{{ $ownerUser->id }}">{{ $ownerUser->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="fin-field">
+                            <label>Purpose <span>*</span></label>
+                            <input type="text" name="reason" id="finCapPurpose" list="finReasons" required placeholder="Working capital">
+                            <datalist id="finReasons">
+                                <option value="Working capital"><option value="Cover negative balance">
+                                <option value="New project funding"><option value="Asset purchase">
+                                <option value="Profit withdrawal"><option value="Dividend"><option value="Personal use">
+                            </datalist>
+                        </div>
+                        <div class="fin-cap-section-title"><i class="fas fa-money-bill-transfer"></i> Money route</div>
+                        <div class="fin-field">
+                            <label id="finCapCompanyRouteLabel">Received Into <span>*</span></label>
+                            <select name="method" id="finCapMethod" required onchange="toggleCapitalBank()">
+                                <option value="cash">Office Cash</option>
+                                <option value="bank">Company Bank Account</option>
+                                <option value="adjustment">Non-cash Adjustment</option>
+                            </select>
+                        </div>
+                        <div class="fin-field" id="finCapBankField">
+                            <label>Company Bank Account <span>*</span></label>
+                            <select name="bank_id" id="finCapBank" required>
+                                <option value="">—</option>
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
+                            </select>
+                        </div>
+                        <div class="fin-field" id="finCapCounterpartyMethodField">
+                            <label id="finCapCounterpartyMethodLabel">Received Via <span>*</span></label>
+                            <select name="counterparty_method" id="finCapCounterpartyMethod" required onchange="toggleCapitalCounterpartyDetails()">
+                                <option value="cash">Cash</option>
+                                <option value="bank">Bank Transfer</option>
+                                <option value="cheque">Cheque</option>
+                            </select>
+                        </div>
+                        <div class="fin-field" id="finCapCounterpartyBankField" style="display:none;">
+                            <label id="finCapCounterpartyBankLabel">Their Bank <span>*</span></label>
+                            <input type="text" name="counterparty_bank" id="finCapCounterpartyBank" maxlength="150" placeholder="e.g. DBBL">
+                        </div>
+                        <div class="fin-field" id="finCapCounterpartyRefField" style="display:none;">
+                            <label id="finCapCounterpartyRefLabel">Account No. <span>*</span></label>
+                            <input type="text" name="counterparty_ref" id="finCapCounterpartyRef" maxlength="100" placeholder="Account number">
+                        </div>
                     </div>
                     <div class="fin-field">
-                        <label>Reference</label>
-                        <input type="text" name="reference" placeholder="Cheque or slip no.">
+                        <label>Reference No.</label>
+                        <input type="text" name="reference" id="finCapReference" placeholder="Transaction, cheque or slip no.">
                     </div>
                     <div class="fin-field">
                         <label>Notes</label>
@@ -470,17 +809,163 @@
                     </div>
                     <p class="fin-hint">
                         <i class="fas fa-circle-info"></i>
-                        Recorded here for the register only. Enter the deposit or withdrawal in
-                        Manage Banks to put it on the books.
+                        Bank and cash movements post automatically. Adjustment changes no cash or bank ledger.
                     </p>
                 </div>
                 <div class="fin-modal-foot">
                     <button type="button" class="fin-btn-ghost" onclick="document.getElementById('finCapModal').style.display='none'">Cancel</button>
-                    <button type="submit" class="fin-btn-primary">Save</button>
+                    <button type="submit" class="fin-btn-primary" id="finCapSubmit">Save Investment</button>
                 </div>
             </form>
         </div>
     </div>
+    <script>
+    function openCapitalModal(kind) {
+        const isDrawing = kind === 'drawings';
+        document.getElementById('finCapForm').reset();
+        document.getElementById('finCapModal').classList.toggle('is-drawing', isDrawing);
+        document.getElementById('finCapKind').value = kind;
+        document.getElementById('finCapTitle').textContent = isDrawing ? 'Record Drawing' : 'Add Investment';
+        document.getElementById('finCapSubtitle').textContent = isDrawing ? 'The owner is taking money out for personal use or profit withdrawal.' : 'The owner is putting money into the company.';
+        document.getElementById('finCapSubmit').textContent = isDrawing ? 'Save Drawing' : 'Save Investment';
+        document.getElementById('finCapCompanyRouteLabel').innerHTML = (isDrawing ? 'Paid From' : 'Received Into') + ' <span>*</span>';
+        document.getElementById('finCapCounterpartyMethodLabel').innerHTML = (isDrawing ? 'Paid Via' : 'Received Via') + ' <span>*</span>';
+        document.getElementById('finCapCounterpartyBankLabel').innerHTML = (isDrawing ? 'Recipient Bank' : 'Their Bank') + ' <span>*</span>';
+        document.getElementById('finCapPurpose').placeholder = isDrawing ? 'Personal use / dividend' : 'Working capital';
+        const fixedOwnerId = @json($capitalOwner?->id);
+        if (fixedOwnerId) document.getElementById('finCapPerson').value = String(fixedOwnerId);
+        // Required and used to be left blank on every open — defaulted to now,
+        // same as the date above it; still fully editable for a movement
+        // recorded after the fact.
+        const finCapNow = new Date();
+        const finCapHour24 = finCapNow.getHours();
+        document.getElementById('finCapHour').value = String((finCapHour24 % 12) || 12);
+        document.getElementById('finCapMinute').value = String(finCapNow.getMinutes());
+        document.getElementById('finCapAmPm').value = finCapHour24 < 12 ? 'AM' : 'PM';
+        // Same auto-preview the bank ledger's Cash In/Out now shows — still a
+        // normal editable field for a real cheque or slip number.
+        const finCapPad2 = n => String(n).padStart(2, '0');
+        const finCapYmdhis = finCapNow.getFullYear() + finCapPad2(finCapNow.getMonth() + 1) + finCapPad2(finCapNow.getDate())
+            + finCapPad2(finCapNow.getHours()) + finCapPad2(finCapNow.getMinutes()) + finCapPad2(finCapNow.getSeconds());
+        document.getElementById('finCapReference').value = (isDrawing ? 'DRW-' : 'INV-') + finCapYmdhis;
+        document.getElementById('finCapModal').style.display = 'flex';
+        filterCapitalBanks(); toggleCapitalBank(); toggleCapitalCounterpartyDetails();
+    }
+    function toggleCapitalBank() {
+        const method = document.getElementById('finCapMethod'), field = document.getElementById('finCapBankField'), bank = document.getElementById('finCapBank');
+        if (!method || !field || !bank) return;
+        const visible = method.value === 'bank'; field.style.display = visible ? '' : 'none'; bank.required = visible;
+        if (!visible) bank.value = '';
+        const routeField = document.getElementById('finCapCounterpartyMethodField');
+        const route = document.getElementById('finCapCounterpartyMethod');
+        const isAdjustment = method.value === 'adjustment';
+        routeField.style.display = isAdjustment ? 'none' : '';
+        route.required = !isAdjustment;
+        if (isAdjustment) route.value = '';
+        toggleCapitalCounterpartyDetails();
+    }
+    function toggleCapitalCounterpartyDetails() {
+        const method = document.getElementById('finCapCounterpartyMethod');
+        const companyMethod = document.getElementById('finCapMethod');
+        const bankField = document.getElementById('finCapCounterpartyBankField');
+        const refField = document.getElementById('finCapCounterpartyRefField');
+        const bank = document.getElementById('finCapCounterpartyBank');
+        const ref = document.getElementById('finCapCounterpartyRef');
+        const visible = companyMethod.value !== 'adjustment' && ['bank', 'cheque'].includes(method.value);
+        bankField.style.display = visible ? '' : 'none';
+        refField.style.display = visible ? '' : 'none';
+        bank.required = visible; ref.required = visible;
+        document.getElementById('finCapCounterpartyRefLabel').innerHTML = (method.value === 'cheque' ? 'Cheque No.' : 'Account No.') + ' <span>*</span>';
+        ref.placeholder = method.value === 'cheque' ? 'Cheque number' : 'Account number';
+        if (!visible) { bank.value = ''; ref.value = ''; }
+    }
+    document.getElementById('finCapForm').addEventListener('submit', function (event) {
+        const hourValue = document.getElementById('finCapHour').value;
+        const minuteValue = document.getElementById('finCapMinute').value;
+        if (!hourValue || minuteValue === '') {
+            event.preventDefault();
+            return;
+        }
+        let hour = Number(hourValue) % 12;
+        if (document.getElementById('finCapAmPm').value === 'PM') hour += 12;
+        document.getElementById('finCapTime').value = String(hour).padStart(2, '0') + ':' + String(minuteValue).padStart(2, '0');
+    });
+    function filterCapitalBanks() {
+        const company = document.getElementById('finCapCompany'), bank = document.getElementById('finCapBank');
+        if (!company || !bank) return;
+
+        let visibleCount = 0;
+
+        [...bank.options].forEach(option => {
+            if (!option.value) return;
+
+            const hidden = option.dataset.company && option.dataset.company !== company.value;
+            option.hidden = hidden;
+            option.disabled = hidden;
+
+            if (!hidden) visibleCount++;
+        });
+
+        bank.querySelectorAll('optgroup').forEach(group => {
+            const hasVisibleOption = [...group.querySelectorAll('option')].some(option => !option.hidden);
+            group.hidden = !hasVisibleOption;
+            group.disabled = !hasVisibleOption;
+        });
+
+        if (bank.selectedOptions[0]?.hidden) bank.value = '';
+
+        const placeholder = bank.querySelector('option[value=""]');
+        if (placeholder) {
+            placeholder.textContent = visibleCount > 0
+                ? '— Select Bank —'
+                : 'No bank account for selected company';
+        }
+    }
+    document.addEventListener('DOMContentLoaded', () => { filterCapitalBanks(); toggleCapitalBank(); });
+
+    function openCapitalPrint() {
+        const selected = [...document.querySelectorAll('.capital-print-row:checked')].map(el => el.value);
+        const today = new Date().toISOString().slice(0, 10);
+        const yesterdayDate = new Date(); yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = yesterdayDate.toISOString().slice(0, 10);
+        const currentFrom = @json(request('date_from')) || '';
+        const currentTo = @json(request('date_to')) || '';
+        const row = (value, title, detail, extra = '') => `<label class="cap-print-choice"><span><input type="radio" name="cap_print_scope" value="${value}"> <b>${title}</b><small>${detail}</small></span>${extra}</label>`;
+        Swal.fire({
+            title: 'Print statement',
+            width: 460,
+            html: `<div class="cap-print-options">
+                ${row('today','Today',today)}
+                ${row('yesterday','Yesterday',yesterday)}
+                ${row('day','A specific day','Choose one date','<input type="date" id="capPrintDay" value="'+today+'">')}
+                ${row('range','A date range','Choose start and end','<span class="cap-print-range"><input type="date" id="capPrintFrom" value="'+(currentFrom||today)+'"><em>to</em><input type="date" id="capPrintTo" value="'+(currentTo||today)+'"></span>')}
+                ${row('selected','Selected transactions',selected.length ? selected.length+' transaction(s) selected' : 'Tick the rows you want in the table')}
+                ${row('shown','What the table shows now',(currentFrom||'All time')+' — '+(currentTo||'Today'))}
+            </div>`,
+            showCancelButton: true, confirmButtonText: '<i class="fas fa-print"></i> Print', cancelButtonText: 'Cancel', confirmButtonColor: '#4f46e5',
+            didOpen: () => { const radio = document.querySelector(`input[name="cap_print_scope"][value="${selected.length ? 'selected' : 'shown'}"]`); if (radio) radio.checked = true; },
+            preConfirm: () => {
+                const scope = document.querySelector('input[name="cap_print_scope"]:checked')?.value;
+                if (!scope) return Swal.showValidationMessage('Choose what you want to print.');
+                if (scope === 'selected' && !selected.length) return Swal.showValidationMessage('Select at least one transaction from the table.');
+                return {scope, day:document.getElementById('capPrintDay')?.value, from:document.getElementById('capPrintFrom')?.value, to:document.getElementById('capPrintTo')?.value};
+            }
+        }).then(result => {
+            if (!result.isConfirmed) return;
+            const url = new URL(@json($capitalPrintBaseUrl), window.location.origin);
+            const scope = result.value.scope;
+            if (scope === 'today') { url.searchParams.set('date_from', today); url.searchParams.set('date_to', today); }
+            if (scope === 'yesterday') { url.searchParams.set('date_from', yesterday); url.searchParams.set('date_to', yesterday); }
+            if (scope === 'day') { const day = result.value.day || today; url.searchParams.set('date_from', day); url.searchParams.set('date_to', day); }
+            if (scope === 'range') { url.searchParams.set('date_from', result.value.from || today); url.searchParams.set('date_to', result.value.to || today); }
+            if (scope === 'selected') {
+                ['date_from','date_to','q','kind'].forEach(key => url.searchParams.delete(key));
+                url.searchParams.set('ids', selected.join(','));
+            }
+            window.open(url.toString(), '_blank');
+        });
+    }
+    </script>
     @endcan
 
 {{-- ── The employee book: a read-only mirror ─────────────────────────── --}}
@@ -869,6 +1354,10 @@
         @endif
     </div>
 
+{{-- ── The liability book: what one company owes another ─────────────── --}}
+@elseif($book === 'liability')
+    @include('financing.partials.liability-book')
+
 {{-- ── The lent / borrowed books ─────────────────────────────────────── --}}
 @else
     {{-- Where this book stands, before any of the tables. Computed over the
@@ -985,9 +1474,7 @@
             {{-- Dropdowns apply on change; this is only for the text box, which
                  must not fire a request per keystroke. Enter works too. --}}
             <button type="submit" class="fin-btn"><i class="fas fa-magnifying-glass"></i> Search</button>
-            @if(request('q') || request('status'))
-                <a href="{{ route('role.financing.index', ['role' => $role, 'book' => $book]) }}" class="fin-btn-ghost">Reset</a>
-            @endif
+            <a href="{{ route('role.financing.index', ['role' => $role, 'book' => $book]) }}" class="fin-btn-ghost"><i class="fas fa-rotate-left"></i> Reset</a>
         </form>
     </div>
 
@@ -1041,7 +1528,7 @@
 
                 <div class="fin-modal-head">
                     <h3>Add {{ $book === 'borrowed' ? 'a borrowing' : 'a loan given' }}</h3>
-                    <p>The instalment schedule is generated from these terms when you save.</p>
+                    <p id="finLoanSubtitle">The instalment schedule is generated from these terms when you save.</p>
                 </div>
 
                 <div class="fin-modal-body">
@@ -1165,7 +1652,7 @@
                             },
                             'company:running': {
                                 tone: '#2563eb', tint: '#eff6ff', soft: 'rgb(37 99 235 / .18)', icon: 'fa-arrows-rotate',
-                                html: 'Opens at a <strong>nil balance</strong> — nothing posts today. Each drawing is recorded and posted on its own, so the liability only ever shows what has actually been drawn.'
+                                html: 'Opens at a <strong>nil balance</strong> — nothing posts today. For an old loan, save first and then use <strong>Record opening liability</strong> on its detail page. Use Record drawing only for new money actually received.'
                             },
                             'personal:term': {
                                 tone: '#d97706', tint: '#fffbeb', soft: 'rgb(217 119 6 / .2)', icon: 'fa-user-shield',
@@ -1220,6 +1707,12 @@
                             });
                             var hint = document.getElementById('finShapeHint');
                             if (hint) hint.style.display = running ? '' : 'none';
+                            var submit = document.getElementById('finLoanSubmit');
+                            if (submit) submit.textContent = running ? 'Open running account' : 'Save & build schedule';
+                            var subtitle = document.getElementById('finLoanSubtitle');
+                            if (subtitle) subtitle.textContent = running
+                                ? 'Opens with a nil balance. Add an old outstanding amount from the detail page.'
+                                : 'The instalment schedule is generated from these terms when you save.';
                         }
 
                         // "Money received into" is the one field BOTH answers govern,
@@ -1241,7 +1734,13 @@
                             disb.style.display = hide ? 'none' : '';
                             if (hide) {
                                 var sel = disb.querySelector('select');
-                                if (sel) sel.value = '';
+                                if (sel) {
+                                    sel.value = '';
+                                    // select2 mirrors the native select into its own markup and
+                                    // only re-reads it on change. Without this it keeps showing the
+                                    // bank name while the field submits nothing.
+                                    if (window.jQuery) jQuery(sel).trigger('change');
+                                }
                             }
                         }
 
@@ -1282,7 +1781,7 @@
                         @if($book === 'borrowed')
                             <div class="fin-field" id="finDeptWrap">
                                 <label>Department</label>
-                                <select name="department_id">
+                                <select name="department_id" class="fin-search">
                                     <option value="">— whole company —</option>
                                     @foreach($departments as $d)
                                         <option value="{{ $d->id }}">{{ $d->name }}</option>
@@ -1402,21 +1901,31 @@
                                        id="finFee" oninput="finNet()">
                                 <small class="fin-hint" id="finNetHint" style="display:none;"></small>
                             </div>
-                            {{-- The cash leg of the entry for a received loan. Only a
-                                 borrowing in the COMPANY's name has one: a loan in a
-                                 person's own name never touched a company account on
-                                 the way in, which is why this sits beside the
-                                 department field and not on the personal branch. --}}
-                            <div class="fin-field fin-term-only" id="finDisbWrap">
-                                <label>Money received into<span class="fin-i-wrap"><button type="button" class="fin-i" aria-expanded="false" aria-label="What naming this account does">i</button><span class="fin-i-pop">Naming the account is what <strong>posts the loan to the ledger</strong>: the cash that actually arrived, the lender's fee as an expense on day one, and the <strong>full sanctioned principal</strong> as the liability. Left blank, the loan is recorded on this desk only.</span></span></label>
-                                <select name="disbursement_bank_id">
-                                    <option value="">— not received into a company account —</option>
-                                    @foreach($banks as $b)
-                                        <option value="{{ $b->id }}">{{ $b->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
                         @endif
+                        {{-- The cash leg, and BOTH books need one — naming the account is
+                             what puts the arrangement on the ledger at all.
+
+                             It used to sit inside the borrowed-only block, which left the
+                             lent book with no way to say where the money went out from.
+                             lentPosts() requires exactly this field on a fixed loan, so
+                             every loan given was recorded on the desk and never reached
+                             the books — the cash simply vanished from the bank while the
+                             statement showed it gone.
+
+                             Blank stays meaningful on the lent side: an instalment plan
+                             against a sale never paid anything out, and the sale already
+                             booked the receivable. That is the one case which must not
+                             post, and leaving this empty is how it says so.
+
+                             A personal borrowing and a running account both null it in the
+                             controller, so finSyncDisb() hides it for those. --}}
+                        <div class="fin-field fin-term-only" id="finDisbWrap">
+                            <label>{{ $book === 'borrowed' ? 'Money received into' : 'Money paid from' }}<span class="fin-i-wrap"><button type="button" class="fin-i" aria-expanded="false" aria-label="What naming this account does">i</button><span class="fin-i-pop">@if($book === 'borrowed')Naming the account is what <strong>posts the loan to the ledger</strong>: the cash that actually arrived, the lender's fee as an expense on day one, and the <strong>full sanctioned principal</strong> as the liability. Left blank, the loan is recorded on this desk only.@else Naming the account is what <strong>posts the loan to the ledger</strong>: cash leaves it and the borrower's debt to you takes its place. Leave it blank for an <strong>instalment plan against a sale</strong> — nothing was paid out, and the sale already put the balance on the books.@endif</span></span></label>
+                            <select name="disbursement_bank_id" class="fin-search">
+                                <option value="">{{ $book === 'borrowed' ? '— not received into a company account —' : '— no cash left a company account —' }}</option>
+                                @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
+                            </select>
+                        </div>
                         <div class="fin-field fin-term-only">
                             <label>Interest method <span>*</span></label>
                             <select name="interest_method" required>
@@ -1455,14 +1964,20 @@
                     <div class="fin-grid">
                         <div class="fin-field">
                             <label>Posts against — principal</label>
-                            <select name="gl_account_id">
+                            <select name="gl_account_id" class="fin-search">
                                 <option value="">— decide later —</option>
                                 @foreach($glAccounts as $glType => $glRows)
                                     <optgroup label="{{ ucfirst($glType) }}">
                                         @foreach($glRows as $ga)
                                             <option value="{{ $ga->id }}"
-                                                @if($book === 'borrowed' && in_array($ga->code, ['2210','2120'], true)) selected @endif
-                                                @if($book === 'lent' && $ga->code === '1050') selected @endif
+                                                {{-- Defaults come from config/accounts.php, never from codes typed
+                                                     in here. The old list (2210, 2120, 1050) was written against the
+                                                     previous chart; after the renumber 2210 became Salaries Payable,
+                                                     2120 stopped existing and 1050 became Mobile Financial Services —
+                                                     so a borrowing saved without touching this field posted its
+                                                     liability to the payroll account. --}}
+                                                @if($book === 'borrowed' && $ga->code === config('accounts.loan_payable')) selected @endif
+                                                @if($book === 'lent' && $ga->code === config('accounts.director_current_account')) selected @endif
                                             >{{ $ga->code }} — {{ $ga->name }}</option>
                                         @endforeach
                                     </optgroup>
@@ -1471,14 +1986,19 @@
                         </div>
                         <div class="fin-field">
                             <label>Posts against — interest</label>
-                            <select name="gl_interest_account_id">
+                            <select name="gl_interest_account_id" class="fin-search">
                                 <option value="">— none / no interest —</option>
                                 @foreach($glAccounts as $glType => $glRows)
                                     <optgroup label="{{ ucfirst($glType) }}">
                                         @foreach($glRows as $ga)
                                             <option value="{{ $ga->id }}"
-                                                @if($book === 'borrowed' && $ga->code === '7002') selected @endif
-                                                @if($book === 'lent' && $ga->code === '4201') selected @endif
+                                                {{-- Same rule as the principal select above: codes come from
+                                                     config, never typed here. 7002 and 4201 were the old chart's
+                                                     interest accounts and neither survived the renumber, so this
+                                                     select silently defaulted to nothing and an asset account got
+                                                     picked by hand for a cost. --}}
+                                                @if($book === 'borrowed' && $ga->code === config('accounts.loan_interest_expense')) selected @endif
+                                                @if($book === 'lent' && $ga->code === config('accounts.loan_interest_income')) selected @endif
                                             >{{ $ga->code }} — {{ $ga->name }}</option>
                                         @endforeach
                                     </optgroup>
@@ -1501,7 +2021,7 @@
 
                 <div class="fin-modal-foot">
                     <button type="button" class="fin-btn-ghost" onclick="document.getElementById('finAddModal').style.display='none'">Cancel</button>
-                    <button type="submit" class="fin-btn-primary">Save &amp; build schedule</button>
+                    <button type="submit" class="fin-btn-primary" id="finLoanSubmit">Save &amp; build schedule</button>
                 </div>
             </form>
         </div>
@@ -1511,5 +2031,74 @@
 
 </div>{{-- /.fin-scope --}}
 
+{{-- Clicking the dim outside a modal cancels it, exactly as its Cancel button
+     does — hide it and leave the fields as they were (owner, 2026-08-22).
+
+     Guarded on where the press STARTED, not on where the click landed. A `click`
+     fires on the nearest common ancestor of its mousedown and its mouseup, so
+     dragging to select the text in a field and releasing out over the dim would
+     report the overlay as the target and shut the modal on someone mid-edit.
+     Only a press that both begins and ends on the dim itself closes it.
+
+     Scoped to this page's own `.fin-modal` elements, bound one by one. Nothing
+     here is delegated off the document, so no modal on any other screen — and
+     no other company's — can be reached by it. --}}
+<script>
+    (function () {
+        document.querySelectorAll('.fin-modal').forEach(function (modal) {
+            var startedOnBackdrop = false;
+            modal.addEventListener('mousedown', function (e) {
+                startedOnBackdrop = (e.target === modal);
+            });
+            modal.addEventListener('click', function (e) {
+                if (startedOnBackdrop && e.target === modal) {
+                    modal.style.display = 'none';
+                }
+                startedOnBackdrop = false;
+            });
+        });
+    })();
+</script>
+
 @include('financing.partials.styles')
+@endsection
+
+@section('js')
+{{-- jQuery FIRST: select2 is a jQuery plugin and the layout does not provide
+     jQuery globally, so without this the search box silently never appears. --}}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    /* Department and the two posting accounts are the long lists on this form —
+       the chart of accounts alone runs to hundreds of rows, and hunting one in a
+       native <select> is the slow part of filing a loan.
+
+       Only these three are upgraded. The arrangement radios, the shape toggle and
+       the interest method are short, and finShape()/finTakenFor() show and hide
+       their wrappers directly — select2 would put its own container in the way. */
+    function wire() {
+        if (!window.jQuery || !jQuery.fn.select2) return;
+
+        jQuery('.fin-search').each(function () {
+            var $el = jQuery(this);
+            if ($el.data('select2')) return;          // already upgraded
+
+            $el.select2({
+                width: '100%',
+                minimumResultsForSearch: 5,
+                // .fin-modal is a fixed overlay; without this the list renders
+                // into <body> and opens behind the sheet.
+                dropdownParent: $el.closest('.fin-modal-box').length
+                    ? $el.closest('.fin-modal-box')
+                    : jQuery(document.body),
+            });
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', wire);
+})();
+</script>
 @endsection

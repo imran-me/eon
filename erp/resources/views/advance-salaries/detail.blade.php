@@ -101,6 +101,28 @@
                         @endif
                     </td>
                 </tr>
+                @if(!empty($paidFrom))
+                    <tr>
+                        <td class="px-4 py-2.5 text-gray-500">Paid from</td>
+                        <td class="px-4 py-2.5 text-right font-semibold text-gray-800">
+                            {{ $paidFrom['bank'] }} <span class="text-xs font-normal text-gray-400">· {{ $paidFrom['ref'] }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2.5 text-gray-500">How it was given</td>
+                        <td class="px-4 py-2.5 text-right font-semibold text-gray-800">
+                            {{ ucfirst($paidFrom['method'] ?: 'not specified') }}
+                            @if($paidFrom['recipient_bank']) · {{ $paidFrom['recipient_bank'] }} @endif
+                            @if($paidFrom['recipient_ref']) · {{ $paidFrom['method'] === 'cheque' ? 'Cheque ' : 'A/C ' }}{{ $paidFrom['recipient_ref'] }} @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2.5 text-gray-500">Transaction time</td>
+                        <td class="px-4 py-2.5 text-right font-semibold text-gray-800">
+                            {{ \Carbon\Carbon::parse($paidFrom['date'])->format('d M Y') }}{{ $paidFrom['time'] ? ' · '.\Carbon\Carbon::parse($paidFrom['time'])->format('h:i A') : '' }}
+                        </td>
+                    </tr>
+                @endif
                 <tr>
                     <td class="px-4 py-2.5 text-gray-500">Against salary month</td>
                     <td class="px-4 py-2.5 text-right font-semibold text-gray-800">{{ $book->monthLabel($advance->month) }}</td>
@@ -126,6 +148,7 @@
             </tbody>
         </table>
     </div>
+
 
     {{-- ── Every recovery against this advance ──
          An advance has no movement table of its own: it comes back off a

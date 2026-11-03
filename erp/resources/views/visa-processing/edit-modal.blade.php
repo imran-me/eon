@@ -93,7 +93,7 @@
                                 <select id="edit_status" name="status"
                                     class="w-full px-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 transition">
                                     <option value="pending">NEW</option>
-                                    <option value="received">DOC COLLECTION</option>
+                                    <option value="received">DOCUMENTS PREPARATION</option>
                                     <option value="in_embassy">IN EMBASSY</option>
                                     <option value="approved">APPROVED</option>
                                     <option value="delivered">DELIVERED</option>
@@ -211,9 +211,7 @@
                                     class="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 bg-gray-50 select2"
                                     style="width:100%">
                                     <option value="">— Select Bank —</option>
-                                    @foreach ($banks as $bank)
-                                        <option value="{{ $bank->id }}">{{ $bank->name }} — {{ $bank->account_number }}</option>
-                                    @endforeach
+                                    @include('partials.bank-options', ['banks' => $banks, 'selected' => null])
                                 </select>
                             </div>
                             <div>

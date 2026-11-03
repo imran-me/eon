@@ -30,18 +30,47 @@ export function getTimeAgo(timestamp) {
     return `${days} day${days !== 1 ? 's' : ''} ago`;
 }
 
+/**
+ * "17:09:33 24/08/26" — HHMMSS DDMMYY, the owner's format for the task module.
+ *
+ * Seconds are the point of it, not decoration: without them an item worked on
+ * for eight seconds printed the same value on both ends of its range chip
+ * ("5.09pm:24/08/2026 → 5.09pm:24/08/2026") and looked broken. 24-hour, so
+ * there is no am/pm to read, and a two-digit year to keep it short.
+ *
+ * This is the single definition for the whole task module — the drawer, the
+ * card chips, the sub-work rows and their tooltips all come through here, so
+ * they cannot drift apart. Its PHP twin is Task::stampLabel().
+ */
 export function formatDateDisplay(dateStr) {
+    return stamp(dateStr, true);
+}
+
+/**
+ * The same stamp without seconds — "17:09 24/08/26" — for the Kanban card only.
+ *
+ * Measured, not guessed: a card gives its footer 270px, and two full chips plus
+ * the state pill and the priority icon need 296px. Dropping the seconds brings
+ * two chips from 102px to 89px each and the row lands on exactly 270px. That is
+ * a real fit but a tight one — a board whose column is named something longer
+ * than "PROGRESS" widens the state pill and eats the margin.
+ */
+export function formatDateShort(dateStr) {
+    return stamp(dateStr, false);
+}
+
+function stamp(dateStr, withSeconds) {
     if (!dateStr) return '';
     // Parse as local time: replace space with 'T' to avoid UTC interpretation
-    const normalizedStr = dateStr.replace(' ', 'T');
-    const d = new Date(normalizedStr);
-    return d.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    });
+    const d = new Date(String(dateStr).replace(' ', 'T'));
+    if (isNaN(d)) return '';
+
+    const p = n => String(n).padStart(2, '0');
+    const time = withSeconds
+        ? `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+        : `${p(d.getHours())}:${p(d.getMinutes())}`;
+
+    return `${time} ${p(d.getDate())}/${p(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)}`;
 }
 
 export function formatDatetimeLocal(dateStr) {

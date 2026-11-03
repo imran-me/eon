@@ -155,6 +155,14 @@ class EmployeeReimbursementService
                 'description' => 'Reimbursed ' . $name . ' for out-of-pocket expenses',
             ]);
 
+            // Paying a claim back moves real money out of a bank or the drawer, so
+            // the pot has to be able to cover it.
+            \App\Models\Bank::assertCanCover(
+                (int) $counterAccountId,
+                (float) $amount,
+                optional(\App\Models\Account::find($counterAccountId))->name ?: 'That account'
+            );
+
             // Debit the payable, and CARRY THE PARTY. Without it the total on the
             // account falls but this person's own balance does not, so they stay
             // owed money that has already been handed to them.
@@ -191,17 +199,18 @@ class EmployeeReimbursementService
      */
     public function reverse(ExpenseReimbursement $payment): void
     {
-        $journal = $payment->journalEntry;
+        DB::transaction(function () use ($payment) {
+            $payment = ExpenseReimbursement::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $journal = $payment->journalEntry;
 
-        if (!$journal) {
-            throw new \RuntimeException('That payment has no posting to reverse.');
-        }
+            if (!$journal) {
+                throw new \RuntimeException('That payment has no posting to reverse.');
+            }
 
-        if (JournalEntry::where('reversed_journal_entry_id', $journal->id)->exists()) {
-            throw new \RuntimeException('That payment has already been reversed.');
-        }
+            if (JournalEntry::where('reversed_journal_entry_id', $journal->id)->exists()) {
+                throw new \RuntimeException('That payment has already been reversed.');
+            }
 
-        DB::transaction(function () use ($payment, $journal) {
             $reversal = JournalEntry::create([
                 'company_id'                => $journal->company_id,
                 'created_by'                => auth()->id(),

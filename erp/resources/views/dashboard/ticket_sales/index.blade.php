@@ -12,9 +12,28 @@
     .tk-table td { font-size: 12px; color: #374151; padding: 9px 10px; }
     .tk-table tr:hover td { background: #eff6ff; }
     .tk-table tr.selected td { background: #dbeafe; }
+    #tsCreateModal .ts-create-header { background:#2563eb; background:linear-gradient(90deg,#1d4ed8 0%,#2563eb 52%,#0ea5e9 100%); }
+    #tsEditModal .ts-edit-header { background:#7c3aed; background:linear-gradient(90deg,#6d28d9 0%,#7c3aed 52%,#6366f1 100%); }
+    #tsCreateModal .ts-create-shell, #tsEditModal .ts-edit-shell { max-height:calc(100vh - 2rem); }
+    #tsCreateModal .ts-create-body, #tsEditModal .ts-edit-body { scrollbar-width:thin; scrollbar-color:#94a3b8 #f1f5f9; }
+    #tsCreateModal .ts-create-section, #tsEditModal .ts-edit-section { margin-top:1.25rem; padding-top:1.25rem; border-top:1px solid #e2e8f0; }
+    #tsCreateModal form > div:first-of-type .ts-create-section,
+    #tsEditModal form > div:first-of-type .ts-edit-section { margin-top:0; padding-top:0; border-top:0; }
+    #tsCreateModal input:not([type="checkbox"]), #tsCreateModal select, #tsCreateModal textarea,
+    #tsEditModal input:not([type="checkbox"]), #tsEditModal select, #tsEditModal textarea { min-height:42px; border-radius:10px; transition:border-color .15s,box-shadow .15s,background .15s; }
+    #tsCreateModal input:not([type="checkbox"]):focus, #tsCreateModal select:focus, #tsCreateModal textarea:focus { border-color:#3b82f6 !important; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    #tsEditModal input:not([type="checkbox"]):focus, #tsEditModal select:focus, #tsEditModal textarea:focus { border-color:#8b5cf6 !important; box-shadow:0 0 0 3px rgba(139,92,246,.12); }
+    #tsCreateModal label, #tsEditModal label { line-height:1.25rem; }
+    #tsCreateModal .select2-container .select2-selection--single,
+    #tsEditModal .select2-container .select2-selection--single { height:42px;border-radius:10px;border-color:#cbd5e1;display:flex;align-items:center; }
+    #tsCreateModal .select2-container .select2-selection--single .select2-selection__rendered,
+    #tsEditModal .select2-container .select2-selection--single .select2-selection__rendered { padding-left:12px;line-height:40px; }
+    #tsCreateModal .select2-container .select2-selection--single .select2-selection__arrow,
+    #tsEditModal .select2-container .select2-selection--single .select2-selection__arrow { height:40px; }
 </style>
 @endsection
 @section('main-content')
+@include('layout.ticketing-tabs')
 
     {{-- Stat Cards --}}
     <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
@@ -66,41 +85,40 @@
 
     {{-- Filter + Table --}}
     <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <form method="GET" action="" class="flex flex-wrap items-center gap-2 bg-slate-50 px-4 py-3">
-            <div class="flex min-w-44 flex-1 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2">
-                <i class="fas fa-search text-xs text-slate-400"></i>
-                <input type="text" name="invoice_no" value="{{ request('invoice_no') }}" placeholder="Search invoice no..." class="flex-1 border-0 bg-transparent text-sm outline-none">
-            </div>
-            <select name="client_id" class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-400">
-                <option value="">All Clients</option>
-                @foreach ($agents as $agent)
-                    <option value="{{ $agent->id }}" {{ $agent->id == request('client_id') ? 'selected' : '' }}>{{ $agent->name }}</option>
-                @endforeach
-                @foreach ($customers as $customer)
-                    <option value="{{ $customer->id }}" {{ $customer->id == request('client_id') ? 'selected' : '' }}>{{ $customer->name }}</option>
-                @endforeach
-            </select>
-            <select name="ticket_id" class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-400">
-                <option value="">All Tickets</option>
-                @foreach ($tickets as $ticket)
-                    <option value="{{ $ticket->id }}" {{ $ticket->id == request('ticket_id') ? 'selected' : '' }}>{{ $ticket->title }}</option>
-                @endforeach
-            </select>
-            <select name="status" class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-400">
-                <option value="">All Status</option>
-                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
-                <option value="confirm" {{ request('status') == 'confirm' ? 'selected' : '' }}>Confirm</option>
-                <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
-                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
-            </select>
-            <input type="date" name="from_date" value="{{ request('from_date') }}" class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-400">
-            <input type="date" name="to_date" value="{{ request('to_date') }}" class="h-9 rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-blue-400">
-            <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white">Filter</button>
-            <a href="{{ route('role.ticket-sales.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())]) }}" class="rounded-lg border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600">Reset</a>
+        {{-- The Manage Banks filter bar, with this page's three selects slotted
+             in. A select applies on change; the sale-date range and the invoice
+             search go with Apply. --}}
+        <form method="GET" action="">
+            <x-ticketing-filter-bar search="invoice_no" placeholder="Search invoice no…"
+                               :reset="route('role.ticket-sales.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first())])"
+                               :total="$datas->total()">
+                <select name="client_id" onchange="this.form.requestSubmit()" aria-label="Client">
+                    <option value="">All Clients</option>
+                    @foreach ($agents as $agent)
+                        <option value="{{ $agent->id }}" {{ $agent->id == request('client_id') ? 'selected' : '' }}>{{ $agent->name }}</option>
+                    @endforeach
+                    @foreach ($customers as $customer)
+                        <option value="{{ $customer->id }}" {{ $customer->id == request('client_id') ? 'selected' : '' }}>{{ $customer->name }}</option>
+                    @endforeach
+                </select>
+                <select name="ticket_id" onchange="this.form.requestSubmit()" aria-label="Ticket">
+                    <option value="">All Tickets</option>
+                    @foreach ($tickets as $ticket)
+                        <option value="{{ $ticket->id }}" {{ $ticket->id == request('ticket_id') ? 'selected' : '' }}>{{ $ticket->title }}</option>
+                    @endforeach
+                </select>
+                <select name="status" onchange="this.form.requestSubmit()" aria-label="Status">
+                    <option value="">All Status</option>
+                    <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="confirm" {{ request('status') == 'confirm' ? 'selected' : '' }}>Confirm</option>
+                    <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
+                    <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                </select>
+            </x-ticketing-filter-bar>
         </form>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200">
+        <div class="overflow-x-auto" data-tfb-swap>
+            <table class="min-w-full divide-y divide-slate-200" data-cf-sort>
                 <thead class="bg-slate-50">
                     <tr>
                         <th class="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wide text-slate-500">Invoice #</th>
@@ -113,7 +131,7 @@
                         <th class="px-4 py-3 text-right text-[10px] font-bold uppercase tracking-wide text-slate-500">Due</th>
                         <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">Payment</th>
                         <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">Status</th>
-                        <th class="px-4 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500">Action</th>
+                        <th class="px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wide text-slate-500" style="width:1%;white-space:nowrap">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
@@ -125,6 +143,8 @@
                         $firstTicket = $firstItem?->ticketPurchase?->ticket;
                         $pnrList     = $value->items->take(3)->map(fn ($i) => $i->ticketPurchase?->ticket_no)->filter()->implode(', ');
                         $extraCount  = max(0, $value->items->count() - 3);
+                        $clientIsAgent = $value->client?->roles?->contains('name', 'agent') ?? false;
+                        $clientCode = $value->client ? ($clientIsAgent ? 'EP-AG-' : 'EP-CU-').str_pad((string) $value->client->id, 3, '0', STR_PAD_LEFT) : null;
                     @endphp
                     <tr class="hover:bg-slate-50">
                         <td class="px-4 py-3">
@@ -133,6 +153,7 @@
                         <td class="px-4 py-3">
                             <div class="text-sm font-semibold text-slate-800">{{ $value->client?->name ?? '—' }}</div>
                             <div class="text-xs text-slate-400">{{ $value->client?->email }}</div>
+                            @if($value->client)<div class="mt-0.5 text-[10px] text-slate-400">{{ $clientIsAgent ? 'Agent' : 'Customer' }} ID: <a href="{{ route('role.party-statement.index', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'party_id' => $value->client->id]) }}" class="font-semibold text-blue-700 hover:underline" title="Open party ledger">{{ $clientCode }}</a></div>@endif
                         </td>
                         <td class="px-4 py-3">
                             <span class="rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-semibold text-blue-700">
@@ -155,33 +176,33 @@
                         <td class="px-4 py-3 text-center">
                             <span class="rounded-full px-2.5 py-1 text-[10px] font-semibold {{ $sBadgeClass }}">{{ ucfirst($value->status) }}</span>
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex items-center justify-center gap-1">
+                        <td class="px-2 py-3">
+                            <div style="display:grid;grid-template-columns:repeat(2,24px);gap:4px;width:max-content;margin:0 auto;justify-content:center" data-row-actions>
                                 <button type="button" onclick="tsShowDetail({{ $value->id }})"
-                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View Details">
-                                    <i class="fas fa-eye text-xs"></i>
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-blue-50 hover:text-blue-600" title="View Details" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-eye text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                                 <a target="_blank" href="{{ route('role.ticket-sales.show', ['role' => Str::slug(Auth::user()->getRoleNames()->first()), 'ticket_sale' => $value->id]) }}"
-                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-600 hover:bg-teal-100" title="Print Invoice">
-                                    <i class="fas fa-print text-xs"></i>
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-teal-200 bg-teal-50 text-teal-600 hover:bg-teal-100" title="Print Invoice" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-print text-xs" style="font-size:11px;margin:0"></i>
                                 </a>
                                 @if($value->due_amount > 0 && $value->status !== 'cancelled')
                                 <button type="button" onclick="openReceivePaymentModal({{ $value->id }}, '{{ $value->invoice_no }}', {{ $value->due_amount }})"
-                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100" title="Receive payment">
-                                    <i class="fas fa-hand-holding-usd text-xs"></i>
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100" title="Receive payment" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-hand-holding-usd text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                                 @else
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300" title="Fully paid">
-                                    <i class="fas fa-check text-xs"></i>
+                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-slate-300" title="Fully paid" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-check text-xs" style="font-size:11px;margin:0"></i>
                                 </span>
                                 @endif
                                 <button type="button" onclick="tseOpen({{ $value->id }})"
-                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" title="Edit Sale">
-                                    <i class="fas fa-pencil-alt text-xs"></i>
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100" title="Edit Sale" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-pencil-alt text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                                 <button type="button" onclick="confirmDelete('{{ $value->id }}', '{{ $value->invoice_no }}')"
-                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" title="Delete">
-                                    <i class="fas fa-trash text-xs"></i>
+                                    class="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-100" title="Delete" style="width:24px;height:24px;min-width:0;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;border-radius:6px">
+                                    <i class="fas fa-trash text-xs" style="font-size:11px;margin:0"></i>
                                 </button>
                             </div>
                         </td>
@@ -198,7 +219,7 @@
                 </tbody>
             </table>
         </div>
-        <div class="p-4">{{ $datas->appends(request()->all())->links() }}</div>
+        <div class="p-4" data-tfb-swap>{{ $datas->appends(request()->all())->links() }}</div>
     </div>
 
     {{-- View Details Modal --}}
@@ -219,12 +240,12 @@
     </div>
 
     {{-- Receive Payment Modal --}}
-    <div id="receivePaymentModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-start justify-center p-6 overflow-y-auto">
-        <div class="w-full max-w-md bg-white rounded-2xl overflow-hidden shadow-2xl">
+    <div id="receivePaymentModal" class="fixed inset-0 z-[9999] bg-black/50 hidden [&:not(.hidden)]:flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-2xl max-h-[calc(100vh-2rem)] bg-white rounded-2xl overflow-y-auto shadow-2xl">
             <div class="flex items-center gap-3 bg-gradient-to-r from-emerald-600 to-green-500 px-5 py-4">
                 <div class="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0"><i class="fas fa-hand-holding-usd"></i></div>
                 <div class="flex-1">
-                    <h2 class="text-sm font-bold text-white">Receive Payment</h2>
+                    <h2 class="text-sm font-bold text-white">Receive Ticket Payment</h2>
                     <p class="text-xs text-emerald-100 mt-0.5">Invoice: <span id="rpInvoiceLabel"></span> — Due: <span id="rpDueLabel"></span></p>
                 </div>
                 <button type="button" onclick="closeReceivePaymentModal()" class="ml-auto h-8 w-8 rounded-full bg-white/20 border-0 text-white cursor-pointer flex items-center justify-center">
@@ -234,38 +255,23 @@
             <div class="p-5">
                 <form id="receivePaymentForm" method="POST">
                     @csrf
-                    <div class="mb-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Amount <sup class="text-red-500">*</sup></label>
-                        <input type="number" name="payment_amount" id="rpAmount" step="0.01" min="0.01" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
+                    <div class="mb-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                        <p class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500"><i class="fas fa-sack-dollar mr-1"></i> Payment Details</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Amount <span class="text-red-500">*</span></label><input type="number" name="payment_amount" id="rpAmount" step="0.01" min="0.01" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Payment Date <span class="text-red-500">*</span></label><input type="date" name="payment_date" id="rpDate" max="{{ now()->format('Y-m-d') }}" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></div>
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Custom Time <span class="text-red-500">*</span></label><input type="hidden" name="transaction_time" id="rpTransactionTime"><div class="flex items-center gap-1"><select id="rpHour" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-1 py-2 text-sm">@for($h=1;$h<=12;$h++)<option value="{{ $h }}">{{ str_pad($h,2,'0',STR_PAD_LEFT) }}</option>@endfor</select><b>:</b><select id="rpMinute" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-1 py-2 text-sm">@for($m=0;$m<60;$m++)<option value="{{ $m }}">{{ str_pad($m,2,'0',STR_PAD_LEFT) }}</option>@endfor</select><select id="rpPeriod" class="min-w-0 flex-1 rounded-lg border border-slate-300 px-1 py-2 text-sm"><option>AM</option><option>PM</option></select></div></div>
+                        </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Bank Account <sup class="text-red-500">*</sup></label>
-                        <select name="bank_id" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
-                            <option value="">Select bank</option>
-                            @foreach ($banks as $bank)
-                                <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Method <sup class="text-red-500">*</sup></label>
-                        <select name="payment_method" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
-                            <option value="cash">Cash</option>
-                            <option value="card">Card</option>
-                            <option value="advance">Advance</option>
-                            <option value="checque">Cheque</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="mobile_banking">Mobile Banking</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Payment Date <sup class="text-red-500">*</sup></label>
-                        <input type="date" name="payment_date" value="{{ date('Y-m-d') }}" required class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
-                    </div>
-                    <div class="mb-3">
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">Reference No</label>
-                        <input type="text" name="reference_no" placeholder="Optional" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500">
+                    <div class="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                        <p class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-500"><i class="fas fa-building-columns mr-1"></i> Money Route</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Received Via <span class="text-red-500">*</span></label><select name="payment_method" id="rpMethod" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="cash">Cash</option><option value="bank_transfer">Bank Transfer</option><option value="mobile_banking">Mobile Banking</option><option value="cheque">Cheque</option><option value="card">Card</option><option value="other">Other</option></select></div>
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Company Account (money received into) <span class="text-red-500">*</span></label><select name="bank_id" id="rpBank" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"><option value="">— Select account —</option>@include('partials.bank-options', ['banks' => $banks, 'selected' => null])</select></div>
+                            <div id="rpPayerFields" class="hidden sm:col-span-2 rounded-lg border border-blue-200 bg-blue-50/60 p-3"><p id="rpPayerTitle" class="mb-2 text-[11px] font-bold uppercase text-blue-700"></p><div class="grid grid-cols-1 sm:grid-cols-2 gap-3"><div><label id="rpPayerBankLabel" class="block text-xs font-semibold text-slate-600 mb-1"></label><input type="text" name="payer_bank" id="rpPayerBank" maxlength="150" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></div><div><label id="rpPayerRefLabel" class="block text-xs font-semibold text-slate-600 mb-1"></label><input type="text" name="payer_reference" id="rpPayerRef" maxlength="100" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></div></div></div>
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Reference No. / TRNX ID</label><input type="text" name="reference_no" id="rpReference" readonly class="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2 text-sm text-slate-500"></div>
+                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Note (optional)</label><input type="text" name="notes" maxlength="500" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"></div>
+                        </div>
                     </div>
                     <div class="flex justify-end gap-3 mt-4">
                         <button type="button" onclick="closeReceivePaymentModal()" class="rounded-xl border border-slate-200 bg-slate-100 text-slate-700 px-4 py-2 text-sm font-semibold">Cancel</button>
@@ -439,11 +445,52 @@
 
         // ── Receive Payment (settles a due invoice) ───────────────────
         const TS_MAKE_PAYMENT_BASE = "{{ url(Str::slug(Auth::user()->getRoleNames()->first()) . '/ticket-sales/make/payment') }}";
+        const rpAccountTypes = { cash:['cash'], bank_transfer:['bank'], cheque:['bank'], card:['bank'], mobile_banking:['mobile_banking','digital_wallet'] };
+        const rpPayerCopy = {
+            bank_transfer:{title:'Customer / Agent paid from',bank:'Bank Name',ref:'Account Number',bankPh:'e.g. Dutch-Bangla Bank',refPh:'Party account number'},
+            cheque:{title:'Cheque details',bank:'Bank Name (cheque drawn on)',ref:'Cheque No.',bankPh:'e.g. Dutch-Bangla Bank',refPh:'Cheque number'},
+            mobile_banking:{title:'Customer / Agent paid from',bank:'Provider / Service',ref:'Mobile Account Number',bankPh:'e.g. bKash, Nagad or Rocket',refPh:'Party mobile account number'}
+        };
+        function syncTicketPaymentRoute() {
+            const method = document.getElementById('rpMethod').value;
+            const account = document.getElementById('rpBank');
+            const wanted = rpAccountTypes[method] || null;
+            let first = null;
+            [...account.options].forEach(option => {
+                if (!option.value) return;
+                const hidden = !!wanted && !wanted.includes(option.dataset.type || '');
+                option.hidden = hidden; option.disabled = hidden;
+                if (!hidden && !first) first = option;
+            });
+            account.querySelectorAll('optgroup').forEach(group => {
+                const visible = [...group.querySelectorAll('option')].some(option => !option.hidden);
+                group.hidden = !visible; group.disabled = !visible;
+            });
+            if (account.selectedOptions[0]?.hidden || account.selectedOptions[0]?.disabled) account.value = '';
+            if (method === 'cash' && first) account.value = ([...account.options].find(o => !o.hidden && /office\s*cash/i.test(o.textContent)) || first).value;
+            const copy = rpPayerCopy[method];
+            document.getElementById('rpPayerFields').classList.toggle('hidden', !copy);
+            const bank = document.getElementById('rpPayerBank'), ref = document.getElementById('rpPayerRef');
+            if (copy) {
+                document.getElementById('rpPayerTitle').textContent = copy.title;
+                document.getElementById('rpPayerBankLabel').innerHTML = copy.bank + ' <span class="text-red-500">*</span>';
+                document.getElementById('rpPayerRefLabel').innerHTML = copy.ref + ' <span class="text-red-500">*</span>';
+                bank.placeholder = copy.bankPh; ref.placeholder = copy.refPh;
+            }
+            [bank,ref].forEach(field => { field.required=!!copy; field.disabled=!copy; if(!copy) field.value=''; });
+        }
+        document.getElementById('rpMethod')?.addEventListener('change', syncTicketPaymentRoute);
 
         function openReceivePaymentModal(saleId, invoiceNo, dueAmt) {
             $('#rpInvoiceLabel').text(invoiceNo);
             $('#rpDueLabel').text('৳' + parseFloat(dueAmt).toFixed(2));
             $('#rpAmount').val(parseFloat(dueAmt).toFixed(2)).attr('max', dueAmt);
+            const now = new Date(), hour24 = now.getHours();
+            $('#rpDate').val([now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-'));
+            $('#rpHour').val(hour24 % 12 || 12); $('#rpMinute').val(now.getMinutes()); $('#rpPeriod').val(hour24 >= 12 ? 'PM' : 'AM');
+            $('#rpMethod').val('cash'); $('#rpBank').val(''); $('#rpPayerBank,#rpPayerRef').val('');
+            $('#rpReference').val(invoiceNo + '-PAY-' + [now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0'),String(now.getHours()).padStart(2,'0'),String(now.getMinutes()).padStart(2,'0'),String(now.getSeconds()).padStart(2,'0')].join(''));
+            syncTicketPaymentRoute();
             $('#receivePaymentForm').attr('action', TS_MAKE_PAYMENT_BASE + '/' + saleId);
             $('#receivePaymentModal').removeClass('hidden');
         }
@@ -451,6 +498,11 @@
             $('#receivePaymentModal').addClass('hidden');
         }
         $('#receivePaymentModal').on('click', function (e) { if (e.target.id === 'receivePaymentModal') closeReceivePaymentModal(); });
+        $('#receivePaymentForm').on('submit', function () {
+            let hour=Number($('#rpHour').val())||12; const minute=String($('#rpMinute').val()).padStart(2,'0'), period=$('#rpPeriod').val();
+            if(period==='PM'&&hour!==12) hour+=12; if(period==='AM'&&hour===12) hour=0;
+            $('#rpTransactionTime').val(String(hour).padStart(2,'0')+':'+minute);
+        });
 
         // ══════════════════════════════════════════════════════════
         //  CREATE / EDIT TICKET SALE — modal logic (mirrors visa-sales)
@@ -465,6 +517,7 @@
         let tsSelectedIds   = new Set();
         let tsSalePrices    = {};
         let tsTotalAmount   = 0;
+        let tsTicketQuery   = '';
 
         const TS_PARTY_FIELDS = {
             create: { id: '#ts_create_client_id', agent: '#ts_create_agent_picker', customer: '#ts_create_customer_picker' },
@@ -499,6 +552,9 @@
             tsSelectedIds.clear();
             tsSalePrices = {};
             tsTicketData = [];
+            tsTicketQuery = '';
+            $('#tsTicketSearch').val('');
+            $('#tsTicketSearchClear').addClass('hidden');
             $('#tsHiddenInputs').empty();
             $('#tsCreateModal').removeClass('hidden');
             tsToggleBankField();
@@ -538,7 +594,12 @@
                 $tbody.html('<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs">No confirmed unsold tickets available.</td></tr>');
                 return;
             }
-            $tbody.html(tsTicketData.map(function (t) {
+            const visibleTickets = tsFilteredTickets();
+            if (!visibleTickets.length) {
+                $tbody.html('<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs"><i class="fas fa-search mr-1"></i>No ticket matches your search.</td></tr>');
+                return;
+            }
+            $tbody.html(visibleTickets.map(function (t) {
                 const checked  = tsSelectedIds.has(t.id) ? 'checked' : '';
                 const selClass = tsSelectedIds.has(t.id) ? 'selected' : '';
                 const salePrice = (tsSalePrices[t.id] !== undefined) ? tsSalePrices[t.id] : t.price;
@@ -554,6 +615,26 @@
                     '</td>' +
                     '</tr>';
             }).join(''));
+        }
+
+        function tsFilteredTickets() {
+            if (!tsTicketQuery) return tsTicketData;
+            return tsTicketData.filter(function (t) {
+                return [t.ticket_no, t.name_ticket_no, t.passenger, t.passport_no, t.route]
+                    .filter(Boolean).join(' ').toLowerCase().includes(tsTicketQuery);
+            });
+        }
+
+        function tsFilterTickets(value) {
+            tsTicketQuery = String(value || '').trim().toLowerCase();
+            $('#tsTicketSearchClear').toggleClass('hidden', !tsTicketQuery);
+            $('#tsSelectAll').prop('checked', false);
+            tsRenderTickets();
+        }
+
+        function tsClearTicketSearch() {
+            $('#tsTicketSearch').val('').focus();
+            tsFilterTickets('');
         }
 
         function tsSetPrice(id, value) {
@@ -573,7 +654,7 @@
         }
 
         function tsToggleAll(chk) {
-            tsTicketData.forEach(function (t) {
+            tsFilteredTickets().forEach(function (t) {
                 if (chk.checked) {
                     tsSelectedIds.add(t.id);
                     if (tsSalePrices[t.id] === undefined) tsSalePrices[t.id] = t.price;
@@ -668,6 +749,7 @@
         let tseTotalAmount = 0;
         let tsePrevPaid    = 0;
         let tseSaleId      = null;
+        let tseTicketQuery = '';
 
         function tseOpen(saleId) {
             tseSaleId = saleId;
@@ -675,6 +757,9 @@
             tseSelectedIds.clear();
             tseSalePrices = {};
             tseTicketData = [];
+            tseTicketQuery = '';
+            $('#tseTicketSearch').val('');
+            $('#tseTicketSearchClear').addClass('hidden');
             $('#tseHiddenInputs').empty();
             $('#tsEditForm').attr('action', TS_BASE_URL + '/' + saleId);
             $('#tsEditModal').removeClass('hidden');
@@ -699,6 +784,7 @@
                     $('#tseStatus').val(sale.status).trigger('change');
                     $('#tseCurrency').val(sale.currency);
                     $('#tseBank').val(sale.bank_id).trigger('change');
+                    $('#tsePaymentInstructionBank').val(sale.payment_instruction_bank_id || '').trigger('change');
                     tseToggleBankField();
                     tsePrevPaid = parseFloat(sale.paid_amount) || 0;
                     $('#tsePrevPaid').text(tsePrevPaid.toFixed(2));
@@ -752,7 +838,12 @@
                 $tbody.html('<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs">No confirmed unsold tickets available.</td></tr>');
                 return;
             }
-            $tbody.html(tseTicketData.map(function (t) {
+            const visibleTickets = tseFilteredTickets();
+            if (!visibleTickets.length) {
+                $tbody.html('<tr><td colspan="5" class="text-center py-6 text-gray-400 text-xs"><i class="fas fa-search mr-1"></i>No ticket matches your search.</td></tr>');
+                return;
+            }
+            $tbody.html(visibleTickets.map(function (t) {
                 const checked  = tseSelectedIds.has(t.id) ? 'checked' : '';
                 const selClass = tseSelectedIds.has(t.id) ? 'selected' : '';
                 const salePrice = (tseSalePrices[t.id] !== undefined) ? tseSalePrices[t.id] : t.price;
@@ -768,6 +859,26 @@
                     '</td>' +
                     '</tr>';
             }).join(''));
+        }
+
+        function tseFilteredTickets() {
+            if (!tseTicketQuery) return tseTicketData;
+            return tseTicketData.filter(function (t) {
+                return [t.ticket_no, t.name_ticket_no, t.passenger, t.passport_no, t.route]
+                    .filter(Boolean).join(' ').toLowerCase().includes(tseTicketQuery);
+            });
+        }
+
+        function tseFilterTickets(value) {
+            tseTicketQuery = String(value || '').trim().toLowerCase();
+            $('#tseTicketSearchClear').toggleClass('hidden', !tseTicketQuery);
+            $('#tseSelectAll').prop('checked', false);
+            tseRenderTickets();
+        }
+
+        function tseClearTicketSearch() {
+            $('#tseTicketSearch').val('').focus();
+            tseFilterTickets('');
         }
 
         function tseSetPrice(id, value) {
@@ -787,7 +898,7 @@
         }
 
         function tseToggleAll(chk) {
-            tseTicketData.forEach(function (t) {
+            tseFilteredTickets().forEach(function (t) {
                 if (chk.checked) {
                     tseSelectedIds.add(t.id);
                     if (tseSalePrices[t.id] === undefined) tseSalePrices[t.id] = t.price;

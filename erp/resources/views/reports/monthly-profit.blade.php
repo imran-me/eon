@@ -1,8 +1,10 @@
 @extends('layout.app')
-@section('title', 'Monthly Profit Sheet')
+@section('title', 'Service Profitability')
 
 @section('main-content')
 @php $role = Str::slug(Auth::user()->getRoleNames()->first()); @endphp
+
+@include('report.partials.account-report-tabs')
 
 <div class="min-h-screen bg-gray-50">
 
@@ -14,12 +16,16 @@
                     <i class="fas fa-chart-line text-white text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-white leading-tight">Monthly Profit Sheet</h1>
-                    <p class="text-xs text-emerald-100 mt-0.5">Ticket &middot; Visa &middot; Flight &middot; File — Revenue vs Cost</p>
+                    <h1 class="text-xl font-bold text-white leading-tight">Service Profitability</h1>
+                    <p class="text-xs text-emerald-100 mt-0.5">Monthly direct margin · Ticket · Visa · Flight · File</p>
                 </div>
             </div>
             {{-- Year Selector --}}
             <div class="flex items-center gap-2">
+                <a href="{{ route('role.report.profit-loss', ['role' => $role]) }}"
+                   class="text-xs font-semibold px-4 py-2 rounded-xl bg-white text-emerald-700 hover:bg-emerald-50 transition border border-white/60">
+                    <i class="fas fa-scale-balanced mr-1"></i> Accounting P&amp;L
+                </a>
                 <label class="text-xs text-emerald-200 font-semibold">Year</label>
                 <select id="yearSelect"
                     class="text-sm font-semibold border-0 rounded-xl px-4 py-2 bg-white/20 text-white focus:ring-2 focus:ring-white/40 focus:outline-none cursor-pointer">
@@ -69,6 +75,11 @@
 
     <div class="px-6 py-5 space-y-5">
 
+        <div class="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-blue-800">
+            <i class="fas fa-circle-info mt-0.5"></i>
+            <div class="text-xs leading-relaxed"><strong>Operational report:</strong> revenue minus direct service cost. It does not include payroll, office overhead, depreciation, finance cost or tax. Use <strong>Accounting P&amp;L</strong> for the company’s formal net profit.</div>
+        </div>
+
         {{-- ══ LOADING STATE ══ --}}
         <div id="loadingState" class="flex items-center justify-center py-20">
             <div class="text-center">
@@ -93,9 +104,9 @@
                     <p class="text-xs text-gray-400 mt-1">All modules combined</p>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-emerald-100 p-4 bg-gradient-to-br from-emerald-50 to-teal-50">
-                    <p class="text-[10px] text-emerald-600 uppercase tracking-wider font-bold mb-1">Net Profit</p>
+                    <p class="text-[10px] text-emerald-600 uppercase tracking-wider font-bold mb-1">Direct Profit</p>
                     <p id="cardProfit" class="text-2xl font-bold text-emerald-600">—</p>
-                    <p class="text-xs text-emerald-500 mt-1">Revenue minus Cost</p>
+                    <p class="text-xs text-emerald-500 mt-1">Before overhead and tax</p>
                 </div>
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
                     <p class="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Profit Margin</p>

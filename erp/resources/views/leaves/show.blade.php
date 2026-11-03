@@ -59,6 +59,8 @@
     .letter-salute  { margin-bottom: 14px; font-weight: 700; }
     .letter-subject { margin-bottom: 18px; font-weight: 700; text-decoration: underline; font-size: 12.5pt; }
     .letter-body p  { margin: 0 0 14px; text-align: justify; }
+    .reason-block { margin: 8px 0 18px; padding: 12px 14px; border-left: 3px solid #1e3a8a; background: #f8fafc; white-space: pre-wrap; overflow-wrap: anywhere; font-family: 'Times New Roman', Times, serif; }
+    .reason-label { display:block; margin-bottom:5px; color:#475569; font-family:'Segoe UI',sans-serif; font-size:9pt; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
     .letter-closing { margin-top: 28px; }
     .letter-closing p { margin: 0 0 6px; }
 
@@ -193,13 +195,10 @@
             @endif
             at <strong>{{ $companyName }}</strong>, would like to request
             <strong>{{ $leaveType }}</strong> for
-            <strong>{{ $leaveDateText }}</strong>@if($leave->leave_time) starting from <strong>{{ \Carbon\Carbon::parse($leave->leave_time)->format('h:i A') }}</strong>@endif.
+            <strong>{{ $leaveDateText }}</strong>@if($leave->leave_time) {{ $leave->leave_type?->exempts_late_deduction ? 'with approved arrival by' : 'starting from' }} <strong>{{ \Carbon\Carbon::parse($leave->leave_time)->format('h:i A') }}</strong>@endif.
         </p>
 
-        <p>
-            The reason for my leave request is as follows:
-            <strong>{{ $leave->reason ?: 'Personal reasons.' }}</strong>
-        </p>
+        <div class="reason-block"><span class="reason-label">Reason for Leave</span>{{ $leave->reason ?: 'Personal reasons.' }}</div>
 
         <p>
             I kindly request you to approve this leave application for the mentioned period.

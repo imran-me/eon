@@ -2,40 +2,46 @@
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Http\Controllers\Controller;
+use App\Models\AdvanceSalary;
+use App\Models\Attendance;
+use App\Models\Bank;
+use App\Models\Company;
+use App\Models\Department;
 use App\Models\DeviceSetting;
 use App\Models\DeviceUser;
-use Illuminate\Support\Facades\DB;
+use App\Models\EmployeeDocument;
+use App\Models\EmployeePayment;
+use App\Models\EmployeePaymentAllocation;
 use App\Models\EmployeeProfile;
+use App\Models\EmployeeSalary;
+use App\Models\Leave as LeaveModel;
+use App\Models\Loan;
+use App\Models\PaymentSchedule;
 use App\Models\SalaryTemplate;
 use App\Models\User;
-use App\Models\EmployeeDocument;
-use App\Models\Department;
-use App\Models\Company;
-use App\Models\Attendance;
-use App\Models\Leave as LeaveModel;
-use App\Models\EmployeeSalary;
-use App\Models\Loan;
-use App\Models\AdvanceSalary;
-use App\Models\Bank;
-use App\Models\PaymentSchedule;
+use App\Services\AdvancePostingService;
+use App\Services\AttendanceMonthService;
 use App\Services\PayrollService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
+use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 
 class UserController implements HasMiddleware
 {
-    public function __construct(private PayrollService $payroll)
-    {
-    }
+    public function __construct(private PayrollService $payroll) {}
 
     /**
      * Every public method must appear here. A method left out of this map is
@@ -57,7 +63,8 @@ class UserController implements HasMiddleware
             // callers catch a non-2xx and just hide the dropdown.
             new Middleware('permission:view users', only: [
                 'index', 'show', 'summary', 'search', 'documents',
-                'salaryTransactionReportPrint', 'payslipsReportPrint',
+                'sendEmployeeLedger',
+                'salaryTransactionReportPrint', 'payslipsReportPrint', 'leaveEncashmentReportPrint', 'attendanceReportPrint',
             ]),
             new Middleware('permission:create users', only: ['create', 'store']),
             // updateDocuments uploads files onto another user's record. That is
@@ -127,6 +134,7 @@ class UserController implements HasMiddleware
 
         if ($authUser->can('view company users') && $authUser->company_id) {
             $query->where('users.company_id', $authUser->company_id);
+
             return;
         }
 
@@ -136,13 +144,13 @@ class UserController implements HasMiddleware
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index($role, Request $request)
-    {  
-        if(!$request->role){
+    {
+        if (! $request->role) {
             $role = $role;
-        }else{
+        } else {
             $role = $request->role;
         }
         $role = normalizeRoleName($role);
@@ -157,30 +165,87 @@ class UserController implements HasMiddleware
 
         // Apply filters
         if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->input('name') . '%');
+            $query->where('name', 'like', '%'.$request->input('name').'%');
         }
-        
+
         if ($request->filled('phone')) {
-            $query->where('phone', 'like', '%' . $request->input('phone') . '%');
+            $query->where('phone', 'like', '%'.$request->input('phone').'%');
         }
-        
+
         if ($request->filled('company')) {
             $query->where('company_id', $request->input('company'));
         }
-        
+
         if ($request->filled('department')) {
             $query->whereHas('profile', function ($q) {
                 $q->where('department_id', request()->input('department'));
             });
         }
-        
+
+        $statusCounts = [
+            'active' => (clone $query)->where('status', 'active')->count(),
+            'resigned' => (clone $query)->where('status', 'resigned')->count(),
+            'inactive' => (clone $query)->where('status', 'inactive')->count(),
+            'all' => (clone $query)->count(),
+        ];
+        $status = in_array($request->input('status'), ['active', 'resigned', 'inactive', 'all'], true)
+            ? $request->input('status')
+            : 'active';
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
         $users = $query->paginate(20);
-        
+
         // Get dropdown options
         $departments = Department::orderBy('name')->get();
         $companies = Company::orderBy('name')->get();
-        
-        return view('panel.users.index', compact('users', 'departments', 'companies','role'));
+
+        return view('panel.users.index', compact('users', 'departments', 'companies', 'role', 'status', 'statusCounts'));
+    }
+
+    public function printList($role, Request $request)
+    {
+        $role = normalizeRoleName($request->filled('role') ? $request->input('role') : $role);
+        $query = User::with(['roles', 'company', 'profile.department', 'profile.designation'])
+            ->orderBy('name')
+            ->role($role);
+
+        $this->applyUserScope($query);
+
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%'.$request->input('name').'%');
+        }
+        if ($request->filled('phone')) {
+            $query->where('phone', 'like', '%'.$request->input('phone').'%');
+        }
+        if ($request->filled('company')) {
+            $query->where('company_id', $request->input('company'));
+        }
+        if ($request->filled('department')) {
+            $query->whereHas('profile', fn ($profileQuery) => $profileQuery
+                ->where('department_id', $request->input('department')));
+        }
+
+        $status = in_array($request->input('status'), ['active', 'resigned', 'inactive', 'all'], true)
+            ? $request->input('status')
+            : 'active';
+        if ($status !== 'all') {
+            $query->where('status', $status);
+        }
+
+        $users = $query->get();
+        $company = $request->filled('company')
+            ? Company::find($request->input('company'))
+            : auth()->user()->company;
+        $department = $request->filled('department')
+            ? Department::find($request->input('department'))
+            : null;
+        $groupCompany = Company::whereRaw('LOWER(name) = ?', ['epal group'])->first()
+            ?? Company::find(4)
+            ?? $company;
+
+        return view('panel.users.print', compact('users', 'company', 'groupCompany', 'department', 'role', 'status'));
     }
 
     public function search($role, Request $request)
@@ -224,7 +289,7 @@ class UserController implements HasMiddleware
 
     public function summary($role, $user, Request $request)
     {
-        $employee = User::with(['company', 'profile.department', 'profile.designation'])
+        $employee = User::with(['company', 'profile.department', 'profile.designation', 'ledgerEntries.source'])
             ->findOrFail($user);
 
         $this->authorizeEmployeeAccess($employee);
@@ -232,6 +297,19 @@ class UserController implements HasMiddleware
         if (! $employee->hasRole('employee')) {
             return redirect()->back()->with('error', 'Profile summary is only available for employee users.');
         }
+
+        $returnUrl = $this->safeUserListReturnUrl(
+            $request->query('return_url', url()->previous()),
+            $role
+        );
+
+        $employeeOptionsQuery = User::role('employee')
+            ->with(['company:id,name'])
+            ->select('users.id', 'users.name', 'users.employee_id_no', 'users.company_id', 'users.email', 'users.phone')
+            ->where('users.status', 'active')
+            ->orderBy('users.name');
+        $this->applyUserScope($employeeOptionsQuery);
+        $employeeOptions = $employeeOptionsQuery->get();
 
         $today = Carbon::today();
         $currentYear = (int) $today->year;
@@ -351,35 +429,35 @@ class UserController implements HasMiddleware
             ->whereBetween('a.date', [$monthStart->toDateString(), $monthEnd->toDateString()])
             ->selectRaw('DATE(a.date) as day_date')
             ->selectRaw(
-                "SUM(CASE
+                'SUM(CASE
                     WHEN a.check_in IS NOT NULL
-                    THEN 1 ELSE 0 END) as present_count"
+                    THEN 1 ELSE 0 END) as present_count'
             )
             ->selectRaw(
-                "SUM(CASE
+                'SUM(CASE
                     WHEN a.check_in IS NOT NULL
                         AND s.start_time IS NOT NULL
                         AND TIME_TO_SEC(a.check_in) > (TIME_TO_SEC(s.start_time) + (COALESCE(aset.time_after_checkin, 0) * 60))
-                    THEN 1 ELSE 0 END) as late_count"
+                    THEN 1 ELSE 0 END) as late_count'
             )
             ->selectRaw("SUM(CASE WHEN LOWER(a.status) = 'absent' THEN 1 ELSE 0 END) as absent_count")
             ->selectRaw(
-                "SUM(CASE
+                'SUM(CASE
                     WHEN a.check_in IS NOT NULL
                         AND s.start_time IS NOT NULL
                         AND TIME_TO_SEC(a.check_in) > (TIME_TO_SEC(s.start_time) + (COALESCE(aset.time_after_checkin, 0) * 60))
                     THEN (TIME_TO_SEC(a.check_in) - (TIME_TO_SEC(s.start_time) + (COALESCE(aset.time_after_checkin, 0) * 60))) / 60
-                    ELSE 0 END) as late_minutes"
+                    ELSE 0 END) as late_minutes'
             )
             ->selectRaw(
-                "SUM(CASE
+                'SUM(CASE
                     WHEN a.check_in IS NOT NULL AND a.check_out IS NOT NULL
                     THEN (CASE
                         WHEN TIME_TO_SEC(a.check_out) >= TIME_TO_SEC(a.check_in)
                         THEN (TIME_TO_SEC(a.check_out) - TIME_TO_SEC(a.check_in))
                         ELSE (TIME_TO_SEC(a.check_out) + 86400 - TIME_TO_SEC(a.check_in))
                     END) / 3600
-                    ELSE 0 END) as working_hours"
+                    ELSE 0 END) as working_hours'
             )
             ->groupBy('day_date')
             ->get()
@@ -440,18 +518,160 @@ class UserController implements HasMiddleware
             ->selectRaw('SUM(remaining_amount) as total_remaining')
             ->first();
 
+        // The cached remaining_amount can lag behind transaction history on
+        // older loans. The account card must show what is genuinely still
+        // recoverable from this employee.
+        $loanStats->total_remaining = Loan::with('transactions')
+            ->where('user_id', $employee->id)
+            ->get()
+            ->sum(fn (Loan $loan) => $loan->outstanding);
+
         $advanceSalaryStats = AdvanceSalary::where('user_id', $employee->id)
             ->selectRaw("SUM(CASE WHEN status = 'Pending' THEN amount ELSE 0 END) as pending_amount")
             ->selectRaw("SUM(CASE WHEN status = 'Approved' THEN amount ELSE 0 END) as approved_amount")
             ->selectRaw("SUM(CASE WHEN status = 'Rejected' THEN amount ELSE 0 END) as rejected_amount")
             ->first();
 
-        // ledgerEntries() is ordered by id (true insertion/calculation
-        // order) — see the relationship's docblock — so ->last() here is
-        // always the row the running balance was most recently computed
-        // against, regardless of what entry_date got typed on any row.
-        $ledgerEntries = $employee->ledgerEntries;
-        $ledgerBalance = (float) ($ledgerEntries->last()->balance ?? 0);
+        // A historical correction can be inserted later with an older
+        // entry_date, so neither the greatest id nor the visually last dated
+        // row is guaranteed to carry the true closing stored balance. The
+        // closing balance is order-independent: total owed minus total paid.
+        // Derive it from all active ledger movements so backdated repairs and
+        // imports cannot make the Company Owes card read a stale row.
+        $allLedgerEntries = $employee->ledgerEntries;
+        $ledgerBalance = round((float) $allLedgerEntries->sum(
+            fn ($entry) => (float) $entry->debit - (float) $entry->credit
+        ), 2);
+
+        // Build every running balance before filtering/pagination. This keeps
+        // Net Due historically correct even when the first visible row is on
+        // page two or an earlier transaction has been filtered out.
+        $orderedLedgerEntries = $this->ledgerEntriesInDateOrder($allLedgerEntries);
+        $ledgerSearch = trim((string) $request->input('ledger_q', ''));
+        $ledgerType = trim((string) $request->input('ledger_type', ''));
+        $ledgerStatus = in_array($request->input('ledger_status', 'active'), ['active', 'all'], true)
+            ? $request->input('ledger_status', 'active')
+            : 'active';
+        $isReversalEntry = static function ($entry): bool {
+            if (str_ends_with((string) $entry->type, '_reversal')) {
+                return true;
+            }
+            if ($entry->source instanceof EmployeePayment) {
+                return $entry->source->status === 'reversed';
+            }
+            if ($entry->source instanceof AdvanceSalary) {
+                return $entry->source->is_reversed;
+            }
+
+            return false;
+        };
+        $ledgerReversalHistory = $orderedLedgerEntries
+            ->filter($isReversalEntry)
+            ->groupBy(fn ($entry) => $entry->source_type && $entry->source_id
+                ? $entry->source_type.':'.$entry->source_id
+                : 'entry:'.$entry->id)
+            ->map(function ($rows) {
+                $rows = $rows->sortBy(fn ($entry) => sprintf('%s|%012d', $entry->entry_date->format('Y-m-d'), $entry->id))->values();
+                $latest = $rows->last();
+                $source = $latest->source;
+
+                return [
+                    'title' => data_get($source, 'reference') ?: $latest->reference ?: 'Ledger reversal #'.$latest->id,
+                    'amount' => (float) $rows->max(fn ($entry) => max((float) $entry->debit, (float) $entry->credit)),
+                    'date' => $latest->entry_date->format('d M Y'),
+                    'rows' => $rows->map(fn ($entry) => [
+                        'type' => Str::headline($entry->type),
+                        'date' => $entry->entry_date->format('d M Y'),
+                        'time' => $entry->display_time,
+                        'debit' => (float) $entry->debit,
+                        'credit' => (float) $entry->credit,
+                        'reference' => $entry->reference,
+                        'note' => $entry->note,
+                    ])->all(),
+                ];
+            })
+            ->sortByDesc('date')
+            ->values();
+        $ledgerReversalCount = $ledgerReversalHistory->count();
+        $ledgerDate = static function ($value, bool $endOfDay = false) {
+            if (! is_string($value) || ! Carbon::hasFormat($value, 'Y-m-d')) {
+                return null;
+            }
+
+            $date = Carbon::createFromFormat('Y-m-d', $value);
+
+            return $endOfDay ? $date->endOfDay() : $date->startOfDay();
+        };
+        $ledgerFrom = $ledgerDate($request->input('ledger_from'));
+        $ledgerTo = $ledgerDate($request->input('ledger_to'), true);
+
+        // Rebuild the running balance from the rows that belong to the chosen
+        // status view. Active hides both a reversed source row and its
+        // equal-and-opposite audit row, so carrying the balance calculated
+        // from the unfiltered collection would make hidden payments appear as
+        // an advance until their later reversal date.
+        $statusLedgerEntries = $orderedLedgerEntries
+            ->filter(function ($entry) use ($ledgerStatus, $isReversalEntry) {
+                $reversalEntry = $isReversalEntry($entry);
+
+                return ! ($ledgerStatus === 'active' && $reversalEntry);
+            })
+            ->values();
+        $statusRunningBalance = 0.0;
+        $statusLedgerEntries->each(function ($entry) use (&$statusRunningBalance) {
+            $statusRunningBalance += (float) $entry->debit - (float) $entry->credit;
+            $entry->running_balance = round($statusRunningBalance, 2);
+        });
+
+        $filteredLedgerEntries = $statusLedgerEntries->filter(function ($entry) use ($ledgerSearch, $ledgerType, $ledgerFrom, $ledgerTo) {
+            if ($ledgerType !== '' && $entry->type !== $ledgerType) {
+                return false;
+            }
+
+            $entryDate = $entry->entry_date ? Carbon::parse($entry->entry_date) : null;
+            if ($ledgerFrom && (! $entryDate || $entryDate->lt($ledgerFrom))) {
+                return false;
+            }
+            if ($ledgerTo && (! $entryDate || $entryDate->gt($ledgerTo))) {
+                return false;
+            }
+
+            if ($ledgerSearch !== '') {
+                $source = $entry->source;
+                $haystack = Str::lower(implode(' ', array_filter([
+                    $entry->type,
+                    $entry->reference,
+                    $entry->note,
+                    $entry->debit,
+                    $entry->credit,
+                    data_get($source, 'reference'),
+                    data_get($source, 'payment_method'),
+                    data_get($source, 'recipient_bank'),
+                    data_get($source, 'recipient_account'),
+                ])));
+                if (! Str::contains($haystack, Str::lower($ledgerSearch))) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->sortByDesc(fn ($entry) => sprintf(
+            '%s|%012d',
+            $entry->entry_date ? $entry->entry_date->format('Y-m-d') : '0000-00-00',
+            $entry->id
+        ))->values();
+
+        $ledgerPerPage = in_array((int) $request->input('ledger_per_page', 15), [10, 15, 25, 50], true)
+            ? (int) $request->input('ledger_per_page', 15)
+            : 15;
+        $ledgerPage = LengthAwarePaginator::resolveCurrentPage('ledger_page');
+        $ledgerEntries = (new LengthAwarePaginator(
+            $filteredLedgerEntries->forPage($ledgerPage, $ledgerPerPage)->values(),
+            $filteredLedgerEntries->count(),
+            $ledgerPerPage,
+            $ledgerPage,
+            ['path' => $request->url(), 'pageName' => 'ledger_page']
+        ))->appends($request->except('ledger_page'))->fragment('employee-ledger-transactions');
 
         // ── Header KPI strip ────────────────────────────────────────────
         // "Salary Due" is the outstanding balance of only the most-recently
@@ -460,33 +680,69 @@ class UserController implements HasMiddleware
         // — older unpaid months are intentionally excluded here). "Company
         // Owes" above still reflects the true running total via the ledger.
         $payslips = $this->getPayslipsWithPaidDue($employee->id);
-        $salaryDue = (float) ($payslips->first()->due_amount ?? 0);
+        $latestSalaryPayslip = $payslips->firstWhere('document_type', 'salary');
+        $salaryDue = (float) ($latestSalaryPayslip->due_amount ?? 0);
 
-        $advanceOut = (float) AdvanceSalary::where('user_id', $employee->id)
+        // "Paid" means the approved advance was handed to the employee; it
+        // does not mean the employee has repaid it. Show the unrecovered
+        // balance, which payroll will deduct from the matching month's salary.
+        $advanceOut = (float) AdvanceSalary::with('recoveries')
+            ->where('user_id', $employee->id)
             ->where('status', 'Approved')
-            ->where('payment_status', '!=', 'Paid')
-            ->sum('amount');
+            ->get()
+            ->sum(fn (AdvanceSalary $advance) => $advance->outstanding);
 
         $pendingReconciliation = $this->payroll->projectPendingReconciliation($employee, $today);
 
         $banks = Bank::where('status', 1)->orderBy('name')->get();
+        // An advance journal belongs to the employee's company, so its credit
+        // side must come from that same company's cash/bank book. Keep the
+        // broad list for Pay Due (its existing flow), but give the Advance
+        // modal a company-scoped list so an invalid cross-company account is
+        // never offered in the first place. Null-company rows are legacy/shared
+        // accounts and remain eligible; the posting service performs the final
+        // server-side ownership check.
+        $advanceBanks = Bank::where('status', 1)
+            ->whereNotNull('account_id')
+            ->where(function ($query) use ($employee) {
+                $query->where('company_id', $employee->company_id)
+                    ->orWhereNull('company_id');
+            })
+            ->orderBy('name')
+            ->get();
+        $advancePosting = app(AdvancePostingService::class);
+        $advanceAccounts = $advancePosting->contraAccounts();
+        $advanceDefaultId = optional($advanceAccounts->firstWhere('code', AdvancePostingService::defaultAccountCode()))->id;
 
         // ── Payslips tab (reuses $payslips computed above for the KPI) ──
 
         // ── Attendance tab (month-scoped, independent of the Overview chart) ──
         $attMonthInput = $request->filled('att_month') ? $request->att_month : $today->format('Y-m');
-        if (!preg_match('/^\d{4}-\d{2}$/', $attMonthInput)) {
+        if (! preg_match('/^\d{4}-\d{2}$/', $attMonthInput)) {
             $attMonthInput = $today->format('Y-m');
         }
         [$attYear, $attMonthNum] = array_map('intval', explode('-', $attMonthInput));
         $attMonthStart = Carbon::createFromDate($attYear, $attMonthNum, 1)->startOfMonth();
         $attMonthEnd = $attMonthStart->copy()->endOfMonth();
 
-        $attendanceHistory = Attendance::with('shift')
-            ->where('user_id', $employee->id)
-            ->whereBetween('date', [$attMonthStart->toDateString(), $attMonthEnd->toDateString()])
-            ->orderBy('date')
-            ->get();
+        $attendanceMonthReport = app(AttendanceMonthService::class)->build($employee, $attYear, $attMonthNum);
+        $attendanceHistory = $attendanceMonthReport['records'];
+        $attendanceSummary = app(AttendanceMonthService::class)->summaryFromRows(
+            $attendanceHistory,
+            $attendanceMonthReport['summary']
+        );
+        $attendanceWorkedMinutes = (int) $attendanceHistory->sum(function ($record) {
+            if (! $record->check_in || ! $record->check_out) {
+                return 0;
+            }
+            $start = Carbon::parse($record->date.' '.$record->check_in);
+            $end = Carbon::parse($record->date.' '.$record->check_out);
+            if ($end->lt($start)) {
+                $end->addDay();
+            }
+
+            return $start->diffInMinutes($end);
+        });
 
         // ── All Details tab ─────────────────────────────────────────────
         $employeeDocument = EmployeeDocument::where('user_id', $employee->id)->first();
@@ -522,15 +778,71 @@ class UserController implements HasMiddleware
             'currentMonth',
             'ledgerEntries',
             'ledgerBalance',
+            'ledgerStatus',
+            'ledgerReversalCount',
+            'ledgerReversalHistory',
             'salaryDue',
             'advanceOut',
             'pendingReconciliation',
             'banks',
+            'advanceBanks',
+            'advanceAccounts',
+            'advanceDefaultId',
             'payslips',
             'attendanceHistory',
+            'attendanceSummary',
+            'attendanceWorkedMinutes',
             'attMonthInput',
-            'employeeDocument'
+            'employeeDocument',
+            'employeeOptions',
+            'returnUrl'
         ));
+    }
+
+    /** Email or SMS the employee's complete Accounts ledger. */
+    public function sendEmployeeLedger($role, $user, Request $request)
+    {
+        $employee = User::with(['company', 'ledgerEntries.source'])->findOrFail($user);
+        $this->authorizeEmployeeAccess($employee);
+        abort_unless($employee->hasRole('employee'), 404);
+
+        $validated = $request->validate(['channel' => 'required|in:email,sms']);
+        $entries = $this->ledgerEntriesInDateOrder($employee->ledgerEntries);
+        $totalDebit = (float) $entries->sum('debit');
+        $totalCredit = (float) $entries->sum('credit');
+        $closingBalance = round($totalDebit - $totalCredit, 2);
+        $company = $employee->company ?? Company::first();
+
+        if ($validated['channel'] === 'email') {
+            abort_if(! filter_var($employee->email, FILTER_VALIDATE_EMAIL), 422, 'This employee has no valid email address.');
+            $pdf = Pdf::loadView('panel.users.print-salary-transaction-report', [
+                'employee' => $employee, 'ledgerEntries' => $entries,
+                'totalDebit' => $totalDebit, 'totalCredit' => $totalCredit,
+                'closingBalance' => $closingBalance, 'company' => $company,
+            ])->output();
+            $response = sendBrevoMail(
+                $employee->email,
+                $employee->name,
+                'Employee account statement - '.now()->format('d M Y'),
+                view('emails.employee-ledger-statement', compact('employee', 'totalDebit', 'totalCredit', 'closingBalance', 'company'))->render(),
+                [['name' => 'Employee-Statement-'.($employee->employee_id_no ?: $employee->id).'.pdf', 'content' => $pdf]],
+            );
+            if (is_object($response) && method_exists($response, 'successful') && ! $response->successful()) {
+                return response()->json(['success' => false, 'message' => 'Email gateway rejected the statement.'], 502);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Statement emailed to '.$employee->email.'.']);
+        }
+
+        abort_if(! trim((string) $employee->phone), 422, 'This employee has no phone number.');
+        $balanceText = $closingBalance > 0
+            ? 'Company owes Tk '.number_format($closingBalance, 2)
+            : ($closingBalance < 0 ? 'Advance/overpaid Tk '.number_format(abs($closingBalance), 2) : 'Balance settled');
+        $sent = sendSms($employee->phone, "Dear {$employee->name}, employee account statement: {$balanceText}. Total earned Tk ".number_format($totalDebit, 2).', total paid/recovered Tk '.number_format($totalCredit, 2).'.');
+
+        return response()->json($sent === false
+            ? ['success' => false, 'message' => app()->bound('sms.last_error') ? (string) app('sms.last_error') : 'SMS gateway failed.']
+            : ['success' => true, 'message' => 'Statement SMS sent to '.$employee->phone.'.'], $sent === false ? 502 : 200);
     }
 
     /**
@@ -539,24 +851,148 @@ class UserController implements HasMiddleware
      * styled like party-statement's print-statement (letterhead, summary
      * strip, ledger table, signature block, auto window.print() on load).
      */
-    public function salaryTransactionReportPrint($role, $user)
+    /**
+     * The ledger in the order a reader expects it — oldest entry first —
+     * with the running balance rebuilt to match that order.
+     *
+     * ledgerEntries() deliberately returns id (insertion) order, because
+     * that is the order each row's stored `balance` was calculated in. The
+     * two orders diverge as soon as salary months are generated out of
+     * sequence: generating July, then June, then May files the rows in that
+     * order, so the screen listed July at the top and the stored balances
+     * climbed backwards through time.
+     *
+     * Re-sorting on its own would be worse than leaving it alone — the Net
+     * Due column would count *down* the page. So the running balance is
+     * recomputed here in the order actually displayed. The closing figure
+     * is identical either way: a running balance is the cumulative sum of
+     * debit - credit, and a sum does not depend on the order it is taken
+     * in. The last row therefore still agrees with $ledgerBalance,
+     * $closingBalance and every stored total elsewhere.
+     *
+     * Display only — the recomputed figure is written to a `running_balance`
+     * attribute and never to `balance`, so nothing here can be mistaken for
+     * a correction to what is stored. entry_date is free-typed and can be
+     * backdated, so id breaks ties: rows filed under the same date keep the
+     * sequence they were really calculated in.
+     *
+     * @param  Collection  $entries  id-ordered ledger rows
+     * @return Collection date-ordered copy
+     */
+    private function ledgerEntriesInDateOrder($entries)
     {
-        $employee = User::with(['company', 'profile.department', 'profile.designation'])
+        $running = 0.0;
+
+        return $entries
+            ->sortBy(fn ($entry) => sprintf(
+                '%s|%012d',
+                $entry->entry_date ? $entry->entry_date->format('Y-m-d') : '0000-00-00',
+                $entry->id
+            ))
+            ->values()
+            ->each(function ($entry) use (&$running) {
+                $running += (float) $entry->debit - (float) $entry->credit;
+                $entry->running_balance = round($running, 2);
+            });
+    }
+
+    public function salaryTransactionReportPrint($role, $user, Request $request)
+    {
+        $employee = User::with(['company', 'profile.department', 'profile.designation', 'ledgerEntries.source'])
             ->findOrFail($user);
 
         $this->authorizeEmployeeAccess($employee);
 
-        $ledgerEntries = $employee->ledgerEntries;
+        $allEntries = $this->ledgerEntriesInDateOrder($employee->ledgerEntries);
+        $scope = in_array($request->print_scope, ['today', 'yesterday', 'day', 'range', 'current'], true)
+            ? $request->print_scope
+            : 'current';
+        $from = $to = null;
+        $search = '';
+        $reportPeriod = 'All Time';
+
+        if ($scope === 'today') {
+            $from = $to = today();
+            $reportPeriod = 'Today · '.today()->format('d M Y');
+        } elseif ($scope === 'yesterday') {
+            $from = $to = today()->subDay();
+            $reportPeriod = 'Yesterday · '.$from->format('d M Y');
+        } elseif ($scope === 'day' && Carbon::hasFormat((string) $request->print_day, 'Y-m-d')) {
+            $from = $to = Carbon::createFromFormat('Y-m-d', $request->print_day);
+            $reportPeriod = $from->format('d M Y');
+        } elseif ($scope === 'range') {
+            $from = Carbon::hasFormat((string) $request->print_from, 'Y-m-d') ? Carbon::createFromFormat('Y-m-d', $request->print_from) : null;
+            $to = Carbon::hasFormat((string) $request->print_to, 'Y-m-d') ? Carbon::createFromFormat('Y-m-d', $request->print_to) : null;
+            $reportPeriod = ($from?->format('d M Y') ?? 'Beginning').' – '.($to?->format('d M Y') ?? 'Today');
+        } elseif ($scope === 'current') {
+            $from = Carbon::hasFormat((string) $request->current_from, 'Y-m-d') ? Carbon::createFromFormat('Y-m-d', $request->current_from) : null;
+            $to = Carbon::hasFormat((string) $request->current_to, 'Y-m-d') ? Carbon::createFromFormat('Y-m-d', $request->current_to) : null;
+            $search = trim((string) $request->current_q);
+            $reportPeriod = $from || $to ? (($from?->format('d M Y') ?? 'Beginning').' – '.($to?->format('d M Y') ?? 'Today')) : 'Current table · All Time';
+        }
+
+        $ledgerEntries = $allEntries->filter(function ($entry) use ($from, $to, $search) {
+            $date = $entry->entry_date ? Carbon::parse($entry->entry_date) : null;
+            if ($from && (! $date || $date->lt($from->copy()->startOfDay()))) {
+                return false;
+            }
+            if ($to && (! $date || $date->gt($to->copy()->endOfDay()))) {
+                return false;
+            }
+            if ($search !== '') {
+                $source = $entry->source;
+                $haystack = Str::lower(implode(' ', array_filter([$entry->type, $entry->reference, $entry->note, $entry->debit, $entry->credit, data_get($source, 'reference'), data_get($source, 'payment_method')])));
+                if (! Str::contains($haystack, Str::lower($search))) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
 
         $totalDebit = (float) $ledgerEntries->sum('debit');
         $totalCredit = (float) $ledgerEntries->sum('credit');
-        $closingBalance = $ledgerEntries->isNotEmpty() ? (float) $ledgerEntries->last()->balance : 0.0;
+        $closingBalance = round((float) ($ledgerEntries->last()->running_balance ?? 0), 2);
 
         $company = $employee->company ?? Company::first();
 
         return view('panel.users.print-salary-transaction-report', compact(
-            'employee', 'ledgerEntries', 'totalDebit', 'totalCredit', 'closingBalance', 'company'
+            'employee', 'ledgerEntries', 'totalDebit', 'totalCredit', 'closingBalance', 'company', 'reportPeriod'
         ));
+    }
+
+    public function leaveEncashmentReportPrint($role, $user)
+    {
+        $employee = User::with(['company', 'profile.department', 'profile.designation'])->findOrFail($user);
+        $this->authorizeEmployeeAccess($employee);
+
+        $projection = $this->payroll->projectPendingReconciliation($employee, Carbon::today());
+        abort_unless($projection, 404, 'No leave encashment accrual is available for this employee.');
+
+        $company = $employee->company ?? Company::first();
+
+        return view('panel.users.print-leave-encashment-report', compact('employee', 'projection', 'company'));
+    }
+
+    public function attendanceReportPrint($role, $user, Request $request)
+    {
+        $employee = User::with(['company', 'shift'])->findOrFail($user);
+        $this->authorizeEmployeeAccess($employee);
+
+        $period = preg_match('/^\d{4}-\d{2}$/', (string) $request->month)
+            ? (string) $request->month
+            : now()->format('Y-m');
+        [$year, $month] = array_map('intval', explode('-', $period));
+        $report = app(AttendanceMonthService::class)->build($employee, $year, $month);
+
+        return view('report.monthly_attendances_pdf', [
+            'attendances' => $report['records'],
+            'user' => $employee,
+            'summary' => (object) app(AttendanceMonthService::class)->summaryFromRows($report['records'], $report['summary']),
+            'month' => $report['start']->format('F'),
+            'year' => $year,
+            'autoPrint' => true,
+        ]);
     }
 
     /**
@@ -567,30 +1003,43 @@ class UserController implements HasMiddleware
      */
     private function getPayslipsWithPaidDue(int $employeeId)
     {
-        $payslips = EmployeeSalary::where('user_id', $employeeId)
+        $salaries = EmployeeSalary::where('user_id', $employeeId)
+            ->with('leaveEncashments.schedules')
             ->orderByDesc('year')
             ->orderByDesc('month')
             ->get();
 
-        $paidPerPayslip = PaymentSchedule::where('schedulable_type', EmployeeSalary::class)
-            ->whereIn('schedulable_id', $payslips->pluck('id'))
-            ->settled()
-            ->selectRaw('schedulable_id, SUM(paid_amount) as paid_total')
-            ->groupBy('schedulable_id')
-            ->pluck('paid_total', 'schedulable_id');
+        $paidPerPayslip = EmployeePaymentAllocation::query()
+            ->whereIn('employee_salary_id', $salaries->pluck('id'))
+            ->whereHas('payment', fn ($q) => $q->where('status', 'posted'))
+            ->selectRaw('employee_salary_id, SUM(amount) as paid_total')
+            ->groupBy('employee_salary_id')->pluck('paid_total', 'employee_salary_id');
 
-        $payslips->each(function ($slip) use ($paidPerPayslip) {
-            $isFullyPaid = strtolower($slip->status) === 'paid';
-            $paid = $isFullyPaid
-                ? (float) $slip->net_salary
-                : (float) ($paidPerPayslip[$slip->id] ?? 0);
+        $salaries->each(function ($slip) use ($paidPerPayslip) {
+            $salaryPaid = min((float) $slip->net_salary, (float) ($paidPerPayslip[$slip->id] ?? 0));
+            $encashmentAmount = (float) $slip->leaveEncashments->sum('total_amount');
+            $encashmentPaid = (float) $slip->leaveEncashments->sum(
+                fn ($encashment) => min((float) $encashment->total_amount, PaymentSchedule::paidTotal($encashment->schedules))
+            );
+            $netPay = (float) $slip->net_salary + $encashmentAmount;
+            $paid = $salaryPaid + $encashmentPaid;
+            $isFullyPaid = $paid >= $netPay - .01;
 
+            $slip->document_type = 'salary';
+            $slip->document_label = 'Monthly Salary';
+            $slip->period_label = Carbon::createFromDate((int) $slip->year, (int) $slip->month, 1)->format('F Y');
+            $slip->sort_date = sprintf('%04d-%02d-01', (int) $slip->year, (int) $slip->month);
+            $slip->encashment_amount = $encashmentAmount;
+            $slip->encashment_earned_days = (float) $slip->leaveEncashments->sum('earned_days');
+            $slip->encashment_days = (float) $slip->leaveEncashments->sum('encashable_days');
+            $slip->earnings_amount = (float) $slip->net_salary + (float) $slip->total_deductions + $encashmentAmount;
+            $slip->net_pay_amount = $netPay;
             $slip->paid_amount = $paid;
-            $slip->due_amount = max(0, (float) $slip->net_salary - $paid);
+            $slip->due_amount = max(0, $netPay - $paid);
             $slip->display_status = $isFullyPaid ? 'Paid' : ($paid > 0 ? 'Partial' : 'Pending');
         });
 
-        return $payslips;
+        return $salaries;
     }
 
     /**
@@ -607,9 +1056,9 @@ class UserController implements HasMiddleware
 
         $payslips = $this->getPayslipsWithPaidDue($employee->id);
 
-        $totalGross = (float) $payslips->sum('gross_salary');
+        $totalGross = (float) $payslips->sum('earnings_amount');
         $totalDeductions = (float) $payslips->sum('total_deductions');
-        $totalNet = (float) $payslips->sum('net_salary');
+        $totalNet = (float) $payslips->sum('net_pay_amount');
         $totalPaid = (float) $payslips->sum('paid_amount');
         $totalDue = (float) $payslips->sum('due_amount');
 
@@ -623,12 +1072,13 @@ class UserController implements HasMiddleware
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
         // Logic to show user creation form
-        $salaryTemplates = SalaryTemplate::where('status',  1)->get();
+        $salaryTemplates = SalaryTemplate::where('status', 1)->get();
+
         return view('panel.users.create', compact('salaryTemplates'));
     }
 
@@ -643,11 +1093,11 @@ class UserController implements HasMiddleware
         $this->applyUserScope($query);
 
         if ($request->filled('name')) {
-            $query->where('name', 'like', '%' . $request->name . '%');
+            $query->where('name', 'like', '%'.$request->name.'%');
         }
 
         if ($request->filled('phone')) {
-            $query->where('phone', 'like', '%' . $request->phone . '%');
+            $query->where('phone', 'like', '%'.$request->phone.'%');
         }
 
         if ($request->filled('company')) {
@@ -694,7 +1144,7 @@ class UserController implements HasMiddleware
         if ($passportSizeImage instanceof UploadedFile) {
             $passportImagePath = $this->storePublicFile(
                 $passportSizeImage,
-                'uploads/employee-documents/' . $user->id,
+                'uploads/employee-documents/'.$user->id,
                 $employeeDocument->passport_size_image
             );
             $employeeDocument->passport_size_image = $passportImagePath;
@@ -703,7 +1153,7 @@ class UserController implements HasMiddleware
         if ($nid instanceof UploadedFile) {
             $nidPath = $this->storePublicFile(
                 $nid,
-                'uploads/employee-documents/' . $user->id,
+                'uploads/employee-documents/'.$user->id,
                 $employeeDocument->nid
             );
             $employeeDocument->nid = $nidPath;
@@ -712,7 +1162,7 @@ class UserController implements HasMiddleware
         if ($appointmentLetter instanceof UploadedFile) {
             $appointmentLetterPath = $this->storePublicFile(
                 $appointmentLetter,
-                'uploads/employee-documents/' . $user->id,
+                'uploads/employee-documents/'.$user->id,
                 $employeeDocument->appointment_letter
             );
             $employeeDocument->appointment_letter = $appointmentLetterPath;
@@ -724,18 +1174,57 @@ class UserController implements HasMiddleware
     }
 
     /**
+     * Map the "User Status" dropdown onto the users.status column.
+     *
+     * The dropdown posts 1 / 0 / "resigned". Anything that is not the literal
+     * string "resigned" keeps the original truthy check, so every existing
+     * caller (the API sending true/false or 1/0) behaves exactly as before.
+     */
+    private function resolveUserStatus($isActive): string
+    {
+        if (is_string($isActive) && strtolower(trim($isActive)) === 'resigned') {
+            return 'resigned';
+        }
+
+        return $isActive ? 'active' : 'inactive';
+    }
+
+    /**
+     * `users.device_id` is meant to hold a JSON array of device ids, but some
+     * legacy rows hold a bare scalar ("1"). json_decode() turns that into an
+     * int, which array_map() then rejects — a 500 on the edit page for every
+     * such user. Normalise whatever is stored into a list of ints.
+     */
+    private function normalizeDeviceIds($deviceId): array
+    {
+        if ($deviceId === null || $deviceId === '') {
+            return [];
+        }
+
+        $decoded = json_decode((string) $deviceId, true);
+
+        if (! is_array($decoded)) {
+            // A bare scalar, or not JSON at all — treat it as a single id
+            $decoded = [$decoded ?? $deviceId];
+        }
+
+        $numeric = array_filter($decoded, fn ($id) => is_numeric($id));
+
+        return array_values(array_map('intval', $numeric));
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
             // User Table Validations
-            'name'             => 'required|string|max:255',
-            'email'            => 'required|string|email|max:255|unique:users,email',
-            'phone'            => 'required|string|max:15|unique:users,phone',
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email',
+            'phone' => 'required|string|max:15|unique:users,phone',
             // 'device_user_id' => [
             //     'required',
             //     'string',
@@ -743,21 +1232,21 @@ class UserController implements HasMiddleware
             //     Rule::unique('users', 'device_user_id')
             //         ->where(fn($q) => $q->where('company_id', request('company_id'))),
             // ],
-            'password'         => 'required|string|min:8|confirmed',
-            'company_id'       => 'required|exists:companies,id',
+            'password' => 'required|string|min:8|confirmed',
+            'company_id' => 'required|exists:companies,id',
             'salary_template_id' => 'required|exists:salary_templates,id',
-            'shift_id'         => 'nullable|exists:shifts,id',
-            'address'          => 'nullable|string|max:500',
-            'roles'            => 'required|array|min:1',
-            'roles.*'          => 'exists:roles,name',
-            'image'            => 'nullable|max:2048',
+            'shift_id' => 'nullable|exists:shifts,id',
+            'address' => 'nullable|string|max:500',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,name',
+            'image' => 'nullable|max:2048',
 
             // EmployeeProfile Table Validations
-            'department_id'    => 'required|exists:departments,id',
-            'designation_id'   => 'required|exists:designations,id',
-            'joining_date'     => 'nullable|date',
-            'salary'           => 'nullable|numeric|min:0',
-            'employment_type'  => 'required|in:full_time,part_time,contractual',
+            'department_id' => 'required|exists:departments,id',
+            'designation_id' => 'required|exists:designations,id',
+            'joining_date' => 'nullable|date',
+            'salary' => 'nullable|numeric|min:0',
+            'employment_type' => 'required|in:full_time,part_time,contractual',
         ], [
             'device_user_id.required' => 'Device User ID is required.',
             // 'device_user_id.unique'   => 'This Device User ID is already assigned to another employee in this company.',
@@ -774,32 +1263,32 @@ class UserController implements HasMiddleware
 
             // 1. Create the User (Auth Table)
             $user = User::create([
-                'name'            => $request->name,
-                'email'           => $request->email,
-                'phone'           => $request->phone,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
                 // 'device_user_id'  => $request->device_user_id,
-                'company_id'      => $request->company_id,
+                'company_id' => $request->company_id,
                 'salary_template_id' => $request->salary_template_id,
-                'shift_id'        => $request->shift_id,
-                'address'         => $request->address,
-                'password'        => bcrypt($request->password),
-                'status'       => $request->is_active ? 'active' : 'inactive',
+                'shift_id' => $request->shift_id,
+                'address' => $request->address,
+                'password' => bcrypt($request->password),
+                'status' => $this->resolveUserStatus($request->is_active),
             ]);
 
             // 2. Handle Image Upload (Optional: belongs to User or Profile? usually User)
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $image_name = uniqid() . '.' . strtolower($image->getClientOriginalExtension());
+                $image_name = uniqid().'.'.strtolower($image->getClientOriginalExtension());
                 $upload_path = 'image/user/';
-                if (!file_exists(public_path($upload_path))) {
+                if (! file_exists(public_path($upload_path))) {
                     mkdir(public_path($upload_path), 0777, true);
                 }
                 $success = $image->move(public_path($upload_path), $image_name);
                 if ($success) {
-                    if (!empty($data->image) && file_exists(public_path($data->image))) {
+                    if (! empty($data->image) && file_exists(public_path($data->image))) {
                         unlink(public_path($data->image));
                     }
-                    $user->image = $upload_path . $image_name;
+                    $user->image = $upload_path.$image_name;
                     $user->save();
                 }
             }
@@ -807,11 +1296,11 @@ class UserController implements HasMiddleware
             // 3. Create the Employee Profile (Details Table)
             if ($request->designation_id) {
                 EmployeeProfile::create([
-                    'user_id'         => $user->id,
-                    'department_id'   => $request->department_id,
-                    'designation_id'  => $request->designation_id,
-                    'joining_date'    => $request->joining_date,
-                    'salary'          => $request->salary,
+                    'user_id' => $user->id,
+                    'department_id' => $request->department_id,
+                    'designation_id' => $request->designation_id,
+                    'joining_date' => $request->joining_date,
+                    'salary' => $request->salary,
                     'employment_type' => $request->employment_type,
                 ]);
             }
@@ -823,10 +1312,12 @@ class UserController implements HasMiddleware
             DB::commit();
 
             $primaryRole = Str::slug($roles[0]);
+
             return redirect()->route('role.user.index', ['role' => $primaryRole])->with('success', 'User and Profile created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage())->withInput();
+
+            return redirect()->back()->with('error', 'Something went wrong: '.$e->getMessage())->withInput();
         }
     }
 
@@ -835,7 +1326,7 @@ class UserController implements HasMiddleware
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -847,26 +1338,47 @@ class UserController implements HasMiddleware
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function edit($role, $id)
+    public function edit(Request $request, $role, $id)
     {
         // Logic to show user edit form
         $data = User::findOrFail($id);
-        $deviceIds = json_decode($data->device_id, true) ?? [];
-        $data->device_ids = array_map('intval', $deviceIds);
+        $data->device_ids = $this->normalizeDeviceIds($data->device_id);
         $devices = DeviceSetting::get();
         $device_users = DeviceUser::where('user_id', $data->id)->get();
-        $salaryTemplates = SalaryTemplate::where('status',  1)->get();
-        return view('panel.users.edit', compact('data', 'devices', 'device_users', 'salaryTemplates'));
+        $salaryTemplates = SalaryTemplate::where('status', 1)->get();
+        $manualAttendanceRecipients = User::query()
+            ->where('id', '!=', $data->id)
+            ->where('status', 'active')
+            ->whereHas('roles', fn ($query) => $query->where('name', 'employee'))
+            ->withCount('deviceTokens')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        $manualAttendanceRecipientIds = Schema::hasTable('manual_attendance_notification_recipients')
+            ? $data->manualAttendanceNotificationRecipients()->pluck('users.id')->all()
+            : [];
+        $returnUrl = $this->safeUserListReturnUrl(
+            $request->query('return_url', url()->previous()),
+            $role
+        );
+
+        return view('panel.users.edit', compact(
+            'data',
+            'devices',
+            'device_users',
+            'salaryTemplates',
+            'manualAttendanceRecipients',
+            'manualAttendanceRecipientIds',
+            'returnUrl'
+        ));
     }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $role, $id)
     {
@@ -875,9 +1387,9 @@ class UserController implements HasMiddleware
         $validator = Validator::make(
             $request->all(),
             [
-                'name'             => 'required|string|max:255',
-                'email'            => 'required|string|email|max:255|unique:users,email,' . $user->id,
-                'phone'            => 'required|string|max:15|unique:users,phone,' . $user->id,
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
+                'phone' => 'required|string|max:15|unique:users,phone,'.$user->id,
                 // 'device_user_id' => [
                 //     'required',
                 //     'string',
@@ -886,26 +1398,29 @@ class UserController implements HasMiddleware
                 //         ->where(fn($q) => $q->where('company_id', request('company_id')))
                 //         ->ignore($user->id),
                 // ],
-                'company_id'       => 'required|exists:companies,id',
+                'company_id' => 'required|exists:companies,id',
                 'salary_template_id' => 'required|exists:salary_templates,id',
-                'device_id.*'     => 'exists:device_settings,id',
+                'device_id.*' => 'exists:device_settings,id',
                 // 'device_user_id' => 'required|string|regex:/^[0-9, ]+$/',
-                'shift_id'         => 'nullable|exists:shifts,id',
-                'roles'            => 'required|array|min:1',
-                'roles.*'          => 'exists:roles,name',
-                'address'          => 'nullable|string|max:500',
-                'image'            => 'nullable|max:2048',
-                'password'         => 'nullable|string|min:8|confirmed',
+                'shift_id' => 'nullable|exists:shifts,id',
+                'roles' => 'required|array|min:1',
+                'roles.*' => 'exists:roles,name',
+                'address' => 'nullable|string|max:500',
+                'image' => 'nullable|max:2048',
+                'password' => 'nullable|string|min:8|confirmed',
                 'allow_manual_attendance' => 'nullable|boolean',
+                'manual_attendance_recipient_ids' => 'nullable|array',
+                'manual_attendance_recipient_ids.*' => ['integer', 'distinct', Rule::exists('users', 'id')->where('status', 'active')],
                 'overtime_eligible' => 'nullable|boolean',
                 'auto_payslip_enabled' => 'nullable|boolean',
+                'fixed_salary' => 'nullable|boolean',
 
                 // Profile Validations
-                'department_id'    => 'required|exists:departments,id',
-                'designation_id'   => 'required|exists:designations,id',
-                'joining_date'     => 'nullable|date',
-                'salary'           => 'nullable|numeric|min:0',
-                'employment_type'  => 'required|in:full_time,part_time,contractual',
+                'department_id' => 'required|exists:departments,id',
+                'designation_id' => 'required|exists:designations,id',
+                'joining_date' => 'nullable|date',
+                'salary' => 'nullable|numeric|min:0',
+                'employment_type' => 'required|in:full_time,part_time,contractual',
             ],
         );
 
@@ -918,20 +1433,31 @@ class UserController implements HasMiddleware
 
             // 1. Update User Basic Info
             $userData = [
-                'name'            => $request->name,
-                'email'           => $request->email,
-                'phone'           => $request->phone,
-                'device_id'      => json_encode($request->device_id),
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'device_id' => json_encode($request->device_id),
                 'employee_id_no' => $request->employee_id_no,
-                'company_id'      => $request->company_id,
+                'company_id' => $request->company_id,
                 'salary_template_id' => $request->salary_template_id,
-                'shift_id'        => $request->shift_id,
-                'address'         => $request->address,
-                'status'       => $request->is_active ? 'active' : 'inactive',
+                'shift_id' => $request->shift_id,
+                'address' => $request->address,
+                'status' => $this->resolveUserStatus($request->is_active),
                 'allow_manual_attendance' => $request->has('allow_manual_attendance') ? (bool) $request->allow_manual_attendance : false,
                 'overtime_eligible' => $request->has('overtime_eligible') ? (bool) $request->overtime_eligible : false,
                 'auto_payslip_enabled' => $request->has('auto_payslip_enabled') ? (bool) $request->auto_payslip_enabled : false,
             ];
+
+            // Written only once the column exists. `users` is the one table
+            // every company's login, profile and payroll screen touches, so a
+            // server whose migrations have not been run yet must still be able
+            // to save a user rather than dying on an unknown column — the
+            // toggle simply has no effect until `php artisan migrate` has run.
+            if (Schema::hasColumn('users', 'fixed_salary')) {
+                $userData['fixed_salary'] = $request->has('fixed_salary')
+                    ? (bool) $request->fixed_salary
+                    : false;
+            }
 
             // Update password only if provided
             if ($request->filled('password')) {
@@ -940,23 +1466,35 @@ class UserController implements HasMiddleware
 
             $user->update($userData);
 
+            if (Schema::hasTable('manual_attendance_notification_recipients')) {
+                $recipientIds = $request->has('allow_manual_attendance')
+                    ? collect($request->input('manual_attendance_recipient_ids', []))
+                        ->map(fn ($recipientId) => (int) $recipientId)
+                        ->reject(fn ($recipientId) => $recipientId === (int) $user->id)
+                        ->unique()
+                        ->values()
+                        ->all()
+                    : [];
+                $user->manualAttendanceNotificationRecipients()->sync($recipientIds);
+            }
+
             // 2. Handle Image Update
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
-                $image_name = uniqid() . '.' . strtolower($image->getClientOriginalExtension());
+                $image_name = uniqid().'.'.strtolower($image->getClientOriginalExtension());
                 $upload_path = 'image/user/';
 
-                if (!file_exists(public_path($upload_path))) {
+                if (! file_exists(public_path($upload_path))) {
                     mkdir(public_path($upload_path), 0777, true);
                 }
 
                 // Remove old image if it exists
-                if (!empty($user->image) && file_exists(public_path($user->image))) {
+                if (! empty($user->image) && file_exists(public_path($user->image))) {
                     unlink(public_path($user->image));
                 }
 
                 $image->move(public_path($upload_path), $image_name);
-                $user->image = $upload_path . $image_name;
+                $user->image = $upload_path.$image_name;
                 $user->save();
             }
 
@@ -965,24 +1503,24 @@ class UserController implements HasMiddleware
             EmployeeProfile::updateOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'department_id'   => $request->department_id,
-                    'designation_id'  => $request->designation_id,
-                    'joining_date'    => $request->joining_date,
-                    'salary'          => $request->salary,
+                    'department_id' => $request->department_id,
+                    'designation_id' => $request->designation_id,
+                    'joining_date' => $request->joining_date,
+                    'salary' => $request->salary,
                     'employment_type' => $request->employment_type,
                 ]
             );
 
             $deviceIds = $request->device_id; // [1,2,3]
-            if(!empty($deviceIds)){
+            if (! empty($deviceIds)) {
                 $deviceUserIds = $request->device_user_id;
                 // [ 1 => 'ABC123', 2 => 'XYZ456' ]
                 DeviceUser::where('user_id', $user->id)->delete();
                 foreach ($deviceIds as $deviceId) {
                     $userId = $deviceUserIds[$deviceId] ?? null;
-                    
-                    if ($userId){
-                        $deviceUser = new DeviceUser();
+
+                    if ($userId) {
+                        $deviceUser = new DeviceUser;
                         $deviceUser->user_id = $user->id;
                         $deviceUser->device_id = $deviceId;
                         $deviceUser->device_user_id = $userId;
@@ -997,19 +1535,42 @@ class UserController implements HasMiddleware
 
             DB::commit();
 
-            $primaryRole = Str::slug($roles[0]);
-            return redirect()->route('role.user.index', ['role' => $primaryRole])->with('success', 'User and Profile updated successfully.');
+            return redirect()->back()->with('success', 'User and Profile updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Update failed: ' . $e->getMessage())->withInput();
+
+            return redirect()->back()->with('error', 'Update failed: '.$e->getMessage())->withInput();
         }
+    }
+
+    private function safeUserListReturnUrl(?string $returnUrl, string $role): string
+    {
+        $fallback = route('role.user.index', ['role' => $role]);
+
+        if (! $returnUrl) {
+            return $fallback;
+        }
+
+        $target = parse_url($returnUrl);
+        // Compare against the current request host instead of APP_URL. Local
+        // installations commonly use a Laragon *.test domain while APP_URL
+        // is still localhost.
+        $application = parse_url(request()->getSchemeAndHttpHost());
+
+        if (($target['scheme'] ?? null) !== ($application['scheme'] ?? null)
+            || ($target['host'] ?? null) !== ($application['host'] ?? null)
+            || ($target['port'] ?? null) !== ($application['port'] ?? null)) {
+            return $fallback;
+        }
+
+        return $returnUrl;
     }
 
     /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
@@ -1020,7 +1581,7 @@ class UserController implements HasMiddleware
 
     private function storePublicFile(UploadedFile $file, string $directory, ?string $oldPath = null): string
     {
-        $fileName = uniqid() . '_' . time() . '.' . strtolower($file->getClientOriginalExtension());
+        $fileName = uniqid().'_'.time().'.'.strtolower($file->getClientOriginalExtension());
 
         if (! file_exists(public_path($directory))) {
             mkdir(public_path($directory), 0777, true);
@@ -1032,6 +1593,6 @@ class UserController implements HasMiddleware
 
         $file->move(public_path($directory), $fileName);
 
-        return trim($directory, '/') . '/' . $fileName;
+        return trim($directory, '/').'/'.$fileName;
     }
 }

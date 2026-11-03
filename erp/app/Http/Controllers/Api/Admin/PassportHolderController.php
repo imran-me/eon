@@ -65,7 +65,7 @@ class PassportHolderController extends Controller
        try {
             $validatedData = $request->validate([
                 'name'           => 'required|string|max:255',
-                'passport_no'    => 'required|string|max:50|unique:passport_holders,passport_no',
+                'passport_no'    => 'nullable|string|max:50|unique:passport_holders,passport_no',
                 'nationality'    => 'required|string|max:100',
                 'phone'          => 'nullable|string|max:20',
                 'date_of_birth'  => 'nullable|date',
@@ -148,7 +148,7 @@ class PassportHolderController extends Controller
         try {
             $validatedData = $request->validate([
                 'name'           => 'required|string|max:255',
-                'passport_no'    => 'required|string|max:50|unique:passport_holders,passport_no,' . $passportHolder->id,
+                'passport_no'    => 'nullable|string|max:50|unique:passport_holders,passport_no,' . $passportHolder->id,
                 'nationality'    => 'required|string|max:100',
                 'phone'          => 'nullable|string|max:20',
                 'date_of_birth'  => 'nullable|date',

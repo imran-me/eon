@@ -191,6 +191,8 @@ class PurchaseController implements HasMiddleware
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    \App\Models\Bank::assertCanCover((int) $bank->account_id, (float) $data->paid_amount, $bank->name);
+
                     $journalItems[] = [
                         'account_id' => $bank->account_id,
                         'debit'      => 0,
@@ -425,6 +427,8 @@ class PurchaseController implements HasMiddleware
                     if (!$bank || !$bank->account_id) {
                         throw new \Exception('Bank is not linked to a chart-of-accounts account.');
                     }
+                    \App\Models\Bank::assertCanCover((int) $bank->account_id, (float) $data->paid_amount, $bank->name);
+
                     $journalItems[] = [
                         'account_id' => $bank->account_id,
                         'debit'      => 0,
@@ -769,6 +773,8 @@ class PurchaseController implements HasMiddleware
                     'credit'           => 0,
                     'note'             => 'Payable cleared — ' . $purchase->purchase_no,
                 ]);
+
+                \App\Models\Bank::assertCanCover((int) $bank->account_id, (float) $validated['payment_amount'], $bank->name);
 
                 \App\Models\JournalItem::create([
                     'journal_entry_id' => $journal->id,

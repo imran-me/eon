@@ -38,14 +38,29 @@ class FlightScheduleController implements HasMiddleware
         $tomorrow = (clone $today)->addDay();
 
         $query = ContractFlight::with([
-            'flightCategory', 'categoryType', 'ticket.airline', 'ticket.from_airport',
-            'ticket.to_airport', 'agent', 'boardingOfficer.user',
-            'immigrationOfficer.user', 'passengers.passportHolder',
+            'flightCategory', 'categoryType', 'ticket.airline', 'ticket.from_airport.country',
+            'ticket.to_airport.country', 'agent', 'boardingOfficer.user',
+            'immigrationOfficer.user', 'passengers.passportHolder', 'passengers.flightCategory',
+            // .agent and .ticketPurchases feed the itinerary card's Agent
+            // grouping and its readiness badge
+            // (ContractFlight::getReadinessSummaryAttribute()) — without
+            // these two, both would silently lazy-load per row.
+            'passengers.agent', 'passengers.ticketPurchases',
         ])
             ->orderBy('departure_at')
             ->orderBy('flight_number');
 
-        if ($request->filled('date')) {
+        // The list bar's range replaces the default yesterday–tomorrow window
+        // when either bound is given. A single ?date= (older links) still
+        // means that one day.
+        if ($request->filled('from_date') || $request->filled('to_date')) {
+            if ($request->filled('from_date')) {
+                $query->whereDate('departure_at', '>=', $request->from_date);
+            }
+            if ($request->filled('to_date')) {
+                $query->whereDate('departure_at', '<=', $request->to_date);
+            }
+        } elseif ($request->filled('date')) {
             $query->whereDate('departure_at', $request->date);
         } else {
             $query->whereBetween('departure_at', [$yesterday, (clone $tomorrow)->endOfDay()]);

@@ -23,9 +23,9 @@ class JournalController implements HasMiddleware
     public static function middleware(): array
     {
         return [
-            new Middleware('permission:view journal|view all journal', only: ['index']),
+            new Middleware('permission:view journal|view all journal', only: ['index', 'edit']),
             new Middleware('permission:create journal', only: ['store']),
-            new Middleware('permission:edit journal', only: ['update']),
+            new Middleware('permission:edit journal', only: ['update', 'reclassify', 'reverseReplace']),
             new Middleware('permission:delete journal', only: ['destroy']),
         ];
     }
@@ -37,15 +37,53 @@ class JournalController implements HasMiddleware
     {
         $query = JournalEntry::with(['items.account', 'createdBy']);            
 
+        $requestedCompanyId = $request->integer('company_id') ?: $request->integer('company');
+        $companyId = Auth::user()->is_super_admin
+            ? ($requestedCompanyId ?: null)
+            : (Auth::user()->company_id ? (int) Auth::user()->company_id : null);
+
         // Filter: date range
-        if (Auth::user()->company_id) {
-            $query->where('company_id', Auth::user()->company_id);
+        if ($companyId) $query->where('company_id', $companyId);
+
+        $projectId = $request->integer('project_id');
+        $project = $projectId ? DB::table('expense_departments')->where('id', $projectId)->whereNull('deleted_at')->first(['id', 'company_id', 'name']) : null;
+        if ($project && (! $companyId || (int) $project->company_id === $companyId)
+            && (Auth::user()->is_super_admin || (int) $project->company_id === (int) Auth::user()->company_id)) {
+            $companyId = (int) $project->company_id;
+            $query->where('company_id', $companyId)->where(function ($projectQuery) use ($projectId) {
+                $projectQuery->where(function ($q) use ($projectId) {
+                    $q->where('source', 'project_statement')->whereIn('source_id', DB::table('project_statement')
+                        ->where('expense_department_id', $projectId)->select('id'));
+                })->orWhere(function ($q) use ($projectId) {
+                    $q->where('source', 'expense')->whereIn('source_id', DB::table('expenses')
+                        ->where('expense_department_id', $projectId)->select('id'));
+                });
+            });
+        } else {
+            $projectId = null;
         }
         if ($request->filled('date_from')) {
             $query->whereDate('date', '>=', $request->date_from);
         }
         if ($request->filled('date_to')) {
             $query->whereDate('date', '<=', $request->date_to);
+        }
+
+        if ($request->filled('search')) {
+            $search = '%' . trim((string) $request->input('search')) . '%';
+            $query->where(function ($q) use ($search) {
+                $q->where('reference', 'like', $search)
+                    ->orWhere('description', 'like', $search)
+                    ->orWhere('source', 'like', $search)
+                    ->orWhereHas('items', function ($items) use ($search) {
+                        $items->where('note', 'like', $search)
+                            ->orWhere('debit', 'like', $search)
+                            ->orWhere('credit', 'like', $search)
+                            ->orWhereHas('account', function ($accounts) use ($search) {
+                                $accounts->where('code', 'like', $search)->orWhere('name', 'like', $search);
+                            });
+                    });
+            });
         }
 
         // Filter: reference
@@ -91,6 +129,8 @@ class JournalController implements HasMiddleware
         }
 
         $companies      = Company::where('status', 1)->orderBy('name')->get();
+        $projects       = $companyId ? DB::table('expense_departments')->where('company_id', $companyId)
+            ->where('status', 1)->whereNull('deleted_at')->orderBy('name')->get(['id', 'name']) : collect();
         // orderByDesc('id') stays in every case: on its own it is the original
         // default, and behind a sort it is the tiebreak that keeps paging stable
         // when several entries share a value.
@@ -99,7 +139,7 @@ class JournalController implements HasMiddleware
         $debitAccounts  = Account::active()->whereIn('type', ['expense', 'asset'])->orderBy('code')->get();
         $assetAccounts  = Account::active()->where('type', 'asset')->orderBy('code')->get();
         $banks          = Bank::where('status', 1)->orderBy('name')->get();
-        $sources        = ['manual', 'sale', 'purchase', 'expense', 'salary', 'loan', 'bank_transfer', 'ticket_sale', 'ticket_purchase', 'opening_receivable', 'opening_payable', 'opening_asset'];
+        $sources        = ['manual', 'account_reclassification', 'sale', 'purchase', 'expense', 'salary', 'loan', 'bank_transfer', 'ticket_sale', 'ticket_purchase', 'opening_receivable', 'opening_payable', 'opening_asset'];
 
         // Parties for the Opening Balance modals
         $partyCustomers = Customer::where('is_active', true)->orderBy('name')->get(['id', 'name', 'phone']);
@@ -110,7 +150,7 @@ class JournalController implements HasMiddleware
                               ->where('status', 'active')->orderBy('name')->get(['id', 'name', 'phone']);
 
         return view('journals.index', compact(
-            'journals', 'creditAccounts', 'debitAccounts', 'assetAccounts', 'sources', 'banks', 'companies',
+            'journals', 'creditAccounts', 'debitAccounts', 'assetAccounts', 'sources', 'banks', 'companies', 'projects', 'companyId', 'projectId',
             'partyCustomers', 'partySuppliers', 'partyAgents', 'partyVendors'
         ));
     }
@@ -121,8 +161,20 @@ class JournalController implements HasMiddleware
     public function store(Request $request)
     {
         // dd($request->all());
+        if ($request->source === 'manual') {
+            $request->validate(['company_id' => ['required', 'integer', 'exists:companies,id']]);
+            abort_if(!Auth::user()->is_super_admin && Auth::user()->company_id
+                && (int) $request->company_id !== (int) Auth::user()->company_id, 403, 'Choose your own company.');
+        }
         $this->validateJournal($request);
         $this->assertBalanced($request->items);
+        if ($request->source === 'manual') {
+            $ids = collect($request->items)->pluck('account_id')->unique();
+            $count = Account::active()->whereIn('id', $ids)->where(function ($query) use ($request) {
+                $query->whereNull('company_id')->orWhere('company_id', $request->company_id);
+            })->count();
+            abort_unless($count === $ids->count(), 422, 'Use active accounts belonging to the selected company.');
+        }
 
         DB::beginTransaction();
         try {
@@ -185,7 +237,10 @@ class JournalController implements HasMiddleware
      */
     public function voucher($role, JournalEntry $journal)
     {
-        $journal->load(['items.account', 'items.party', 'items.partyUser', 'createdBy', 'company']);
+        $this->assertJournalCompanyAccess($journal);
+        // Resolve the selected party below: employee/agent/vendor aliases are
+        // users, and must not be eagerly loaded through the customer/supplier morph.
+        $journal->load(['items.account', 'createdBy', 'company']);
         $company = $journal->company ?? \App\Models\Company::first();
         return view('journals.voucher', compact('journal', 'company'));
     }
@@ -195,7 +250,8 @@ class JournalController implements HasMiddleware
      */
     public function partyVoucher($role, JournalEntry $journal)
     {
-        $journal->load(['items.account', 'items.party', 'items.partyUser', 'createdBy', 'company']);
+        $this->assertJournalCompanyAccess($journal);
+        $journal->load(['items.account', 'createdBy', 'company']);
         $company = $journal->company ?? \App\Models\Company::first();
 
         // Resolve party from the first item that has a party set
@@ -227,6 +283,7 @@ class JournalController implements HasMiddleware
             'supplier' => 'Supplier Voucher',
             'agent'    => 'Agent Voucher',
             'vendor'   => 'Vendor Voucher',
+            'employee' => 'Employee Voucher',
             default    => 'Party Voucher',
         };
 
@@ -242,7 +299,161 @@ class JournalController implements HasMiddleware
      */
     public function edit($role, JournalEntry $journal)
     {
-        return response()->json($journal->load('items.account'));
+        $this->assertJournalCompanyAccess($journal);
+        $journal->load('items.account');
+        $journal->setAttribute('can_reverse_replace', ! $journal->reversalOf()->exists() && ! $journal->reversedBy()->exists());
+        $reclassifiedItemIds = JournalEntry::query()
+            ->where('source', 'account_reclassification')
+            ->whereIn('source_id', $journal->items->pluck('id'))
+            ->pluck('source_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $journal->items->each(function (JournalItem $item) use ($journal, $reclassifiedItemIds) {
+            $item->setAttribute('can_reclassify', ! $journal->reversalOf && ! $journal->reversedBy
+                && ! in_array((int) $item->id, $reclassifiedItemIds, true));
+        });
+
+        return response()->json($journal);
+    }
+
+    /**
+     * Move one posted journal line to another chart-of-accounts head without
+     * rewriting history. The adjustment reverses the amount out of the old
+     * head and posts the same side/amount to the new head.
+     */
+    public function reclassify(Request $request, $role, JournalEntry $journal, JournalItem $item)
+    {
+        $this->assertJournalCompanyAccess($journal);
+        abort_unless((int) $item->journal_entry_id === (int) $journal->id, 404);
+        abort_if($journal->reversalOf || $journal->reversedBy, 422, 'A reversed journal cannot be reclassified.');
+
+        $validated = $request->validate([
+            'account_id' => ['required', 'integer', Rule::exists('accounts', 'id')->where(fn ($q) => $q
+                ->where('status', 1)->whereNull('deleted_at'))],
+            'date' => ['required', 'date', 'after_or_equal:' . $journal->date->format('Y-m-d')],
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+        abort_if((int) $validated['account_id'] === (int) $item->account_id, 422, 'Choose a different account head.');
+
+        $newAccount = Account::active()
+            ->whereKey((int) $validated['account_id'])
+            ->where(function ($q) use ($journal) {
+                $q->whereNull('company_id')->orWhere('company_id', $journal->company_id);
+            })
+            ->firstOrFail();
+
+        $adjustment = DB::transaction(function () use ($journal, $item, $newAccount, $validated) {
+            $lockedItem = JournalItem::query()->lockForUpdate()->findOrFail($item->id);
+            abort_if(JournalEntry::query()->where('source', 'account_reclassification')
+                ->where('source_id', $lockedItem->id)->exists(), 422,
+                'This journal line has already been reclassified. Reclassify its latest adjustment line if another correction is required.');
+
+            $amount = max((float) $lockedItem->debit, (float) $lockedItem->credit);
+            abort_if($amount <= 0, 422, 'The selected journal line has no amount to reclassify.');
+            $oldAccount = $lockedItem->account()->firstOrFail();
+            $isDebit = (float) $lockedItem->debit > 0;
+            $reason = trim($validated['reason']);
+
+            $entry = JournalEntry::create([
+                'company_id' => $journal->company_id,
+                'created_by' => Auth::id(),
+                'date' => $validated['date'],
+                'reference' => 'RCL-JI-' . $lockedItem->id,
+                'source' => 'account_reclassification',
+                'source_id' => $lockedItem->id,
+                'description' => "Reclassify [{$oldAccount->code}] {$oldAccount->name} to [{$newAccount->code}] {$newAccount->name}: {$reason}",
+            ]);
+
+            $common = [
+                'party_type' => $lockedItem->party_type,
+                'party_id' => $lockedItem->party_id,
+            ];
+            JournalItem::create($common + [
+                'journal_entry_id' => $entry->id,
+                'account_id' => $oldAccount->id,
+                'debit' => $isDebit ? 0 : $amount,
+                'credit' => $isDebit ? $amount : 0,
+                'note' => 'Reclassification out - original journal #' . $journal->id,
+            ]);
+            JournalItem::create($common + [
+                'journal_entry_id' => $entry->id,
+                'account_id' => $newAccount->id,
+                'debit' => $isDebit ? $amount : 0,
+                'credit' => $isDebit ? 0 : $amount,
+                'note' => 'Reclassification in - ' . $reason,
+            ]);
+
+            return $entry;
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Account head reclassified through adjustment journal ' . $adjustment->reference . '.',
+            'journal_id' => $adjustment->id,
+        ]);
+    }
+
+    public function reverseReplace(Request $request, $role, JournalEntry $journal)
+    {
+        $this->assertJournalCompanyAccess($journal);
+        $data = $request->validate([
+            'date' => ['required', 'date', 'after_or_equal:' . $journal->date->format('Y-m-d')],
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+            'heads' => ['required', 'array'],
+            'heads.*' => ['required', 'integer'],
+            'lines' => ['required', 'array'],
+            'lines.*.debit' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'lines.*.credit' => ['required', 'numeric', 'min:0', 'decimal:0,2'],
+            'lines.*.note' => ['nullable', 'string', 'max:500'],
+        ]);
+        $replacement = DB::transaction(function () use ($journal, $data) {
+            $original = JournalEntry::lockForUpdate()->findOrFail($journal->id);
+            abort_if($original->reversalOf()->exists() || $original->reversedBy()->exists(), 422, 'This journal is already reversed or is a reversal.');
+            $original->load('items');
+            abort_unless(count($data['heads']) === $original->items->count(), 422, 'Every original line must be included.');
+            $lines = [];
+            foreach ($original->items as $item) {
+                $head = $data['heads'][$item->id] ?? null;
+                $account = Account::active()->whereKey($head)->where(function ($q) use ($original) {
+                    $q->whereNull('company_id')->orWhere('company_id', $original->company_id);
+                })->first();
+                abort_unless($account, 422, 'Choose an active account belonging to this company.');
+                $edited = $data['lines'][$item->id] ?? null;
+                abort_unless($edited, 422, 'Every journal line must be included.');
+                abort_unless(((float) $edited['debit'] > 0) !== ((float) $edited['credit'] > 0), 422, 'Each line needs either debit or credit, not both.');
+                $lines[] = ['account_id' => $account->id, 'debit' => $edited['debit'], 'credit' => $edited['credit'],
+                    'party_type' => $item->party_type, 'party_id' => $item->party_id, 'note' => $edited['note'] ?? null];
+            }
+            // Undo every active descendant head adjustment before reversing the original.
+            $entries = collect([$original]);
+            $frontier = $original->items->pluck('id');
+            while ($frontier->isNotEmpty()) {
+                $children = JournalEntry::where('source', 'account_reclassification')->whereIn('source_id', $frontier)
+                    ->whereDoesntHave('reversedBy')->with('items')->lockForUpdate()->get();
+                $entries = $entries->concat($children);
+                $frontier = $children->flatMap(fn ($entry) => $entry->items->pluck('id'));
+            }
+            foreach ($entries->reverse() as $entry) {
+                abort_if($entry->date->gt($data['date']), 422, 'Correction date must be on or after all earlier adjustments.');
+                $reversal = JournalEntry::create(['company_id' => $original->company_id, 'created_by' => Auth::id(),
+                    'date' => $data['date'], 'reference' => 'REV-JE-' . $entry->id,
+                    'source' => 'journal_correction_reversal', 'source_id' => $entry->id,
+                    'reversed_journal_entry_id' => $entry->id, 'description' => 'Full reversal: ' . $data['reason']]);
+                $this->syncItems($reversal, $entry->items->map(fn ($item) => [
+                    'account_id' => $item->account_id, 'debit' => $item->credit, 'credit' => $item->debit,
+                    'party_type' => $item->party_type, 'party_id' => $item->party_id,
+                    'note' => 'Reversal of journal #' . $entry->id,
+                ])->all());
+            }
+            $replacement = JournalEntry::create(['company_id' => $original->company_id, 'created_by' => Auth::id(),
+                'date' => $data['date'], 'reference' => 'COR-JE-' . $original->id,
+                'source' => 'journal_correction', 'source_id' => $original->id,
+                'description' => 'Replacement of journal #' . $original->id . ': ' . $data['reason']]);
+            $this->assertBalanced($lines);
+            $this->syncItems($replacement, $lines);
+            return $replacement;
+        });
+        return response()->json(['message' => 'Original journal and prior head adjustments reversed. Replacement created: ' . $replacement->reference]);
     }
 
     /**
@@ -372,6 +583,14 @@ class JournalController implements HasMiddleware
                 'party_type'       => $item['party_type'] ?? null,
                 'party_id'         => isset($item['party_id']) ? (int)$item['party_id'] : null,
             ]);
+        }
+    }
+
+    private function assertJournalCompanyAccess(JournalEntry $journal): void
+    {
+        if (! Auth::user()->is_super_admin && Auth::user()->company_id
+            && (int) $journal->company_id !== (int) Auth::user()->company_id) {
+            abort(403, 'You cannot access another company\'s journal.');
         }
     }
 }

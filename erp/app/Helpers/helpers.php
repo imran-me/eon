@@ -130,36 +130,66 @@ if (!function_exists('company_icon')) {
         // (" it " must not fire on "digital", " inn " not on "winner").
         $name = ' ' . Str::lower(trim(($company->name ?? '') . ' ' . ($company->short_name ?? ''))) . ' ';
 
+        // ACCENTS: deep, and spaced around the hue wheel. Re-set 2026-08-19 on
+        // the owner's instruction — "still similar, use rgb color / deep color".
+        //
+        // The accents that shipped here were transcribed from the Modular ERP
+        // reference build, and three of the concerns actually trading landed
+        // within about forty degrees of one another: GROUP #1a43bf, TRAVELS
+        // #2f6bff and IT #7b5cff are all blue-to-violet. Side by side as a 5px
+        // rail on a bank card, or as a 40px tile in the company switcher, they
+        // are indistinguishable — the owner's words were "I see all color same".
+        // Saturation could not fix that; only hue can.
+        //
+        // Two rules now govern this column, and a new company must respect both:
+        //   1. DEEP. Lightness roughly 25–40%, so the colour holds at 5px on
+        //      white and still carries a white glyph on the sidebar tile.
+        //   2. SPACED. At least ~45° of hue from every other trade a company on
+        //      this installation might match. Check the neighbours before
+        //      picking; two companies that both read "blue" is the bug.
+        //
+        // GROUP is deliberately the one with no hue at all. It is the umbrella,
+        // not a trade — giving it graphite says that, and it is what breaks the
+        // blue pile-up, since a holding company and a travel agency both want to
+        // be corporate blue and only one of them can have it.
+        //
+        // This column is read by the sidebar's company switcher (--rail-accent
+        // in layout/sidebar.blade.php) AND by the bank cards' company rail
+        // (BankControllerV2::companyRail). That is the point: one source of
+        // truth, so a concern is the same colour wherever it appears. Editing a
+        // value here moves both, together, which is the only way they can stay
+        // 100% matched.
         $map = [
-            // ── the six the reference build defines, icon + accent verbatim ──
-            [['travel', 'tour', 'airlin', 'aviation', 'air ticket', 'holiday'],            'bi-airplane-fill',        '#2f6bff'],
-            [['wood', 'interior', 'furnitur', 'carpent', 'decor'],                         'bi-tree-fill',            '#6f9c1c'],
-            [[' it ', 'it solution', 'infotech', 'software', 'technolog', 'digital', 'cyber', 'computer'], 'bi-cpu-fill', '#7b5cff'],
-            [['shop', 'store', 'retail', 'ecommerce', 'e-commerce', 'online'],             'bi-shop',                 '#e0356e'],
-            [['construction', 'builder', 'infrastructure'],                                'bi-buildings-fill',       '#e2721b'],
+            // ── the six the reference build defines ──                          hue
+            [['travel', 'tour', 'airlin', 'aviation', 'air ticket', 'holiday'],            'bi-airplane-fill',        '#1e40af'], // 224 deep royal blue
+            [['wood', 'interior', 'furnitur', 'carpent', 'decor'],                         'bi-tree-fill',            '#4d7c0f'], //  85 deep apple green
+            [[' it ', 'it solution', 'infotech', 'software', 'technolog', 'digital', 'cyber', 'computer'], 'bi-cpu-fill', '#6b21a8'], // 277 deep purple
+            [['shop', 'store', 'retail', 'ecommerce', 'e-commerce', 'online'],             'bi-shop',                 '#9f1239'], // 345 deep rose
+            [['construction', 'builder', 'infrastructure'],                                'bi-buildings-fill',       '#9a3412'], //  22 deep burnt orange
             // ── trades the reference has no company for yet ──
-            [['propert', 'real estate', 'estate', 'housing', 'developer'],                 'bi-house-door-fill',      '#0d9488'],
-            [['manufactur', 'factory', 'industr', 'production', 'mills'],                  'bi-gear-wide-connected',  '#475569'],
-            [['textile', 'garment', 'apparel', 'fashion', 'fabric', 'knit'],               'bi-scissors',             '#be123c'],
-            [['shipping', 'marine', 'maritime', 'port '],                                  'bi-life-preserver',       '#0e7490'],
-            [['logistic', 'courier', 'cargo', 'transport', 'freight', 'delivery'],         'bi-truck',                '#0891b2'],
-            [['agro', 'agri', 'farm', 'poultry', 'fisher', 'dairy', 'seed'],               'bi-flower1',              '#16a34a'],
-            [['restaurant', 'catering', 'bakery', 'kitchen', 'cafe', ' food'],             'bi-cup-hot-fill',         '#ea580c'],
-            [['hotel', 'resort', 'hospitality', ' inn '],                                   'bi-luggage-fill',         '#b45309'],
-            [['pharma', 'health', 'medic', 'hospital', 'clinic', 'diagnost'],              'bi-hospital-fill',        '#dc2626'],
-            [['academy', 'school', 'educat', 'institute', 'college', 'training'],          'bi-mortarboard-fill',     '#7c3aed'],
-            [['media', 'advertis', 'marketing', 'creative', 'studio', 'agency'],           'bi-megaphone-fill',       '#db2777'],
-            [['printing', 'press', 'publicat', 'publish'],                                 'bi-printer-fill',         '#57534e'],
-            [['energy', 'power', 'solar', 'electric', 'renewable', 'petro'],               'bi-lightning-charge-fill','#f59e0b'],
-            [['securities', 'finance', 'capital', 'bank', 'invest', 'insur', 'leasing'],   'bi-bank',                 '#0f766e'],
-            [['telecom', 'network', 'communicat', 'broadband', 'fiber'],                   'bi-broadcast-pin',        '#0284c7'],
-            [['security', 'guard', 'surveillance', 'protection'],                          'bi-shield-fill-check',    '#334155'],
-            [['auto', 'motor', 'vehicle', 'rent a car'],                                    'bi-car-front-fill',       '#1d4ed8'],
-            [['engineer', 'fabricat', 'steel', 'machin'],                                   'bi-tools',                '#1e293b'],
-            [['chemical', 'plastic', 'polymer', 'paint'],                                   'bi-droplet-fill',         '#7e22ce'],
-            [['consult', 'advisory', 'legal', 'associates'],                                'bi-briefcase-fill',       '#6366f1'],
+            [['propert', 'real estate', 'estate', 'housing', 'developer'],                 'bi-house-door-fill',      '#115e59'], // 174 deep teal
+            [['manufactur', 'factory', 'industr', 'production', 'mills'],                  'bi-gear-wide-connected',  '#854d0e'], //  38 deep bronze
+            [['textile', 'garment', 'apparel', 'fashion', 'fabric', 'knit'],               'bi-scissors',             '#831843'], // 331 deep wine
+            [['shipping', 'marine', 'maritime', 'port '],                                  'bi-life-preserver',       '#155e75'], // 197 deep marine
+            [['logistic', 'courier', 'cargo', 'transport', 'freight', 'delivery'],         'bi-truck',                '#0e7490'], // 192 deep cyan
+            [['agro', 'agri', 'farm', 'poultry', 'fisher', 'dairy', 'seed'],               'bi-flower1',              '#15803d'], // 142 deep leaf green
+            [['restaurant', 'catering', 'bakery', 'kitchen', 'cafe', ' food'],             'bi-cup-hot-fill',         '#b45309'], //  33 deep amber
+            [['hotel', 'resort', 'hospitality', ' inn '],                                   'bi-luggage-fill',         '#7c2d12'], //  17 deep rust
+            [['pharma', 'health', 'medic', 'hospital', 'clinic', 'diagnost'],              'bi-hospital-fill',        '#991b1b'], //   0 deep red
+            [['academy', 'school', 'educat', 'institute', 'college', 'training'],          'bi-mortarboard-fill',     '#5b21b6'], // 263 deep indigo-violet
+            [['media', 'advertis', 'marketing', 'creative', 'studio', 'agency'],           'bi-megaphone-fill',       '#9d174d'], // 337 deep magenta
+            [['printing', 'press', 'publicat', 'publish'],                                 'bi-printer-fill',         '#44403c'], //   – deep stone
+            [['energy', 'power', 'solar', 'electric', 'renewable', 'petro'],               'bi-lightning-charge-fill','#a16207'], //  41 deep gold
+            [['securities', 'finance', 'capital', 'bank', 'invest', 'insur', 'leasing'],   'bi-bank',                 '#134e4a'], // 176 deep pine
+            [['telecom', 'network', 'communicat', 'broadband', 'fiber'],                   'bi-broadcast-pin',        '#075985'], // 201 deep ocean
+            [['security', 'guard', 'surveillance', 'protection'],                          'bi-shield-fill-check',    '#3f3f46'], //   – deep zinc
+            [['auto', 'motor', 'vehicle', 'rent a car'],                                    'bi-car-front-fill',       '#1e3a8a'], // 226 deep navy
+            [['engineer', 'fabricat', 'steel', 'machin'],                                   'bi-tools',                '#292524'], //   – deep charcoal
+            [['chemical', 'plastic', 'polymer', 'paint'],                                   'bi-droplet-fill',         '#581c87'], // 280 deep grape
+            [['consult', 'advisory', 'legal', 'associates'],                                'bi-briefcase-fill',       '#3730a3'], // 244 deep indigo
             // Generic last, so "Epal Travels Group" still reads as travel.
-            [['group', 'holding', 'conglomerate', 'corporate', 'ventures'],                 'bi-hexagon-fill',         '#1a43bf'],
+            // Graphite on purpose — see the note above.
+            [['group', 'holding', 'conglomerate', 'corporate', 'ventures'],                 'bi-hexagon-fill',         '#1e293b'], //   – graphite
         ];
 
         $icon   = 'bi-briefcase-fill';
@@ -230,12 +260,17 @@ function amountToWords($number) {
 
 if (!function_exists('sendBrevoMail')) {
 
-    function sendBrevoMail($toEmail, $toName, $subject, $htmlContent)
+    /**
+     * @param  array  $attachments  Optional files to attach, each
+     *                              ['name' => 'Payslip.pdf', 'content' => <raw bytes>].
+     *                              Added as an optional fifth argument so the nine
+     *                              existing callers keep working untouched; when it is
+     *                              empty the request body is byte-identical to what it
+     *                              has always been.
+     */
+    function sendBrevoMail($toEmail, $toName, $subject, $htmlContent, array $attachments = [])
     {
-        return Http::withHeaders([
-            'api-key'      => config('services.brevo.key'),
-            'Content-Type' => 'application/json',
-        ])->post('https://api.brevo.com/v3/smtp/email', [
+        $payload = [
             'to' => [
                 [
                     'email' => $toEmail,
@@ -248,7 +283,30 @@ if (!function_exists('sendBrevoMail')) {
                 'email' => 'no-reply@epaltravels.com',
                 'name'  => 'Epal Group',
             ],
-        ]);
+        ];
+
+        // Brevo takes attachments as base64 under `attachment`. Anything without
+        // both a name and content is dropped rather than sent half-formed — an
+        // email that arrives with a broken attachment is worse than one without.
+        $encoded = [];
+        foreach ($attachments as $file) {
+            if (empty($file['name']) || empty($file['content'])) {
+                continue;
+            }
+            $encoded[] = [
+                'name'    => $file['name'],
+                'content' => base64_encode($file['content']),
+            ];
+        }
+
+        if ($encoded) {
+            $payload['attachment'] = $encoded;
+        }
+
+        return Http::withHeaders([
+            'api-key'      => config('services.brevo.key'),
+            'Content-Type' => 'application/json',
+        ])->post(rtrim(config('services.brevo.endpoint', 'https://api.brevo.com'), '/') . '/v3/smtp/email', $payload);
     }
 
 }
@@ -257,8 +315,23 @@ if (!function_exists('sendSms')) {
 
     function sendSms($phone, $message)
     {
-        $url = "https://msg.mram.com.bd/smsapi";
-        $phone = preg_replace('/^0/', '880', $phone);
+        app()->forgetInstance('sms.last_error');
+
+        $url = config('services.mram.endpoint', 'https://msg.mram.com.bd/smsapi');
+        $phone = preg_replace('/\D+/', '', (string) $phone);
+        if (str_starts_with($phone, '01')) {
+            $phone = '88' . $phone;
+        }
+
+        if (!preg_match('/^8801[3-9][0-9]{8}$/', $phone)) {
+            app()->instance('sms.last_error', 'Invalid mobile number. Use +8801XXXXXXXXX.');
+            return false;
+        }
+
+        if (!filled(config('services.mram.api_key'))) {
+            app()->instance('sms.last_error', 'SMS API key is not configured.');
+            return false;
+        }
         $data = [
             "api_key" => config('services.mram.api_key'),
             "type" => "text",
@@ -272,9 +345,53 @@ if (!function_exists('sendSms')) {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $result = curl_exec($ch);
+        $curlError = curl_error($ch);
         curl_close($ch);
+
+        if ($result === false) {
+            app()->instance('sms.last_error', $curlError !== '' ? $curlError : 'SMS gateway request failed.');
+            return false;
+        }
+
+        if (trim((string) $result) === '') {
+            app()->instance('sms.last_error', 'SMS gateway returned an empty response.');
+            return false;
+        }
+
+        $body = trim((string) $result);
+        $gatewayErrors = [
+            '1002' => 'Sender ID not found.',
+            '1003' => 'SMS API not found.',
+            '1004' => 'Message rejected as spam.',
+            '1005' => 'SMS gateway internal error.',
+            '1006' => 'SMS gateway internal error.',
+            '1007' => 'Insufficient SMS balance.',
+            '1008' => 'SMS message is empty.',
+            '1009' => 'SMS message type is not set.',
+            '1010' => 'Invalid SMS gateway credentials.',
+            '1011' => 'Invalid SMS gateway user.',
+        ];
+        if (isset($gatewayErrors[$body])) {
+            app()->instance('sms.last_error', $gatewayErrors[$body] . ' (code ' . $body . ')');
+            return false;
+        }
+
+        $decoded = json_decode($body, true);
+        if (is_array($decoded)) {
+            $status = $decoded['status_code'] ?? $decoded['response_code'] ?? $decoded['status'] ?? null;
+            if ($status !== null && !in_array(strtolower((string) $status), ['200', '201', '202', '1000', 'ok', 'success'], true)) {
+                app()->instance('sms.last_error', 'SMS gateway rejected the request: ' . mb_substr($body, 0, 500));
+                return false;
+            }
+            if ($status === null && (isset($decoded['error']) || isset($decoded['error_message']))) {
+                app()->instance('sms.last_error', 'SMS gateway rejected the request: ' . mb_substr($body, 0, 500));
+                return false;
+            }
+        }
 
         return $result;
     }
@@ -342,3 +459,42 @@ if (!function_exists('payslipAmount')) {
     }
 }
 
+
+if (!function_exists('user_shortcuts')) {
+    /**
+     * The signed-in user's pinned pages of one kind ('tab' or 'menu'), in the
+     * order they were pinned. Read by the shared shell on EVERY page
+     * (layout/shortcuts.blade.php and the sidebar), so two things matter:
+     *
+     *  - it is memoised, so the strip and the sidebar cost one query between
+     *    them, not one each;
+     *  - it cannot throw. Until the user_shortcuts migration has run on a
+     *    server the query fails, and a failure here would 500 every page for
+     *    every company. It degrades to "no shortcuts" instead.
+     *
+     * @return \Illuminate\Support\Collection<int, \App\Models\UserShortcut>
+     */
+    function user_shortcuts(string $kind): \Illuminate\Support\Collection
+    {
+        static $byKind = [];
+
+        if (array_key_exists($kind, $byKind)) {
+            return $byKind[$kind];
+        }
+
+        try {
+            $userId = auth()->id();
+            $byKind[$kind] = $userId
+                ? \App\Models\UserShortcut::forUser((int) $userId)
+                    ->ofKind($kind)
+                    ->orderBy('sort_order')
+                    ->orderBy('id')
+                    ->get()
+                : collect();
+        } catch (\Throwable $e) {
+            $byKind[$kind] = collect();
+        }
+
+        return $byKind[$kind];
+    }
+}

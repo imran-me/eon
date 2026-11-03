@@ -38,7 +38,11 @@ class ReportController implements HasMiddleware
 
     public function monthly_attendances(Request $request)
     {
-        $users = User::whereNotNull('company_id')->role('employee')->get();
+        $users = User::whereNotNull('company_id')
+            ->where('status', 'active')
+            ->role('employee')
+            ->orderBy('name')
+            ->get();
         $selectedMonth = $request->input('month', date('n'));
         $selectedYear = $request->input('year', date('Y'));
         $userId = $request->input('user_id');
@@ -92,11 +96,16 @@ class ReportController implements HasMiddleware
                 ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
                 ->where('leaves.user_id', $userId)
                 ->where('leaves.status', 'approved')
+                ->whereNull('leaves.deleted_at')
                 ->where(function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('leaves.start_date', [$startDate, $endDate])
                         ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
                 })
-                ->select('leaves.*', 'leave_types.exempts_early_out_deduction')
+                ->select(
+                    'leaves.*',
+                    'leave_types.exempts_early_out_deduction',
+                    'leave_types.exempts_late_deduction'
+                )
                 ->get();
 
             foreach ($period as $date) {
@@ -106,6 +115,7 @@ class ReportController implements HasMiddleware
                 if (isset($dbAttendances[$dateString])) {
                     $record = $dbAttendances[$dateString];
                     $approvedEarlyLeave = $this->findApprovedEarlyLeaveForDate($leaves, $dateString);
+                    $approvedLateIn = $this->findApprovedLateInForDate($leaves, $dateString);
 
                     // --- CONSISTENT LATE CALCULATION ---
                     if ($record->check_in && $record->attendence_setting) {
@@ -116,7 +126,7 @@ class ReportController implements HasMiddleware
                             ->addMinutes($minutes);
                         // late min count
                         $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
-                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0) {
+                        if ($checkInTime->gt($lateThreshold) && $lateMinutes > 0 && !$approvedLateIn) {
                             $record->status = 'Late ' . $lateMinutes . ' mins';
                             $summary['late']++;    // Increment Late
                             $summary['present']++; // Also increment Present (as they are physically there)
@@ -124,6 +134,10 @@ class ReportController implements HasMiddleware
                         } else {
                             $record->status = 'Present';
                             $summary['present']++;
+                        }
+
+                        if ($approvedLateIn) {
+                            $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                         }
 
                         if ($approvedEarlyLeave && !$record->check_out) {
@@ -188,7 +202,7 @@ class ReportController implements HasMiddleware
                             $summary[$status]++;
                         }
                     }
-                } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+                } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                     $record = (object)[
                         'date' => $dateString,
                         'shift' => $defaultShift,
@@ -274,12 +288,20 @@ class ReportController implements HasMiddleware
 
         // Fetch Approved Leaves for this user
         $leaves = \DB::table('leaves')
-            ->where('user_id', $userId)
-            ->where('status', 'approved')
+            ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->where('leaves.user_id', $userId)
+            ->where('leaves.status', 'approved')
+            ->whereNull('leaves.deleted_at')
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate]);
-            })->get();
+                $query->whereBetween('leaves.start_date', [$startDate, $endDate])
+                    ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
+            })
+            ->select(
+                'leaves.*',
+                'leave_types.exempts_early_out_deduction',
+                'leave_types.exempts_late_deduction'
+            )
+            ->get();
 
         // Initialize counters
         $totalMinutes = 0;
@@ -295,6 +317,7 @@ class ReportController implements HasMiddleware
 
             if (isset($dbAttendances[$dateString])) {
                 $record = $dbAttendances[$dateString];
+                $approvedLateIn = $this->findApprovedLateInForDate($leaves, $dateString);
                 $record->shift_name = $record->shift?->name ?? '-';
                 $record->worked_display = "Missing Out";
 
@@ -325,13 +348,17 @@ class ReportController implements HasMiddleware
                     $lateThreshold = \Carbon\Carbon::parse($dateString . ' ' . $user->shift->start_time)
                         ->addMinutes($minutes);
 
-                    if ($checkInTime->gt($lateThreshold)) {
+                    if ($checkInTime->gt($lateThreshold) && !$approvedLateIn) {
                         $record->status = 'Late';
                         $late++;
                         $present++; // Late people are physically present
                     } else {
                         $record->status = 'Present';
                         $present++;
+                    }
+
+                    if ($approvedLateIn) {
+                        $record->note = 'Approved Late In (until ' . \Carbon\Carbon::parse($approvedLateIn->leave_time)->format('h:i A') . ')';
                     }
                 } else {
                     // If no check_in (e.g. manual status entries like Leave)
@@ -340,7 +367,7 @@ class ReportController implements HasMiddleware
                     elseif ($currentStatus == 'holiday') $holiday++;
                     else $absent++;
                 }
-            } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
+            } elseif ($leaveRecord = $leaves->first(fn($l) => !$l->exempts_late_deduction && $dateString >= $l->start_date && $dateString <= $l->end_date)) {
                 $record = (object)[
                     'date' => $dateString,
                     'employee_id' => $user->employee_id ?? '',
@@ -427,166 +454,11 @@ class ReportController implements HasMiddleware
             $userId = auth()->id();
         }
         $user = User::with('shift')->find($userId);
-        // 1. Fetch Data (Same logic as Excel/Web)
-        $dbAttendances = Attendance::with('shift', 'attendence_setting')
-            ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->where('user_id', $userId)
-            ->get()->keyBy('date');
-
-        $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
-        $endDate = $startDate->copy()->endOfMonth();
-        $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
-        $defaultShift = $user->shift ?? $dbAttendances->first()?->shift;
-
-        // Fetch Holidays that overlap with the selected month
-        $holidays = \DB::table('holidays')
-            ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('start_date', [$startDate, $endDate])
-                    ->orWhereBetween('end_date', [$startDate, $endDate]);
-            })->get();
-
-        // Fetch Approved Leaves for this user
-        $leaves = \DB::table('leaves')
-            ->leftJoin('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
-            ->where('leaves.user_id', $userId)
-            ->where('leaves.status', 'approved')
-            ->where(function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('leaves.start_date', [$startDate, $endDate])
-                    ->orWhereBetween('leaves.end_date', [$startDate, $endDate]);
-            })
-            ->select('leaves.*', 'leave_types.exempts_early_out_deduction')
-            ->get();
-
-        $fullMonthData = collect();
-        $summary = ['present' => 0, 'absent' => 0, 'late' => 0, 'holiday' => 0, 'leave' => 0, 'late_minutes' => 0, 'early_out' => 0, 'early_minutes' => 0, 'overtime_days' => 0, 'overtime_minutes' => 0];
-
-        foreach ($period as $date) {
-            $dateString = $date->format('Y-m-d');
-            $dayName = strtolower($date->format('l'));
-
-            if (isset($dbAttendances[$dateString])) {
-                $record = $dbAttendances[$dateString];
-                $approvedEarlyLeave = $this->findApprovedEarlyLeaveForDate($leaves, $dateString);
-                // $record->shift_name = $defaultShift->name ?? '-';
-                if ($record->check_in && $record->attendence_setting) {
-                    $checkInTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_in);
-                    $minutes = (int) $record->attendence_setting->time_after_checkin;
-                    $lateThreshold = \Carbon\Carbon::parse($dateString . ' ' . $record->shift->start_time)
-                        ->addMinutes($minutes);
-                    $lateMinutes = (int) abs($checkInTime->diffInMinutes($lateThreshold, false));
-                    if ($checkInTime->gt($lateThreshold)) {
-                        $record->status = 'Late ' . $lateMinutes . ' mins';
-                        $record->late_minutes = $lateMinutes;
-                        $summary['late']++;
-                        $summary['present']++;
-                        $summary['late_minutes'] += $lateMinutes;
-                    } else {
-                        $record->status = 'Present';
-                        $summary['present']++;
-                    }
-
-                    if ($approvedEarlyLeave && !$record->check_out) {
-                        // Still checked in — show the approved time as a heads-up.
-                        // If checkout later turns out normal/overtime, this gets left alone
-                        // below and the original note is never overwritten.
-                        $record->note = 'Approved Early Leave (until ' . \Carbon\Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')';
-                    }
-
-                    if ($record->check_out && $record->attendence_setting) {
-                            $checkOutTime = \Carbon\Carbon::parse($dateString . ' ' . $record->check_out);
-
-                            $minutes = (int) $record->attendence_setting->time_after_checkout;
-                            // dd($record->shift->start_time);
-                            $shiftEnd = \Carbon\Carbon::parse($dateString . ' ' . $record->shift->end_time);
-
-                            // Thresholds (assuming $minutes is 10 for early and 60 for late)
-                            $earlyThreshold = $shiftEnd->copy()->subMinutes(10); // 6:50 PM
-                            $overtimeThreshold = $shiftEnd->copy()->addMinutes(60); // 8:00 PM
-
-                            $earlyMinutes = 0;
-                            $overtimeMinutes = 0;
-
-                            if ($checkOutTime->lessThan($earlyThreshold)) {
-                                // 1. LEFT TOO EARLY (Before 6:50)
-                                $earlyMinutes = (int) abs($checkOutTime->diffInMinutes($earlyThreshold, false));
-                            } elseif ($checkOutTime->greaterThanOrEqualTo($overtimeThreshold)) {
-                                // 2. WORKED OVERTIME (8:00 or later)
-                                // We calculate from 7:00 PM to give them the full hour + extra
-                                $overtimeMinutes = (int) abs($checkOutTime->diffInMinutes($shiftEnd, false));
-                            } else {
-                                // 3. WITHIN GRACE PERIOD (6:50 to 7:59)
-                                $earlyMinutes = 0;
-                                $overtimeMinutes = 0;
-                            }
-                            if ($checkOutTime->lt($earlyThreshold) && $earlyMinutes > 0) {
-                                if ($approvedEarlyLeave) {
-                                    $record->note = 'Approved Early Leave (from ' . \Carbon\Carbon::parse($approvedEarlyLeave->leave_time)->format('h:i A') . ')';
-                                    $summary['present']++; // Still present for most of the day, no deduction
-                                } else {
-                                    $record->out_status = 'Early Out ' . $earlyMinutes . ' mins';
-                                    $summary['early_out']++;    // Increment Early Out
-                                    $summary['present']++; // Also increment Present (as they are physically there)
-                                    $summary['early_minutes'] += $earlyMinutes; // Accumulate early minutes
-                                }
-                            }
-                            // Overtime handling days
-                            if ($checkOutTime->gte($overtimeThreshold) && $overtimeMinutes > 0) {
-                                $record->out_status = 'Overtime ' . $overtimeMinutes . ' mins';
-                                $summary['overtime_minutes'] += $overtimeMinutes; // Accumulate overtime minutes
-                                $summary['overtime_days'] = ($summary['overtime_days'] ?? 0) + 1; // Count days with overtime
-                            }
-                        } else {
-                            $status = strtolower($record->status);
-                            if (array_key_exists($status, $summary)) {
-                                $summary[$status]++;
-                            }
-                        }
-                } else {
-                    $status = strtolower($record->status);
-                    if (array_key_exists($status, $summary)) $summary[$status]++;
-                }
-            } elseif ($leaveRecord = $leaves->first(fn($l) => $dateString >= $l->start_date && $dateString <= $l->end_date)) {
-                $record = (object)[
-                    'date' => $dateString,
-                    'shift_name' => $defaultShift->name ?? '-',
-                    'check_in' => null,
-                    'check_out' => null,
-                    'status' => $leaveRecord->leave_time ? 'Early Leave' : 'Leave',
-                    'note' => $leaveRecord->leave_time
-                        ? 'Approved (from ' . \Carbon\Carbon::parse($leaveRecord->leave_time)->format('h:i A') . ')'
-                        : 'Approved Leave'
-                ];
-                $summary['leave']++;
-            } else {
-                $holidayRecord = $holidays->first(fn($h) => $dateString >= $h->start_date && $dateString <= $h->end_date);
-                $isWeekend = $defaultShift && in_array($dayName, $defaultShift->holidays ?? []);
-
-                if ($holidayRecord || $isWeekend) {
-                    $record = (object)[
-                        'date' => $dateString,
-                        'shift_name' => $defaultShift->name ?? '-',
-                        'check_in' => null,
-                        'check_out' => null,
-                        'status' => 'Holiday',
-                        'note' => $holidayRecord ? $holidayRecord->name : 'Weekend'
-                    ];
-                    $summary['holiday']++;
-                } else {
-                    // 4. Default to Absent
-                    $record = (object)[
-                        'date' => $dateString,
-                        'shift_name' => $defaultShift->name ?? '-',
-                        'check_in' => null,
-                        'check_out' => null,
-                        'status' => 'Absent',
-                        'note' => 'No record'
-                    ];
-                    $summary['absent']++;
-                }
-            }
-            $fullMonthData->push($record);
-        }
+        // The day-by-day build lives in AttendanceMonthService so the payslip
+        // PDF's attendance page and this report cannot drift apart. Behaviour
+        // is unchanged — the service is a verbatim lift of what stood here.
+        ['records' => $fullMonthData, 'summary' => $summary, 'start' => $startDate] =
+            app(\App\Services\AttendanceMonthService::class)->build($user, (int) $year, (int) $month);
         // 2. Generate PDF using a specific blade view
         $pdf = \PDF::loadView('report.monthly_attendances_pdf', [
             'attendances' => $fullMonthData,
@@ -596,7 +468,12 @@ class ReportController implements HasMiddleware
             'year' => $year
         ]);
 
-        return $pdf->download("Attendance_Report_{$user->name}_{$month}.pdf");
+        // Slugged, and carrying the year as well as the month: the raw name went
+        // into the filename verbatim, so spaces and any punctuation an employee
+        // record happens to hold ended up in the Content-Disposition header.
+        $fileName = 'Attendance_Report_' . \Str::slug($user->name, '_') . '_' . $startDate->format('Y_m') . '.pdf';
+
+        return $pdf->download($fileName);
     }
     public function attendanceDetails($role, $attendance_id, $date)
     {
@@ -933,6 +810,12 @@ class ReportController implements HasMiddleware
     }
     public function profitLossV1(Request $request)
     {
+        // The Zoho-style statement (sections, gross / operating profit, company picker). The earlier layout
+        // below stays reachable with ?classic=1.
+        if (! $request->boolean('classic')) {
+            return app(AccountingReportController::class)->profitLoss($request);
+        }
+
         $dateFrom = $request->date_from;
         $dateTo   = $request->date_to;
         $companyId = auth()->user()->company_id;
@@ -983,13 +866,18 @@ class ReportController implements HasMiddleware
         $totalIncome   = $incomeAccounts->sum('net');
         $totalExpense  = $expenseAccounts->sum('net');
         $netProfit     = $totalIncome - $totalExpense;
+        // The ledger drill-down must use the exact same company scope as this
+        // report, otherwise its debit/credit movements will not reconcile with
+        // the amount clicked in the P&L.
+        $ledgerScope = $canViewAll ? 'all' : 'company';
 
         return view('report.profit_lossV2', compact(
             'incomeAccounts',
             'expenseAccounts',
             'totalIncome',
             'totalExpense',
-            'netProfit'
+            'netProfit',
+            'ledgerScope'
         ));
     }
 
@@ -1039,6 +927,10 @@ class ReportController implements HasMiddleware
     }
     public function balanceSheetV1(Request $request)
     {
+        if (! $request->boolean('classic')) {
+            return app(AccountingReportController::class)->balanceSheet($request);
+        }
+
         $asOf = $request->as_of ?? now()->toDateString();
         $companyId = auth()->user()->company_id;
         $canViewAll = auth()->user()->can('view all account');
@@ -1183,9 +1075,16 @@ class ReportController implements HasMiddleware
     public function accountLedgerV1(Request $request)
     {
         $companyId = auth()->user()->company_id;
+        $canViewAll = auth()->user()->can('view all account');
+        $viewAllCompanies = $canViewAll && $request->get('scope') === 'all';
+        $restrictToCompany = ! $viewAllCompanies && ! empty($companyId);
+        $printing = $request->boolean('print');
+        $perPage = in_array((int) $request->get('per_page', 25), [15, 25, 50, 100], true)
+            ? (int) $request->get('per_page', 25)
+            : 25;
 
         $allAccountsQuery = Account::active();
-        if (!empty($companyId)) {
+        if ($restrictToCompany) {
             $allAccountsQuery->where(function ($q) use ($companyId) {
                 $q->whereNull('company_id')->orWhere('company_id', $companyId);
             });
@@ -1197,51 +1096,106 @@ class ReportController implements HasMiddleware
         $closingBalance  = 0;
         $totalDebit      = 0;
         $totalCredit     = 0;
+        $periodMovement  = 0;
+        $transactionCount = 0;
+        $pageOpeningBalance = 0;
 
         if ($request->filled('account_id')) {
-            $account = Account::findOrFail($request->account_id);
+            $accountQuery = Account::active();
+            if ($restrictToCompany) {
+                $accountQuery->where(function ($q) use ($companyId) {
+                    $q->whereNull('company_id')->orWhere('company_id', $companyId);
+                });
+            }
+            $account = $accountQuery->with('parent')->findOrFail($request->account_id);
 
             // Opening balance = all transactions BEFORE date_from
             if ($request->filled('date_from')) {
                 $beforeItems = JournalItem::where('account_id', $account->id)
                     ->whereHas(
                         'journalEntry',
-                        fn($q) =>
-                        $q->where('company_id', $companyId)->whereDate('date', '<', $request->date_from)
+                        function ($q) use ($request, $restrictToCompany, $companyId) {
+                            if ($restrictToCompany) {
+                                $q->where('company_id', $companyId);
+                            }
+                            $q->whereDate('date', '<', $request->date_from);
+                        }
                     )
                     ->get();
 
-                $openingBalance = $beforeItems->sum('debit') - $beforeItems->sum('credit');
+                $openingBalance = (float) $account->opening_balance
+                    + $beforeItems->sum('debit')
+                    - $beforeItems->sum('credit');
             } else {
                 $openingBalance = (float) $account->opening_balance;
             }
 
-            // Fetch items within the selected period
-            $items = JournalItem::with('journalEntry')
+            // Build one filtered transaction query. Summary totals, print and
+            // pagination all derive from this query so the figures reconcile.
+            $itemsQuery = JournalItem::with('journalEntry')
                 ->where('account_id', $account->id)
-                ->whereHas('journalEntry', function ($q) use ($request, $companyId) {
-                    $q->where('company_id', $companyId);
+                ->whereHas('journalEntry', function ($q) use ($request, $restrictToCompany, $companyId) {
+                    if ($restrictToCompany) {
+                        $q->where('company_id', $companyId);
+                    }
                     if ($request->filled('date_from')) {
                         $q->whereDate('date', '>=', $request->date_from);
                     }
                     if ($request->filled('date_to')) {
                         $q->whereDate('date', '<=', $request->date_to);
                     }
-                })
+                });
+
+            if ($request->filled('search')) {
+                $search = trim((string) $request->search);
+                $itemsQuery->where(function ($q) use ($search) {
+                    $like = '%' . $search . '%';
+                    $q->where('journal_items.note', 'like', $like)
+                        ->orWhere('journal_items.debit', 'like', $like)
+                        ->orWhere('journal_items.credit', 'like', $like)
+                        ->orWhereHas('journalEntry', function ($entry) use ($like) {
+                            $entry->where('reference', 'like', $like)
+                                ->orWhere('source', 'like', $like)
+                                ->orWhere('description', 'like', $like)
+                                ->orWhere('date', 'like', $like);
+                        });
+                });
+            }
+
+            $itemsQuery
                 ->orderBy(
                     JournalEntry::select('date')
                         ->whereColumn('journal_entries.id', 'journal_items.journal_entry_id')
                         ->limit(1)
                 )
-                ->orderBy('id')
-                ->get();
+                ->orderBy('journal_items.id');
 
-            $totalDebit  = $items->sum('debit');
-            $totalCredit = $items->sum('credit');
+            $transactionCount = (clone $itemsQuery)->reorder()->count();
+            $totalDebit  = (float) (clone $itemsQuery)->reorder()->sum('debit');
+            $totalCredit = (float) (clone $itemsQuery)->reorder()->sum('credit');
+            $periodMovement = $account->type === 'income'
+                ? $totalCredit - $totalDebit
+                : $totalDebit - $totalCredit;
 
-            // Build rows with running balance
-            $runningBalance = $openingBalance;
-            $rows = $items->map(function ($item) use (&$runningBalance) {
+            if ($printing) {
+                $items = (clone $itemsQuery)->get();
+                $runningBalance = $openingBalance;
+            } else {
+                // Continue the true running balance on page 2+, rather than
+                // restarting each page at the statement opening balance.
+                $currentPage = max(1, (int) $request->get('page', 1));
+                $priorCount = ($currentPage - 1) * $perPage;
+                $priorMovement = $priorCount > 0
+                    ? (clone $itemsQuery)->limit($priorCount)->get(['debit', 'credit'])
+                    : collect();
+                $items = (clone $itemsQuery)->paginate($perPage)->withQueryString();
+                $runningBalance = $openingBalance
+                    + $priorMovement->sum('debit')
+                    - $priorMovement->sum('credit');
+            }
+
+            $pageOpeningBalance = $runningBalance;
+            $mappedRows = $items->map(function ($item) use (&$runningBalance) {
                 $runningBalance += $item->debit - $item->credit;
                 return [
                     'date'        => $item->journalEntry->date,
@@ -1256,7 +1210,32 @@ class ReportController implements HasMiddleware
                 ];
             });
 
-            $closingBalance = $runningBalance;
+            if ($printing) {
+                $rows = $mappedRows;
+            } else {
+                $items->setCollection($mappedRows);
+                $rows = $items;
+            }
+
+            $closingBalance = $openingBalance + $totalDebit - $totalCredit;
+        }
+
+        if ($printing && $account) {
+            $company = \App\Models\Company::find($account->company_id ?: $companyId)
+                ?? \App\Models\Company::first();
+
+            return view('report.account-ledger-print', compact(
+                'account',
+                'company',
+                'rows',
+                'openingBalance',
+                'closingBalance',
+                'totalDebit',
+                'totalCredit',
+                'periodMovement',
+                'transactionCount',
+                'viewAllCompanies'
+            ));
         }
 
         return view('report.account_ledgerV2', compact(
@@ -1266,7 +1245,13 @@ class ReportController implements HasMiddleware
             'openingBalance',
             'closingBalance',
             'totalDebit',
-            'totalCredit'
+            'totalCredit',
+            'periodMovement',
+            'viewAllCompanies',
+            'transactionCount',
+            'printing',
+            'perPage',
+            'pageOpeningBalance'
         ));
     }
 
@@ -1665,6 +1650,21 @@ class ReportController implements HasMiddleware
             $dateIsWithinLeavePeriod = $dateString >= $leave->start_date && $dateString <= $leave->end_date;
 
             if ($dateIsWithinLeavePeriod) {
+                return $leave;
+            }
+        }
+
+        return null;
+    }
+
+    private function findApprovedLateInForDate($leaves, string $dateString)
+    {
+        foreach ($leaves as $leave) {
+            if (!$leave->exempts_late_deduction) {
+                continue;
+            }
+
+            if ($dateString >= $leave->start_date && $dateString <= $leave->end_date) {
                 return $leave;
             }
         }
