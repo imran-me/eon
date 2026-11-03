@@ -142,6 +142,9 @@ const KNOWN = [{
       p = p.ambiguous.filter((c) => said(c.name)).sort((a, b) => (a.type === 'customer' ? 0 : 1) - (b.type === 'customer' ? 0 : 1))[0] || null;
     }
     const want = p && p.name ? String(p.name).toLowerCase() : null;
+    // the agent list also fills itself a moment after the modal opens
+    for (let i = 0; i < 10 && !(($('#ts_create_agent_picker') || {}).options || []).length > 1; i++) await sleep(300);
+    for (let i = 0; i < 10 && ((($('#ts_create_agent_picker') || {}).options || []).length || 0) < 2; i++) await sleep(300);
     for (const id of ['ts_create_agent_picker', 'ts_create_customer_picker']) {
       const el = $('#' + id); if (!el || !el.options) continue;
       const o = [...el.options].find((x) => x.value && (want ? x.textContent.toLowerCase().includes(want) : slots._raw.toLowerCase().includes(x.textContent.split(' - ')[0].trim().toLowerCase())));
