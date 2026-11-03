@@ -55,3 +55,8 @@ tools/.qa-dataset.json
 # The generators in tools/kb/ ARE versioned; their output is not. Rebuild with
 #   node tools/kb/make-kb.mjs && node tools/kb/make-questions.mjs
 tools/corpus/
+
+# headless-Chrome profiles left by the print scripts, and generated exports
+**/.chrome-profile*/
+server/storage/data/report-*.csv
+scratchpad_grid.png
