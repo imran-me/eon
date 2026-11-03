@@ -118,7 +118,28 @@ function chooseOption(sel, text) {
 }
 /* Forms known exactly (read from the ERP's own Blade views): what each spoken detail is called there.
    The generic label matcher above covers every other form. */
+const COUNTRY = { মালয়েশিয়া: 'malaysia', মালয়েশিয়া: 'malaysia', সৌদি: 'saudi', দুবাই: 'emirates', আমিরাত: 'emirates', ওমান: 'oman', কাতার: 'qatar', কুয়েত: 'kuwait', বাহরাইন: 'bahrain', থাইল্যান্ড: 'thailand', তুরস্ক: 'turkey', সাইপ্রাস: 'cyprus', সিঙ্গাপুর: 'singapore', ভারত: 'india', ইন্ডিয়া: 'india', চীন: 'china', জাপান: 'japan', ইতালি: 'italy', রোমানিয়া: 'romania', পোল্যান্ড: 'poland', মাল্টা: 'malta', সার্বিয়া: 'serbia', ক্রোয়েশিয়া: 'croatia', যুক্তরাজ্য: 'kingdom', লন্ডন: 'kingdom', আমেরিকা: 'america', কানাডা: 'canada', অস্ট্রেলিয়া: 'australia', মালদ্বীপ: 'maldives', নেপাল: 'nepal', ভিয়েতনাম: 'vietnam', ইন্দোনেশিয়া: 'indonesia', জর্ডান: 'jordan', মিশর: 'egypt' };
+const VCAT = [[/ভিজিট|visit/i, 'visit'], [/ওয়ার্ক|ওয়ার্ক|কাজের|work/i, 'work'], [/উমরাহ|umrah/i, 'umrah'], [/হজ|hajj/i, 'hajj'], [/স্টুডেন্ট|ছাত্র|student/i, 'student'], [/ট্যুরিস্ট|tourist/i, 'tourist'], [/বিজনেস|business/i, 'business'], [/ট্রানজিট|transit/i, 'transit']];
 const KNOWN = [{
+  path: /\/visa\/?$/,
+  async open(w) { const b = w.document.querySelector('.create-btn'); if (b) { b.click(); await sleep(800); } },
+  apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q), raw = slots._raw.toLowerCase();
+    const sel = (el, test, what) => { if (!el) return false; const o = [...el.options].find((x) => x.value && test(x.textContent.trim().toLowerCase())); if (o) { setValue(w, el, o.value); done.push(what + ': ' + o.textContent.trim()); return true; } return false; };
+    let c = null; for (const [bn, en] of Object.entries(COUNTRY)) if (slots._raw.includes(bn)) { c = en; break; }
+    if (!c) { const el = $('#create_country_id'); const o = el && [...el.options].find((x) => x.value && x.textContent.trim().length > 3 && raw.includes(x.textContent.trim().toLowerCase())); if (o) c = o.textContent.trim().toLowerCase(); }
+    if (c) sel($('#create_country_id'), (t) => t.includes(c), 'Country');
+    let cat = null; for (const [rx, k] of VCAT) if (rx.test(slots._raw)) { cat = k; break; }
+    // the category list depends on the country — the page fills it after the country changes
+    if (cat) setTimeout(() => sel($('#create_visa_category_id'), (t) => t.includes(cat), 'Visa category'), 900), done.push('Visa category: ' + cat);
+    if (slots.name) sel($('#create_passport_holder_id'), (t) => slots.name.toLowerCase().split(/\s+/).every((p) => t.includes(p)) || t.includes(slots.name.toLowerCase()), 'Applicant');
+    if (slots.date && d.querySelector('#createModal [name=travel_date]')) { setValue(w, d.querySelector('#createModal [name=travel_date]'), slots.date); done.push('Travel date: ' + slots.date); }
+    if (slots.cost != null && $('#c_costing_price')) { setValue(w, $('#c_costing_price'), String(slots.cost)); done.push('Costing price: ' + slots.cost); }
+    if (slots.sale != null && $('#c_sale_price')) { setValue(w, $('#c_sale_price'), String(slots.sale)); done.push('Sale price: ' + slots.sale); }
+    for (const [id, what] of [['c_vendor_id', 'Vendor'], ['c_portal_id', 'Portal']]) { const el = $('#' + id); if (el && el.options) sel(el, (t) => t.length > 2 && raw.includes(t), what); }
+    return true;
+  },
+}, {
   path: /contract-flights\/dashboard/,
   async open(w) {
     const b = [...w.document.querySelectorAll('button,a')].find((x) => /add flight/i.test(x.textContent));
@@ -209,7 +230,7 @@ function fill(w, slots) {
 }
 
 /* ---------- the orders ---------- */
-const CREATE = /(নতুন|new|add|অ্যাড|এন্ট্রি|entry|তৈরি|create|বানাও|খোলো নতুন|ইস্যু করো|issue)/i;
+const CREATE = /(নতুন|new|add|অ্যাড|এন্ট্রি|entry|তৈরি|create|বানাও|খোলো নতুন|ইস্যু করো|issue|অ্যাপ্লাই|এপ্লাই|apply|আবেদন)/i;
 const EDIT = /(এডিট|edit|সংশোধন|ঠিক করো|change the|update|আপডেট)/i;
 const PRINT = /(প্রিন্ট|print)/i;
 const SAVE = /^(সেভ|save|submit|সাবমিট|জমা দাও|সংরক্ষণ)/i;
@@ -266,7 +287,8 @@ async function answer(q) {
     if (!href) return null;
   }
 
-  if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
+  if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
+  else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   const w = await openAndWait(href);
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
   if (k0 && k0.open) await k0.open(w);
