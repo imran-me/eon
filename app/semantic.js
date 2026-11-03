@@ -58,7 +58,23 @@ async function match(q) {
   return best >= THRESHOLD ? Object.assign({ score: +best.toFixed(3) }, bank.items[at]) : null;
 }
 
-const EonSemantic = { load, match, ready: () => !!(bank && embed), threshold: THRESHOLD };
+/** the nearest known question for each of the n closest *different* subjects — so a caller can
+    tell a clear match from two subjects running neck and neck, and ask which one was meant */
+async function candidates(q, n = 2) {
+  if (!bank || !embed) return [];
+  const e = (await embed(bank.prefix + q, { pooling: 'mean', normalize: true })).data, dim = bank.dim, v = bank.v;
+  const best = {};
+  for (let i = 0; i < bank.items.length; i++) {
+    let s = 0; const o = i * dim;
+    for (let j = 0; j < dim; j++) s += e[j] * v[o + j];
+    s /= 127;
+    const it = bank.items[i];
+    if (!best[it.intent] || s > best[it.intent].score) best[it.intent] = Object.assign({ score: +s.toFixed(3) }, it);
+  }
+  return Object.values(best).sort((a, b) => b.score - a.score).slice(0, n);
+}
+
+const EonSemantic = { load, match, candidates, ready: () => !!(bank && embed), threshold: THRESHOLD };
 window.EonSemantic = EonSemantic;
 setTimeout(load, 4000);
 export default EonSemantic;

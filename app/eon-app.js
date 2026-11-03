@@ -211,13 +211,18 @@ function msgHtml(m) {
   const L = langOf(m.text);
   if (m.role === 'me') return `<div class="msg me" lang="${L}">${esc(m.text)}</div>`;
   if (m.role === 'think') return `<div class="msg eon think" lang="${L}">${esc(m.text)}</div>`;
-  return `<div class="msg eon" lang="${L}">${esc(m.text)}${m.detail ? `<div class="detail" lang="${langOf(m.detail)}">${esc(m.detail)}</div>` : ''}${m.draft ? `<div class="draft" style="margin-top:8px">${esc(m.draft)}</div><div class="actions"><button class="btn sm" data-copy="${esc(m.draft)}">Copy</button><button class="btn sm ok" data-send-draft="${esc(m.draftTitle || 'draft')}">Queue to send</button></div>` : ''}${(m.actions || []).length ? `<div class="actions">${m.actions.map((a) => `<button class="btn sm" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</button>`).join('')}</div>` : ''}${m.trace ? `<div class="trace">${esc(m.trace)}</div>` : ''}</div>`;
+  return `<div class="msg eon" lang="${L}">${esc(m.text)}${m.choices ? `<div class="chips" style="margin-top:8px">${m.choices.map((c, i) => `<span class="chip" data-q="${esc(c)}">${i + 1}. ${esc(c)}</span>`).join('')}</div>` : ''}${m.detail ? `<div class="detail" lang="${langOf(m.detail)}">${esc(m.detail)}</div>` : ''}${m.draft ? `<div class="draft" style="margin-top:8px">${esc(m.draft)}</div><div class="actions"><button class="btn sm" data-copy="${esc(m.draft)}">Copy</button><button class="btn sm ok" data-send-draft="${esc(m.draftTitle || 'draft')}">Queue to send</button></div>` : ''}${(m.actions || []).length ? `<div class="actions">${m.actions.map((a) => `<button class="btn sm" data-act='${esc(JSON.stringify(a))}'>${esc(a.label)}</button>`).join('')}</div>` : ''}${m.trace ? `<div class="trace">${esc(m.trace)}</div>` : ''}</div>`;
 }
 
 /* ---------------- ask ---------------- */
 async function ask(q, { voice = false } = {}) {
   q = String(q || '').trim(); if (!q) return;
   if (state.lang === 'auto') state.lastLang = langOf(q) === 'bn' ? 'bn-BD' : 'en-US';
+  if (state.choices) {
+    const ch = state.choices; state.choices = null;
+    const pick = /^(1|১|first|the first|prothom|প্রথম|প্রথমটা|yes|ha|hya|হ্যাঁ|হুম)(?![\w\u0980-\u09FF])/i.test(q) ? 0 : /^(2|২|second|the second|ditiyo|দ্বিতীয়|দ্বিতীয়টা|পরেরটা)(?![\w\u0980-\u09FF])/i.test(q) ? 1 : -1;
+    if (pick >= 0 && ch[pick]) q = ch[pick];
+  }
   // "yes, take me there" presses the button EON just offered — it must work hands-free
   if (state.lastOffer && isAffirmative(q)) {
     const label = state.lastOffer.label || (curLang() === 'bn-BD' ? 'ওটা' : 'that');
@@ -291,12 +296,21 @@ async function ask(q, { voice = false } = {}) {
    ask that instead, and say what it was taken as so a wrong guess is visible */
 async function askByMeaning(q, voice) {
   const S = window.EonSemantic; if (!S || !S.ready()) return null;
-  let m = null; try { m = await S.match(q); } catch (e) { return null; }
-  if (!m || m.q.toLowerCase() === q.toLowerCase()) return null;
+  let c = []; try { c = await S.candidates(q, 2); } catch (e) { return null; }
+  const m = c[0]; if (!m || m.score < S.threshold || m.q.toLowerCase() === q.toLowerCase()) return null;
+  const bn = langOf(q) === 'bn' || curLang() === 'bn-BD';
+  // two subjects neck and neck, or no clear winner: ask which one — never act on a coin toss
+  if (m.score < 0.95 || (c[1] && m.score - c[1].score < 0.03)) {
+    const opts = c.filter((x) => x.score >= S.threshold).map((x) => x.q);
+    state.choices = opts;
+    const t = opts.length > 1
+      ? (bn ? `ঠিক বুঝিনি — তুমি কি “${opts[0]}” বলতে চাইছ, নাকি “${opts[1]}”?` : `I'm not sure — did you mean “${opts[0]}”, or “${opts[1]}”?`)
+      : (bn ? `তুমি কি “${opts[0]}” বলতে চাইছ?` : `Did you mean “${opts[0]}”?`);
+    return { text: t, speak: t, choices: opts, trace: `meaning match: ${c.map((x) => x.intent + ' ' + x.score).join(' vs ')} — asked` };
+  }
   try {
     const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: m.q, conversation_id: state.conv, company: co(), voice, lang: curLang() }) });
     if (!r || r.weak || !r.text) return null;
-    const bn = langOf(q) === 'bn' || curLang() === 'bn-BD';
     const lead = bn ? `বুঝেছি — “${m.q}”। ` : `I took that as “${m.q}”. `;
     return { text: lead + r.text, speak: r.speak || r.text, trace: `meaning match ${m.score} → ${m.intent} · server offline brain · tools: ${(r.tools_used || []).join(', ') || '—'}` };
   } catch (e) { return null; }
