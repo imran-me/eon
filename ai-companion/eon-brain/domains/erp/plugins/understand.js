@@ -653,7 +653,7 @@ async function step(D, q, verb, ctx) {
        posted until the boss says yes to the card it puts up. */
     if (v === 'pay') {
       if (!A) throw new Error(speakBn ? 'অ্যাকশন লেয়ারটা লোড হয়নি' : 'the action layer is not loaded');
-      const plan = await A.planPayment(slots.who, { month: slots.month, amount: slots.amount, bank: slots.account });
+      const plan = await A.planPayment(slots.who, { month: slots.month, amount: slots.amount, bank: slots.account, payerBank: slots.payerBank, reference: slots.reference });
 
       /* The ERP's mark-paid form has bank_id => required. An account is not a
          detail EON may pick on the boss's behalf — money leaves the one he
@@ -667,6 +667,15 @@ async function step(D, q, verb, ctx) {
           detail: [heldSummary('pay', slots, speakBn)].filter(Boolean).concat(names.length ? [names.join(' · ')] : []),
           awaiting: 'account',
         };
+      }
+      /* A party payment through a bank, a cheque or mobile banking: the ERP (Nov 2026)
+         wants the bank on the other side and the reference. Asked one at a time, and
+         taken as said — they are the boss's facts, there is no list to pick from. */
+      for (const [slot, label, en, bn] of [['payerBank', 'the bank or wallet on the other side', 'Which bank or wallet was it paid to?', 'কোন ব্যাংক বা ওয়ালেটে গেছে?'], ['reference', 'the transaction or cheque reference', 'What is the transaction or cheque reference?', 'ট্রানজেকশন বা চেকের রেফারেন্স নম্বর কত?']]) {
+        if (!slots[slot] && (plan.missing || []).includes(label)) {
+          convo = { verb: 'pay', slots, asked: slot, at: Date.now(), options: [], lang: speakBn ? 'bn' : 'en' };
+          return { speak: speakBn ? bn : en, detail: [heldSummary('pay', slots, speakBn)].filter(Boolean), awaiting: slot };
+        }
       }
       if (speakBn) {
         plan.lang = 'bn';

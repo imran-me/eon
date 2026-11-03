@@ -372,10 +372,14 @@ async function salarySchedule(person, month, year) {
 const PARTY_CONTROLS = [
   { id: 'pmAmount', name: 'amount', label: 'Amount (৳)', required: true },
   { id: 'pmMode', name: 'payment_method', label: 'Mode', required: true },
-  { id: 'pmBank', name: 'bank_id', label: 'Bank Account', required: false },
+  { id: 'pmBank', name: 'bank_id', label: 'Bank Account', required: true },   // required since the Nov 2026 ERP
   { id: 'pmDate', name: 'payment_date', label: 'Payment Date', required: true },
   { id: 'pmRef', name: 'reference_no', label: 'Reference No. / Cheque / TXN ID', required: false },
   { id: 'pmNotes', name: 'notes', label: 'Notes', required: false },
+  // asked for by the ERP when the money moved through a bank, a cheque or mobile banking
+  { id: 'pmPayerBank', name: 'payer_bank', label: 'Bank / wallet on the other side', required: false },
+  { id: 'pmPayerReference', name: 'payer_reference', label: 'Transaction / cheque reference', required: false },
+  { id: 'pmAllocationMode', name: 'allocation_mode', label: 'Apply to invoices', required: false },
 ];
 
 /** the party statement's payment modal, read as if it declared itself a form */
@@ -489,17 +493,28 @@ export async function planPayment(who, opts = {}) {
   const noteF = pick(f, 'notes');
   const period = opts.month ? ` (${year}-${pad2(opts.month)})` : '';
   if (noteF) values[noteF.name] = opts.note || `Payment${period} — recorded through EON`;
+  /* recordPayment (Nov 2026) also wants the time of day, says what kind of money
+     this is, and — for anything that went through a bank — whose bank and which
+     reference. The time is now; the rest is asked for, never invented. */
+  const at = new Date();
+  values.transaction_time = `${pad2(at.getHours())}:${pad2(at.getMinutes())}`;
+  values.transaction_kind = 'payment';
+  const allocF = pick(f, 'allocation_mode');
+  if (allocF) values[allocF.name] = optionFor(allocF, 'auto') || (allocF.options?.[0]?.value ?? 'auto');
+  const viaBank = ['bank_transfer', 'cheque', 'mobile_banking'].includes(String(values.payment_method || ''));
+  if (opts.payerBank) values.payer_bank = opts.payerBank;
+  if (opts.reference) values.payer_reference = opts.reference;
 
   const missing = f.filter((x) => x.required && (values[x.name] == null || values[x.name] === '')).map((x) => x.label || x.name);
+  if (viaBank && !values.payer_bank) missing.push('the bank or wallet on the other side');
+  if (viaBank && !values.payer_reference) missing.push('the transaction or cheque reference');
   const notes = [];
-  // recordPayment writes the journal only when a bank is named — say so rather than let it pass quietly
-  if (bankF && acct.value == null) notes.push('Without an account the ERP records the ledger entry but posts no journal and moves no bank balance.');
   if (acct.why) notes.push(acct.why);
 
   return {
     what: 'payment', money: true, form, values, missing, notes,
-    // recordPayment leaves bank_id optional, so a party payment is never blocked on it
-    needsAccount: false,
+    // the ERP now refuses a party payment without the company account it came from
+    needsAccount: true,
     accounts: (bankF && bankF.options) || [],
     summary: `Pay ${party.name} ৳${amount.toLocaleString('en-US')} and record it on their party statement`,
   };
