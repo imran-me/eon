@@ -175,9 +175,32 @@ function score(query, item) {
   return s;
 }
 
+/* The menu speaks English and the boss often does not: a Bangla screen word ("ড্যাশবোর্ডে",
+   "ব্যাংকের", "একাউন্টস") becomes the English word the menu uses, whatever case ending it
+   carries — matched on the word's start. Banglish needs nothing: it is already Latin. */
+const BN_SCREEN = [
+  ['ড্যাশবোর্ড', 'dashboard'], ['ড্যাসবোর্ড', 'dashboard'], ['ড্যাশ', 'dashboard'],
+  ['ব্যাংক', 'bank'], ['ব্যাঙ্ক', 'bank'], ['ট্রান্সফার', 'transfer'],
+  ['অ্যাকাউন্টস', 'accounts'], ['একাউন্টস', 'accounts'], ['অ্যাকাউন্ট', 'accounts'], ['একাউন্ট', 'accounts'], ['হিসাব', 'accounts'],
+  ['লেজার', 'ledger'], ['রিপোর্ট', 'report'], ['স্টেটমেন্ট', 'statement'], ['জার্নাল', 'journal'],
+  ['ট্রায়াল', 'trial'], ['ব্যালেন্স', 'balance'], ['ব্যালান্স', 'balance'], ['ক্যাশ', 'cash'], ['ফ্লো', 'flow'],
+  ['পেরোল', 'payroll'], ['পে-রোল', 'payroll'], ['বেতন', 'salary'], ['স্যালারি', 'salary'], ['পেস্লিপ', 'payslip'], ['পে-স্লিপ', 'payslip'],
+  ['কর্মচারী', 'employee'], ['এমপ্লয়ি', 'employee'], ['স্টাফ', 'employee'], ['হাজিরা', 'attendance'], ['অ্যাটেনডেন্স', 'attendance'], ['ছুটি', 'leave'], ['লিভ', 'leave'],
+  ['টিকিট', 'ticket'], ['টিকেট', 'ticket'], ['ভিসা', 'visa'], ['ফ্লাইট', 'flight'], ['কন্ট্রাক্ট', 'contract'], ['ফাইল', 'file'], ['পাসপোর্ট', 'passport'],
+  ['টাস্ক', 'task'], ['কাজ', 'task'], ['প্রজেক্ট', 'project'], ['প্রকল্প', 'project'], ['খরচ', 'expense'], ['এক্সপেন্স', 'expense'],
+  ['পার্টি', 'party'], ['ভেন্ডর', 'vendor'], ['ভেন্ডার', 'vendor'], ['ক্লায়েন্ট', 'client'], ['এজেন্ট', 'agent'], ['কাস্টমার', 'customer'], ['গ্রাহক', 'customer'],
+  ['ইনভয়েস', 'invoice'], ['ইনভয়েজ', 'invoice'], ['পেমেন্ট', 'payment'], ['সেটিং', 'settings'], ['ইউজার', 'user'], ['কোম্পানি', 'company'],
+  ['তালিকা', 'list'], ['লিস্ট', 'list'], ['নতুন', 'create'], ['অ্যাড', 'add'], ['অনুমোদন', 'approval'], ['বাজেট', 'budget'], ['পেটি', 'petty'],
+];
+function toEn(query) {
+  if (!/[\u0980-\u09FF]/.test(query)) return query;
+  return String(query).split(/\s+/).map((w) => { const hit = BN_SCREEN.find(([b]) => w.startsWith(b)); return hit ? hit[1] : w; }).join(' ');
+}
+
 /** the best screens for a question, menu first then every route */
 export function find(query, limit = 5) {
   if (!MAP) return [];
+  query = toEn(query);
   const expanded = expand(query);
   const routeByName = new Map();
   for (const p of MAP.pages) routeByName.set(p.name, p);

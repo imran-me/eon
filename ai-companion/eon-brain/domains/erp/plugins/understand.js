@@ -1295,13 +1295,20 @@ async function understand(q, ctx) {
   }
 
   // "where is X" / "open X" — the navigator owns the ERP's geography
-  if ((verb === 'where' || verb === 'open') && N()) {
+  /* A bare screen name ("একাউন্টস ড্যাশবোর্ড", "bank transfers") is the boss pointing at a
+     screen: go there. And a sentence that names a particular screen — the dashboard, the
+     transfers, a report — is searched whole before its subject alone, or "ব্যাংকের ড্যাশবোর্ড"
+     loses "dashboard" and lands on the bank list. */
+  const SCREEN = /dashboard|transfer|report|statement|ledger|settings|ড্যাশবোর্ড|ড্যাসবোর্ড|ট্রান্সফার|রিপোর্ট|স্টেটমেন্ট|লেজার|সেটিং/i;
+  const bare = !verb && SCREEN.test(q) && q.trim().split(/\s+/).length <= 4 && !ASKING.test(q) && !/[?？]|কত|কি |কী |কে |কেন|how|what/i.test(q);
+  const navVerb = bare ? 'open' : verb;
+  if ((navVerb === 'where' || navVerb === 'open') && N()) {
     /* `ask` is the phrase the ANSWERER wants, not a screen name — lead's is
        "pipeline", which no ERP menu is called, so "লিড কোথায় পাব" found nothing
        and fell through to the pipeline figures: an answer about the right
        subject to the wrong question. Try the subject's own name too, then the
        sentence, before giving the geography up. */
-    const keys = subj ? [subj.id, subj.id + 's', subj.ask, q] : [q];
+    const keys = subj ? (SCREEN.test(q) ? [q, subj.id, subj.id + 's', subj.ask] : [subj.id, subj.id + 's', subj.ask, q]) : [q];
     let key = null, hit = null;
     for (const k of keys) { if (!k) continue; const h = (N().find(k, 1) || [])[0]; if (h) { key = k; hit = h; break; } }
     if (hit) {
@@ -1312,10 +1319,10 @@ async function understand(q, ctx) {
          boss is told where something lives in a language he did not ask in. */
       return {
         speak: bn
-          ? (verb === 'open' ? `${hit.label || key} খুলছি — ${path}` : `${hit.label || key} আছে ${path} ঠিকানায়।`)
+          ? (navVerb === 'open' ? `${hit.label || key} খুলছি — ${path}` : `${hit.label || key} আছে ${path} ঠিকানায়।`)
           : `${hit.label || key} — ${path}`,
         detail: [], actions: [{ label: say(q, 'Open', 'খুলুন'), kind: 'erp-open', href: url }],
-        navigate: verb === 'open' ? url : null,
+        navigate: navVerb === 'open' ? url : null,
       };
     }
   }
