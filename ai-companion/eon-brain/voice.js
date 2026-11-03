@@ -151,6 +151,44 @@ function ttsUrl(text, lang) {
        + '&text=' + encodeURIComponent(text);
 }
 
+/* ------------------------------------------------------------------
+   Kokoro — an open-source neural voice (Apache-2.0, 82M parameters) that
+   runs in the browser, for English that sounds like a person rather than
+   the machine's robot. ~90 MB, fetched once in the background and kept by
+   the browser's cache; until it is ready (or if it cannot load) EON speaks
+   as before. Bangla is not among its languages, so Bangla is unchanged.
+   ------------------------------------------------------------------ */
+const KOKORO = { lib: 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm', model: 'onnx-community/Kokoro-82M-v1.0-ONNX', voice: 'af_heart', speed: 1.0 };
+let kokoro = null, kokoroLoading = null;
+function loadKokoro() {
+  if (kokoro || kokoroLoading || typeof window === 'undefined') return kokoroLoading;
+  try { if (localStorage.getItem('eon_kokoro') === 'off') return null; } catch (e) {}
+  kokoroLoading = import(/* @vite-ignore */ KOKORO.lib)
+    .then(({ KokoroTTS }) => KokoroTTS.from_pretrained(KOKORO.model, { dtype: 'q8', device: 'wasm' }))
+    .then((t) => { kokoro = t; console.info('[EON voice] Kokoro neural voice ready'); return t; })
+    .catch((e) => { console.warn('[EON voice] Kokoro unavailable, using the browser voice', e); return null; });
+  return kokoroLoading;
+}
+async function sayViaKokoro(chunks, myId) {
+  // generate the next phrase while the current one plays, so the pauses stay short
+  let pending = kokoro.generate(chunks[0], { voice: KOKORO.voice, speed: KOKORO.speed });
+  for (let i = 0; i < chunks.length; i++) {
+    let audio; try { audio = await pending; } catch (e) { return false; }
+    if (state.sayId !== myId) return false;
+    if (i + 1 < chunks.length) pending = kokoro.generate(chunks[i + 1], { voice: KOKORO.voice, speed: KOKORO.speed });
+    const url = URL.createObjectURL(audio.toBlob());
+    const ok = await new Promise((res) => {
+      const a = new SPK.Audio(url); state.audio = a;
+      a.onended = () => res(true); a.onerror = () => res(false);
+      a.play().catch(() => { setStatus('error', 'The browser blocked audio until you interact with the page — click anywhere, then ask again.'); res(false); });
+    });
+    URL.revokeObjectURL(url);
+    if (!ok || state.sayId !== myId) return false;
+  }
+  return true;
+}
+if (typeof window !== 'undefined') setTimeout(loadKokoro, 2500);
+
 function sayViaServer(text, lang, myId) {
   return new Promise((resolve) => {
     let a;
@@ -250,6 +288,18 @@ export const EonVoice = {
     const code = wantsBangla ? 'bn' : 'en';
     // no local voice for this language (or the caller wants EON's own): let the
     // server render it and simply play the audio back
+    if (code === 'en' && kokoro) {
+      this.hush();
+      const rec1 = state.rec; if (rec1) { try { rec1.stop(); } catch {} }
+      const myId = ++state.sayId;
+      state.speaking = true; setStatus('speaking');
+      return sayViaKokoro(phrases(text), myId).then((ok) => {
+        if (state.sayId === myId) state.speaking = false;
+        if (state.continuous && state.rec === rec1 && rec1) { try { rec1.start(); state.listening = true; setStatus('listening'); } catch (e) { setStatus('idle'); } }
+        else if (state.status === 'speaking') setStatus('idle');
+        return ok;
+      });
+    }
     const needServer = state.serverVoice === 'always'
       || (state.serverVoice !== 'never' && !hasVoiceFor(code));
     if (needServer) {
