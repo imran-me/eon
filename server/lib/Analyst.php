@@ -68,6 +68,7 @@ final class Analyst
             'পার্টি তালিকা ও বকেয়া' => 'agentDue', 'বাজারে পাওনা/দেনা' => 'agentDue',
             'লাভ-ক্ষতি - কন্ট্রাক্ট ফ্লাইট' => 'flightProfit', 'টিকেটিং লাভ/কমিশন' => 'ticketProfit',
             'ট্রাভেল সামারি' => 'travelSummary', 'লসের কারণ' => 'losses',
+            'রিশিডিউলের অ্যাকাউন্টস ইমপ্যাক্ট' => 'changes',
         ];
         // a statement / ledger looked at, or a follow-up on the last answer: the panel carries those
         if (in_array($intent, ['পার্টি স্টেটমেন্ট দেখা', 'ফলো-আপ (আগের উত্তরের প্রেক্ষিতে)', 'আগের উত্তর ছোট/বড় করা'], true)) return ['client_command' => $q];
@@ -418,6 +419,22 @@ final class Analyst
         $b = $neg ? implode('; ', array_map(fn($k, $v) => "$k " . self::m($v), array_keys(array_slice($neg, 0, 4, true)), array_slice($neg, 0, 4, true))) : '';
         // braces: a Bangla danda right after a variable is read by PHP as part of its name
         return self::t("Losses, {$per[2]}: by section — {$a}." . ($b ? " Tickets sold below cost — {$b}." : ''), "{$w} লস: সেকশন অনুযায়ী — {$a}।" . ($b ? " cost-এর নিচে বিক্রি হওয়া ticket — {$b}।" : ''));
+    }
+
+    /* ---------- ticket changes: what reschedules / reissues / refunds moved ---------- */
+    private static function changes(string $q, array $D): ?string
+    {
+        if (!isset($D['ticket_changes'])) return null;   // an older server: let the next layer answer
+        $per = Slots::period($q); $when = self::when($per, 'on record', 'রেকর্ডের সব');
+        [$p, $miss] = self::partyOrSay($q, $D, ['customer']); if ($miss) return $miss;
+        $l = mb_strtolower($q);
+        $kind = preg_match('/রিইস্যু|reissue/u', $l) ? 'reissue' : (preg_match('/রিফান্ড|refund/u', $l) ? 'refund' : (preg_match('/ভয়েড|void/u', $l) ? 'void' : (preg_match('/রিশিডিউল|reschedule|ডেট চেঞ্জ|date change/u', $l) ? 'reschedule' : null)));
+        $C = array_values(array_filter($D['ticket_changes'], fn($c) => self::in($c['created_at'], $per) && (!$kind || $c['kind'] === $kind) && (!$p || (string) $c['client'] === $p['name'])));
+        $label = $kind ?? self::t('ticket change', 'ticket change'); $who = $p ? $p['name'] . ' ' : '';
+        if (!$C) return self::t("No {$label}s {$who}{$when}.", "{$when} {$who}কোনো {$label} নেই।");
+        $pen = array_sum(array_map(fn($c) => (float) $c['penalty'], $C)); $fd = array_sum(array_map(fn($c) => (float) $c['fare_difference'], $C)); $fee = array_sum(array_map(fn($c) => (float) $c['service_fee'], $C)); $ref = array_sum(array_map(fn($c) => (float) $c['refund_amount'], $C));
+        return self::t(sprintf('%s%ss %s: %d — penalty %s, fare difference %s, our service fee %s%s.', $who, $label, $when, count($C), self::m($pen), self::m($fd), self::m($fee), $ref > 0 ? ', refunded ' . self::m($ref) : ''),
+            sprintf('%s %s%sটা %s — penalty %s, fare difference %s, আমাদের service fee %s%s।', $when, $who ? $who . '— ' : '', self::n(count($C)), $label, self::m($pen), self::m($fd), self::m($fee), $ref > 0 ? ', refund ' . self::m($ref) : ''));
     }
 
     /* ---------- banks: one or all ---------- */
