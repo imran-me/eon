@@ -207,7 +207,10 @@ final class Speech
 
         // 5. money — every written shape, both scripts
         $t = preg_replace_callback(
-            '/(−|-)?৳\s?([০-৯0-9][০-৯0-9.,]*)\s*(কোটি|লাখ|হাজার|Cr|L|k)?/u',
+            /* the space before a unit belongs to the unit: with no unit it stays where it
+               was, or "৳0 on" became "zero takaon"; and a Latin unit letter must end there,
+               or "৳0 Lunch" would read as a lakh */
+            '/(−|-)?৳\s?([০-৯0-9][০-৯0-9.,]*)(?:\s*(কোটি|লাখ|হাজার|Cr|L|k)(?![A-Za-z]))?/u',
             function ($m) use ($lang) {
                 $v = self::toFloat($m[2]) ?? $t;
                 $mult = ['কোটি' => 1e7, 'Cr' => 1e7, 'লাখ' => 1e5, 'L' => 1e5, 'হাজার' => 1e3, 'k' => 1e3];

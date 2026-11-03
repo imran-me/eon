@@ -1689,7 +1689,7 @@ final class Answer
                 $this->t(sprintf('Nothing has been booked as an expense in %s.', $period),
                          sprintf('%s মাসে খরচ হিসেবে কিছু বসেনি।', $period)),
                 $this->act('an expense only posts once it is approved — check whether any are still sitting pending.',
-                           'খরচ অনুমোদন হলে তবেই এন্ট্রি হয় — দেখুন কোনোটা pending পড়ে আছে কি না।')]);
+                           'খরচ অনুমোদন হলে তবেই এন্ট্রি হয় — দেখুন কোনোটা অনুমোদনের অপেক্ষায় পড়ে আছে কি না।')]);
         }
         return $this->say([
             $this->open('ok'),

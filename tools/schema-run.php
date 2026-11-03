@@ -37,6 +37,13 @@ $cases = [
     ['how many rows in ticket changes', ['ticket_changes', 'rows']],
     ['what links to passport holders', ['passport_holders', 'ticket_purchases']],
     ['পাসপোর্ট হোল্ডারের সাথে কী কী যুক্ত', ['passport_holders']],
+    // what is wrong in the data
+    ['any problems in the data?', ['journal entries', 'VISA-036']],
+    ['is our database clean', ['problems']],
+    ['ডেটায় কোনো সমস্যা আছে?', ['জার্নাল', 'VISA-036']],
+    ['are the journal entries ok? any errors', ['debits and credits']],
+    ['any problems today?', null],
+    ['is there any issue with Rabbi', null],
     // business questions — not ours
     ['how many tickets did we sell this month', null],
     ['what is our cash position', null],

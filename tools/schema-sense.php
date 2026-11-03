@@ -40,6 +40,39 @@ $fks = Db::rows($pdo, "SELECT TABLE_NAME t, COLUMN_NAME c, REFERENCED_TABLE_NAME
     WHERE TABLE_SCHEMA = ? AND REFERENCED_TABLE_NAME IS NOT NULL", [$db]);
 $fkMap = [];
 foreach ($fks as $f) $fkMap[$f['t'] . '.' . $f['c']] = $f['rt'];
+
+/* The ERP's own models say what a column points at — belongsTo(Bank::class,
+   'account_id') — which beats both a missing foreign key and a column's name
+   (transactions.account_id is a bank, not a chart-of-accounts row). */
+$modelMap = [];
+(function () use (&$modelMap) {
+    $erp = __DIR__ . '/../erp';
+    $files = array_merge(glob("$erp/app/Models/*.php") ?: [], glob("$erp/Modules/*/Models/*.php") ?: [], glob("$erp/Modules/*/*/*/Models/*.php") ?: [], glob("$erp/Modules/*/*/Models/*.php") ?: []);
+    $tableOf = [];
+    $src = [];
+    foreach ($files as $p) {
+        $code = (string) file_get_contents($p);
+        $cls = basename($p, '.php');
+        $snake = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $cls));
+        $plural = preg_match('/y$/', $snake) && !preg_match('/[aeiou]y$/', $snake) ? substr($snake, 0, -1) . 'ies' : (preg_match('/(s|x|ch|sh)$/', $snake) ? $snake . 'es' : $snake . 's');
+        $tableOf[dirname($p)][$cls] = preg_match("/protected\\s+\\\$table\\s*=\\s*['\"]([a-z0-9_]+)['\"]/", $code, $m) ? $m[1] : $plural;
+        $src[$p] = $code;
+    }
+    $main = "$erp/app/Models";
+    foreach ($src as $p => $code) {
+        $cls = basename($p, '.php'); $dir = dirname($p);
+        preg_match_all("/belongsTo\\(\\s*\\\\?(?:[A-Za-z]+\\\\)*([A-Za-z0-9]+)::class\\s*(?:,\\s*['\"]([a-z0-9_]+)['\"])?/", $code, $mm, PREG_SET_ORDER);
+        foreach ($mm as $m) {
+            /* the model beside this one first (WoodArt's Project is wa_projects), then the ERP's own */
+            $target = $tableOf[$dir][$m[1]] ?? $tableOf[$main][$m[1]] ?? null;
+            if (!$target) foreach ($tableOf as $byDir) if (isset($byDir[$m[1]])) { $target = $byDir[$m[1]]; break; }
+            if (!$target) continue;
+            $col = $m[2] ?? '';
+            if ($col === '') $col = strtolower(preg_replace('/(?<!^)[A-Z]/', '_$0', $m[1])) . '_id';
+            $modelMap[$tableOf[$dir][$cls] . '.' . $col] = $target;
+        }
+    }
+})();
 $tables = [];
 foreach ($cols as $c) $tables[$c['t']][] = $c;
 $names = array_keys($tables);
@@ -54,6 +87,7 @@ function plural(string $w): array {
 }
 /** where a *_id column points: the declared foreign key, else the table its name implies */
 function target(string $table, string $col, array $fkMap, array $names): ?string {
+    if (isset($GLOBALS['modelMap']["$table.$col"])) return $GLOBALS['modelMap']["$table.$col"];
     if (isset($fkMap["$table.$col"])) return $fkMap["$table.$col"];
     if (!preg_match('/^(.*)_id$/', $col, $m)) return null;
     $base = $m[1];
@@ -80,8 +114,15 @@ function role(array $c, string $table, array $fkMap, array $names): array {
     if (preg_match('/_id$/', $n) && preg_match('/int/', $dt)) {
         /* commentable_id beside commentable_type: the row says which table it points at */
         $stem = substr($n, 0, -3);
-        if (in_array($stem . '_type', $GLOBALS['colNames'][$table] ?? [], true)) return ['role' => 'reference', 'to' => null, 'polymorphic' => $stem . '_type'];
-        return ['role' => 'reference', 'to' => target($table, $n, $fkMap, $names)];
+        foreach ([$stem . '_type', $stem] as $sib) if ($sib !== $n && in_array($sib, $GLOBALS['colNames'][$table] ?? [], true) && $sib !== $n) {
+            if ($sib === $stem && !preg_match('/^(source|model|owner|subject|target|linked|trackable|schedulable|commentable)$/', $stem)) continue;
+            return ['role' => 'reference', 'to' => null, 'polymorphic' => $sib];
+        }
+        $to = target($table, $n, $fkMap, $names);
+        /* how sure: the database declares it, or the name says it exactly (ticket_id → tickets); anything else is a guess */
+        $base = substr($n, 0, -3);
+        $how = isset($GLOBALS['modelMap']["$table.$n"]) ? 'model' : (isset($fkMap["$table.$n"]) ? 'declared' : ($to !== null && in_array($to, [$base . 's', $base . 'es', preg_replace('/y$/', 'ies', $base)], true) ? 'name' : 'guess'));
+        return ['role' => 'reference', 'to' => $to, 'how' => $how];
     }
     if (in_array($dt, ['date', 'datetime', 'timestamp'], true)) return ['role' => 'date'];
     if ($dt === 'time') return ['role' => 'time'];
@@ -147,6 +188,33 @@ foreach ($tables as $t => $list) {
 foreach ($schema['tables'] as $t => $e) foreach ($e['columns'] as $c => $col) {
     if (($col['role'] ?? '') === 'reference' && !empty($col['to']) && isset($schema['tables'][$col['to']])) $schema['tables'][$col['to']]['referenced_by'][] = "$t.$c";
 }
+
+/* ---------- what is wrong in the data ----------
+   Counts and record ids only — never amounts, never names. Each finding is
+   something the accountant can open and fix in the ERP. */
+$health = [];
+// a link that points at a row which is no longer there
+foreach ($schema['tables'] as $t => $e) {
+    if (($e['rows'] ?? 0) === 0) continue;
+    foreach ($e['columns'] as $c => $col) {
+        $to = $col['to'] ?? null;
+        if (($col['role'] ?? '') !== 'reference' || !$to || !isset($schema['tables'][$to]) || $to === $t || ($col['how'] ?? 'guess') === 'guess') continue;
+        if (!isset($schema['tables'][$to]['columns']['id'])) continue;
+        $live = isset($e['columns']['deleted_at']) ? ' AND a.deleted_at IS NULL' : '';
+        try {
+            $r = Db::one($pdo, "SELECT COUNT(*) n, GROUP_CONCAT(a.id ORDER BY a.id SEPARATOR ',') ids FROM `$t` a LEFT JOIN `$to` b ON b.id = a.`$c` WHERE a.`$c` IS NOT NULL AND a.`$c` <> 0 AND b.id IS NULL$live");
+        } catch (Throwable $x) { continue; }
+        if ((int) $r['n'] > 0) $health[] = ['kind' => 'orphan', 'table' => $t, 'column' => $c, 'to' => $to, 'how' => $col['how'], 'rows' => (int) $r['n'], 'ids' => array_slice(array_map('intval', explode(',', (string) $r['ids'])), 0, 10)];
+    }
+}
+// a journal entry whose debits and credits do not agree — the trial balance cannot balance with one
+if (isset($schema['tables']['journal_items'], $schema['tables']['journal_entries'])) {
+    $live = isset($schema['tables']['journal_entries']['columns']['deleted_at']) ? 'WHERE e.deleted_at IS NULL' : '';
+    $rows = Db::rows($pdo, "SELECT e.id, e.reference FROM journal_entries e JOIN journal_items i ON i.journal_entry_id = e.id $live GROUP BY e.id, e.reference HAVING ROUND(SUM(i.debit) - SUM(i.credit), 2) <> 0 ORDER BY e.id LIMIT 50");
+    if ($rows) $health[] = ['kind' => 'unbalanced_journal', 'table' => 'journal_entries', 'rows' => count($rows), 'ids' => array_map(fn($r) => (int) $r['id'], $rows), 'refs' => array_values(array_filter(array_map(fn($r) => (string) $r['reference'], $rows)))];
+}
+usort($health, fn($a, $b) => ($a['kind'] === 'unbalanced_journal' ? -1 : 0) - ($b['kind'] === 'unbalanced_journal' ? -1 : 0) ?: $b['rows'] <=> $a['rows']);
+$schema['health'] = $health;
 
 @mkdir(dirname($out), 0775, true);
 file_put_contents($out, json_encode($schema, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));

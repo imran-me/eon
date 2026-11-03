@@ -56,9 +56,43 @@ final class SchemaSense
         return self::$S;
     }
 
+    /** "any problems in the data?" — what the last scan found wrong, worst first */
+    public static function health(string $q, ?string $lang = null): ?array
+    {
+        $about = preg_match('/\b(data|database|records?|entries|journals?|ledger|books?)\b|ডেটা|ডাটা|তথ্য|রেকর্ড|এন্ট্রি|জার্নাল|খাতা/iu', $q);
+        $wrong = preg_match('/\b(problems?|issues?|errors?|broken|orphan(ed)?|inconsisten\w*|integrity|quality|health|wrong|corrupt\w*|unbalanced|mismatch\w*|clean)\b|সমস্যা|গরমিল|ভুল|অমিল|ত্রুটি|গোলমাল|ঠিক আছে কি|ঠিক আছে কিনা/iu', $q);
+        if (!$about || !$wrong) return null;
+        // "how is a wrong entry corrected" is a how-to — the account book's, not a scan of the data
+        if (preg_match('/\b(how|why|when)\b|কিভাবে|কীভাবে|কেমনে|কেন|kivabe|kibhabe/iu', $q)) return null;
+        $S = self::load();
+        $H = $S['health'] ?? null;
+        if ($H === null) return null;
+        $bn = $lang === 'bn' || ($lang === null && preg_match('/\p{Bengali}/u', $q) && self::bnShare($q));
+        $asof = substr((string) ($S['generated'] ?? ''), 0, 10);
+        if (!$H) return self::out($bn ? 'শেষ যাচাইয়ে (' . self::d($asof, true) . ') ডেটায় কোনো ভাঙা সংযোগ বা গরমিল পাইনি।' : "The last check ({$asof}) found no broken links and no unbalanced entries in the data.", $bn, 'health');
+        $lines = [];
+        foreach (array_slice($H, 0, 8) as $h) {
+            if ($h['kind'] === 'unbalanced_journal') {
+                $refs = implode(', ', array_slice($h['refs'] ?? [], 0, 8));
+                $lines[] = $bn
+                    ? self::n($h['rows'], true) . "টি জার্নাল এন্ট্রিতে ডেবিট আর ক্রেডিট মেলে না ({$refs}) — এগুলো ঠিক না হলে ট্রায়াল ব্যালান্স মিলবে না"
+                    : "{$h['rows']} journal entries whose debits and credits do not agree ({$refs}) — the trial balance cannot balance until they are fixed";
+            } else {
+                $ids = implode(', ', array_slice($h['ids'], 0, 5));
+                $lines[] = $bn
+                    ? "{$h['table']}-এর " . self::n($h['rows'], true) . "টি রেকর্ড এমন {$h['to']}-কে নির্দেশ করে যেটা আর নেই ({$h['column']}; যেমন আইডি " . self::d($ids, true) . ')'
+                    : "{$h['rows']} {$h['table']} rows point at {$h['to']} that no longer exist ({$h['column']}; e.g. ids {$ids})";
+            }
+        }
+        $more = count($H) > 8 ? count($H) - 8 : 0;
+        if ($bn) return self::out('শেষ যাচাইয়ে (' . self::d($asof, true) . ') ডেটায় ' . self::n(count($H), true) . 'টি সমস্যা পেয়েছি, গুরুত্ব অনুযায়ী: ' . implode('; ', $lines) . ($more ? '; আরও ' . self::n($more, true) . 'টি' : '') . '। এগুলো হিসাবরক্ষকের দেখার জিনিস — ইআরপির নিজের ডেটা, EON-এর নয়।', true, 'health');
+        return self::out("The last check ({$asof}) found " . count($H) . ' problems in the data, worst first: ' . implode('; ', $lines) . ($more ? "; and {$more} more" : '') . '. These are for the accountant to fix in the ERP — they are in its own data, not in EON.', false, 'health');
+    }
+
     /** a question plainly about the data's shape */
     public static function strong(string $q, ?string $lang = null): ?array
     {
+        if ($h = self::health($q, $lang)) return $h;
         if (!preg_match('/\b(table|tables|column|columns|field|fields|database|schema|stored|store[sd]?|kept|saved|records?|rows?|statuses|status values|possible status|kinds of|types of|stages of|what (statuses|stages|kinds|types|methods|modes|values)|links? to|refers? to|referenc|foreign key|data ?type)\b|টেবিল|কলাম|ডাটাবেস|ডেটাবেস|ফিল্ড|কোথায় রাখা|কোথায় থাকে|কোথায় সেভ|রেকর্ড|স্ট্যাটাস কী কী|স্ট্যাটাস কি কি|কী কী অবস্থা|ধরন|যুক্ত|সংযুক্ত/iu', $q)) return null;
         return self::answer($q, $lang, 1.2);
     }
