@@ -20,7 +20,12 @@ const bank = JSON.parse(readFileSync(new URL('tools/owner-100k.json', ROOT), 'ut
 
 // deterministic stratified sample: per intent, spread across the list
 const byIntent = {}; for (const r of bank) (byIntent[r.intent] = byIntent[r.intent] || []).push(r);
-const sample = []; for (const [k, rows] of Object.entries(byIntent)) for (let i = 0; i < per; i++) sample.push(rows[Math.floor((i + 0.5) * rows.length / per)]);
+// --raw: the colloquial variants first, and speech the way a microphone hears it
+const RAW = process.argv.includes('--raw');
+const FILL = ['আচ্ছা শোনো ', 'ভাই ', 'umm ', 'এই ', 'একটু ', 'hmm ', 'আরে ', ''];
+const MIC = [[/পেমেন্ট/g, 'payment'], [/টিকেট/g, 'ticket'], [/ফ্লাইট/g, 'flight'], [/লেজার/g, 'ledger'], [/এজেন্ট/g, 'agent'], [/রিপোর্ট/g, 'report']];
+const roughen = (q, i) => { let t = q.replace(/[?？।,!]/g, '').replace(/s+/g, ' ').trim(); t = FILL[i % FILL.length] + t; if (i % 3 === 0) for (const [rx, w] of MIC) t = t.replace(rx, w); return t; };
+const sample = []; for (const [k, rows0] of Object.entries(byIntent)) { const col = rows0.filter((x) => x.variant === 'কথ্য ভেরিয়েন্ট'); const rows = RAW && col.length >= per ? col : rows0; for (let i = 0; i < per; i++) { const r = Object.assign({}, rows[Math.floor((i + 0.5) * rows.length / per)]); if (RAW) r.q = roughen(r.q, sample.length); sample.push(r); } }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function gemini(system, user) {
@@ -42,6 +47,8 @@ for (const r of sample) {
   const g = await gemini(JUDGE, `Question: ${r.q}\nIntent: ${r.intent} (${r.type})\nOwner expects action: ${r.action}\nOwner expects response like: ${r.response}\n\nAssistant did (${j.intent || '?'}): ${did}`) || { grade: 'fail', why: 'judge unavailable' };
   out.push({ id: r.id, intent: r.intent, type: r.type, module: r.module, q: r.q, eon: j.intent, did, grade: g.grade, why: g.why });
   const k = r.intent; tally[k] = tally[k] || { pass: 0, partial: 0, fail: 0 }; tally[k][g.grade] = (tally[k][g.grade] || 0) + 1;
+  process.stdout.write(`${out.length}/${sample.length} · ${g.grade} · ${r.intent} · ${r.q.slice(0, 50)}
+`);
   await sleep(1500);
 }
 const tot = { pass: 0, partial: 0, fail: 0 }; for (const x of out) tot[x.grade] = (tot[x.grade] || 0) + 1;
