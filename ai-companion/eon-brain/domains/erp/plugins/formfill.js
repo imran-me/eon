@@ -173,6 +173,7 @@ async function answer(q) {
   const wantEdit = EDIT.test(s), wantCreate = !wantEdit && CREATE.test(s) && SUBJECT.test(s);
   if (!wantEdit && !wantCreate) return null;
   const slots = Object.assign(slotsOf(raw), { _raw: raw });
+  try { await N().ready(); } catch (e) {}   // the ERP map loads lazily — a search before it arrives finds nothing
 
   let href = null, label = '';
   if (wantEdit) {
