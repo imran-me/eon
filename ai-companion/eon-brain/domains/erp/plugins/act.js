@@ -799,4 +799,5 @@ if (typeof window !== 'undefined') {
   if (window.EonApp) hook(); else window.addEventListener('eon:app-ready', hook);
 }
 
+export { latinSkeleton, banglaSkeleton, CASE_ENDING };
 export default { discover, submit, propose, confirm, planPayment };
