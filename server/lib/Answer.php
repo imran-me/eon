@@ -1476,29 +1476,32 @@ final class Answer
         $mood = $ov > 0 ? ($ov > $total * 0.5 ? 'bad' : 'warn') : 'good';
         $party = $ag['by_party'][0] ?? null;
         $oldest = $ag['oldest'] ?? null;
+        $noName = $this->t('a party with no name on record', 'নাম ছাড়া একটি party');
+        if ($party && trim((string) ($party['party_name'] ?? '')) === '') $party['party_name'] = $noName;
+        if ($oldest && trim((string) ($oldest['party'] ?? '')) === '') $oldest['party'] = $noName;
 
         $head = $isAr
             ? $this->t(sprintf('%s is owed to you, %s of it already past its date.', $this->m($total), $this->m($ov)),
-                       sprintf('আপনার পাওনা %s, তার %s ইতিমধ্যে তারিখ পেরিয়েছে।', $this->m($total), $this->m($ov)))
+                       sprintf('আপনার মোট receivable %s — এর মধ্যে %s already overdue।', $this->m($total), $this->m($ov)))
             : $this->t(sprintf('You owe %s, and %s of it is already overdue.', $this->m($total), $this->m($ov)),
-                       sprintf('আপনার দেনা %s, তার %s ইতিমধ্যে বকেয়া।', $this->m($total), $this->m($ov)));
+                       sprintf('আপনার মোট payable %s — এর মধ্যে %s overdue।', $this->m($total), $this->m($ov)));
 
         $who = $party
             ? ($isAr
                 ? $this->t(sprintf('%s owes the most — %s across %s %s.', (string) $party['party_name'], $this->m($this->f($party['due'])), $this->num($party['count']), Phrase::plural((int) $party['count'], 'item', 'items')),
-                           sprintf('সবচেয়ে বেশি পাওনা %s-এর কাছে — %s, %s টা বিষয়ে।', (string) $party['party_name'], $this->m($this->f($party['due'])), $this->num($party['count'])))
+                           sprintf('সবচেয়ে বেশি বাকি %s-এর কাছে — %s, মোট %sটা invoice।', (string) $party['party_name'], $this->m($this->f($party['due'])), $this->num($party['count'])))
                 : $this->t(sprintf('The largest is %s at %s.', (string) $party['party_name'], $this->m($this->f($party['due']))),
-                           sprintf('সবচেয়ে বড় দেনা %s-কে, %s।', (string) $party['party_name'], $this->m($this->f($party['due'])))))
+                           sprintf('সবচেয়ে বড় payable %s-এর, %s।', (string) $party['party_name'], $this->m($this->f($party['due'])))))
             : '';
 
         $old = $oldest
             ? $this->t(sprintf('The oldest is %s at %s days past due (%s).', (string) $oldest['party'], $this->num($oldest['days_overdue']), (string) $oldest['ref']),
-                       sprintf('সবচেয়ে পুরনোটা %s — %s দিন পার (%s)।', (string) $oldest['party'], $this->num($oldest['days_overdue']), (string) $oldest['ref']))
+                       sprintf('সবচেয়ে পুরনো invoice %s-এর — %s দিন ধরে overdue (%s)।', (string) $oldest['party'], $this->num($oldest['days_overdue']), (string) $oldest['ref']))
             : '';
 
         $soon = $this->f($ag['due_in_7_days']) > 0
             ? $this->t(sprintf('%s falls due in the next seven days.', $this->m($this->f($ag['due_in_7_days']))),
-                       sprintf('সামনের সাত দিনে দিতে হবে %s।', $this->m($this->f($ag['due_in_7_days']))))
+                       sprintf('সামনের সাত দিনে due হবে %s।', $this->m($this->f($ag['due_in_7_days']))))
             : '';
 
         // The invoices and the party ledger disagree when an advance was taken but never
@@ -1512,9 +1515,9 @@ final class Answer
                 sprintf('Careful with that figure: the party ledger only supports %s. %s shows %s on the invoice but the ledger has them %s — %s.',
                     $this->m($this->f($ag['ledger_receivable'] ?? 0)), (string) $x['party'], $this->m($this->f($x['invoiced_open'] ?? 0)),
                     $bal < 0 ? 'in credit ' . $this->m(abs($bal)) : 'at ' . $this->m($bal), (string) $x['reason']),
-                sprintf('ওই অঙ্কটা একটু সাবধানে দেখুন: পার্টি খাতা সমর্থন করে মাত্র %s। %s-এর বিলে %s দেখালেও খাতায় তিনি %s — অগ্রিম নেওয়া হয়েছে, বিলে বসানো হয়নি।',
+                sprintf('তবে এই figure-টা একটু যাচাই করে নিন: party ledger অনুযায়ী আসলে %s। %s-এর invoice-এ %s due দেখালেও ledger-এ উনার %s — advance নেওয়া হয়েছে, কিন্তু invoice-এ adjust করা হয়নি।',
                     $this->m($this->f($ag['ledger_receivable'] ?? 0)), (string) $x['party'], $this->m($this->f($x['invoiced_open'] ?? 0)),
-                    $bal < 0 ? $this->m(abs($bal)) . ' জমা আছেন' : $this->m($bal) . ' বাকি')
+                    $bal < 0 ? $this->m(abs($bal)) . ' advance জমা আছে' : $this->m($bal) . ' due')
             );
         }
 

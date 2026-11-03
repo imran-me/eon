@@ -40,6 +40,7 @@ if (is_file(EON_ROOT . '/lib/AccountsBook.php')) require_once EON_ROOT . '/lib/A
 if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insight.php';
 if (is_file(EON_ROOT . '/lib/Reason.php')) require_once EON_ROOT . '/lib/Reason.php';    // why, as opposed to what  // aging, runway, forecast, anomalies, comparisons
 if (is_file(EON_ROOT . '/lib/Persona.php')) require_once EON_ROOT . '/lib/Persona.php';  // the warmth a person adds when speaking
+if (is_file(EON_ROOT . '/lib/Natural.php')) require_once EON_ROOT . '/lib/Natural.php';  // Bangla the way an office speaks it
 if (is_file(EON_ROOT . '/lib/Speech.php')) require_once EON_ROOT . '/lib/Speech.php';   // written answers turned into spoken words
 if (is_file(EON_ROOT . '/lib/Tts.php')) require_once EON_ROOT . '/lib/Tts.php';      // and rendered to audio when the machine has no voice
 if (is_file(EON_ROOT . '/lib/Answer.php')) require_once EON_ROOT . '/lib/Answer.php';   // the offline voice, in the boss's language

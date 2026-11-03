@@ -72,6 +72,8 @@ TXT;
         if (!$out) { $out = self::askOffline($question, $D, $company, $tools, $lang); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
         Memory::addMessage($conv['id'], 'assistant', $out['text'], ['mode' => $out['mode'], 'tools' => $out['tools_used'] ?? []]);
         $out['conversation_id'] = $conv['id'];
+        // every Bangla answer leaves in the Bangla an office speaks (Natural, app/bn-natural.json)
+        if (class_exists('Natural')) foreach (['text', 'speak'] as $k) if (isset($out[$k]) && is_string($out[$k])) $out[$k] = Natural::bn($out[$k]);
         return $out;
     }
 
