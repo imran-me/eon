@@ -188,7 +188,7 @@ function rAsk() {
   return `<div class="card"><h3>${title} <span class="spacer"></span><span class="hint">${hint}</span></h3>
     <div class="chat" id="chat" role="log" aria-live="polite" aria-relevant="additions text" aria-label="Conversation with EON">${state.messages.map(msgHtml).join('') || '<div class="msg eon">Ask me anything about the business — by voice or by typing. Try “brief”, “who owes us money”, “who is absent today”, “payroll”, “evaluate Afiqur Rahman”, “forecast the next quarter”, “draft a payment reminder”, “what is 2210”.</div>'}</div>
     <div class="askbar"><button class="btn mic" id="btnMic2" title="Talk" aria-label="Ask by voice"><span aria-hidden="true">🎙</span></button><input id="askInput" placeholder="Ask EON… (Enter to send)" aria-label="Ask EON a question" autocomplete="off" enterkeyhint="send"><button class="btn primary" id="btnAsk">Ask</button></div>
-    <div class="ask-options" style="margin-top:10px"><div class="mode-buttons"><button class="chip mode-button" id="convMode" type="button" aria-pressed="${state.voiceMode}" title="Toggle continuous microphone listening">🎙 <span class="mode-label">Conversation ${state.voiceMode ? 'On' : 'Off'}</span></button><button class="chip mode-button" id="langChip" type="button" title="Switch answer language">🌐 <span class="mode-label">${state.lang === 'auto' ? 'Auto · বাংলা + English' : state.lang === 'bn-BD' ? 'বাংলা' : 'English'}</span></button><button class="chip mode-button" id="muteChip" type="button" aria-pressed="${localStorage.getItem('eon_mute') !== '1'}" title="Voice on reads EON replies aloud. Select to mute or unmute."><span aria-hidden="true">${localStorage.getItem('eon_mute') === '1' ? '🔇' : '🔊'}</span><span class="mode-label">${localStorage.getItem('eon_mute') === '1' ? 'Muted' : 'Voice on'}</span></button></div><details class="quick-asks" ${window.EON_DOCK ? '' : 'open'}><summary>Suggested questions</summary><div class="chips">${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></details></div></div>`;
+    <div class="ask-options" style="margin-top:10px"><div class="mode-buttons"><button class="chip mode-button" id="convMode" type="button" aria-pressed="${state.voiceMode}" title="Toggle continuous microphone listening">🎙 <span class="mode-label">Conversation ${state.voiceMode ? 'On' : 'Off'}</span></button><button class="chip mode-button" id="langChip" type="button" title="Switch answer language">🌐 <span class="mode-label">${state.lang === 'auto' ? 'Auto · বাংলা + English' : state.lang === 'bn-BD' ? 'বাংলা' : 'English'}</span></button><button class="chip mode-button" id="whisperChip" type="button" aria-pressed="${!!(window.EonWhisper && window.EonWhisper.on())}" title="Whisper: one open-source model hears বাংলা, English and mixed speech (≈250 MB, downloaded once)">🎧 <span class="mode-label">Whisper ${window.EonWhisper && window.EonWhisper.on() ? (window.EonWhisper.ready() ? 'on' : 'loading…') : 'off'}</span></button><button class="chip mode-button" id="muteChip" type="button" aria-pressed="${localStorage.getItem('eon_mute') !== '1'}" title="Voice on reads EON replies aloud. Select to mute or unmute."><span aria-hidden="true">${localStorage.getItem('eon_mute') === '1' ? '🔇' : '🔊'}</span><span class="mode-label">${localStorage.getItem('eon_mute') === '1' ? 'Muted' : 'Voice on'}</span></button></div><details class="quick-asks" ${window.EON_DOCK ? '' : 'open'}><summary>Suggested questions</summary><div class="chips">${['Brief', 'What should I focus on?', 'Approvals', 'Cash position', 'Who owes us money?', 'Payroll', 'Who came late?', 'Pipeline', 'Overdue tasks', 'Forecast next quarter', 'Any anomalies?', 'Draft a payment reminder', 'How is late deduction calculated?'].map((q) => `<span class="chip" data-q="${esc(q)}">${esc(q)}</span>`).join('')}</div></details></div></div>`;
 }
 /** which language is this text in? assistive tech needs to be told, per message */
 const langOf = (t) => (/[\u0980-\u09FF]/.test(String(t || '')) ? 'bn' : 'en');
@@ -260,8 +260,9 @@ async function ask(q, { voice = false } = {}) {
   // waited for it before the local brain replied. health.php has already said whether
   // this browser is authenticated — believe it and go straight to the brain.
   if (!out && e.serverOk && e.authed) {
-    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
+    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { weak: !!r.weak, text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
+    if (out && out.weak) out = (await askByMeaning(q, voice)) || out;
   }
   /* No server answer coming (signed out, or the server refused): the thirteen registered
      domains are then the best brain in the room, and they were being thrown away unless
@@ -285,6 +286,20 @@ async function ask(q, { voice = false } = {}) {
   }
   state.messages.pop(); const reply = Object.assign({ role: 'eon' }, out); state.messages.push(reply); rememberOffer(reply); paintChat();
   speakAnswer(out.speak, { voice });
+}
+/* EON only half-understood: find the question it knows that means the same (app/semantic.js),
+   ask that instead, and say what it was taken as so a wrong guess is visible */
+async function askByMeaning(q, voice) {
+  const S = window.EonSemantic; if (!S || !S.ready()) return null;
+  let m = null; try { m = await S.match(q); } catch (e) { return null; }
+  if (!m || m.q.toLowerCase() === q.toLowerCase()) return null;
+  try {
+    const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: m.q, conversation_id: state.conv, company: co(), voice, lang: curLang() }) });
+    if (!r || r.weak || !r.text) return null;
+    const bn = langOf(q) === 'bn' || curLang() === 'bn-BD';
+    const lead = bn ? `বুঝেছি — “${m.q}”। ` : `I took that as “${m.q}”. `;
+    return { text: lead + r.text, speak: r.speak || r.text, trace: `meaning match ${m.score} → ${m.intent} · server offline brain · tools: ${(r.tools_used || []).join(', ') || '—'}` };
+  } catch (e) { return null; }
 }
 function rememberOffer(msg) {
   const acts = (msg && msg.actions) || [];
@@ -317,12 +332,21 @@ function wire() {
   const m2 = $('#btnMic2'); if (m2) m2.onclick = () => toggleMic();
   const cm = $('#convMode'); if (cm) cm.onclick = () => { state.voiceMode = !state.voiceMode; cm.setAttribute('aria-pressed', String(state.voiceMode)); cm.classList.toggle('is-on', state.voiceMode); const label = cm.querySelector('.mode-label'); if (label) label.textContent = `Conversation ${state.voiceMode ? 'On' : 'Off'}`; if (state.voiceMode) { window.EonVoice.wakeWord(true); window.EonVoice.listen({ continuous: true }); toast('Conversation mode on — say “EON, …”'); } else { window.EonVoice.stop(); toast('Conversation mode off.'); } };
   const lc = $('#langChip'); if (lc) lc.onclick = () => { setLang(state.lang === 'auto' ? 'bn-BD' : state.lang === 'bn-BD' ? 'en-US' : 'auto'); };
+  const wc = $('#whisperChip'); if (wc) wc.onclick = () => { const W = window.EonWhisper; if (!W) return; const on = !W.on(); W.set(on); render(); if (on) { toast('Whisper is downloading (≈250 MB, once) — the usual microphone works until it is ready.', 6000); W.load().then((ok) => { render(); toast(ok ? 'Whisper ready — বাংলা, English, Banglish.' : 'Whisper could not load; using the usual microphone.'); }); } };
   const mc = $('#muteChip'); if (mc) mc.onclick = () => { const on = localStorage.getItem('eon_mute') !== '1'; localStorage.setItem('eon_mute', on ? '1' : '0'); window.EonVoice.mute(on); render(); };
 }
 function toggleMic() {
   const V = window.EonVoice; if (!V) return;
   // EON renders Bangla itself — this machine has no Bengali voice and most do not
   try { V.setTts(server() + '/tts.php'); } catch (e) {}
+  const W = window.EonWhisper;
+  if (W && W.on() && W.ready()) {
+    const h = () => $('#heard');
+    if (!W.recording()) { W.start().then(() => { setMic(true); if (h()) h().textContent = '🎧 listening… tap the mic again when done'; }).catch((e) => toast('Microphone: ' + e.message)); return; }
+    setMic(false); if (h()) h().textContent = '🎧 understanding…';
+    W.stop().then((text) => { if (h()) h().textContent = text ? '🎧 ' + text : ''; if (text) ask(text, { voice: true }); }).catch((e) => toast('Whisper: ' + e.message));
+    return;
+  }
   if (!V.available().stt) { toast('Voice input needs Chrome or Edge with a microphone.'); return; }
   if (V.status() === 'listening') V.stop(); else V.listen({ continuous: false });
 }

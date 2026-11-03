@@ -235,8 +235,8 @@ TXT;
            `Answers` ends in a bare apology. Returning the older layer first cost
            four "how is X calculated" cases, which had been answered by that menu
            for months and came back as "I did not catch that" instead. */
-        if ($weak !== null) return $weak;
-        if ($answers !== null) return $answers;
+        if ($weak !== null) return $weak + ['weak' => true];   // the browser may try a meaning match before settling for it
+        if ($answers !== null) return $answers + ['weak' => true];
 
         return self::askOfflineRegex($q, $D, $company, $tools, true);
     }
