@@ -28,6 +28,8 @@ final class Analyst
     private static function t(string $en, string $bn): string { return self::$bn ? $bn : $en; }
     private static function m(float $v): string { return Phrase::money($v, self::$bn ? 'bn' : 'en'); }
     private static function n($v): string { return Phrase::n($v, self::$bn ? 'bn' : 'en'); }
+    /** EPAL GROUP and EPAL TRAVELS are the main businesses (owner, 2026-11-04): 0 and 1, everyone else 2 */
+    private static function rankCo(string $name): int { $n = strtoupper($name); return str_contains($n, 'GROUP') ? 0 : (str_contains($n, 'TRAVEL') ? 1 : 2); }
     private static function in(?string $d, ?array $p): bool { return $p === null || ($d !== null && substr($d, 0, 10) >= $p[0] && substr($d, 0, 10) <= $p[1]); }
     private static function when(?array $p, string $defEn, string $defBn): string { return $p ? (self::$bn ? Phrase::bnDigits($p[3]) : $p[2]) : self::t($defEn, $defBn); }
 
@@ -144,11 +146,19 @@ final class Analyst
         if ($cat) $rows = array_values(array_filter($rows, fn($e) => $e['category'] === $cat));
         $sum = array_sum(array_map(fn($e) => (float) $e['amount'], $rows));
         $who = ($co ? $co['name'] . ' ' : '') . ($cat ? "($cat) " : '');
+        // across all companies, the main two are named on their own first
+        $main = '';
+        if (!$co) {
+            $cn = []; foreach ($D['companies'] ?? [] as $c) $cn[$c['id']] = (string) $c['name'];
+            $part = []; foreach ($rows as $e) { $nm = $cn[$e['company_id']] ?? ''; if (self::rankCo($nm) < 2) $part[$nm] = ($part[$nm] ?? 0) + (float) $e['amount']; }
+            uksort($part, fn($a, $b) => self::rankCo($a) <=> self::rankCo($b));
+            if ($part) $main = ' ' . self::t('Of it — ', 'এর মধ্যে — ') . implode('; ', array_map(fn($k, $v) => "$k " . self::m($v), array_keys($part), $part)) . self::t('.', '।');
+        }
         if (!$rows) return self::t("No expenses {$who}recorded {$per[2]}.", "{$per[3]} {$who}কোনো খরচ এন্ট্রি নেই।");
         $by = []; foreach ($rows as $e) $by[(string) ($e['category'] ?: '—')] = ($by[(string) ($e['category'] ?: '—')] ?? 0) + (float) $e['amount']; arsort($by);
         $parts = []; foreach (array_slice($by, 0, 4, true) as $k => $v) $parts[] = "$k " . self::m($v);
-        return self::t(sprintf('%s%s spending: %s across %d entries. Largest: %s.', ucfirst($per[2]) . ' ', $who, self::m($sum), count($rows), implode('; ', $parts)),
-            sprintf('%s %sখরচ হয়েছে %s — %sটা এন্ট্রি। বড় খাত: %s।', $per[3], $who, self::m($sum), self::n(count($rows)), implode('; ', $parts)));
+        return self::t(sprintf('%s%s spending: %s across %d entries.%s Largest: %s.', ucfirst($per[2]) . ' ', $who, self::m($sum), count($rows), $main, implode('; ', $parts)),
+            sprintf('%s %sখরচ হয়েছে %s — %sটা এন্ট্রি।%s বড় খাত: %s।', Phrase::bnDigits($per[3]), $who, self::m($sum), self::n(count($rows)), $main, implode('; ', $parts)));
     }
 
     /* ---------- profit by section (company) from the journal ---------- */
@@ -167,7 +177,8 @@ final class Analyst
                 elseif (str_contains($ty, 'expense') || str_contains($ty, 'cost')) $pl[$k]['out'] = ($pl[$k]['out'] ?? 0) + (float) $it['debit'] - (float) $it['credit']; }
         }
         if (!$pl) return self::t("Nothing is posted to the journal {$per[2]}" . ($co ? " for {$co['name']}" : '') . '.', "{$per[3]} " . ($co ? "{$co['name']}-এর " : '') . 'journal-এ কোনো আয়-ব্যয় পোস্ট হয়নি।');
-        uasort($pl, fn($x, $y) => (($y['in'] ?? 0) - ($y['out'] ?? 0)) <=> (($x['in'] ?? 0) - ($x['out'] ?? 0)));
+        // the owner's main businesses lead (EPAL GROUP, EPAL TRAVELS); the rest by profit
+        uksort($pl, fn($x, $y) => [self::rankCo($x), (($pl[$y]['in'] ?? 0) - ($pl[$y]['out'] ?? 0))] <=> [self::rankCo($y), (($pl[$x]['in'] ?? 0) - ($pl[$x]['out'] ?? 0))]);
         $parts = []; foreach ($pl as $k => $v) $parts[] = $k . ': ' . self::t('income ', 'আয় ') . self::m($v['in'] ?? 0) . ', ' . self::t('profit ', 'লাভ ') . self::m(($v['in'] ?? 0) - ($v['out'] ?? 0));
         return self::t(ucfirst($per[2]) . ' by section — ' . implode('; ', array_slice($parts, 0, 6)) . '.', $per[3] . ' সেকশনভিত্তিক — ' . implode('; ', array_slice($parts, 0, 6)) . '।');
     }
