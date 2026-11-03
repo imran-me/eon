@@ -179,7 +179,8 @@ TXT;
             try {
                 // the exact shapes Ops knows (a wallet's balance, salary still to pay, flight money due) beat any guess
                 if (class_exists('Ops') && ($o = Ops::answer($q, $D))) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null] + (isset($o['navigate_path']) ? ['navigate_path' => $o['navigate_path']] : []);
-                $rk = IntentModel::rank($q, 2);
+                $shape = Analyst::shape($q);
+                $rk = $shape ? [['intent' => $shape, 'score' => 0, 'margin' => INF]] : IntentModel::rank($q, 2);
                 if ($rk && $rk[0]['margin'] >= IntentModel::confidentMargin()) {
                     $bnQ = (bool) (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno|dao|lav|khoroch)\b/i', $q) >= 1);
                     $a = Analyst::handle($rk[0]['intent'], $q, $D, $bnQ);

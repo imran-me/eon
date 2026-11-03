@@ -32,6 +32,18 @@ final class Analyst
     private static function when(?array $p, string $defEn, string $defBn): string { return $p ? (self::$bn ? Phrase::bnDigits($p[3]) : $p[2]) : self::t($defEn, $defBn); }
 
     /** ['text'=>…] or ['client_command'=>…] or null (not handled — let the next layer try) */
+    /** an intent the sentence's own shape makes certain — a PNR, the word voucher, collection, payroll — or null */
+    public static function shape(string $q): ?string
+    {
+        $l = mb_strtolower($q);
+        if ((preg_match('/\b(?=[a-z0-9]*\d)(?=[a-z0-9]*[a-z])[a-z0-9]{6}\b/i', $q) || preg_match('/\b\d{3}-?\d{10}\b/', $q))
+            && preg_match('/টিকেট|টিকিট|ticket|pnr|তথ্য|দেখাও|info/u', $l) && !preg_match('/রিফান্ড|refund|রিইস্যু|reissue|void|ভয়েড|ক্যান্সেল|cancel|রিশিডিউল|reschedule/u', $l)) return 'টিকেট খোঁজা';
+        if (preg_match('/ভাউচার|voucher/u', $l) && !preg_match('/এন্ট্রি দাও|entry dao|বানাও|করো/u', $l)) return 'ভাউচার/জার্নাল খোঁজা';
+        if (preg_match('/কালেকশন|collection|টাকা আসছে|পেমেন্ট গেছে|ক্যাশ ফ্লো|cash ?flow/u', $l)) return 'ক্যাশ ব্যালেন্স ও ক্যাশ ফ্লো';
+        if (preg_match('/পে-?রোল|পেরোল|payroll/u', $l) && !preg_match('/প্রসেস|process|পাঠাও|send/u', $l)) return 'বেতন জানা';
+        return null;
+    }
+
     public static function handle(string $intent, string $q, array $D, bool $bn): ?array
     {
         self::$bn = $bn;
@@ -39,13 +51,21 @@ final class Analyst
         $map = [
             'এজেন্টভিত্তিক লাভ' => 'agentProfit', 'এজেন্ট অ্যানালিটিক্স' => 'agentProfit',
             'ফ্লাইট কাউন্ট - এজেন্টভিত্তিক' => 'agentFlights',
-            'খরচ জানা' => 'expenses', 'ক্যাশ/ব্যাংক' => null,
+            'খরচ জানা' => 'expenses',
             'সেকশনভিত্তিক লাভ' => 'sectionProfit', 'দৈনিক/সময়ভিত্তিক লাভ' => 'sectionProfit', 'লাভজনকতা তুলনা' => 'sectionProfit', 'সেকশন তুলনা ও র‍্যাংকিং' => 'sectionProfit', 'ট্রেন্ড ও তুলনা' => 'sectionProfit',
             'এজেন্ট ব্যালেন্স/ডিউ' => 'agentDue', 'ডিউ/বকেয়া' => 'agentDue', 'ট্রাভেল অ্যাকাউন্টস' => 'agentDue',
             'ভেন্ডর পেয়েবল' => 'vendor', 'ভেন্ডরভিত্তিক খরচ/লাভ' => 'vendor',
             'টিকেট কাউন্ট/লিস্ট' => 'tickets',
             'ফ্লাইট লিস্ট - এয়ারলাইন/রুট' => 'flights', 'ফ্লাইট লিস্ট - সময়ভিত্তিক' => 'flights', 'ক্যান্সেলড ফ্লাইট কাউন্ট' => 'flights', 'ফ্লাইট ওপেন/খোঁজা' => 'flights', 'সিট ইনভেন্টরি' => 'flights',
             'ব্যাংক ব্যালেন্স' => 'banks',
+            'বেতন জানা' => 'salary', 'কর্মী/HR' => 'salary',
+            'ভিসা স্ট্যাটাস' => 'visa', 'ভিসা কাউন্ট/অ্যানালিটিক্স' => 'visa',
+            'ফাইল খোঁজা/স্ট্যাটাস' => 'files', 'ফাইল কাউন্ট/অ্যানালিটিক্স' => 'files',
+            'ক্যাশ ব্যালেন্স ও ক্যাশ ফ্লো' => 'cashflow', 'ক্যাশ/ব্যাংক' => 'cashflow',
+            'ভাউচার/জার্নাল খোঁজা' => 'vouchers', 'জার্নাল/ভাউচার' => 'vouchers',
+            'টিকেট খোঁজা' => 'ticketFind',
+            'লিড/ক্লায়েন্ট' => 'leads', 'অপারেশন স্ট্যাটাস' => 'projects', 'রিস্ক অ্যানালাইসিস' => 'projects',
+            'পার্টি তালিকা ও বকেয়া' => 'agentDue', 'বাজারে পাওনা/দেনা' => 'agentDue',
         ];
         $h = $map[$intent] ?? null;
         if (!$h) return null;
@@ -201,6 +221,131 @@ final class Analyst
         $list = implode('; ', array_map(fn($f) => $f['flight_number'] . ' ' . substr((string) $f['departure_at'], 0, 16) . ' (' . (int) $f['seats_sold'] . '/' . (int) $f['total_seats'] . ')', array_slice($F, 0, 8)));
         return self::t(sprintf('%d contract flights %s — %d of %d seats sold (%d unsold): %s.', count($F), $when, $sold, $seats, $seats - $sold, $list),
             sprintf('%s %sটা contract flight — %sটা seat-এর মধ্যে %sটা বিক্রি, %sটা unsold: %s।', $when, self::n(count($F)), self::n($seats), self::n($sold), self::n($seats - $sold), $list));
+    }
+
+    /* ---------- a person's salary, or the month's payroll ---------- */
+    private static function salary(string $q, array $D): ?string
+    {
+        if (class_exists('Ops') && ($o = Ops::answer($q, $D, self::$bn ? 'bn' : 'en'))) return $o['text'];
+        // the person named — among staff who actually draw a salary; two of the same name are asked about, never guessed
+        $paid = []; foreach ($D['payroll'] ?? [] as $r) $paid[(int) $r['user_id']] = true;
+        $emp = null; $hits = [];
+        foreach (preg_split('/[\s,?।!]+/u', $q) ?: [] as $w) {
+            $w = preg_replace('/(দের|য়ের|এর|ের|কে|র)$/u', '', $w) ?? $w; $k = Grammar::skeleton($w); if (mb_strlen($k) < 3) continue;
+            foreach ($D['employees'] ?? [] as $e) {
+                if (($e['status'] ?? '') !== 'active' || (!isset($paid[(int) $e['id']]) && (float) $e['salary'] <= 0)) continue;
+                foreach (preg_split('/\s+/', (string) $e['name']) ?: [] as $part) if (Grammar::skeleton($part) === $k) { $hits[$e['id']] = $e; break; }
+            }
+            if ($hits) break;
+        }
+        if (count($hits) > 1) return self::t('Which one — ' . implode(', or ', array_map(fn($e) => $e['name'], $hits)) . '?', 'কার কথা বলছেন — ' . implode(', নাকি ', array_map(fn($e) => $e['name'], $hits)) . '?');
+        if ($hits) $emp = array_values($hits)[0];
+        $rows = $D['payroll'] ?? []; if (!$rows) return null;
+        $months = array_unique(array_map(fn($r) => (string) $r['month_key'], $rows)); rsort($months); $mk = $months[0];
+        if ($emp) {
+            $mine = array_values(array_filter($rows, fn($r) => (int) $r['user_id'] === (int) $emp['id'])); usort($mine, fn($a, $b) => strcmp((string) $b['month_key'], (string) $a['month_key']));
+            if (!$mine) return self::t("{$emp['name']}'s monthly salary is " . self::m((float) $emp['salary']) . '; no payslip yet.', "{$emp['name']}-এর মাসিক বেতন " . self::m((float) $emp['salary']) . '; এখনো কোনো payslip নেই।');
+            $r = $mine[0]; $mon = Phrase::monthName((string) $r['month_key'], self::$bn ? 'bn' : 'en');
+            return self::t(sprintf('%s: %s — gross %s, deductions %s, net %s (%s).', $emp['name'], $mon, self::m((float) $r['gross_salary']), self::m((float) $r['total_deductions']), self::m((float) $r['net_salary']), $r['status']),
+                sprintf('%s — %s: gross %s, কাটা %s, net %s (%s)।', $emp['name'], $mon, self::m((float) $r['gross_salary']), self::m((float) $r['total_deductions']), self::m((float) $r['net_salary']), strtolower((string) $r['status']) === 'paid' ? 'পরিশোধিত' : 'বাকি'));
+        }
+        $cur = array_filter($rows, fn($r) => $r['month_key'] === $mk);
+        $g = array_sum(array_map(fn($r) => (float) $r['gross_salary'], $cur)); $n = array_sum(array_map(fn($r) => (float) $r['net_salary'], $cur)); $d = array_sum(array_map(fn($r) => (float) $r['total_deductions'], $cur));
+        $mon = Phrase::monthName($mk, self::$bn ? 'bn' : 'en');
+        return self::t(sprintf('%s payroll: %d payslips, gross %s, deductions %s, net %s.', $mon, count($cur), self::m($g), self::m($d), self::m($n)), sprintf('%s-এর payroll: %sটা payslip, gross %s, কাটা %s, net %s।', $mon, self::n(count($cur)), self::m($g), self::m($d), self::m($n)));
+    }
+
+    /* ---------- visas: one applicant's, or counts ---------- */
+    private static function visa(string $q, array $D): ?string
+    {
+        $V = $D['visa_processes'] ?? []; if (!$V) return null;
+        $per = Slots::period($q);
+        foreach ($V as $v) { $k = Grammar::skeleton((string) $v['applicant']); if (mb_strlen($k) >= 4 && str_contains(Grammar::skeleton($q), $k))
+            return self::t(sprintf('%s — %s %s visa: %s (%s)%s.', $v['applicant'], $v['country'], $v['visa_category'], $v['status'], $v['stage'] ?? '', $v['travel_date'] ? ', travel ' . $v['travel_date'] : ''),
+                sprintf('%s — %s %s visa: %s (%s)%s।', $v['applicant'], $v['country'], $v['visa_category'], $v['status'], $v['stage'] ?? '', $v['travel_date'] ? ', যাত্রা ' . Phrase::bnDigits((string) $v['travel_date']) : '')); }
+        $st = []; foreach ($V as $v) $st[(string) ($v['status'] ?: '—')] = ($st[(string) ($v['status'] ?: '—')] ?? 0) + 1; arsort($st);
+        $parts = []; foreach ($st as $k => $c) $parts[] = "$k " . self::n($c);
+        return self::t(sprintf('%d visa processes: %s.', count($V), implode(', ', $parts)), sprintf('মোট %sটা visa process: %s।', self::n(count($V)), implode(', ', $parts)));
+    }
+
+    /* ---------- contract files: one file, or counts ---------- */
+    private static function files(string $q, array $D): ?string
+    {
+        $F = $D['contract_files'] ?? []; if (!$F) return null;
+        if (preg_match('/\b([A-Z]{1,4}-?\d{2,6})\b/i', $q, $m)) foreach ($F as $f) if (strcasecmp(str_replace('-', '', (string) $f['file_number']), str_replace('-', '', $m[1])) === 0)
+            return self::t("{$f['file_number']} ({$f['applicant']}, {$f['country']}): {$f['status']}.", "{$f['file_number']} ({$f['applicant']}, {$f['country']}): {$f['status']}।");
+        $per = Slots::period($q);
+        $rows = array_values(array_filter($F, fn($f) => self::in($f['submit_date'] ?? null, $per)));
+        $st = []; foreach ($rows as $f) $st[(string) $f['status']] = ($st[(string) $f['status']] ?? 0) + 1; arsort($st);
+        $parts = []; foreach ($st as $k => $c) $parts[] = "$k " . self::n($c);
+        $when = self::when($per, 'in all', 'মোট');
+        return self::t(sprintf('%s: %d contract files (%s).', ucfirst($when), count($rows), implode(', ', $parts)), sprintf('%s %sটা contract file (%s)।', $when, self::n(count($rows)), implode(', ', $parts)));
+    }
+
+    /* ---------- money in and out over a period ---------- */
+    private static function cashflow(string $q, array $D): ?string
+    {
+        $per = Slots::period($q) ?? [date('Y-m-01'), date('Y-m-d'), 'this month', 'এই মাসে'];
+        $in = 0.0; $out = 0.0;
+        foreach ($D['party_transactions'] ?? [] as $p) { if (!self::in($p['date'], $per) || preg_match('/super ?admin/i', (string) $p['party_name'])) continue;
+            if ($p['party_type'] === 'customer') $in += (float) $p['credit']; else $out += (float) $p['debit']; }
+        foreach ($D['expenses'] ?? [] as $e) if (self::in($e['expense_date'], $per)) $out += (float) $e['amount'];
+        foreach ($D['payments'] ?? [] as $p) if (self::in($p['date'], $per)) $out += (float) $p['amount'];
+        $w = self::$bn ? Phrase::bnDigits($per[3]) : $per[2];
+        return self::t(sprintf('%s: collected %s from agents and clients; paid out %s (vendors, expenses, salaries). Net %s.', ucfirst($w), self::m($in), self::m($out), self::m($in - $out)),
+            sprintf('%s agent-client থেকে collection %s; বাইরে গেছে %s (vendor, খরচ, বেতন)। Net %s।', $w, self::m($in), self::m($out), self::m($in - $out)));
+    }
+
+    /* ---------- vouchers / journal entries over a period ---------- */
+    private static function vouchers(string $q, array $D): ?string
+    {
+        $per = Slots::period($q) ?? [date('Y-m-d'), date('Y-m-d'), 'today', 'আজ'];
+        $J = array_values(array_filter($D['journal_entries'] ?? [], fn($j) => self::in($j['date'], $per)));
+        if (!$J) return self::t("No journal entries {$per[2]}.", Phrase::bnDigits($per[3]) . ' কোনো journal entry নেই।');
+        $by = []; foreach ($J as $j) $by[(string) ($j['source'] ?: 'manual')] = ($by[(string) ($j['source'] ?: 'manual')] ?? 0) + 1; arsort($by);
+        $parts = []; foreach (array_slice($by, 0, 5, true) as $k => $c) $parts[] = "$k " . self::n($c);
+        $last = end($J);
+        return self::t(sprintf('%d journal entries %s (%s). Latest: %s — %s.', count($J), $per[2], implode(', ', $parts), $last['reference'], $last['description']),
+            sprintf('%s %sটা journal entry (%s)। সর্বশেষ: %s — %s।', Phrase::bnDigits($per[3]), self::n(count($J)), implode(', ', $parts), $last['reference'], $last['description']));
+    }
+
+    /* ---------- one ticket by PNR / ticket number ---------- */
+    private static function ticketFind(string $q, array $D): ?string
+    {
+        if (!preg_match('/\b([A-Z0-9]{6}|\d{3}-?\d{10})\b/i', $q, $m)) return null;
+        $key = strtoupper(str_replace('-', '', $m[1]));
+        foreach ($D['ticket_index'] ?? [] as $t) if (strtoupper(str_replace('-', '', (string) $t['pnr'])) === $key) {
+            // only what is on record — a ticket not yet invoiced has no client, invoice or sale to name
+            $more = array_filter(['client' => $t['client'], 'vendor' => $t['vendor'], 'invoice' => $t['invoice'], 'sale' => (float) $t['sale_price'] > 0 ? self::m((float) $t['sale_price']) : null]);
+            $tail = implode(', ', array_map(fn($k, $v) => "$k $v", array_keys($more), $more));
+            if (!$t['invoice']) $tail .= self::t($tail ? '; not invoiced yet' : 'not invoiced yet', $tail ? '; এখনো invoice হয়নি' : 'এখনো invoice হয়নি');
+            return "{$t['pnr']}: {$t['passenger']}, {$t['route']}, {$t['status']}" . ($tail ? "; $tail" : '') . self::t('.', '।');
+        }
+        return self::t("No ticket {$m[1]} in the ERP.", "ERP-তে {$m[1]} নামে কোনো ticket নেই।");
+    }
+
+    /* ---------- leads ---------- */
+    private static function leads(string $q, array $D): ?string
+    {
+        $L = $D['leads'] ?? []; $per = Slots::period($q);
+        $rows = array_values(array_filter($L, fn($l) => self::in($l['created_at'] ?? null, $per)));
+        $st = []; foreach ($rows as $l) $st[(string) ($l['status'] ?: '—')] = ($st[(string) ($l['status'] ?: '—')] ?? 0) + 1;
+        $parts = []; foreach ($st as $k => $c) $parts[] = "$k " . self::n($c);
+        $when = self::when($per, 'in all', 'মোট');
+        return self::t(sprintf('%d leads %s%s.', count($rows), $when, $parts ? ' (' . implode(', ', $parts) . ')' : ''), sprintf('%s %sটা lead%s।', $when, self::n(count($rows)), $parts ? ' (' . implode(', ', $parts) . ')' : ''));
+    }
+
+    /* ---------- projects: running, late, over budget ---------- */
+    private static function projects(string $q, array $D): ?string
+    {
+        $P = $D['projects'] ?? []; if (!$P) return null; $co = Slots::company($q, $D);
+        $P = array_values(array_filter($P, fn($p) => !$co || (int) $p['company_id'] === (int) $co['id']));
+        $run = array_filter($P, fn($p) => !in_array(strtolower((string) $p['status']), ['completed', 'cancelled', 'done'], true));
+        $over = array_filter($P, fn($p) => (float) $p['budget'] > 0 && (float) $p['spent'] > (float) $p['budget']);
+        $late = array_filter($run, fn($p) => $p['end_date'] && $p['end_date'] < date('Y-m-d'));
+        $names = fn($xs) => implode(', ', array_map(fn($p) => $p['project_name'], array_slice(array_values($xs), 0, 4)));
+        return self::t(sprintf('%d projects running%s. Over budget: %d%s. Past their end date: %d%s.', count($run), $co ? " at {$co['name']}" : '', count($over), $over ? ' (' . $names($over) . ')' : '', count($late), $late ? ' (' . $names($late) . ')' : ''),
+            sprintf('%sচলমান project %sটা। বাজেট ছাড়িয়েছে %sটা%s; সময় পার %sটা%s।', $co ? "{$co['name']}-এ " : '', self::n(count($run)), self::n(count($over)), $over ? ' (' . $names($over) . ')' : '', self::n(count($late)), $late ? ' (' . $names($late) . ')' : ''));
     }
 
     /* ---------- banks: one or all ---------- */
