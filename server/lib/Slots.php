@@ -79,7 +79,8 @@ final class Slots
                 // a short sound (সালেহ → sl) only counts as the whole name, exactly
                 // a short name is compared WITH its vowels — সালেহ and SOHEL share the sound s-l, saleh ≠ sohel
                 if (mb_strlen($k) < 4 || mb_strlen($nk) < 4) {
-                    if ($k !== $nk) continue;
+                    // "বিএসপি" is BSP IATA: a short sound may be the start of a longer name
+                    if ($k !== $nk) { if (mb_strlen($k) >= 3 && str_starts_with($nk, $k) && (!$best || $best['score'] < 85)) $best = ['name' => $name, 'kind' => $kind, 'score' => 85.0, 'said' => $phrase]; continue; }
                     $ro = fn($s) => preg_replace('/[^a-z]/', '', strtolower(Grammar::romanise(preg_replace('/\b(mr|md|mrs|ms|mst)\b|\(.*?\)|মোঃ|মো\./iu', ' ', (string) $s) ?? ''))) ?? '';
                     $sim = 0.0; similar_text($ro($phrase), $ro($name), $sim);
                     if ($sim >= 75 && (!$best || $best['score'] < $sim)) $best = ['name' => $name, 'kind' => $kind, 'score' => $sim, 'said' => $phrase];

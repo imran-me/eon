@@ -139,6 +139,10 @@ final class Analyst
     /* ---------- what an agent / client owes ---------- */
     private static function agentDue(string $q, array $D): ?string
     {
+        // "বিএসপি কে কত দিতে হবে" is a due too — but BSP is a vendor: what WE owe, not what they owe us
+        $any = Slots::party($q, $D, ['customer', 'supplier']);
+        if ($any && !isset($any['none']) && $any['kind'] === 'supplier') return self::vendor($q, $D);
+        if (preg_match('/দিতে হবে|দেনা|payable|we owe|ভেন্ডর|vendor|সাপ্লায়ার|supplier/u', mb_strtolower($q)) && !$any) return self::vendor($q, $D);
         [$p, $miss] = self::partyOrSay($q, $D, ['customer']); if ($miss) return $miss;
         $bal = []; foreach ($D['party_transactions'] ?? [] as $x) if ($x['party_type'] === 'customer' && !preg_match('/super ?admin/i', (string) $x['party_name'])) $bal[(string) $x['party_name']] = ($bal[(string) $x['party_name']] ?? 0) + (float) $x['debit'] - (float) $x['credit'];
         if ($p) {
