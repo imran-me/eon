@@ -395,6 +395,8 @@ async function answer(q) {
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   if (!href) return null;
   const w = await openAndWait(href);
+  // the ERP's own page may be broken — say so plainly instead of pretending the form is open
+  try { if (w && /server error|^\s*500|not found|^\s*404|page expired/i.test(w.document.title + ' ' + (w.document.body ? w.document.body.innerText.slice(0, 60) : ''))) return { speak: T(bn, `The ERP's ${label} page is failing right now (${w.document.title.trim() || 'error'}) — that is a fault in the ERP itself, not in what you asked. It needs the ERP's developer.`, `ERP-র ${label} পেজটা এখন চলছে না (${w.document.title.trim() || 'error'}) — সমস্যাটা ERP-র নিজের, আপনার কথায় নয়। ERP-র ডেভেলপারকে দেখাতে হবে।`), detail: [], navigate: href }; } catch (e) {}
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
   if (k0 && k0.open) await k0.open(w);
   if (!w) return { speak: T(bn, `Opening ${label}.`, `${label} খুলছি।`), detail: [], navigate: href };
