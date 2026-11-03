@@ -12,7 +12,7 @@
    ============================================================ */
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1/+esm';
 const KJS = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
-const MODELS = { tts: 'onnx-community/Kokoro-82M-v1.0-ONNX', embed: 'Xenova/multilingual-e5-small', asr: 'Xenova/whisper-small' };
+const MODELS = { tts: 'onnx-community/Kokoro-82M-v1.0-ONNX', embed: 'Xenova/multilingual-e5-small', asr: 'onnx-community/whisper-base' };
 
 // heat: two threads, not every core — slower by a beat, but the laptop stays cool through a long day
 let tuned = null;

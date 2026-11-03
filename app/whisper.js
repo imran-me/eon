@@ -10,13 +10,16 @@
    ============================================================ */
 import { ml } from './ml.js';
 
-let isReady = false, loading = null, rec = null, chunks = [], stream = null;
+let isReady = false, failed = false, loading = null, rec = null, chunks = [], stream = null;
 
 function load() {
   if (loading) return loading;
-  loading = ml('load', { kind: 'asr' })
+  failed = false;
+  // a load that never finishes (out of memory, a stalled download) is a failure, not "loading…" forever
+  const limit = new Promise((_, no) => setTimeout(() => no(new Error('timed out after 5 minutes')), 300000));
+  loading = Promise.race([ml('load', { kind: 'asr' }), limit])
     .then(() => { isReady = true; console.info('[EON whisper] ready'); return true; })
-    .catch((e) => { console.warn('[EON whisper] unavailable', e); loading = null; return false; });
+    .catch((e) => { console.warn('[EON whisper] unavailable', e); failed = true; loading = null; return false; });
   return loading;
 }
 
@@ -45,6 +48,8 @@ async function stop() {
 const EonWhisper = {
   load, start, stop,
   ready: () => isReady,
+  failed: () => failed,
+  state: () => (isReady ? 'ready' : failed ? 'failed' : loading ? 'loading' : 'off'),
   recording: () => !!rec,
   on: () => { try { return localStorage.getItem('eon_whisper2') === '1'; } catch (e) { return false; } },
   set(on) { try { localStorage.setItem('eon_whisper2', on ? '1' : '0'); } catch (e) {} if (on) load(); },
