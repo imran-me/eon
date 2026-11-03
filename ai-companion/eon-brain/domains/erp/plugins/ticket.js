@@ -26,7 +26,7 @@
    ============================================================ */
 import { url } from './navigator.js';
 import { propose } from './act.js';
-import { normalize } from './voicefix.js';
+import { normalize, speaksBangla } from './voicefix.js';
 import { matchName } from './statement.js';
 
 const BN = /[ঀ-৿]/;
@@ -339,7 +339,7 @@ async function answer(q) {
   if (/\b(offload|offloaded|deport|deported)\b|অফলোড|ডিপোর্ট/i.test(s)) return null;
   if (!o.pnr && !o.invoice && /\b(how much|how many|total|did we|have we|koto|kotojon|hoise|hoyeche)\b|কত|কতো|কয়টা|কয়টা|হয়েছে|হয়েছে|হলো/i.test(s)) return null;
 
-  const bn = BN.test(raw);
+  const bn = speaksBangla(raw);
   const c = { kind: o.kind, values: Object.assign({}, o.values), bn, at: Date.now(), passenger: o.passenger };
   /* an order that already carries details was thought through: ask only what the ERP
      cannot do without. A bare "do reissue for X" is walked through field by field. */

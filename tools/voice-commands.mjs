@@ -53,7 +53,8 @@ globalThis.fetch = async (u) => {
 const P = join(HERE, '..', 'ai-companion', 'eon-brain', 'domains', 'erp', 'plugins');
 const load = async (f) => (await import(pathToFileURL(join(P, f)).href)).default;
 const act = await import(pathToFileURL(join(P, 'act.js')).href);
-const PARTS = [['ticket', await load('ticket.js')], ['contract-flight', await load('cflight.js')], ['statement', await load('statement.js')]];
+const PARTS = [['ticket', await load('ticket.js')], ['contract-flight', await load('cflight.js')], ['statement', await load('statement.js')], ['cases', await load('cases.js')]];
+const casesMod = await import(pathToFileURL(join(P, 'cases.js')).href);
 const ticketMod = await import(pathToFileURL(join(P, 'ticket.js')).href);
 const statement = await import(pathToFileURL(join(P, 'statement.js')).href);
 const cflight = await import(pathToFileURL(join(P, 'cflight.js')).href);
@@ -61,6 +62,7 @@ const cflight = await import(pathToFileURL(join(P, 'cflight.js')).href);
 async function route(q) {
   act.cancel();
   ticketMod.forget();
+  casesMod.forget();
   for (const [id, m] of PARTS) {
     const r = await m.answer(q);
     if (r) return { id, r, plan: act.pendingPlan() };
@@ -189,6 +191,29 @@ if (pax) {
 }
 ['how many were offloaded this month', 'কতজন অফলোড হয়েছে', 'list deported passengers', 'deport koyjon hoise', 'open the contract flight board']
   .forEach((q) => add('none', q, none, 'figure question'));
+
+/* contract files and visas: by the applicant, the client, the vendor or the passport */
+const visa1 = (() => { const m = {}; for (const v of DS.visa_processes || []) if (v.applicant) m[v.applicant] = (m[v.applicant] || 0) + 1; const n = Object.keys(m).find((k) => m[k] === 1 && k.split(/\s+/).length >= 2); return (DS.visa_processes || []).find((v) => v.applicant === n); })();
+const file1 = (() => { const m = {}; for (const v of DS.contract_files || []) if (v.applicant) m[v.applicant] = (m[v.applicant] || 0) + 1; const n = Object.keys(m).find((k) => m[k] === 1 && k.split(/\s+/).length >= 2); return (DS.contract_files || []).find((v) => v.applicant === n); })();
+if (visa1) {
+  const nm = visa1.applicant, lw = nm.toLowerCase();
+  const other = visa1.status === 'approved' ? 'rejected' : 'approved';
+  [[`open ${nm}'s visa`, href(/visa\/\d+\/details/)], [`${lw} er visa dekhao`, href(/visa\/\d+\/details/)], [`show me ${lw} visa`, href(/visa\/\d+\/details/)],
+   [`what is the status of ${lw} visa`, (o) => o.r && /is at/.test(o.r.speak)], [`${lw} er visa ki obostha`, (o) => o.r && /is at|অবস্থায়/.test(o.r.speak)],
+   [`mark ${lw} visa ${other}`, plan({ status: other })], [`${lw} er visa ${other} koro`, plan({ status: other })],
+   [`${lw} visa in embassy`, plan({ status: 'in_embassy' })], [`update ${lw} visa status`, asks(/which stage/)]]
+    .forEach(([q, c], i) => add('cases', spin(fill, i) + q, c, 'visa'));
+}
+if (file1) {
+  const nm = file1.applicant, lw = nm.toLowerCase();
+  [[`open ${nm}'s contract file`, href(/contract-files\/\d+\/details/)], [`${lw} er file ta kholo`, href(/contract-files\/\d+\/details/)],
+   [`move ${lw} file to submitted to vendor`, plan({ stage: 'submitted_to_vendor' })], [`${lw} er file documents verified koro`, plan({ stage: 'documents_verified' })],
+   [`${lw} file biometric appointment`, plan({ stage: 'biometrics_appointment' })], [`close ${lw}'s file`, plan({ stage: 'case_closed' })],
+   [`which stage is ${lw}'s file at`, (o) => o.r && /is at/.test(o.r.speak)], file1.passport_no && [`passport ${file1.passport_no} er file er stage change koro`, asks(/which stage/)]]
+    .filter(Boolean).forEach(([q, c], i) => add('cases', spin(fill, i) + q, c, 'contract file'));
+}
+['how many visas are pending', 'how many files are under process', 'কয়টা ভিসা অনুমোদিত হয়েছে', 'koyta file pending ache', 'open the visa dashboard', 'contract file board dekhao']
+  .forEach((q) => add('none', q, none, 'case figure / screen'));
 
 /* ---------- run ---------- */
 const rows = [];

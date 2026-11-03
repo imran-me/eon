@@ -26,7 +26,7 @@
 import { url } from './navigator.js';
 import { propose, latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 import { csrf } from './ticket.js';
-import { normalize } from './voicefix.js';
+import { normalize, speaksBangla } from './voicefix.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const BN = /[ঀ-৿]/;
@@ -87,7 +87,7 @@ async function answer(q) {
   const s0 = String(q || '').trim();
   if (!s0) return null;
   const s = latinDigits(normalize(s0));
-  const bn = BN.test(s0);
+  const bn = speaksBangla(s0);
   const T = (en, b) => (bn ? b : en);
   const ev = EVENTS.find((e) => e.re.test(s));
   const opening = !ev && OPEN.test(s) && FLIGHTISH.test(s);

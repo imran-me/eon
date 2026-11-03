@@ -25,7 +25,7 @@
    a figure and belongs to the answerers below this one.
    ============================================================ */
 import { url } from './navigator.js';
-import { normalize } from './voicefix.js';
+import { normalize, speaksBangla } from './voicefix.js';
 import { latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
@@ -122,11 +122,16 @@ export function matchName(list, text) {
   }
   if (!wanted.length) return null;
   const low = String(text || '').toLowerCase();
+  const spoken = words.map((w) => w.toLowerCase()).filter((w) => /^[a-z]{3,}$/.test(w) && !STOP.test(w));
   const scored = list.map((p) => {
     const parts = p.name.replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((x) => !/^(mr|mrs|md|mst|miss|ms)\.?$/i.test(x)).map(latinSkeleton).filter((x) => x.length >= 2);
     const exact = low.includes(p.name.toLowerCase()) ? 10 : 0;
+    /* Mohammad and Mahmud share a skeleton (m-h-m-d); the word spelled exactly as
+       the record spells it breaks the tie — and lets a short word ("Nur") count */
+    const nameWords = p.name.toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^a-z]+/).filter((x) => x.length >= 3);
+    const spelled = spoken.filter((w) => nameWords.includes(w)).length * 0.5;
     // whole name words only — a skeleton never matches a fragment of one
-    return { p, hits: exact + wanted.filter((sk) => parts.includes(sk)).length };
+    return { p, hits: exact + spelled + wanted.filter((sk) => parts.includes(sk)).length };
   }).filter((x) => x.hits > 0).sort((a, b) => b.hits - a.hits);
   if (!scored.length) return null;
   if (scored.length > 1 && scored[1].hits === scored[0].hits) return { ambiguous: scored.filter((x) => x.hits === scored[0].hits).slice(0, 5).map((x) => x.p) };
@@ -154,7 +159,7 @@ function answer(q) {
   if (/\b(income|financial|profit|p\s*&\s*l|p\s*and\s*l|bank|trial|balance sheet|tb)\s*(statement|balance|sheet)?\b.*\b(statement|sheet|balance)\b|\b(income|financial|bank)\s+statement|balance\s*sheet|trial\s*balance|আয়\s*বিবরণী|আয়\s*বিবরণী|লাভ\s*ক্ষতি|ব্যালান্স\s*শিট|ব্যাংক\s*স্টেটমেন্ট/i.test(s)) return null;
   const verbless = !VERB.test(s);
   if (verbless && (!LEDGERISH.test(s) || ASKING.test(s))) return null;
-  const bn = BN.test(s);
+  const bn = speaksBangla(s);
   const fmt = formatOf(s);
   const per = periodIn(s);
   const perEn = per ? ` for ${per.label}` : '';

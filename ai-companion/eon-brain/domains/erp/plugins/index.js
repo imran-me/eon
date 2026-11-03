@@ -16,5 +16,6 @@ import './entity.js';        // one person, one party, one thing: tasks, dues, a
 import './act.js';           // EON does the work through the ERP's own forms (with a confirmation gate)
 import './statement.js';     // statements and ledgers: open, print, PDF, Excel — any party, any period
 import './ticket.js';        // ticket changes: reissue, reschedule, refund, void, cancel return — through the gate
-import './cflight.js';       // contract flight: offload and deport a passenger, open his flight
+import './cflight.js';       // contract flight: offload and deport a passenger, open their flight
+import './cases.js';         // contract files and visas: open, where is it, move the stage — by any name on the case
 import './understand.js';    // verb + subject + who, in Bangla and English, and half commands are held

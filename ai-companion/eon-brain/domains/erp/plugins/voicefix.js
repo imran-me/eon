@@ -125,6 +125,14 @@ export function numbersToDigits(s) {
   return out.replace(/[ \t]{2,}/g, ' ').trim();
 }
 
+/** true when the boss is speaking Bangla — by the words, not by the first letter */
+export function speaksBangla(q) {
+  const words = String(q || '').split(/[\s,.;:!?।]+/).filter(Boolean);
+  const bn = words.filter((w) => /[ঀ-৿]/.test(w)).length;
+  const en = words.filter((w) => /[A-Za-z]{2,}/.test(w) && !/[ঀ-৿]/.test(w)).length;
+  return bn > 0 && bn * 2 >= en;
+}
+
 export function normalize(q) {
   let s = String(q || '');
   for (const [re, to] of REPAIR) s = s.replace(re, to);
@@ -134,4 +142,4 @@ export function normalize(q) {
 }
 
 if (typeof window !== 'undefined') window.EonVoiceFix = { normalize, numbersToDigits };
-export default { normalize, numbersToDigits };
+export default { normalize, numbersToDigits, speaksBangla };
