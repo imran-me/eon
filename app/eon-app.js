@@ -370,6 +370,19 @@ function boot() {
     try { V.setTts(server() + '/tts.php'); } catch (e) {}
     V.setLang(state.lang); if (localStorage.getItem('eon_mute') === '1') V.mute(true);
     V.onState((s, detail) => { setMic(s === 'listening'); const h = $('#heard'); if (h) h.textContent = s === 'listening' ? '🎙 listening…' : s === 'speaking' ? '🔊 speaking…' : s === 'error' ? '⚠ ' + detail : ''; if (s === 'error') toast(detail, 5000); });
+    /* the first hello: once per visit, in Bangla, a little brighter than an answer. A browser
+       will not speak before the visitor has touched the page, so until then it waits for the
+       first tap or key (here or in the ERP beside it) and says it then */
+    if (!sessionStorage.getItem('eon_hello')) {
+      const hello = 'হেই! তোমার অনেক কাজ আর হিসাব বাকি — বলো, কোনটা জানতে চাও?';
+      const sayHello = () => { if (sessionStorage.getItem('eon_hello')) return; sessionStorage.setItem('eon_hello', '1');
+        try { V.say(hello, { lang: 'bn-BD', pitch: 1.3, rate: 1.05 }); } catch (e) {} };
+      if (navigator.userActivation && navigator.userActivation.hasBeenActive) setTimeout(sayHello, 600);
+      else {
+        ['pointerdown', 'keydown'].forEach((t) => addEventListener(t, sayHello, { once: true }));
+        try { [parent, parent.frames[0]].forEach((w) => w && w !== window && w.addEventListener('pointerdown', sayHello, { once: true })); } catch (e) {}
+      }
+    }
     V.onTranscript((text, meta) => { const h = $('#heard'); if (h) h.textContent = meta.final ? '' : '🎙 ' + text; if (meta.final && text) ask(text, { voice: true }); });
   }
   $('#btnMic').onclick = toggleMic;
