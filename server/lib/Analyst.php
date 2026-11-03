@@ -29,7 +29,7 @@ final class Analyst
     private static function m(float $v): string { return Phrase::money($v, self::$bn ? 'bn' : 'en'); }
     private static function n($v): string { return Phrase::n($v, self::$bn ? 'bn' : 'en'); }
     private static function in(?string $d, ?array $p): bool { return $p === null || ($d !== null && substr($d, 0, 10) >= $p[0] && substr($d, 0, 10) <= $p[1]); }
-    private static function when(?array $p, string $defEn, string $defBn): string { return $p ? (self::$bn ? $p[3] : $p[2]) : self::t($defEn, $defBn); }
+    private static function when(?array $p, string $defEn, string $defBn): string { return $p ? (self::$bn ? Phrase::bnDigits($p[3]) : $p[2]) : self::t($defEn, $defBn); }
 
     /** ['text'=>…] or ['client_command'=>…] or null (not handled — let the next layer try) */
     public static function handle(string $intent, string $q, array $D, bool $bn): ?array
@@ -185,6 +185,9 @@ final class Analyst
     private static function flights(string $q, array $D): ?string
     {
         $per = Slots::period($q); $when = self::when($per, 'on record', 'রেকর্ডে');
+        // flights are asked about ahead: "this month / this week" means the whole of it, not up to today
+        if ($per && $per[1] === date('Y-m-d') && preg_match('/month|মাস/u', $per[2] . $per[3])) $per[1] = date('Y-m-t');
+        if ($per && $per[1] === date('Y-m-d') && preg_match('/week|সপ্তাহ/u', $per[2] . $per[3])) $per[1] = date('Y-m-d', strtotime('+6 days', strtotime($per[0])));
         $l = mb_strtolower($q);
         $F = array_values(array_filter($D['contract_flights'] ?? [], fn($f) => self::in($f['departure_at'], $per)));
         if (preg_match('/\b([a-z]{2,3}-?\d{2,4})\b/i', $q, $m)) { $code = strtoupper(str_replace('-', '', $m[1])); $F = array_values(array_filter($F, fn($f) => str_replace('-', '', strtoupper((string) $f['flight_number'])) === $code)); }

@@ -63,7 +63,9 @@ final class Slots
         foreach ($D['party_transactions'] ?? [] as $p) if (in_array($p['party_type'], $kinds, true) && !preg_match('/super ?admin/i', (string) $p['party_name'])) $names[(string) $p['party_name']] = $p['party_type'];
         if (in_array('customer', $kinds, true)) foreach ($D['contract_flight_passengers'] ?? [] as $p) if ($p['agent']) $names[(string) $p['agent']] = $names[(string) $p['agent']] ?? 'customer';
         if (in_array('supplier', $kinds, true)) foreach ($D['ticket_purchases'] ?? [] as $p) if ($p['vendor']) $names[(string) $p['vendor']] = $names[(string) $p['vendor']] ?? 'supplier';
-        $skel = fn($s) => Grammar::skeleton(preg_replace('/\b(mr|md|mrs|ms|mst|ltd|limited)\b|\(.*?\)|মোঃ|মো\./iu', ' ', (string) $s) ?? '');
+        // titles, tags and the generic trade words are not the name ("আল-মাদানী ট্রাভেলস" must not meet
+        // NARIA TRAVELS on "travels"); য-ফলা is a vowel sound, not a j (ট্যুরস is t-r-s, not t-j-r-s)
+        $skel = fn($s) => Grammar::skeleton(str_replace("\u{09CD}\u{09AF}", '', preg_replace('/\b(mr|md|mrs|ms|mst|ltd|limited|travels?|tours?|agency|air|airlines?|enterprises?|international|intl|and)\b|&|\(.*?\)|মোঃ|মো\.|ট্রাভেলস|ট্রাভেল|ট্যুরস|ট্যুর|এজেন্সি|এয়ার|এন্টারপ্রাইজ|ইন্টারন্যাশনাল/iu', ' ', (string) $s) ?? ''));
         $stop = '/^(এর|কে|থেকে|কাছে|কত|কয়টা|লাভ|লস|প্রফিট|ডিউ|বাকি|টাকা|স্টেটমেন্ট|লেজার|গত|এই|আজ|আজকে|ফ্লাইট|টিকেট|ট্রাভেল|দাও|দেখাও|পাঠাও|বলো|শোনো|আচ্ছা|একটু|প্লিজ|ভাই)$/u';
         $words = array_values(array_filter(preg_split('/[\s,?।!]+/u', $q) ?: [], fn($w) => $w !== ''));
         $best = null;
@@ -71,9 +73,18 @@ final class Slots
             $chunk = array_slice($words, $i, $n);
             if (preg_match($stop, $chunk[0]) || preg_match($stop, end($chunk))) continue;
             $phrase = preg_replace('/(এর|ের|কে|র|সের|দের|থেকে|-এর)$/u', '', implode(' ', $chunk)) ?? '';
-            $k = $skel($phrase); if (mb_strlen($k) < 4) continue;
+            $k = $skel($phrase); if (mb_strlen($k) < 2) continue;
             foreach ($names as $name => $kind) {
                 $nk = $skel($name); if ($nk === '') continue;
+                // a short sound (সালেহ → sl) only counts as the whole name, exactly
+                // a short name is compared WITH its vowels — সালেহ and SOHEL share the sound s-l, saleh ≠ sohel
+                if (mb_strlen($k) < 4 || mb_strlen($nk) < 4) {
+                    if ($k !== $nk) continue;
+                    $ro = fn($s) => preg_replace('/[^a-z]/', '', strtolower(Grammar::romanise(preg_replace('/\b(mr|md|mrs|ms|mst)\b|\(.*?\)|মোঃ|মো\./iu', ' ', (string) $s) ?? ''))) ?? '';
+                    $sim = 0.0; similar_text($ro($phrase), $ro($name), $sim);
+                    if ($sim >= 75 && (!$best || $best['score'] < $sim)) $best = ['name' => $name, 'kind' => $kind, 'score' => $sim, 'said' => $phrase];
+                    continue;
+                }
                 $sim = 0.0; similar_text($k, $nk, $sim);
                 if (str_starts_with($nk, $k) || str_starts_with($k, $nk)) $sim = max($sim, 90.0 * min(mb_strlen($k), mb_strlen($nk)) / max(mb_strlen($k), mb_strlen($nk)) + 10);
                 if ($sim >= 80 && (!$best || $sim > $best['score'])) $best = ['name' => $name, 'kind' => $kind, 'score' => $sim, 'said' => $phrase];
