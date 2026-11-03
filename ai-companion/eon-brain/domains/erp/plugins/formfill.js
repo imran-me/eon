@@ -220,11 +220,12 @@ async function answer(q) {
     else { const w = erpWin(); const a = w && w.document.querySelector('a[href*="/edit"]'); if (a) { href = a.href; label = T(bn, 'this record', 'এই রেকর্ড'); } }
     if (!href) return { speak: T(bn, 'Which record should I edit? Say its PNR, name or open it first.', 'কোন রেকর্ডটা এডিট করব? PNR বা নামটা বলুন, অথবা আগে খুলুন।'), detail: [] };
   } else {
-    const hit = (N().find(raw, 1) || [])[0];
-    if (!hit || !/create|add|new/i.test((hit.route || '') + ' ' + (hit.label || ''))) {
-      const hit2 = (N().find('add ' + (s.match(SUBJECT) || [''])[0], 1) || [])[0];
-      if (hit2) { href = N().url(hit2.uri); label = hit2.label; }
-    } else { href = N().url(hit.uri); label = hit.label; }
+    /* the thing being made is the FIRST one named — "নতুন টিকেট এন্ট্রি … ভেন্ডর BSP" is a ticket,
+       the vendor is one of its details. Its create screen is looked up by that word alone. */
+    const subj = (s.match(SUBJECT) || [''])[0];
+    const isCreate = (h) => h && /create|add|new/i.test((h.route || '') + ' ' + (h.label || ''));
+    const hit = (N().find('add ' + subj, 3) || []).find(isCreate) || (N().find(raw, 3) || []).find(isCreate);
+    if (hit) { href = N().url(hit.uri); label = hit.label; }
     if (!href) return null;
   }
 
