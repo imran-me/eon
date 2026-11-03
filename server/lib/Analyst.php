@@ -41,6 +41,7 @@ final class Analyst
         if (preg_match('/ভাউচার|voucher/u', $l) && !preg_match('/এন্ট্রি দাও|entry dao|বানাও|করো/u', $l)) return 'ভাউচার/জার্নাল খোঁজা';
         if (preg_match('/কালেকশন|collection|টাকা আসছে|পেমেন্ট গেছে|ক্যাশ ফ্লো|cash ?flow/u', $l)) return 'ক্যাশ ব্যালেন্স ও ক্যাশ ফ্লো';
         if (preg_match('/পে-?রোল|পেরোল|payroll/u', $l) && !preg_match('/প্রসেস|process|পাঠাও|send/u', $l)) return 'বেতন জানা';
+        if (preg_match('/(কোথায়|কোথায়|কোন খাতে|কোন জায়গায়|কোন জায়গায়|কেন|কিসে|where|why).*(লস|ক্ষতি|loss)|(লস|ক্ষতি|loss).*(কোথায়|কোথায়|কেন|কিসে|where|why)/u', $l)) return 'লসের কারণ';
         return null;
     }
 
@@ -89,6 +90,8 @@ final class Analyst
     private static function agentProfit(string $q, array $D): ?string
     {
         [$p, $miss] = self::partyOrSay($q, $D, ['customer']); if ($miss) return $miss;
+        // "টিকেটে কত লাভ" with no agent named is the ticket business's profit, not a ranking of agents
+        if (!$p && preg_match('/টিকেট|টিকিট|ticket/u', mb_strtolower($q)) && !preg_match('/এজেন্ট|agent|কার থেকে|কোন এজেন্ট/u', mb_strtolower($q))) return self::ticketProfit($q, $D);
         $per = Slots::period($q);
         $cost = []; foreach ($D['ticket_purchases'] ?? [] as $x) $cost[$x['id']] = (float) ($x['total'] ?? 0);
         $agg = [];
