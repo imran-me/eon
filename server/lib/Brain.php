@@ -154,6 +154,29 @@ TXT;
     {
         // let Nlu resolve a name in the sentence against real records
         if (class_exists('Nlu') && method_exists('Nlu', 'useDataset')) Nlu::useDataset($D);
+
+        /* Gemini first (owner's decision, 2026-11-04): it reads every question, whatever the
+           wording, and says what is wanted — a screen, a question back, or the question in the
+           form EON answers exactly. The figures still come only from the ERP below. When Gemini
+           is slow, absent or its reading answers nothing, the question goes down the offline
+           brain exactly as before, untouched. */
+        if (!self::$planning && class_exists('Gemini') && Gemini::enabled()) {
+            $lg = (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno)\b/i', $q) >= 1) ? 'bn' : 'en';
+            self::$planning = true;
+            try {
+                $p = Gemini::plan($q, $lg);
+                if ($p && ($p['route'] ?? '') !== 'ask') { $r = self::fromPlan($p, $D, $company, $tools, $lg); if ($r !== null) return $r; }
+                if ($p && ($p['route'] ?? '') === 'ask') {
+                    // the boss's own words first (exact rules know them), then Gemini's reading of them
+                    $own = self::askOffline($q, $D, $company, $tools, $lang);
+                    if (empty($own['weak'])) return $own;
+                    $r = self::fromPlan($p, $D, $company, $tools, $lg);
+                    if ($r !== null) return $r;
+                    return $own;
+                }
+            } catch (Throwable $e) { Log::warn('gemini plan failed', ['error' => $e->getMessage()]); }
+            finally { self::$planning = false; }
+        }
         /* A weak answer from `Answer` is kept, not returned. `Answer::compose`
            always produces text — its own fallback if nothing matched — so this
            gate used to be `text !== ''` and was therefore always true. Every
