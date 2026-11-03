@@ -123,6 +123,41 @@ function chooseOption(sel, text) {
 const COUNTRY = { মালয়েশিয়া: 'malaysia', মালয়েশিয়া: 'malaysia', সৌদি: 'saudi', দুবাই: 'emirates', আমিরাত: 'emirates', ওমান: 'oman', কাতার: 'qatar', কুয়েত: 'kuwait', বাহরাইন: 'bahrain', থাইল্যান্ড: 'thailand', তুরস্ক: 'turkey', সাইপ্রাস: 'cyprus', সিঙ্গাপুর: 'singapore', ভারত: 'india', ইন্ডিয়া: 'india', চীন: 'china', জাপান: 'japan', ইতালি: 'italy', রোমানিয়া: 'romania', পোল্যান্ড: 'poland', মাল্টা: 'malta', সার্বিয়া: 'serbia', ক্রোয়েশিয়া: 'croatia', যুক্তরাজ্য: 'kingdom', লন্ডন: 'kingdom', আমেরিকা: 'america', কানাডা: 'canada', অস্ট্রেলিয়া: 'australia', মালদ্বীপ: 'maldives', নেপাল: 'nepal', ভিয়েতনাম: 'vietnam', ইন্দোনেশিয়া: 'indonesia', জর্ডান: 'jordan', মিশর: 'egypt' };
 const VCAT = [[/ভিজিট|visit/i, 'visit'], [/ওয়ার্ক|ওয়ার্ক|কাজের|work/i, 'work'], [/উমরাহ|umrah/i, 'umrah'], [/হজ|hajj/i, 'hajj'], [/স্টুডেন্ট|ছাত্র|student/i, 'student'], [/ট্যুরিস্ট|tourist/i, 'tourist'], [/বিজনেস|business/i, 'business'], [/ট্রানজিট|transit/i, 'transit']];
 const KNOWN = [{
+  // a ticket SALE: tickets sold to an agent / customer — the Create Sale modal on Ticket Sales
+  path: /\/ticket-sales\/?$/,
+  async open(w) {
+    const b = [...w.document.querySelectorAll('button,a')].find((x) => /create sale/i.test(x.textContent));
+    if (b) { b.click(); await sleep(900); }
+  },
+  async apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q);
+    // the agent: EON's party matcher reaches the ERP's Latin name from Bangla ("সালমান ট্যুরস" → SALMAN TOURS & TRAVELS)
+    const S = window.EonStatement; const p = S && S.findParty ? S.findParty(slots._raw) : null;
+    const want = p && p.name ? String(p.name).toLowerCase() : null;
+    for (const id of ['ts_create_agent_picker', 'ts_create_customer_picker']) {
+      const el = $('#' + id); if (!el || !el.options) continue;
+      const o = [...el.options].find((x) => x.value && (want ? x.textContent.toLowerCase().includes(want) : slots._raw.toLowerCase().includes(x.textContent.split(' - ')[0].trim().toLowerCase())));
+      if (o) { setValue(w, el, o.value); done.push('Agent / Customer: ' + o.textContent.trim()); await sleep(1500); break; }   // the unsold tickets load after the agent is chosen
+    }
+    if (slots.date && $('#ts_create_date')) { setValue(w, $('#ts_create_date'), slots.date); done.push('Sale date: ' + slots.date); }
+    // the ticket by PNR / passenger: search it with the page's own filter, tick it, price it
+    const key = slots.pnr || slots.ticket_no || slots.name;
+    if (key && $('#tsTicketSearch')) {
+      setValue(w, $('#tsTicketSearch'), key); try { w.tsFilterTickets && w.tsFilterTickets(key); } catch (e) {}
+      await sleep(400);
+      const rows = [...d.querySelectorAll('#tsTicketsBody tr')].filter((r) => r.querySelector('input[type=checkbox]'));
+      if (rows.length === 1 || (rows.length && slots.pnr)) {
+        const r = rows.find((x) => slots.pnr && x.textContent.includes(slots.pnr)) || rows[0];
+        const cb = r.querySelector('input[type=checkbox]'); if (cb && !cb.checked) cb.click();
+        done.push('Ticket: ' + r.querySelector('td:nth-child(2)').textContent.trim() + ' · ' + r.querySelector('td:nth-child(3)').textContent.trim());
+        const price = slots.sale ?? slots.amount;
+        const pi = r.querySelector('input[type=number]'); if (pi && price != null) { setValue(w, pi, String(price)); done.push('Sale price: ' + price); }
+      } else if (rows.length > 1) done.push(rows.length + ' tickets match "' + key + '" — tick the right one');
+      else done.push('No unsold ticket matches "' + key + '"');
+    }
+    return true;
+  },
+}, {
   // a contract file (manpower): the Add modal on the contract-files list
   path: /\/contract-files\/?$/,
   async open(w) { const b = w.document.querySelector('.create-btn'); if (b) { b.click(); await sleep(800); } },
@@ -218,11 +253,11 @@ const KNOWN = [{
   },
 }];
 
-function fill(w, slots) {
+async function fill(w, slots) {
   const doc = w.document;
   const known = KNOWN.find((k) => k.path.test(w.location.pathname));
   if (known) {
-    const done = []; known.apply(w, slots, done);
+    const done = []; await known.apply(w, slots, done);
     const form = [...doc.querySelectorAll('form')].filter((f) => (f.getAttribute('method') || 'get').toLowerCase() === 'post').sort((a, b) => b.elements.length - a.elements.length)[0];
     const missing = form ? [...form.querySelectorAll('input,select,textarea')].filter((e) => e.required && !e.value && e.type !== 'hidden').map((e) => labelOf(doc, e)).filter(Boolean) : [];
     return { form, done, missing };
@@ -287,7 +322,8 @@ async function answer(q) {
     return { speak: T(bn, 'Printing this screen.', 'এই স্ক্রিনটা প্রিন্ট করছি।'), detail: [] };
   }
 
-  const wantEdit = EDIT.test(s), wantCreate = !wantEdit && CREATE.test(s) && SUBJECT.test(s);
+  const wantSale = /(টিকেট|টিকিট|ticket|pnr|পিএনআর)/i.test(s) && /(বিক্রি করো|বিক্রি করে দাও|বেচো|sell|sale entry|সেল এন্ট্রি|ইনভয়েস বানাও|invoice (it|them|করো))/i.test(s);
+  const wantEdit = !wantSale && EDIT.test(s), wantCreate = wantSale || (!wantEdit && CREATE.test(s) && SUBJECT.test(s));
   if (!wantEdit && !wantCreate) return null;
   const slots = Object.assign(slotsOf(raw), { _raw: raw });
   try { await N().ready(); } catch (e) {}   // the ERP map loads lazily — a search before it arrives finds nothing
@@ -312,14 +348,15 @@ async function answer(q) {
     if (!href) return null;
   }
 
-  if (wantCreate && /কন্ট্রাক্ট ফাইল|contract file|ফাইল খোলো|নতুন ফাইল|new file/i.test(s)) { href = N().url('/{role}/contract-files'); label = T(bn, 'New contract file', 'নতুন কন্ট্রাক্ট ফাইল'); }
+  if (wantSale) { href = N().url('/{role}/ticket-sales'); label = T(bn, 'Create Sale', 'টিকেট বিক্রি'); }
+  else if (wantCreate && /কন্ট্রাক্ট ফাইল|contract file|ফাইল খোলো|নতুন ফাইল|new file/i.test(s)) { href = N().url('/{role}/contract-files'); label = T(bn, 'New contract file', 'নতুন কন্ট্রাক্ট ফাইল'); }
   else if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   const w = await openAndWait(href);
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
   if (k0 && k0.open) await k0.open(w);
   if (!w) return { speak: T(bn, `Opening ${label}.`, `${label} খুলছি।`), detail: [], navigate: href };
-  const r = fill(w, slots);
+  const r = await fill(w, slots);
   if (!r) return { speak: T(bn, `${label} is open, but it has no form I can fill.`, `${label} খুলেছে, কিন্তু ভরার মতো ফর্ম পাইনি।`), detail: [] };
   remember({ form: { href, label } });
   const filled = r.done.length ? T(bn, `I filled ${r.done.length}: `, `${r.done.length}টা ঘর ভরে দিলাম: `) + r.done.join('; ') + '.' : T(bn, 'Nothing in what you said matched a field yet.', 'আপনার কথার কিছুই এখনো কোনো ঘরে মেলেনি।');
