@@ -77,7 +77,8 @@
         font:600 13px "Inter","Segoe UI",system-ui,sans-serif}
       #eon-panel-alt:hover{background:#f5f7fc}
       @media print{#eon-panel-alt{display:none}}
-      @media print{#eon-panel-btn{display:none}}`;
+      @media print{#eon-panel-btn{display:none}}
+      #eon-ask-chip{display:none !important}  /* hidden, not removed: EON's panel beside the ERP does this job */`;
     head.appendChild(style);
     const workspace = O.panel.replace(/\/?$/, '/') + 'workspace.html?to=' + encodeURIComponent(location.pathname + location.search);
     const a = el('a', { id: 'eon-panel-btn', href: workspace, title: 'Work with EON beside the ERP (right-click for a separate tab)' });
