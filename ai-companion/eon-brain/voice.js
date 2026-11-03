@@ -17,7 +17,7 @@
      v.onState(fn)                → fn('idle'|'listening'|'thinking'|'speaking'|'error', detail)
      v.listen({ continuous })     → start listening (push-to-talk if !continuous)
      v.stop()                     → stop listening
-     v.say(text, { lang })        → speak (returns a promise)
+     v.say(text, { lang, raw })   → speak (returns a promise); raw skips the warmth
      v.setLang('en-US' | 'bn-BD') → recognition + synthesis language
      v.hasVoiceFor('bn')          → can this machine pronounce that language?
      v.voiceReport()              → what is installed, and where Bangla comes from
@@ -42,7 +42,11 @@ function pickVoice(lang) {
   const vs = state.voices.length ? state.voices : loadVoices();
   const l = String(lang || state.lang).toLowerCase(); const base = l.split('-')[0];
   const prefer = (v) => (v.lang || '').toLowerCase() === l ? 3 : (v.lang || '').toLowerCase().startsWith(base) ? 2 : 0;
-  const quality = (v) => (/natural|neural|premium|enhanced|google|microsoft (aria|guy|jenny|ryan|sonia|neerja|prabhat)/i.test(v.name) ? 1 : 0) + (/female|aria|jenny|zira|samantha|sonia|neerja/i.test(v.name) ? 0.2 : 0);
+  // the warmest voice the machine has: neural/natural first, then the warm
+  // named voices, and the old robotic ones last
+  const quality = (v) => (/natural|neural|premium|enhanced/i.test(v.name) ? 1.2 : /google|microsoft (aria|guy|jenny|emma|ryan|sonia|neerja|prabhat|nabanita|tanishaa)/i.test(v.name) ? 1 : 0)
+    + (/aria|jenny|emma|ava|sonia|neerja|nabanita|tanishaa|samantha|female/i.test(v.name) ? 0.4 : /zira/i.test(v.name) ? 0.1 : 0)
+    + (/david|mark|compact|espeak/i.test(v.name) ? -0.3 : 0);
   return vs.slice().sort((a, b) => (prefer(b) + quality(b)) - (prefer(a) + quality(a)))[0] || null;
 }
 
@@ -53,6 +57,69 @@ function hasVoiceFor(lang) {
   const base = String(lang || state.lang).toLowerCase().split('-')[0];
   const vs = state.voices.length ? state.voices : loadVoices();
   return vs.some((v) => (v.lang || '').toLowerCase().split('-')[0] === base);
+}
+
+/* ------------------------------------------------------------------
+   Warmth — the browser half of server/lib/Persona.php.
+
+   Answers the panel computes itself never pass through the server, so
+   the same rules live here: an opener ("hmm, let me see…", "আচ্ছা,
+   দেখি…") on about two answers in five, a softener before bad news, an
+   acknowledgement after an order, a closer now and then. Only at the
+   edges, never on a confirmation gate or a refusal, seeded by the text
+   (same answer, same words), never the same filler twice running, and
+   never twice on one answer — the server's speak is already warm.
+   ------------------------------------------------------------------ */
+const WARM = {
+  think: { en: ['Hmm, let me see…', 'Right, let me check…', 'Okay, here it is…', 'Let me look…', 'Alright…', 'So…'],
+           bn: ['হুম, দেখছি…', 'আচ্ছা, দেখি…', 'এই যে…', 'জি, দেখছি…', 'আচ্ছা…', 'হুম…'] },
+  ack:   { en: ['Got it.', 'Okay, done.', 'Sure.', 'Right away.', 'Alright.'],
+           bn: ['ঠিক আছে।', 'জি, অবশ্যই।', 'আচ্ছা।', 'জি।', 'হয়ে গেছে।'] },
+  soft:  { en: ['Hmm, one thing —', 'Okay, heads up —', 'Right, so —', 'Hmm…'],
+           bn: ['তবে একটা কথা —', 'হুম, একটু খেয়াল করুন —', 'আচ্ছা, একটা ব্যাপার —', 'তাই তো…'] },
+  close: { en: ['Anything else?', 'Want me to dig deeper?', 'Shall I look at anything else?'],
+           bn: ['আর কিছু লাগবে?', 'আর কিছু?', 'আরও দেখব?'] },
+};
+const WARM_ALL = Object.values(WARM).flatMap((k) => [...k.en, ...k.bn]);
+const GATE_RX = /\b(say yes|shall i|should i|do you want me|confirm|cannot|can't|could not|unable|not allowed|refus|sign in|i do not know|i don't know|not sure)\b|হ্যাঁ বল|নিশ্চিত কর|করব কি|পোস্ট করব|পারছি না|পারব না|পারিনি|জানি না|সাইন ইন|অনুমতি নেই|[?？]\s*$/i;
+const DONE_RX = /\b(done|posted|assigned|created|sent|saved|recorded|opened|opening|marked)\b|সম্পন্ন|করা হয়েছে|দেওয়া হয়েছে|পাঠানো হয়েছে|পাঠিয়েছি|দিয়েছি|খুলছি|খুলে দিলাম/i;
+const BAD_RX = /\b(overdue|loss|losing|short|shortfall|warning|risk|behind|late|absent|anomal\w*|deficit|negative|unpaid|gap)\b|বকেয়া|লোকসান|ক্ষতি|ঝুঁকি|ঘাটতি|সতর্ক|দেরি|অনুপস্থিত|গরমিল|বাকি/i;
+const warmLast = { open: null, close: null };
+
+// CRC-32 over the UTF-8 bytes — the same seed PHP's crc32() gives Persona, so
+// a sentence the server chose to leave plain is left plain here too
+const CRC = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+function seed(t) { let c = 0xFFFFFFFF; for (const b of new TextEncoder().encode(t)) c = CRC[(c ^ b) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function warmPick(list, n, slot) { let i = n % list.length; if (list[i] === warmLast[slot]) i = (i + 1) % list.length; return (warmLast[slot] = list[i]); }
+
+export function warmKind(t) {
+  if (GATE_RX.test(t)) return 'gate';
+  const first = t.split(/(?<=[।.!?])\s+/)[0] || t;
+  if (DONE_RX.test(first)) return 'ack';
+  if (BAD_RX.test(t)) return 'soft';
+  return 'think';
+}
+
+export function humanize(text, lang) {
+  const t = String(text || '').trim();
+  if (t.length < 12) return t;
+  const l = lang === 'bn' || lang === 'en' ? lang : (/[\u0980-\u09FF]/.test(t) ? 'bn' : 'en');
+  if (WARM_ALL.some((f) => t.startsWith(f) || t.endsWith(f))) return t;   // already warm
+  const kind = warmKind(t);
+  if (kind === 'gate') return t;
+  const h = seed(t), roll = h % 20, n = Math.floor(h / 20);
+  const hasLead = /^[^.:।,—…]{1,32}[:,—]/.test(t);                       // "Good news:", "একটা বিষয় বলি,"
+  if (roll < 8 && !hasLead) return warmPick(WARM[kind][l], n, 'open') + ' ' + t;
+  if (roll < 11 && kind !== 'ack') return t + (/[।.!?…]$/.test(t) ? '' : (l === 'bn' ? '।' : '.')) + ' ' + warmPick(WARM.close[l], n, 'close');
+  return t;
+}
+export function resetWarmth() { warmLast.open = null; warmLast.close = null; }
+
+/* how each language is said: a little slower than the engine's default, and
+   pauses where a person breathes — after a sentence, an ellipsis, a dash */
+const PACE = { en: { rate: 0.95, pitch: 1.04, gap: 160 }, bn: { rate: 0.9, pitch: 1.0, gap: 220 } };
+export function phrases(text) {
+  return (String(text).match(/[^.!?।…—]+(?:[.!?।…]+|\s—\s?|—|$)/g) || [text]).map((p) => p.trim()).filter(Boolean);
 }
 
 const WAKE = /^\s*(hey |ok |hi )?(eon|ion|eyon|aeon|ইয়ন|ইওন|এওন)[,!.\s]*/i;
@@ -168,9 +235,11 @@ export const EonVoice = {
   stop() { state.continuous = false; const r = state.rec; state.rec = null; if (r) { try { r.stop(); } catch {} } state.listening = false; setStatus(state.speaking ? 'speaking' : 'idle'); },
   toggle(opts) { return state.listening ? (this.stop(), false) : this.listen(opts); },
 
+  humanize(text, lang) { return humanize(text, lang); },
   hush() { state.sayId++; if (SS && (SS.speaking || SS.pending)) { try { SS.cancel(); } catch {} } if (state.audio) { try { state.audio.pause(); } catch {} state.audio = null; } state.speaking = false; },
-  say(text, { lang, rate, pitch } = {}) {
+  say(text, { lang, rate, pitch, raw } = {}) {
     text = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!raw && text) text = humanize(text, /[\u0980-\u09FF]/.test(text) ? 'bn' : 'en');
     if (!SS || !text || state.muted) return Promise.resolve(false);
     const wantsBangla = /[\u0980-\u09FF]/.test(text) || String(lang || state.lang).toLowerCase().startsWith('bn');
     const code = wantsBangla ? 'bn' : 'en';
@@ -195,15 +264,21 @@ export const EonVoice = {
     const rec = state.rec; if (rec) { try { rec.stop(); } catch {} }
     const myId = ++state.sayId;
     return new Promise((resolve) => {
-      const chunks = text.length > 240 ? text.match(/[^.!?।]+[.!?।]+|[^.!?।]+$/g) || [text] : [text];
+      // one utterance per phrase, with a short breath between them — a single
+      // long utterance runs every sentence together
+      const chunks = phrases(text);
+      const pace = PACE[code];
       let i = 0; state.speaking = true; setStatus('speaking');
       const next = () => {
         if (state.sayId !== myId) { resolve(false); return; }   // hushed / superseded — stop the chain
         if (i >= chunks.length) { state.speaking = false; if (state.continuous && state.rec === rec && rec) { try { rec.start(); state.listening = true; setStatus('listening'); } catch { setStatus('idle'); } } else setStatus('idle'); resolve(true); return; }
         const u = new SpeechSynthesisUtterance(chunks[i++].trim());
-        u.lang = lang || state.lang; u.rate = rate || state.rate; u.pitch = pitch || state.pitch;
+        u.lang = lang || state.lang;
+        u.rate = rate || (state.rate !== 1.0 ? state.rate : pace.rate);
+        u.pitch = pitch || (state.pitch !== 1.0 ? state.pitch : pace.pitch);
         const v = pickVoice(u.lang); if (v) u.voice = v;
-        u.onend = next; u.onerror = next;
+        const after = () => setTimeout(next, i < chunks.length ? pace.gap : 0);
+        u.onend = after; u.onerror = after;
         SS.speak(u);
       };
       next();
