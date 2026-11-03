@@ -24,7 +24,7 @@ final class Ops
     {
         $l = mb_strtolower(trim($q));
         $bn = (bool) preg_match('/\p{Bengali}/u', $q) || preg_match_all(self::BANGLISH, $l) >= 2;
-        foreach (['bank', 'payrollDue', 'flightsDue', 'flightsPending'] as $h) {
+        foreach (['bank', 'personSalary', 'payrollDue', 'flightsDue', 'flightsPending'] as $h) {
             $r = self::$h($l, $D, $bn);
             if ($r !== null) return ['text' => $r, 'lang' => $bn ? 'bn' : 'en', 'intent' => 'ops_' . $h];
         }
@@ -64,6 +64,44 @@ final class Ops
     private static function companies(array $D): array
     {
         $o = []; foreach ($D['companies'] ?? [] as $c) $o[$c['id']] = (string) ($c['short_name'] ?? $c['name'] ?? ''); return $o;
+    }
+
+    /* ---------- one person's salary: paid or not ---------- */
+    private static function personSalary(string $l, array $D, bool $bn): ?string
+    {
+        if (!preg_match('/\b(salary|beton|betan|payslip)\b|বেতন|স্যালারি|সেলারি|পে-স্লিপ/u', $l)) return null;
+        if (!preg_match('/\b(paid|pay|dewa|deya|diyeche|dise|hoyeche|hoise|hoyse|peyeche|got|received)\b|দেওয়া|দেয়া|দিয়েছ|দিয়েছ|পেয়েছ|পেয়েছ|হয়েছে|হয়েছে|হয়েছে|পরিশোধ/u', $l)) return null;
+        if (!class_exists('Grammar')) return null;
+        $emps = array_values(array_filter($D['employees'] ?? [], fn($e) => ($e['status'] ?? 'active') === 'active' && (float) ($e['salary'] ?? 0) > 0));
+        $hits = [];
+        foreach (preg_split('/[\s,?।!]+/u', $l) ?: [] as $w) {
+            $w = preg_replace('/(দের|য়ের|এর|ের|কে|র|der|er|ke|r)$/u', '', $w) ?? $w;
+            $k = Grammar::skeleton($w);
+            if (mb_strlen($k) < 3) continue;
+            foreach ($emps as $e) foreach (preg_split('/\s+/', (string) $e['name']) ?: [] as $part)
+                if (Grammar::skeleton($part) === $k) { $hits[$e['id']] = $e; break; }
+            if ($hits) break;
+        }
+        if (!$hits) return null;
+        if (count($hits) > 1) {
+            $names = array_map(fn($e) => (string) $e['name'], array_values($hits));
+            return $bn ? 'কার কথা বলছেন — ' . implode(', নাকি ', $names) . '?' : 'Which one — ' . implode(', or ', $names) . '?';
+        }
+        $e = array_values($hits)[0];
+        $rows = array_values(array_filter($D['payroll'] ?? [], fn($r) => (int) $r['user_id'] === (int) $e['id']));
+        usort($rows, fn($a, $b) => strcmp((string) $b['month_key'], (string) $a['month_key']));
+        $all = array_unique(array_map(fn($r) => (string) $r['month_key'], $D['payroll'] ?? [])); rsort($all);
+        if (!$rows) return $bn ? "{$e['name']}-এর কোনো payslip ERP-তে নেই।" : "{$e['name']} has no payslip in the ERP.";
+        $r = $rows[0]; $paid = strtolower((string) $r['status']) === 'paid';
+        $mon = Phrase::monthName((string) $r['month_key'], $bn ? 'bn' : 'en');
+        $latest = ($all[0] ?? '') === $r['month_key'];
+        $miss = !$latest && isset($all[0]) ? ($bn ? ' ' . Phrase::monthName($all[0], 'bn') . '-এর payroll-এ উনার নাম নেই।' : ' They are not on the ' . Phrase::monthName($all[0], 'en') . ' payroll.') : '';
+        if ($paid) return ($bn
+            ? sprintf('জি, %s-এর %s-এর বেতন দেওয়া হয়েছে — net %s%s।', $e['name'], $mon, self::m((float) $r['net_salary'], true), $r['payment_date'] ? ', ' . Phrase::day((string) $r['payment_date'], 'bn') . ' তারিখে' : '')
+            : sprintf('Yes — %s was paid for %s: %s net%s.', $e['name'], $mon, self::m((float) $r['net_salary'], false), $r['payment_date'] ? ' on ' . Phrase::day((string) $r['payment_date'], 'en') : '')) . $miss;
+        return ($bn
+            ? sprintf('না, %s-এর %s-এর বেতন এখনো দেওয়া হয়নি — net %s বাকি।', $e['name'], $mon, self::m((float) $r['net_salary'], true))
+            : sprintf('No — %s\'s %s salary is not paid yet: %s net outstanding.', $e['name'], $mon, self::m((float) $r['net_salary'], false))) . $miss;
     }
 
     /* ---------- this month's payroll still to pay ---------- */
