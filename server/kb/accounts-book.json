@@ -498,6 +498,186 @@
       "source": ["config/accounts.php: tax_payable 2270, withholding_tax_payable 2280", "accounts table in u203838805_erp (32)"],
       "legs": [],
       "where": {"screen": "Accounts › Chart of Accounts", "route": "role.accounts.index"}
+    },
+    {
+      "id": "gen-accounting-equation",
+      "topic": "General — the accounting equation",
+      "scope": "general",
+      "cues": {
+        "en": ["accounting equation", "assets equal liabilities plus equity", "what is the accounting equation", "basic accounting equation"],
+        "bn": ["হিসাববিজ্ঞানের সমীকরণ", "সম্পদ সমান দায় যোগ মালিকানা", "হিসাব সমীকরণ"],
+        "bl": ["accounting equation ki", "hisab somikoron"]
+      },
+      "answer_en": "General bookkeeping, not specific to this ERP: assets = liabilities + owner's equity. Every transaction keeps it true — buying a computer on credit raises an asset and a liability by the same amount; the owner putting money in raises cash and equity together. Profit increases equity and loss decreases it, which is why income is credited and expense debited. In this ERP the balance sheet is that equation printed out, with the current year's profit carried into equity.",
+      "answer_bn": "এটা সাধারণ হিসাববিজ্ঞানের কথা, শুধু এই ইআরপির নয়: সম্পদ = দায় + মালিকের মালিকানা। প্রতিটি লেনদেন এই সমতা ধরে রাখে — বাকিতে কম্পিউটার কিনলে সম্পদ আর দায় একই অঙ্কে বাড়ে; মালিক টাকা দিলে নগদ আর মালিকানা একসাথে বাড়ে। লাভ মালিকানা বাড়ায়, ক্ষতি কমায় — সেজন্যই আয় ক্রেডিট আর খরচ ডেবিট হয়। এই ইআরপির ব্যালান্স শিট আসলে এই সমীকরণটাই, চলতি বছরের লাভ মালিকানার ঘরে যোগ করে।",
+      "source": ["general bookkeeping"],
+      "legs": [],
+      "where": {"screen": "Reports › Balance Sheet", "route": "role.report.balance-sheet"}
+    },
+    {
+      "id": "gen-golden-rules",
+      "topic": "General — the traditional rules of debit and credit",
+      "scope": "general",
+      "cues": {
+        "en": ["golden rules of accounting", "rules of debit and credit", "personal real nominal account", "when to debit and when to credit"],
+        "bn": ["ডেবিট ক্রেডিটের নিয়ম", "ব্যক্তিবাচক বস্তুবাচক নামবাচক হিসাব", "কখন ডেবিট কখন ক্রেডিট", "হিসাবের সোনালি নিয়ম"],
+        "bl": ["debit credit er niyom", "kokhon debit kokhon credit"]
+      },
+      "answer_en": "General bookkeeping, as Bangladeshi textbooks teach it. Personal accounts (a person, a firm, a bank): debit the receiver, credit the giver. Real accounts (cash, furniture, goods): debit what comes in, credit what goes out. Nominal accounts (expenses, losses, incomes, gains): debit expenses and losses, credit incomes and gains. The modern form says the same thing by account type: assets and expenses increase on the debit side, liabilities, equity and income on the credit side — which is how this ERP's chart is typed.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান, বাংলাদেশের পাঠ্যবইয়ে যেভাবে পড়ানো হয়। ব্যক্তিবাচক হিসাব (মানুষ, প্রতিষ্ঠান, ব্যাংক): গ্রহীতা ডেবিট, দাতা ক্রেডিট। বস্তুবাচক হিসাব (নগদ, আসবাব, পণ্য): যা আসে ডেবিট, যা যায় ক্রেডিট। নামবাচক হিসাব (খরচ, ক্ষতি, আয়, লাভ): খরচ ও ক্ষতি ডেবিট, আয় ও লাভ ক্রেডিট। আধুনিক নিয়মে একই কথা খাতের ধরন দিয়ে বলা হয়: সম্পদ ও খরচ বাড়ে ডেবিটে, দায়, মালিকানা ও আয় বাড়ে ক্রেডিটে — এই ইআরপির হিসাবের তালিকাও এভাবেই সাজানো।",
+      "source": ["general bookkeeping"],
+      "legs": [],
+      "where": {"screen": "Accounts › Chart of Accounts", "route": "role.accounts.index"}
+    },
+    {
+      "id": "gen-accrual-cash",
+      "topic": "General — accrual basis versus cash basis",
+      "scope": "general",
+      "cues": {
+        "en": ["accrual basis", "cash basis", "accrual vs cash", "what is accrual accounting", "when is income recognised"],
+        "bn": ["বকেয়া ভিত্তি", "নগদ ভিত্তি", "উপার্জন ভিত্তিক হিসাব", "আয় কখন ধরা হয়"],
+        "bl": ["accrual basis ki", "cash basis ki"]
+      },
+      "answer_en": "General bookkeeping: on the cash basis income is counted when money arrives and cost when money leaves; on the accrual basis income is counted when it is earned and cost when it is incurred, whether or not money has moved. Companies keep accrual books. This ERP works on accrual: a ticket sale is income on the invoice date while the agent still owes it (1311), and salary is an expense in its month while it is still payable (2210).",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: নগদ ভিত্তিতে আয় ধরা হয় টাকা এলে আর খরচ টাকা গেলে; বকেয়া (উপার্জন) ভিত্তিতে আয় ধরা হয় যখন অর্জিত হয় আর খরচ যখন হয়, টাকা নড়ুক বা না নড়ুক। কোম্পানির খাতা বকেয়া ভিত্তিতে চলে। এই ইআরপিও তাই: টিকিট বিক্রি ইনভয়েসের দিনেই আয়, যদিও এজেন্ট তখনো দেনা (১৩১১); আর বেতন তার মাসেই খরচ, যদিও তখনো বকেয়া (২২১০)।",
+      "source": ["general bookkeeping", "this ERP: ticket_sale and salary journals"],
+      "legs": [],
+      "where": {"screen": "Reports › Profit & Loss", "route": "role.report.profit-loss"}
+    },
+    {
+      "id": "gen-voucher",
+      "topic": "General — vouchers: debit, credit, journal and contra",
+      "scope": "general",
+      "cues": {
+        "en": ["debit voucher", "credit voucher", "journal voucher", "contra voucher", "contra entry", "what is a voucher", "types of voucher"],
+        "bn": ["ডেবিট ভাউচার", "ক্রেডিট ভাউচার", "জার্নাল ভাউচার", "কন্ট্রা এন্ট্রি", "ভাউচার কী", "ভাউচারের প্রকার"],
+        "bl": ["voucher ki", "contra entry ki", "debit voucher ki"]
+      },
+      "answer_en": "General bookkeeping as practised in Bangladeshi offices: a debit (payment) voucher records money going out of cash or bank, a credit (receipt) voucher records money coming in, a journal voucher records an entry with no cash in it (an accrual, a depreciation, a correction), and a contra voucher records money moving between cash and bank or between two banks. Each voucher is signed and kept with its supporting paper. In this ERP every journal has a printable voucher (and a party voucher), and a transfer between our own accounts is the contra case.",
+      "answer_bn": "বাংলাদেশের অফিসে যেভাবে চলে, সেই সাধারণ নিয়ম: ডেবিট (পরিশোধ) ভাউচারে নগদ বা ব্যাংক থেকে টাকা যাওয়া লেখা হয়, ক্রেডিট (প্রাপ্তি) ভাউচারে টাকা আসা, জার্নাল ভাউচারে এমন এন্ট্রি যাতে নগদ নেই (বকেয়া, অবচয়, সংশোধন), আর কন্ট্রা ভাউচারে নগদ ও ব্যাংকের মধ্যে বা দুই ব্যাংকের মধ্যে টাকা সরানো। প্রতিটি ভাউচারে সই থাকে আর সঙ্গে প্রমাণপত্র রাখা হয়। এই ইআরপিতে প্রতিটি জার্নালের ছাপার মতো ভাউচার আছে (পার্টি ভাউচারও), আর আমাদের নিজেদের খাতের মধ্যে ট্রান্সফারই কন্ট্রার উদাহরণ।",
+      "source": ["general bookkeeping", "this ERP: routes role.journals.voucher, role.journals.party-voucher"],
+      "legs": [],
+      "where": {"screen": "Accounts › Journals › Voucher", "route": "role.journals.voucher"}
+    },
+    {
+      "id": "gen-trial-balance-limits",
+      "topic": "General — what a trial balance does and does not prove",
+      "scope": "general",
+      "cues": {
+        "en": ["what does a trial balance prove", "errors not shown by trial balance", "purpose of trial balance", "trial balance errors", "suspense account"],
+        "bn": ["রেওয়ামিল কী প্রমাণ করে", "রেওয়ামিলে ধরা পড়ে না এমন ভুল", "রেওয়ামিলের উদ্দেশ্য", "অনিশ্চিত হিসাব"],
+        "bl": ["trial balance ki proman kore", "suspense account ki"]
+      },
+      "answer_en": "General bookkeeping: a trial balance that agrees proves only that debits equal credits. It does not catch an entry left out entirely, an entry posted twice, a wrong account of the right side (posting rent to repairs), the same wrong amount on both sides, or two errors that cancel. When it does not agree, the difference is traditionally parked in a suspense account until found — this ERP's chart has 9810 Suspense Account for it, but the better habit is to find the one-legged entry, as with journal 2255.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: রেওয়ামিল মিললে শুধু এটুকু প্রমাণ হয় যে ডেবিট আর ক্রেডিট সমান। এতে ধরা পড়ে না: কোনো লেনদেন একেবারে বাদ পড়া, একই এন্ট্রি দুবার বসা, ঠিক দিকে কিন্তু ভুল খাতে বসা (ভাড়া মেরামতে), দুই দিকেই একই ভুল অঙ্ক, বা দুটো ভুল যা একে অন্যকে কাটে। না মিললে পার্থক্যটা প্রথাগতভাবে অনিশ্চিত হিসাবে রাখা হয় খুঁজে না পাওয়া পর্যন্ত — এই ইআরপির তালিকায় ৯৮১০ নম্বরে সেই খাত আছে, তবে ভালো অভ্যাস হলো এক-পা এন্ট্রিটা খুঁজে বের করা, যেমন জার্নাল ২২৫৫।",
+      "source": ["general bookkeeping", "accounts table: 9810 Suspense Account"],
+      "legs": [],
+      "where": {"screen": "Reports › Trial Balance", "route": "role.report.trial-balance"}
+    },
+    {
+      "id": "gen-bank-reconciliation",
+      "topic": "General — bank reconciliation",
+      "scope": "general",
+      "cues": {
+        "en": ["bank reconciliation", "how to reconcile the bank", "bank statement does not match", "reconcile bank statement", "uncleared cheque"],
+        "bn": ["ব্যাংক সমন্বয়", "ব্যাংক রিকনসিলিয়েশন", "ব্যাংক স্টেটমেন্ট মিলছে না", "ব্যাংক মেলানো"],
+        "bl": ["bank reconciliation ki", "bank milano"]
+      },
+      "answer_en": "General bookkeeping: once a month the bank's statement is matched line by line against our bank ledger. The usual differences are cheques we issued that the bank has not yet paid, deposits we made that the bank has not yet credited, and items the bank posted that we have not — charges, interest, a direct deposit. The first two wait; the last group is entered in our books (bank charges here go to 8510). This ERP can parse and compare a bank statement against the register, so the leftover lines are the ones to explain.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: মাসে একবার ব্যাংকের স্টেটমেন্ট আমাদের ব্যাংক খতিয়ানের সঙ্গে লাইন ধরে মেলানো হয়। সাধারণ পার্থক্য হলো: আমাদের দেওয়া চেক যা ব্যাংক এখনো পরিশোধ করেনি, আমাদের জমা যা ব্যাংক এখনো উঠায়নি, আর ব্যাংক যা বসিয়েছে কিন্তু আমরা বসাইনি — চার্জ, সুদ, সরাসরি জমা। প্রথম দুটো অপেক্ষা করে; শেষ দলটা আমাদের খাতায় তুলতে হয় (এখানে ব্যাংক চার্জ যায় ৮৫১০-এ)। এই ইআরপি ব্যাংক স্টেটমেন্ট পড়ে রেজিস্টারের সঙ্গে মেলাতে পারে, তাই যা বাকি থাকে সেগুলোই ব্যাখ্যা করার।",
+      "source": ["general bookkeeping", "this ERP: app/Services/BankStatementParser.php, BankStatementComparer.php, app/Models/BankReconciliation.php"],
+      "legs": [],
+      "where": {"screen": "Banks", "route": "role.banks.index"}
+    },
+    {
+      "id": "gen-depreciation",
+      "topic": "General — depreciation",
+      "scope": "general",
+      "cues": {
+        "en": ["depreciation", "how is depreciation calculated", "straight line method", "reducing balance method", "depreciation entry", "accumulated depreciation"],
+        "bn": ["অবচয়", "অবচয় কীভাবে হিসাব হয়", "সরল রৈখিক পদ্ধতি", "ক্রমহ্রাসমান জের পদ্ধতি", "অবচয়ের এন্ট্রি", "পুঞ্জীভূত অবচয়"],
+        "bl": ["depreciation ki", "abochoy kivabe"]
+      },
+      "answer_en": "General bookkeeping: a fixed asset's cost is spread over the years it serves. Straight line charges the same amount each year — (cost − residual value) ÷ useful life. Reducing balance charges a fixed fraction of what is left, so more in the early years. The entry is Dr Depreciation Expense (7110 in this chart) / Cr Accumulated Depreciation (the 1700s, shown against the asset), so the asset's cost stays visible. The useful lives and any rates for tax purposes are set by policy and by the tax law, and are the accountant's to supply; this ERP holds none.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: স্থায়ী সম্পদের দাম যত বছর কাজে লাগে তত বছরে ভাগ করে খরচ ধরা হয়। সরল রৈখিক পদ্ধতিতে প্রতি বছর একই অঙ্ক — (ক্রয়মূল্য বিয়োগ অবশিষ্ট মূল্য) ভাগ আয়ুষ্কাল। ক্রমহ্রাসমান জের পদ্ধতিতে যা বাকি আছে তার একটা নির্দিষ্ট অংশ, তাই শুরুর বছরগুলোতে বেশি। এন্ট্রি: ডেবিট অবচয় খরচ (এই তালিকায় ৭১১০), ক্রেডিট পুঞ্জীভূত অবচয় (১৭০০-এর ঘর, সম্পদের বিপরীতে দেখানো), যাতে সম্পদের ক্রয়মূল্য চোখের সামনে থাকে। আয়ুষ্কাল আর করের জন্য হার নীতি ও কর আইন ঠিক করে, হিসাবরক্ষক তা দেবেন; এই ইআরপিতে তা রাখা নেই।",
+      "source": ["general bookkeeping", "accounts table: 7110 Depreciation Expense", "config/account_reports.php: accumulated depreciation 1700-1749"],
+      "legs": [{"side": "Dr", "code": "7110", "name": "Depreciation Expense"}, {"side": "Cr", "code": "17xx", "name": "Accumulated Depreciation"}],
+      "where": {"screen": "Accounts › Journals", "route": "role.journals.create"}
+    },
+    {
+      "id": "gen-doubtful-debts",
+      "topic": "General — bad and doubtful debts",
+      "scope": "general",
+      "cues": {
+        "en": ["bad debt", "doubtful debts", "provision for doubtful debts", "write off a receivable", "bad debt entry", "allowance for doubtful debts"],
+        "bn": ["অনাদায়ী পাওনা", "সন্দেহজনক পাওনা", "কুঋণ", "পাওনা অবলোপন", "অনাদায়ী পাওনার সঞ্চিতি"],
+        "bl": ["bad debt ki", "anadayi paona"]
+      },
+      "answer_en": "General bookkeeping: a debt that will not be collected is written off — Dr Bad Debts Expense (7210 here) / Cr the receivable. A debt that may not be collected is provided for instead: Dr 7210 / Cr Allowance for Doubtful Debts (1320 here), which sits against receivables so the balance sheet shows what is realistically collectible while the party still owes the full sum. This ERP has the accounts and no automatic provision; the call on which parties are doubtful is management's.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: যে পাওনা আর আদায় হবে না তা অবলোপন করা হয় — ডেবিট অনাদায়ী পাওনা খরচ (এখানে ৭২১০), ক্রেডিট সংশ্লিষ্ট পাওনা। যে পাওনা আদায় নাও হতে পারে তার জন্য সঞ্চিতি রাখা হয়: ডেবিট ৭২১০, ক্রেডিট সন্দেহজনক পাওনার সঞ্চিতি (এখানে ১৩২০), যা পাওনার বিপরীতে বসে — ফলে ব্যালান্স শিটে বাস্তবে যা আদায়যোগ্য তা দেখায়, যদিও পার্টি পুরো অঙ্কই দেনা থাকে। এই ইআরপিতে খাতগুলো আছে, স্বয়ংক্রিয় সঞ্চিতি নেই; কোন পার্টি সন্দেহজনক তা ব্যবস্থাপনার সিদ্ধান্ত।",
+      "source": ["general bookkeeping", "accounts table: 7210 Bad Debts Expense, 1320 Allowance for Doubtful Debts"],
+      "legs": [{"side": "Dr", "code": "7210", "name": "Bad Debts Expense"}, {"side": "Cr", "code": "1320", "name": "Allowance for Doubtful Debts"}],
+      "where": {"screen": "Accounts › Journals", "route": "role.journals.create"}
+    },
+    {
+      "id": "gen-prepaid-accrued",
+      "topic": "General — prepaid and accrued expenses, unearned income",
+      "scope": "general",
+      "cues": {
+        "en": ["prepaid expense", "accrued expense", "unearned revenue", "outstanding expense", "advance rent entry", "adjusting entries"],
+        "bn": ["অগ্রিম প্রদত্ত খরচ", "বকেয়া খরচ", "অনুপার্জিত আয়", "অগ্রিম ভাড়া", "সমন্বয় এন্ট্রি"],
+        "bl": ["prepaid expense ki", "accrued expense ki", "adjustment entry"]
+      },
+      "answer_en": "General bookkeeping: rent paid for six months ahead is not six months of expense — it is an asset (Prepaid Rent, 1471 here) released to expense month by month (Dr 6210 / Cr 1471). An expense used but not yet billed or paid is accrued: Dr the expense / Cr Accrued Expenses (2180) or a specific payable such as 2192 Rent Payable. Money received before the service is delivered is unearned income, a liability (2170, or 2320 for travel) until earned. These month-end adjustments are journal entries; the ERP posts none of them by itself.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: ছয় মাসের ভাড়া আগে দিলে তা ছয় মাসের খরচ নয় — তা একটি সম্পদ (অগ্রিম ভাড়া, এখানে ১৪৭১), মাসে মাসে খরচে নামানো হয় (ডেবিট ৬২১০, ক্রেডিট ১৪৭১)। যে খরচ হয়ে গেছে কিন্তু বিল বা পরিশোধ হয়নি তা বকেয়া খরচ: ডেবিট খরচ, ক্রেডিট বকেয়া খরচ (২১৮০) বা নির্দিষ্ট দেনা যেমন ২১৯২ ভাড়া দেনা। সেবা দেওয়ার আগে পাওয়া টাকা অনুপার্জিত আয়, অর্জিত না হওয়া পর্যন্ত দায় (২১৭০, ভ্রমণের জন্য ২৩২০)। মাস শেষের এই সমন্বয়গুলো জার্নাল এন্ট্রি; ইআরপি নিজে থেকে এগুলো বসায় না।",
+      "source": ["general bookkeeping", "accounts table: 1471, 2170, 2180, 2192, 2320, 6210", "journal_items source=manual (Dr 6210 / Cr 2192 present)"],
+      "legs": [],
+      "where": {"screen": "Accounts › Journals", "route": "role.journals.create"}
+    },
+    {
+      "id": "gen-year-end",
+      "topic": "General — closing the year",
+      "scope": "general",
+      "cues": {
+        "en": ["year end closing", "closing entries", "how to close the year", "retained earnings", "financial year closing", "carry forward profit"],
+        "bn": ["বছর শেষে হিসাব বন্ধ", "সমাপনী এন্ট্রি", "সংরক্ষিত মুনাফা", "আর্থিক বছর শেষ", "লাভ পরের বছরে নেওয়া"],
+        "bl": ["year end closing kivabe", "retained earnings ki"]
+      },
+      "answer_en": "General bookkeeping: at year end every income and expense account is closed to zero and the net profit or loss is carried into equity — retained earnings (3310 here) — while asset, liability and equity balances carry forward as next year's opening. Drawings close against capital. In Bangladesh the income year for most companies runs July to June; confirm the company's own year with the accountant. This ERP reads its statements straight from the journals by date, so it shows the current year's profit in equity without a closing entry having been posted.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: বছর শেষে প্রতিটি আয় ও খরচের খাত শূন্য করে বন্ধ করা হয়, আর নিট লাভ বা ক্ষতি মালিকানায় — সংরক্ষিত মুনাফায় (এখানে ৩৩১০) — নেওয়া হয়; সম্পদ, দায় ও মালিকানার জের পরের বছরের প্রারম্ভিক জের হয়ে যায়। উত্তোলন মূলধনের বিপরীতে বন্ধ হয়। বাংলাদেশে বেশিরভাগ কোম্পানির আয়বর্ষ জুলাই থেকে জুন; কোম্পানির নিজের বছর কোনটা, তা হিসাবরক্ষকের কাছে নিশ্চিত হয়ে নিন। এই ইআরপি তারিখ ধরে সরাসরি জার্নাল থেকে বিবরণী পড়ে, তাই সমাপনী এন্ট্রি না বসালেও চলতি বছরের লাভ মালিকানার ঘরে দেখায়।",
+      "source": ["general bookkeeping", "config/accounts.php: retained_earnings 3310", "app/Services/Reports/StatementBuilder.php"],
+      "legs": [],
+      "where": {"screen": "Reports › Balance Sheet", "route": "role.report.balance-sheet"}
+    },
+    {
+      "id": "gen-ratios",
+      "topic": "General — the few ratios worth reading",
+      "scope": "general",
+      "cues": {
+        "en": ["current ratio", "working capital", "gross margin formula", "net margin formula", "financial ratios", "quick ratio"],
+        "bn": ["চলতি অনুপাত", "চলতি মূলধন", "মোট লাভের হার", "নিট লাভের হার", "আর্থিক অনুপাত"],
+        "bl": ["current ratio ki", "working capital ki"]
+      },
+      "answer_en": "General bookkeeping. Working capital = current assets − current liabilities: what is left to run on if every short-term debt were paid today. Current ratio = current assets ÷ current liabilities; quick ratio leaves inventory and prepayments out. Gross margin = (revenue − cost of sales) ÷ revenue; net margin = net profit ÷ revenue. For this business read receivables net of customer advances first, or the ratios flatter a position that is mostly other people's money.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান। চলতি মূলধন = চলতি সম্পদ বিয়োগ চলতি দায়: আজ সব স্বল্পমেয়াদি দেনা মিটিয়ে দিলে চালানোর জন্য যা থাকে। চলতি অনুপাত = চলতি সম্পদ ভাগ চলতি দায়; দ্রুত অনুপাতে মজুদ আর অগ্রিম খরচ বাদ দেওয়া হয়। মোট লাভের হার = (আয় বিয়োগ বিক্রয় ব্যয়) ভাগ আয়; নিট লাভের হার = নিট লাভ ভাগ আয়। এই ব্যবসায় আগে পাওনা থেকে গ্রাহকের অগ্রিম বাদ দিয়ে পড়ুন, নইলে অনুপাতগুলো এমন অবস্থাকে ভালো দেখায় যার বেশিরভাগই অন্যের টাকা।",
+      "source": ["general bookkeeping"],
+      "legs": [],
+      "where": {"screen": "Reports › Monthly Report", "route": "role.report.monthly-report"}
+    },
+    {
+      "id": "gen-inventory",
+      "topic": "General — valuing stock",
+      "scope": "general",
+      "cues": {
+        "en": ["inventory valuation", "fifo", "weighted average cost", "stock valuation", "closing stock"],
+        "bn": ["মজুদ মূল্যায়ন", "আগে আসলে আগে যায়", "ভারযুক্ত গড়", "সমাপনী মজুদ"],
+        "bl": ["stock valuation ki", "fifo ki"]
+      },
+      "answer_en": "General bookkeeping: stock is valued at the lower of cost and net realisable value. Cost is assigned by first-in-first-out (the oldest units are sold first) or by weighted average (every unit carries the average cost of what is on hand). Cost of goods sold = opening stock + purchases − closing stock. The travel desks hold no stock — a ticket is bought for a passenger — so this matters to the trading, manufacturing and agro companies, whose stock sits under 1400 Inventory.",
+      "answer_bn": "সাধারণ হিসাববিজ্ঞান: মজুদের মূল্য ধরা হয় ক্রয়মূল্য আর নিট আদায়যোগ্য মূল্যের মধ্যে যেটা কম। ক্রয়মূল্য ধরা হয় আগে আসলে আগে যায় পদ্ধতিতে (পুরোনো মাল আগে বিক্রি), নয়তো ভারযুক্ত গড়ে (প্রতিটি এককের দাম মজুদের গড় দাম)। বিক্রীত পণ্যের ব্যয় = প্রারম্ভিক মজুদ যোগ ক্রয় বিয়োগ সমাপনী মজুদ। ভ্রমণের ডেস্কগুলোর কোনো মজুদ নেই — টিকিট কেনা হয় যাত্রীর জন্যই — তাই এটা বাণিজ্য, উৎপাদন আর কৃষি কোম্পানিগুলোর বিষয়, যাদের মজুদ ১৪০০ মজুদ খাতের নিচে।",
+      "source": ["general bookkeeping", "config/accounts.php: inventory 1400"],
+      "legs": [],
+      "where": {"screen": "Inventory", "route": "role.products.index"}
     }
   ]
 }

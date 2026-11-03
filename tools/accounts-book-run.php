@@ -89,6 +89,25 @@ $CASES = [
     ['what is double entry',                                 'en', 'double-entry-epal', true],
     ['ডেবিট ক্রেডিট কী',                                     'bn', 'double-entry-epal', true],
     ['how are accounts numbered in the chart of accounts',   'en', 'chart-of-accounts', true],
+    /* general bookkeeping — answered as general, never as this ERP's rule */
+    ['what is the accounting equation',                      'en', 'gen-accounting-equation', false],
+    ['হিসাব সমীকরণ কী',                                      'bn', 'gen-accounting-equation', false],
+    ['what are the golden rules of accounting',              'en', 'gen-golden-rules', false],
+    ['কখন ডেবিট কখন ক্রেডিট হয়',                              'bn', 'gen-golden-rules', true],
+    ['what is accrual accounting',                           'en', 'gen-accrual-cash', true],
+    ['what is a contra entry',                               'en', 'gen-voucher', true],
+    ['ভাউচার কী',                                            'bn', 'gen-voucher', false],
+    ['what does a trial balance prove',                      'en', 'gen-trial-balance-limits', true],
+    ['how to reconcile the bank statement',                  'en', 'gen-bank-reconciliation', false],
+    ['ব্যাংক সমন্বয় কীভাবে করব',                               'bn', 'gen-bank-reconciliation', false],
+    ['how is depreciation calculated',                       'en', 'gen-depreciation', false],
+    ['অবচয় কীভাবে হিসাব হয়',                                  'bn', 'gen-depreciation', false],
+    ['what is the bad debt entry',                           'en', 'gen-doubtful-debts', true],
+    ['what is a prepaid expense',                            'en', 'gen-prepaid-accrued', false],
+    ['how are closing entries made at year end',             'en', 'gen-year-end', true],
+    ['what is the current ratio',                            'en', 'gen-ratios', false],
+    ['চলতি অনুপাত কী',                                       'bn', 'gen-ratios', false],
+    ['what is fifo inventory valuation',                     'en', 'gen-inventory', false],
 ];
 
 /* figure questions the book must leave alone */
@@ -122,6 +141,9 @@ foreach (AccountsBook::entries() as $e) {
     foreach (['answer_en', 'answer_bn', 'source', 'topic', 'scope'] as $f) if (empty($e[$f])) $miss[] = $f;
     if (empty($e['where']['screen'])) $miss[] = 'where.screen';
     if (preg_match('/[A-Za-z]/', (string) ($e['answer_bn'] ?? ''))) $miss[] = 'Latin in answer_bn';
+    if (($e['scope'] ?? '') === 'general' && (!str_starts_with((string) $e['answer_en'], 'General bookkeeping')
+        || !preg_match('/^(এটা )?সাধারণ হিসাববিজ্ঞান|^বাংলাদেশের অফিসে/u', (string) $e['answer_bn']))) $miss[] = 'general entry not marked general';
+    if (!in_array($e['scope'] ?? '', ['epal', 'general'], true)) $miss[] = 'scope';
     /* a rate the ERP does not hold must not be said; the one percentage allowed is a share EON measured (42%) */
     if (preg_match('/(vat|tax|tds|vds|ভ্যাট|কর)/iu', (string) $e['topic'] . ' ' . $e['id'])
         && preg_match('/\d\s*(%|percent)|[০-৯]\s*(%|শতাংশ)/u', (string) $e['answer_en'] . ' ' . (string) $e['answer_bn'])) $miss[] = 'states a tax rate';
