@@ -66,7 +66,8 @@ final class Slots
         // titles, tags and the generic trade words are not the name ("আল-মাদানী ট্রাভেলস" must not meet
         // NARIA TRAVELS on "travels"); য-ফলা is a vowel sound, not a j (ট্যুরস is t-r-s, not t-j-r-s)
         $skel = fn($s) => Grammar::skeleton(str_replace("\u{09CD}\u{09AF}", '', preg_replace('/\b(mr|md|mrs|ms|mst|ltd|limited|travels?|tours?|agency|air|airlines?|enterprises?|international|intl|and)\b|&|\(.*?\)|মোঃ|মো\.|ট্রাভেলস|ট্রাভেল|ট্যুরস|ট্যুর|এজেন্সি|এয়ার|এন্টারপ্রাইজ|ইন্টারন্যাশনাল/iu', ' ', (string) $s) ?? ''));
-        $stop = '/^(এর|কে|থেকে|কাছে|কত|কয়টা|লাভ|লস|প্রফিট|ডিউ|বাকি|টাকা|স্টেটমেন্ট|লেজার|গত|এই|আজ|আজকে|ফ্লাইট|টিকেট|ট্রাভেল|দাও|দেখাও|পাঠাও|বলো|শোনো|আচ্ছা|একটু|প্লিজ|ভাই)$/u';
+        // ordinary words are never a name — "তুলনা" met THAILAND and "most" met Mostofa on sound alone
+        $stop = '/^(এর|কে|থেকে|কাছে|কত|কয়টা|কয়টা|লাভ|লস|প্রফিট|ডিউ|বাকি|টাকা|স্টেটমেন্ট|লেজার|গত|এই|আজ|আজকে|ফ্লাইট|টিকেট|টিকিট|ট্রাভেল|দাও|দেখাও|পাঠাও|বলো|শোনো|আচ্ছা|একটু|প্লিজ|ভাই|তুলনা|তুলনায়|কারা|কার|কোন|কোনটা|বিক্রি|বিক্রিতে|সবচেয়ে|বেশি|কম|মোট|মাসে|মাস|সপ্তাহে|বছর|খরচ|বেতন|সিট|খালি|এজেন্ট|ভেন্ডর|সেকশন|খাত|অনুযায়ী|ভিত্তিক|টপ|তালিকা|লিস্ট|করো|হইছে|হয়েছে|আছে|কেমন|যাচ্ছে|most|least|top|owe|which|what|who|whom|the|do|we|us|how|many|much|this|last|month|week|year|today|sales|profit|show|list|by|per|and|vs|compare|best|worst|total|all|weather|vendor|vendors|agent|agents|client|clients|customer|customers|supplier|suppliers|demo|ক্লায়েন্ট|কাস্টমার|সাপ্লায়ার|ভেন্ডার)$/iu';
         $words = array_values(array_filter(preg_split('/[\s,?।!]+/u', $q) ?: [], fn($w) => $w !== ''));
         $best = null;
         for ($n = 4; $n >= 1; $n--) for ($i = 0; $i + $n <= count($words); $i++) {

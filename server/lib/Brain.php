@@ -69,6 +69,7 @@ TXT;
         $out = null;
         if ($lang) $clientFacts['lang'] = $lang;
         if (Config::llmEnabled()) { try { $out = self::askLlm($question, $conv['id'], $D, $company, $voice, $tools, $clientFacts); } catch (Throwable $e) { Log::error('llm failed: ' . $e->getMessage()); $out = null; $llmError = $e->getMessage(); } }
+        if (class_exists('Query')) Query::$conv = $conversationId;   // follow-ups find the last question of this conversation
         if (!$out) { $out = self::askOffline($question, $D, $company, $tools, $lang); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
         Memory::addMessage($conv['id'], 'assistant', $out['text'], ['mode' => $out['mode'], 'tools' => $out['tools_used'] ?? []]);
         $out['conversation_id'] = $conv['id'];
@@ -179,6 +180,20 @@ TXT;
             try {
                 // the exact shapes Ops knows (a wallet's balance, salary still to pay, flight money due) beat any guess
                 if (class_exists('Ops') && ($o = Ops::answer($q, $D))) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null] + (isset($o['navigate_path']) ? ['navigate_path' => $o['navigate_path']] : []);
+                /* the composition engine (Query): a follow-up to the last answer, or a question that compares,
+                   ranks, trends or breaks down — combinations no single intent was written for */
+                if (class_exists('Query')) {
+                    $bnQ0 = (bool) (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno|dao|lav|khoroch)\b/i', $q) >= 1);
+                    $last = Query::recall(Query::$conv);
+                    $fr = $last ? Query::followUp($q, $last, $D) : null;
+                    $fr = $fr ?? Query::parse($q, $D);
+                    $compose = ($fr !== null) && ($last !== null && $fr !== Query::parse($q, $D) || in_array($fr['op'], ['compare', 'trend', 'top', 'bottom'], true) || $fr['by']);
+                    if ($compose && ($qa = Query::answer($fr, $D, $bnQ0))) {
+                        Query::remember(Query::$conv, $fr);
+                        return ['mode' => self::MODE_OFFLINE, 'text' => $qa, 'speak' => self::voice($qa, $bnQ0 ? 'bn' : 'en'), 'tools_used' => ['query'], 'intent' => 'query:' . ($fr['measure'] ?? 'count') . '/' . $fr['op'] . ($fr['by'] ? '/by-' . $fr['by'] : ''), 'lang' => $bnQ0 ? 'bn' : 'en', 'usage' => null];
+                    }
+                    if (Query::answerable($fr)) Query::remember(Query::$conv, $fr);   // so the next "আর গত মাসে?" has something to change
+                }
                 $shape = Analyst::shape($q);
                 $rk = $shape ? [['intent' => $shape, 'score' => 0, 'margin' => INF]] : IntentModel::rank($q, 2);
                 if ($rk && $rk[0]['margin'] >= IntentModel::confidentMargin()) {

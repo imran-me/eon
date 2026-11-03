@@ -43,6 +43,7 @@ if (is_file(EON_ROOT . '/lib/Persona.php')) require_once EON_ROOT . '/lib/Person
 if (is_file(EON_ROOT . '/lib/Gemini.php')) require_once EON_ROOT . '/lib/Gemini.php';  // understanding any wording (key in storage/gemini.key)
 if (is_file(EON_ROOT . '/lib/IntentModel.php')) require_once EON_ROOT . '/lib/IntentModel.php';  // EON's own trained intent model
 if (is_file(EON_ROOT . '/lib/Slots.php')) require_once EON_ROOT . '/lib/Slots.php';  // who / when / which section, read from the question
+if (is_file(EON_ROOT . '/lib/Query.php')) require_once EON_ROOT . '/lib/Query.php';  // understanding by composition: measure × of-what × filters × operation
 if (is_file(EON_ROOT . '/lib/Analyst.php')) require_once EON_ROOT . '/lib/Analyst.php';  // exact answers per intent, from the ERP
 if (is_file(EON_ROOT . '/lib/Facts.php')) require_once EON_ROOT . '/lib/Facts.php';  // the ERP boiled down for Gemini to reason over
 if (is_file(EON_ROOT . '/lib/Ops.php')) require_once EON_ROOT . '/lib/Ops.php';  // straight operational questions
