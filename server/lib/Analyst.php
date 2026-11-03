@@ -44,6 +44,17 @@ final class Analyst
         if (preg_match('/কালেকশন|collection|টাকা আসছে|পেমেন্ট গেছে|ক্যাশ ফ্লো|cash ?flow/u', $l)) return 'ক্যাশ ব্যালেন্স ও ক্যাশ ফ্লো';
         if (preg_match('/পে-?রোল|পেরোল|payroll/u', $l) && !preg_match('/প্রসেস|process|পাঠাও|send/u', $l)) return 'বেতন জানা';
         if (preg_match('/(কোথায়|কোথায়|কোন খাতে|কোন জায়গায়|কোন জায়গায়|কেন|কিসে|where|why).*(লস|ক্ষতি|loss)|(লস|ক্ষতি|loss).*(কোথায়|কোথায়|কেন|কিসে|where|why)/u', $l)) return 'লসের কারণ';
+        $count = '/কয়টা|কয়টা|কয়টি|কতগুলো|koyta|koita|how many/u';
+        // seats left on a flight
+        if (preg_match('/সিট|seat/u', $l) && preg_match('/খালি|বাকি|unsold|available|empty|left|বিক্রি হয়নি/u', $l)) return 'সিট ইনভেন্টরি';
+        // how many tickets were cancelled / voided — a count, not a cancellation order
+        if (preg_match($count, $l) && preg_match('/টিকেট|টিকিট|ticket/u', $l) && preg_match('/ক্যান্সেল|ক্যানসেল|বাতিল|cancel|void|ভয়েড/u', $l)) return 'টিকেট কাউন্ট/লিস্ট';
+        // how many flights were given to an agent
+        if (preg_match($count, $l) && preg_match('/ফ্লাইট|flight/u', $l) && preg_match('/দিছি|দিলাম|দিয়েছি|দিয়েছি|দিছে|gave|dichi|disi|given/u', $l)) return 'ফ্লাইট কাউন্ট - এজেন্টভিত্তিক';
+        // projects against budget or deadline
+        if (preg_match('/প্রজেক্ট|প্রকল্প|project/u', $l) && preg_match('/বাজেট|budget|লেট|late|দেরি|সময় পার|ছাড়িয়ে|ছাড়িয়ে|overrun|deadline/u', $l)) return 'রিস্ক অ্যানালাইসিস';
+        // how much was spent — not an expense being entered
+        if (preg_match('/\bspen[dt]|খরচ|khoroch|expense/u', $l) && preg_match('/কত|koto|how much|total|মোট/u', $l) && !preg_match('/তুলো|তোলো|লেখো|লিখো|এন্ট্রি|entry|add|record|দিছি|দিয়েছি|গেছে/u', $l)) return 'খরচ জানা';
         return null;
     }
 
