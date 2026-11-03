@@ -52,6 +52,7 @@ export const DATASET_SHAPE = {
   visa_processes:          ['id', 'application_id', 'passport_holder_id', 'applicant', 'vendor_id', 'country', 'visa_category', 'visa_type', 'travel_date', 'embassy_fee', 'vfs_fee', 'our_service_fee', 'costing_price', 'cost_paid_amount', 'due_amount', 'sale_price', 'advance_received', 'payable_date', 'receivable_date', 'payment_status', 'status', 'stage', 'assigned_officer_id', 'officer'],
   other_visa_services:     ['id', 'service_code', 'passport_holder_id', 'applicant', 'service_type', 'cost_price', 'sale_price', 'deadline', 'status', 'is_billable'],
   passport_holders:        ['id', 'name', 'passport_no', 'nationality', 'phone', 'expiry_date', 'type', 'status', 'category'],
+  contract_flight_passengers: ['id', 'contract_flight_id', 'flight_number', 'departure_at', 'passport_holder_id', 'name', 'passport_no', 'agent_id', 'agent', 'stage', 'exception_flag', 'agent_price'],
   portals:                 ['id', 'name', 'type', 'balance', 'next_payment_date', 'next_payment_amount', 'account_id', 'status'],
   ticket_sale_items:       ['id', 'ticket_sale_id', 'price', 'ticket_no', 'airline', 'trip_type', 'ticket_type'],
   visa_sale_items:         ['id', 'visa_sale_id', 'sale_price', 'application_id', 'country', 'visa_category'],

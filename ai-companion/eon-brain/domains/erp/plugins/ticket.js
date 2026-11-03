@@ -81,7 +81,7 @@ export function readOrder(q) {
 }
 
 /* ---------- talking to the ERP ---------- */
-async function csrf() {
+export async function csrf() {
   if (typeof document !== 'undefined') {
     const m = document.querySelector('meta[name="csrf-token"]');
     if (m && m.content) return m.content;

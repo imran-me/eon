@@ -183,6 +183,8 @@ final class Erp
         self::section($D, 'other_visa_services', "SELECT s.id, s.service_code, s.passport_holder_id, h.name AS applicant, t.name AS service_type, s.cost_price, s.sale_price, s.deadline, s.status, s.is_billable, s.assigned_officer_id
             FROM other_visa_services s LEFT JOIN passport_holders h ON h.id = s.passport_holder_id LEFT JOIN other_service_types t ON t.id = s.other_service_type_id WHERE 1=1 {$sd('other_visa_services', 's')}");
         self::section($D, 'passport_holders', "SELECT h.id, h.name, h.passport_no, h.nationality, h.phone, h.expiry_date, h.type, h.status, c.name AS category FROM passport_holders h LEFT JOIN passport_holder_categories c ON c.id = h.category_id WHERE 1=1 {$sd('passport_holders', 'h')}");
+        // --- who is on which contract flight: offload, deport and rebooking act on this row, not on the holder ---
+        self::section($D, 'contract_flight_passengers', "SELECT p.id, p.contract_flight_id, f.flight_number, f.departure_at, p.passport_holder_id, h.name, h.passport_no, p.agent_id, a.name AS agent, p.stage, p.exception_flag, p.agent_price FROM contract_flight_passengers p JOIN contract_flights f ON f.id = p.contract_flight_id LEFT JOIN passport_holders h ON h.id = p.passport_holder_id LEFT JOIN users a ON a.id = p.agent_id WHERE f.deleted_at IS NULL");
 
         // --- money movement outside the journal ---
         self::section($D, 'payments', "SELECT p.id, p.user_id, u.name AS person, p.employee_salary_id, p.payment_date AS date, p.bank_id, p.payment_method, p.transaction_no, p.amount, p.notes FROM payments p LEFT JOIN users u ON u.id = p.user_id WHERE p.payment_date >= ? ORDER BY p.payment_date DESC", [$from]);

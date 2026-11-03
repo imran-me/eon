@@ -126,6 +126,8 @@ export async function submit(plan) {
     const errs = Object.entries(json.errors).map(([f, m]) => `${f}: ${[].concat(m).join(', ')}`);
     return { ok: false, status: r.status, errors: errs, message: 'The ERP rejected it: ' + errs.join(' · ') };
   }
+  // a refusal that says why ({success:false, message}, as the contract-flight screens answer) is reported in its own words
+  if (!r.ok && json && typeof json.message === 'string' && json.message) return { ok: false, status: r.status, errors: [json.message], message: `The ERP refused it: ${json.message} Nothing was saved.` };
   if (!r.ok) return { ok: false, status: r.status, message: `The ERP refused (${r.status}). Nothing was saved.` };
 
   /* A 200 is not proof. Two of the ERP's own payment endpoints answer a refusal
