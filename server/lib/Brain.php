@@ -123,6 +123,33 @@ TXT;
         dataset — 1131/1131 on tools/qa-corpus.json. Answers sits underneath it,
         and the original English-only regex chain underneath that, so the API
         answers even if a layer above it throws. */
+    private static bool $planning = false;
+
+    /** carry out what Gemini understood — every figure still comes from the offline brain */
+    private static function fromPlan(array $p, array $D, ?int $company, Tools $tools, string $lg): ?array
+    {
+        $bn = $lg === 'bn';
+        switch ($p['route'] ?? '') {
+            case 'ask':
+                $cq = trim((string) ($p['question'] ?? ''));
+                if ($cq === '') return null;
+                $o = self::askOffline($cq, $D, $company, $tools, $lg);
+                if (!empty($o['weak'])) return null;
+                $o['planned'] = $cq;
+                return $o;
+            case 'navigate':
+                $sc = trim((string) ($p['screen'] ?? ''));
+                if ($sc === '') return null;
+                $t = $bn ? "{$sc} খুলছি।" : "Opening {$sc}.";
+                return ['mode' => self::MODE_OFFLINE, 'text' => $t, 'speak' => self::voice($t, $lg), 'tools_used' => [], 'intent' => 'navigate', 'lang' => $lg, 'navigate_query' => $sc, 'usage' => null];
+            case 'clarify':
+                $t = trim((string) ($p['question'] ?? ''));
+                if ($t === '') return null;
+                return ['mode' => self::MODE_OFFLINE, 'text' => $t, 'speak' => self::voice($t, $lg), 'tools_used' => [], 'intent' => 'clarify', 'lang' => $lg, 'usage' => null];
+        }
+        return null;
+    }
+
     public static function askOffline(string $q, array $D, ?int $company, Tools $tools, ?string $lang = null): array
     {
         // let Nlu resolve a name in the sentence against real records
@@ -158,7 +185,7 @@ TXT;
         // go first: the general answerer took "salary dite hobe" for supplier payables
         if (class_exists('Ops')) {
             try {
-                $o = Ops::answer($q, $D);
+                $o = Ops::answer($q, $D, $lang);
                 if ($o !== null) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null];
             } catch (Throwable $e) { Log::warn('ops failed', ['error' => $e->getMessage()]); }
         }
@@ -248,6 +275,17 @@ TXT;
            `Answers` ends in a bare apology. Returning the older layer first cost
            four "how is X calculated" cases, which had been answered by that menu
            for months and came back as "I did not catch that" instead. */
+        // nothing understood it: Gemini reads the wording and hands back something EON does exactly
+        if (!self::$planning && class_exists('Gemini') && Gemini::enabled()) {
+            $lg = (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno)\b/i', $q) >= 1) ? 'bn' : 'en';
+            self::$planning = true;
+            try {
+                $p = Gemini::plan($q, $lg);
+                $r = $p ? self::fromPlan($p, $D, $company, $tools, $lg) : null;
+                if ($r !== null) return $r;
+            } catch (Throwable $e) { Log::warn('gemini plan failed', ['error' => $e->getMessage()]); }
+            finally { self::$planning = false; }
+        }
         if ($weak !== null) return $weak + ['weak' => true];   // the browser may try a meaning match before settling for it
         if ($answers !== null) return $answers + ['weak' => true];
 

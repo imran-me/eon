@@ -20,10 +20,11 @@ final class Ops
 {
     private const BANGLISH = '/\b(ache|achhe|koto|kto|taka|dite|hobe|baki|koyta|koita|dewa|deya|hoyeche|hoise|hoyse|mase|mashe|kothay|dekhao|amar|amader|sobai|sobaike|shobai|ki|keno|kar|koro|niye|jao)\b/i';
 
-    public static function answer(string $q, array $D): ?array
+    public static function answer(string $q, array $D, ?string $lang = null): ?array
     {
         $l = mb_strtolower(trim($q));
-        $bn = (bool) preg_match('/\p{Bengali}/u', $q) || preg_match_all(self::BANGLISH, $l) >= 2;
+        // 'bn'/'en' exactly is an instruction (the Gemini planner re-asks in English for a Bangla speaker)
+        $bn = $lang === 'bn' ? true : ($lang === 'en' ? false : ((bool) preg_match('/\p{Bengali}/u', $q) || preg_match_all(self::BANGLISH, $l) >= 2));
         foreach (['bank', 'personSalary', 'payrollDue', 'flightsDue', 'flightsPending'] as $h) {
             $r = self::$h($l, $D, $bn);
             if ($r !== null) return ['text' => $r, 'lang' => $bn ? 'bn' : 'en', 'intent' => 'ops_' . $h];

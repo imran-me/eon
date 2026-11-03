@@ -61,3 +61,10 @@ tools/corpus/
 server/storage/data/report-*.csv
 server/storage/data/report-*.xlsx
 scratchpad_grid.png
+tools/nav-bank.jsonl
+tools/nav-sweep-report.json
+tools/owner-report.json
+
+# never commit API keys
+server/storage/gemini.key
+*.key

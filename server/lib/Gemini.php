@@ -1,0 +1,101 @@
+<?php
+/* ============================================================
+   EON · Gemini — understanding, not answering.
+
+   The offline brain answers exactly but only what its rules were written
+   for. Gemini reads any wording — বাংলা, Banglish, English, half a
+   sentence — and turns it into something EON already does exactly: a
+   question the offline brain answers from the ERP, a screen to open, or a
+   question back when the boss was not clear. It never produces a figure:
+   every number still comes from the ERP through Ops/Answer.
+
+   Key: server/storage/gemini.key (private, kept across deploys), or
+   config gemini.key, or env GEMINI_API_KEY. Never in the repo.
+   ============================================================ */
+declare(strict_types=1);
+
+final class Gemini
+{
+    /** fast first; the next one when the first is overloaded (2.5 is closed to new keys) */
+    private const MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+
+    public static function key(): ?string
+    {
+        $f = dirname(__DIR__) . '/storage/gemini.key';
+        if (is_file($f) && ($k = trim((string) file_get_contents($f))) !== '') return $k;
+        if (class_exists('Config') && ($k = (string) (Config::get('gemini.key') ?? '')) !== '') return $k;
+        return getenv('GEMINI_API_KEY') ?: null;
+    }
+
+    public static function enabled(): bool { return self::key() !== null; }
+
+    /** one JSON-mode call; null on any failure, so the offline brain carries on */
+    public static function json(string $system, string $user, float $timeout = 12.0): ?array
+    {
+        $key = self::key(); if (!$key) return null;
+        $body = json_encode([
+            'systemInstruction' => ['parts' => [['text' => $system]]],
+            'contents' => [['role' => 'user', 'parts' => [['text' => $user]]]],
+            'generationConfig' => ['responseMimeType' => 'application/json', 'temperature' => 0.1],
+        ], JSON_UNESCAPED_UNICODE);
+        $res = false; $code = 0;
+        foreach (self::MODELS as $model) {
+            $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent');
+            curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => (int) ceil($timeout),
+                CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $key]]);
+            $res = curl_exec($ch); $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
+            if ($res !== false && $code === 200) break;
+        }
+        if ($res === false || $code !== 200) { if (class_exists('Log')) Log::warn('gemini failed', ['code' => $code]); return null; }
+        $j = json_decode((string) $res, true);
+        $t = $j['candidates'][0]['content']['parts'][0]['text'] ?? null;
+        $o = is_string($t) ? json_decode($t, true) : null;
+        return is_array($o) ? $o : null;
+    }
+
+    /* ---------- the planner ---------- */
+
+    private static ?string $catalog = null;
+    private static function catalog(): string
+    {
+        if (self::$catalog !== null) return self::$catalog;
+        $f = dirname(__DIR__) . '/kb/eon-intents.json';
+        $j = is_file($f) ? json_decode((string) file_get_contents($f), true) : [];
+        $lines = [];
+        foreach (($j['intents'] ?? []) as $name => $ex) $lines[] = '- ' . $name . ': ' . implode(' | ', array_slice($ex, 0, 3));
+        return self::$catalog = implode("\n", $lines);
+    }
+
+    /**
+     * What does the boss want? Returns one of
+     *   ['route' => 'ask', 'question' => '<English question EON answers exactly>']
+     *   ['route' => 'navigate', 'screen' => '<ERP screen in English>']
+     *   ['route' => 'clarify', 'question' => '<a short question back, in the boss's language>']
+     *   ['route' => 'none']
+     */
+    public static function plan(string $q, string $lang): ?array
+    {
+        $system = <<<TXT
+You are the understanding layer of EON, the assistant inside Epal Group's ERP (a Bangladeshi travel group: ticketing, contract flights, visa processing, contract files (manpower), plus accounts, payroll, HR, CRM, tasks). The boss speaks Bangla, Banglish (Bangla in Latin letters) or English, often loosely, by voice (speech-recognition errors happen; English words may arrive written in Bangla letters).
+
+Your only job: map what the boss said to ONE thing EON can do exactly. Never answer the question yourself and never invent a number.
+
+EON answers these questions exactly (intent: examples):
+{CATALOG}
+Also exactly: a named bank/wallet's balance ("how much is in bKash"), this month's salary still to pay, one person's salary paid or not, how many contract flights are still to fly, contract-flight money due, a person's details by name, a party's ledger or statement, tickets by passenger name, ticket counts by status.
+
+Reply with JSON only, one of:
+{"route":"ask","question":"<a short English question in the style of the examples above, keeping every name, number, month and filter the boss gave>"}
+{"route":"navigate","screen":"<the ERP screen to open, in English, e.g. 'contract flight board', 'ticket orders', 'bank transfers', 'vendor ledger'>"}
+{"route":"clarify","question":"<one short question back to the boss, in {LANG}>"}
+{"route":"none"}  (not about the business at all)
+
+For navigate, keep the boss's own words for the screen, translated to English if needed ('flight dashboard' stays 'flight dashboard', 'টিকেট সেলস' becomes 'ticket sales').
+Prefer "ask" when the boss wants information, "navigate" when they want to go/open/see a screen with no specific figure, "clarify" only when you truly cannot tell which of two things is meant.
+TXT;
+        $system = str_replace(['{CATALOG}', '{LANG}'], [self::catalog(), $lang === 'bn' ? 'Bangla' : 'English'], $system);
+        $o = self::json($system, $q);
+        if (!$o || !isset($o['route'])) return null;
+        return $o;
+    }
+}
