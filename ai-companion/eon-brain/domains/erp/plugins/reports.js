@@ -39,6 +39,30 @@ async function answer(text) {
   const lab = per ? (per.label || per.from + ' – ' + per.to) : '';
   const when = per ? ` (${bn ? (BNL[String(lab).toLowerCase()] || lab) : lab})` : '';
 
+  /* one invoice or one ticket, by its number: open its own page and print it once it has loaded
+     ("INV000178 প্রিন্ট করো", "VPLX4H টিকেটটা প্রিন্ট দাও") */
+  const inv = raw.match(/\bINV-?\d{3,}\b/i), pnr = raw.match(/\b(?=[A-Z0-9]*\d)(?=[A-Z0-9]*[A-Z])[A-Z0-9]{6}\b/);
+  if ((inv || pnr) && /print|প্রিন্ট|pdf|পিডিএফ|খোলো|ওপেন|open|দেখাও|show/i.test(s)) {
+    const D = window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null;
+    let path = null, what = '';
+    if (inv) { const k = inv[0].toUpperCase().replace('-', ''); const sale = ((D && D.ticket_sales) || []).find((x) => String(x.invoice).toUpperCase().replace('-', '') === k);
+      if (sale) { path = `/{role}/ticket-sales/${sale.id}`; what = `${sale.invoice} · ${sale.client}`; } }
+    if (!path && pnr) { const t = ((D && D.ticket_index) || []).find((x) => String(x.pnr).toUpperCase() === pnr[0].toUpperCase());
+      if (t) { path = `/{role}/ticket-purchase/${t.purchase_id}`; what = `${t.pnr} · ${t.passenger}`; } }
+    if (!path) return { speak: T(bn, `I don't find ${(inv || pnr)[0]} in the ERP.`, `ERP-তে ${(inv || pnr)[0]} পাইনি।`), detail: [] };
+    const href = N().url(path); N().go(href);
+    const doPrint = /print|প্রিন্ট|pdf|পিডিএফ/i.test(s);
+    if (doPrint) {
+      // print the ERP frame once the record's page is in it
+      const t0 = Date.now();
+      const tick = () => { try { const f = window.parent.document.getElementById('erp'); const w = f && f.contentWindow;
+        if (w && w.location.pathname.endsWith(path.replace('/{role}', '').split('/').slice(-2).join('/')) && w.document.readyState === 'complete') { setTimeout(() => w.print(), 600); return; } } catch (e) {}
+        if (Date.now() - t0 < 15000) setTimeout(tick, 400); };
+      setTimeout(tick, 500);
+    }
+    return { speak: T(bn, `${what} — ${doPrint ? 'opening it to print' : 'opening it'}.`, `${what} — ${doPrint ? 'প্রিন্টের জন্য খুলছি' : 'খুলছি'}।`), detail: [], navigate: href, actions: [{ label: T(bn, 'Open', 'খুলুন'), kind: 'erp-open', href }] };
+  }
+
   // a bank's own statement
   if (BANK.test(s)) {
     const D = window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null;
