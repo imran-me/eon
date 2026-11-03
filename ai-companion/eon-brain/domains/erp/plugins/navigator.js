@@ -204,31 +204,54 @@ const BN_CONS = {
   'শ': 's', 'ষ': 's', 'স': 's', 'হ': 'h', 'ৎ': 't', 'ং': 'n', 'ড়': 'r', 'ঢ়': 'r',
 };
 const dedupe = (x) => x.replace(/(.)\1+/g, '$1');
-const skelBn = (w) => dedupe(String(w).normalize('NFC').replace(/[\u200c\u200d]/g, '')
+const BN_VOWEL0 = /^[অআইঈউঊঋএঐওঔ]/;
+const skelBn = (w) => (BN_VOWEL0.test(String(w).normalize('NFC')) ? 'V' : '') + dedupe(String(w).normalize('NFC').replace(/[\u200c\u200d]/g, '')
   .replace(/\u09cd\u09af/g, '')                   // য-ফলা (ম্যা) is a vowel sound, not a j
-  .replace(/(কেই|কেও|কে|রে|দের|য়ের|এর|ের|টা|টি|তে|ে)$/, '')
   .split('').map((ch) => BN_CONS[ch] || '').join(''));
-const skelEn = (w) => dedupe(String(w).toLowerCase().replace(/[^a-z]/g, '')
+const skelEn = (w) => (/^[aeiou]/i.test(String(w)) ? 'V' : '') + dedupe(String(w).toLowerCase().replace(/[^a-z]/g, '')
+  .replace(/ng/g, 'n')
   .replace(/tion/g, 'sn').replace(/ph/g, 'f').replace(/ck/g, 'k').replace(/x/g, 'ks').replace(/q/g, 'k')
   .replace(/v/g, 'b').replace(/z/g, 'j').replace(/w/g, '').replace(/c(?=[eiy])/g, 's').replace(/g(?=[eiy])/g, 'j')
-  .replace(/([kgcjtdpbs])h/g, '$1').replace(/[aeiouy]/g, ''));
+  .replace(/ch/g, 'C').replace(/([kgjtdpbs])h/g, '$1').replace(/c/g, 'k').replace(/C/g, 'c').replace(/[aeiouy]/g, ''));
 let SOUND = null;
 function soundIndex() {
   if (SOUND || !MAP) return SOUND;
-  SOUND = new Map();
-  const add = (w) => { if (w.length < 3) return; const k = skelEn(w); if (k.length >= 2 && !SOUND.has(k)) SOUND.set(k, w); };
+  const seen = new Map();   // sound → { word → uses }
+  const add = (w) => { if (w.length < 3) return; const k = skelEn(w); if (k.replace('V', '').length < 2) return;
+    const m = seen.get(k) || new Map(); m.set(w, (m.get(w) || 0) + 1); seen.set(k, m); };
   for (const m of MAP.menu) norm(m.label || '').split(' ').forEach(add);
   for (const p of MAP.pages) routeWords(p.name).split(' ').forEach(add);
+  SOUND = new Map([...seen].map(([k, m]) => [k, [...m].sort((a, b) => b[1] - a[1])[0][0]]));
   return SOUND;
 }
-function toEn(query) {
+/* within one edit (a sound added, dropped or swapped) */
+function near1(a, b) {
+  if (a === b) return true;
+  let i = 0, j = 0, e = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++e > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return e + (a.length - i) + (b.length - j) <= 1;
+}
+const BN_END = /^(?:ের|এর|ে|এ|র|কে|য়|য়ের|টা|টি|টার|গুলো|গুলি|তে|দের|স|্স|িং|ি)$/;
+const BN_CASE = /(কেই|কেও|কে|রে|দের|য়ের|এর|ের|টা|টি|তে|ে)$/;
+const BN_VERB = /^(দেখাও|দেখান|দেখা|খোলো|খুলো|খোল|খুলুন|খুলে|যাও|যান|চলো|নিয়ে|নাও|দাও|দিন|করো|করুন|কর|চাই|আমাকে|আমার|একটু|তো|এ|এর|এটা|ওটা|কোথায়|কই|প্লিজ|ঠিক|আছে|জন্য|মধ্যে|পেজ|পেইজ|স্ক্রিন|সেকশন|অপশন|মেনু)$/;
+export function toEn(query) {
   if (!/[\u0980-\u09FF]/.test(query)) return query;
   const idx = soundIndex();
   return String(query).split(/\s+/).map((w) => {
-    const hit = BN_SCREEN.find(([b]) => w.startsWith(b));
+    const hit = BN_SCREEN.find(([b]) => w === b || (w.startsWith(b) && BN_END.test(w.slice(b.length))));
     if (hit) return hit[1];
-    const k = skelBn(w);
-    return (idx && k.length >= 2 && idx.get(k)) || w;
+    if (BN_VERB.test(w) || !idx) return w;              // the order, not the screen: দেখাও is not "doc"
+    // the whole word first (রেমিন্ডের is reminder), then without its case ending (ব্যাংকের is bank)
+    const k0 = skelBn(w), k = skelBn(w.replace(BN_CASE, ''));
+    for (const kk of [k0, k]) if (kk.replace('V', '').length >= 2 && idx.has(kk)) return idx.get(kk);
+    if (k.replace('V', '').length < 3) return w;
+    let best = null, n = 0;
+    for (const [key, word] of idx) if (Math.abs(key.length - k.length) <= 1 && near1(key, k)) { best = word; n++; if (n > 1) break; }
+    return n === 1 ? best : w;
   }).join(' ');
 }
 
@@ -277,7 +300,7 @@ export function find(query, limit = 5) {
     let label = m.label;
     if (label && m.route) {
       const lw = words(label), rw = new Set(routeWords(m.route).split(' '));
-      if (lw.length && !lw.some((w) => rw.has(w) || [...rw].some((r) => r.startsWith(w) || w.startsWith(r)))) label = null;
+      if (lw.length && !lw.some((w) => rw.has(w) || [...rw].some((r) => r.startsWith(w) || w.startsWith(r) || (w.length >= 5 && r.slice(0, 5) === w.slice(0, 5))))) label = null;   // category ~ categories
     }
     candidates.push({
       label,
