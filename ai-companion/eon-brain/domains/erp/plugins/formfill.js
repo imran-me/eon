@@ -134,8 +134,12 @@ const KNOWN = [{
     if (!c) { const el = $('#create_country_id'); const o = el && el.options && [...el.options].find((x) => x.value && x.textContent.trim().length > 3 && raw.includes(x.textContent.trim().toLowerCase())); if (o) c = o.textContent.trim().toLowerCase(); }
     if (c) sel($('#create_country_id'), (t) => t.includes(c), 'Country');
     const saidAs = (t) => { const i = raw.indexOf(t); const before = i > 0 ? raw.slice(Math.max(0, i - 14), i) : ''; return /ভেন্ডর|vendor|সাপ্লায়ার/u.test(before) ? 'vendor' : /এজেন্ট|agent|ক্লায়েন্ট|client/u.test(before) ? 'client' : null; };
+    // "Received From" first — agent or direct client — as the boss said it
+    if ($('#create_client_type')) { const ty = /ডাইরেক্ট|direct|সরাসরি|ক্লায়েন্ট|client/i.test(slots._raw) && !/এজেন্ট|agent/i.test(slots._raw) ? 'direct' : /এজেন্ট|agent/i.test(slots._raw) ? 'agent' : null; if (ty) { setValue(w, $('#create_client_type'), ty); done.push('Received from: ' + ty); } }
+    // a party option reads "NAME - phone": the name part is what is said
+    const nameOf = (t) => t.split(' - ')[0].trim();
     for (const [id, what, role] of [['create_client_id', 'Agent / Client', 'client'], ['create_vendor_id', 'Vendor', 'vendor'], ['create_portal_id', 'Portal', null], ['create_contract_file_category_id', 'File category', null]])
-      sel($('#' + id), (t) => t.length > 2 && raw.includes(t) && (!role || (saidAs(t) || role) === role), what);
+      sel($('#' + id), (t) => nameOf(t).length > 2 && raw.includes(nameOf(t)) && (!role || (saidAs(nameOf(t)) || role) === role), what);
     if (slots.sale != null && $('#create_client_price')) { setValue(w, $('#create_client_price'), String(slots.sale)); done.push('Client charge: ' + slots.sale); }
     if (slots.cost != null && $('#create_visa_rate')) { setValue(w, $('#create_visa_rate'), String(slots.cost)); done.push('Visa rate (cost): ' + slots.cost); }
     if (slots.date && $('#create_submit_date')) { setValue(w, $('#create_submit_date'), slots.date); done.push('Submit date: ' + slots.date); }
