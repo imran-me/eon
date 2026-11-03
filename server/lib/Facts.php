@@ -55,7 +55,8 @@ final class Facts
 
         // parties (agents, clients, vendors): balance from their own transactions, recomputed in date order
         $pb = [];
-        foreach ($D['party_transactions'] ?? [] as $p) { $k = (string) $p['party_name'] . ' (' . $p['party_type'] . ')'; $pb[$k] = ($pb[$k] ?? 0) + (float) $p['debit'] - (float) $p['credit']; }
+        foreach ($D['party_transactions'] ?? [] as $p) { if (preg_match('/super ?admin|^admin$/i', (string) $p['party_name'])) continue;   // a system account, not a party
+            $k = (string) $p['party_name'] . ' (' . $p['party_type'] . ')'; $pb[$k] = ($pb[$k] ?? 0) + (float) $p['debit'] - (float) $p['credit']; }
         uasort($pb, fn($a, $b) => abs($b) <=> abs($a));
         $S['party_balances_debit_minus_credit'] = array_map($r, array_slice($pb, 0, 40, true));
         $S['party_balance_note'] = 'positive = the party owes us (receivable); negative = we owe them or they paid in advance';
