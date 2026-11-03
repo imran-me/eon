@@ -30,7 +30,7 @@ final class Gemini
     public static function enabled(): bool { return self::key() !== null; }
 
     /** one JSON-mode call; null on any failure, so the offline brain carries on */
-    public static function json(string $system, string $user, float $timeout = 12.0): ?array
+    public static function json(string $system, string $user, float $timeout = 6.0): ?array
     {
         $key = self::key(); if (!$key) return null;
         $body = json_encode([
@@ -38,10 +38,12 @@ final class Gemini
             'contents' => [['role' => 'user', 'parts' => [['text' => $user]]]],
             'generationConfig' => ['responseMimeType' => 'application/json', 'temperature' => 0.1],
         ], JSON_UNESCAPED_UNICODE);
-        $res = false; $code = 0;
+        // a slow or absent API must cost seconds, not the answer: one overall budget, then the offline brain
+        $res = false; $code = 0; $until = microtime(true) + 9.0;
         foreach (self::MODELS as $model) {
+            if (microtime(true) > $until - 2) break;
             $ch = curl_init('https://generativelanguage.googleapis.com/v1beta/models/' . $model . ':generateContent');
-            curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => (int) ceil($timeout),
+            curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => (int) max(2, min(ceil($timeout), floor($until - microtime(true)))), CURLOPT_CONNECTTIMEOUT => 3,
                 CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-goog-api-key: ' . $key]]);
             $res = curl_exec($ch); $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE); curl_close($ch);
             if ($res !== false && $code === 200) break;

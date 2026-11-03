@@ -46,9 +46,11 @@ const EonWhisper = {
   load, start, stop,
   ready: () => isReady,
   recording: () => !!rec,
-  on: () => { try { return localStorage.getItem('eon_whisper') === '1'; } catch (e) { return false; } },
-  set(on) { try { localStorage.setItem('eon_whisper', on ? '1' : '0'); } catch (e) {} if (on) load(); },
+  on: () => { try { return localStorage.getItem('eon_whisper2') === '1'; } catch (e) { return false; } },
+  set(on) { try { localStorage.setItem('eon_whisper2', on ? '1' : '0'); } catch (e) {} if (on) load(); },
 };
 window.EonWhisper = EonWhisper;
-if (EonWhisper.on()) setTimeout(load, 3000);
+/* never downloaded behind the boss's back: the 250 MB pull starved Chrome's own recogniser
+   (the mic went red and heard nothing). It loads only when the 🎧 chip is pressed, and the
+   old key is retired so a browser that had it on starts with it off. */
 export default EonWhisper;
