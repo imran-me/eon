@@ -171,6 +171,23 @@ TXT;
         // let Nlu resolve a name in the sentence against real records
         if (class_exists('Nlu') && method_exists('Nlu', 'useDataset')) Nlu::useDataset($D);
 
+        /* EON's own trained model first (tools/train-intent.mjs, on the owner's 100,000 labelled
+           questions): when it is sure what is asked and an exact handler exists, the answer is
+           computed from the ERP here — no Google, no quota, milliseconds. Unsure, or no handler:
+           Gemini below, then the rules. */
+        if (!self::$planning && class_exists('IntentModel') && class_exists('Analyst')) {
+            try {
+                $rk = IntentModel::rank($q, 2);
+                if ($rk && $rk[0]['margin'] >= IntentModel::confidentMargin()) {
+                    $bnQ = (bool) (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno|dao|lav|khoroch)\b/i', $q) >= 1);
+                    $a = Analyst::handle($rk[0]['intent'], $q, $D, $bnQ);
+                    $lgQ = $bnQ ? 'bn' : 'en';
+                    if ($a && isset($a['client_command'])) return ['mode' => self::MODE_OFFLINE, 'text' => '', 'speak' => '', 'tools_used' => ['intent-model'], 'intent' => 'do', 'lang' => $lgQ, 'client_command' => $a['client_command'], 'model' => $rk[0], 'usage' => null];
+                    if ($a && isset($a['text'])) return ['mode' => self::MODE_OFFLINE, 'text' => $a['text'], 'speak' => self::voice($a['text'], $lgQ), 'tools_used' => ['intent-model'], 'intent' => 'model:' . $rk[0]['intent'], 'lang' => $lgQ, 'model' => $rk[0], 'usage' => null];
+                }
+            } catch (Throwable $e) { Log::warn('intent model failed', ['error' => $e->getMessage()]); }
+        }
+
         /* Gemini first (owner's decision, 2026-11-04): it reads every question, whatever the
            wording, and says what is wanted — a screen, a question back, or the question in the
            form EON answers exactly. The figures still come only from the ERP below. When Gemini

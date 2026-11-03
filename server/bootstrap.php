@@ -41,6 +41,9 @@ if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insigh
 if (is_file(EON_ROOT . '/lib/Reason.php')) require_once EON_ROOT . '/lib/Reason.php';    // why, as opposed to what  // aging, runway, forecast, anomalies, comparisons
 if (is_file(EON_ROOT . '/lib/Persona.php')) require_once EON_ROOT . '/lib/Persona.php';  // the warmth a person adds when speaking
 if (is_file(EON_ROOT . '/lib/Gemini.php')) require_once EON_ROOT . '/lib/Gemini.php';  // understanding any wording (key in storage/gemini.key)
+if (is_file(EON_ROOT . '/lib/IntentModel.php')) require_once EON_ROOT . '/lib/IntentModel.php';  // EON's own trained intent model
+if (is_file(EON_ROOT . '/lib/Slots.php')) require_once EON_ROOT . '/lib/Slots.php';  // who / when / which section, read from the question
+if (is_file(EON_ROOT . '/lib/Analyst.php')) require_once EON_ROOT . '/lib/Analyst.php';  // exact answers per intent, from the ERP
 if (is_file(EON_ROOT . '/lib/Facts.php')) require_once EON_ROOT . '/lib/Facts.php';  // the ERP boiled down for Gemini to reason over
 if (is_file(EON_ROOT . '/lib/Ops.php')) require_once EON_ROOT . '/lib/Ops.php';  // straight operational questions
 if (is_file(EON_ROOT . '/lib/Natural.php')) require_once EON_ROOT . '/lib/Natural.php';  // Bangla the way an office speaks it
