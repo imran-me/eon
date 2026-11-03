@@ -516,7 +516,17 @@ export async function planPayment(who, opts = {}) {
     // the ERP now refuses a party payment without the company account it came from
     needsAccount: true,
     accounts: (bankF && bankF.options) || [],
-    summary: `Pay ${party.name} ৳${amount.toLocaleString('en-US')} and record it on their party statement`,
+    /* the ERP books it by the party's type: an agent/customer paying US is a receipt, a vendor is paid —
+       say which, so "yes" is said to the right thing */
+    ...(() => {
+      const D = typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null;
+      const row = D && (D.party_transactions || []).find((p) => String(p.party_name).trim() === String(party.name).trim());
+      const inn = row ? row.party_type === 'customer' : false;
+      const tk = '৳' + amount.toLocaleString('en-US');
+      return inn
+        ? { summary: `Receive ${tk} from ${party.name} and record it on their party statement`, summary_bn: `${party.name}-এর কাছ থেকে ${tk} জমা — party statement-এ এন্ট্রি` }
+        : { summary: `Pay ${party.name} ${tk} and record it on their party statement`, summary_bn: `${party.name}-কে ${tk} পরিশোধ — party statement-এ এন্ট্রি` };
+    })(),
   };
 }
 

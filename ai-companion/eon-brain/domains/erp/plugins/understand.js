@@ -90,7 +90,8 @@ const T = (D) => (D && D.meta && D.meta.today) || iso(new Date());
 const VERBS = [
   { id: 'howmuch', en: /\b(how much|how many|what is the (total|amount|balance)|what's the (total|amount|balance)|total|how big)\b/, bn: /(কত|কতটুকু|কয়টা|কয়জন|কতজন|মোট)/ },
   /* Paying is tested before assigning, because "বেতন দাও" carries both words. */
-  { id: 'pay',     en: /\b(pay|clear|settle|release)\b/,                                  bn: /(পরিশোধ|ক্লিয়ার|পে করো|(বেতন|টাকা|বিল|পেমেন্ট|বকেয়া)(?:(?!হিসাব|তালিকা|রিপোর্ট|তথ্য|খবর|স্লিপ|শিট|অবস্থা|বিবরণ|পরিমাণ)[^।]){0,12}(দাও|দিন))/ },
+  // "X ২ লাখ টাকা দিছে, এন্ট্রি করো" / "received 50k from X": money IN is the same ERP screen — it books by the party's type
+  { id: 'pay',     en: /\b(pay|clear|settle|release|received|got)\b(?=.*\b(from|entry|record|\d))|\b(pay|clear|settle|release)\b/,                                  bn: /((টাকা|পেমেন্ট)[^।]{0,20}(দিছে|দিয়েছে|দিলো|দিল|জমা দিছে|জমা দিয়েছে|পাইছি|পেয়েছি)[^।]{0,20}(এন্ট্রি|তুলো|লেখো|রাখো|করো)|পরিশোধ|ক্লিয়ার|পে করো|(বেতন|টাকা|বিল|পেমেন্ট|বকেয়া)(?:(?!হিসাব|তালিকা|রিপোর্ট|তথ্য|খবর|স্লিপ|শিট|অবস্থা|বিবরণ|পরিমাণ)[^।]){0,12}(দাও|দিন))/ },
   /* "দাও" on its own means "give me" — an instruction needs its noun.
      And "দে" must not be read inside দেখাও: "টাস্ক দেখাও" is show me the tasks,
      not give somebody a task, and EON answered it with "কাকে দেবো?" until the
