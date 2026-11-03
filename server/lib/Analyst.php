@@ -66,7 +66,11 @@ final class Analyst
             'টিকেট খোঁজা' => 'ticketFind',
             'লিড/ক্লায়েন্ট' => 'leads', 'অপারেশন স্ট্যাটাস' => 'projects', 'রিস্ক অ্যানালাইসিস' => 'projects',
             'পার্টি তালিকা ও বকেয়া' => 'agentDue', 'বাজারে পাওনা/দেনা' => 'agentDue',
+            'লাভ-ক্ষতি - কন্ট্রাক্ট ফ্লাইট' => 'flightProfit', 'টিকেটিং লাভ/কমিশন' => 'ticketProfit',
+            'ট্রাভেল সামারি' => 'travelSummary', 'লসের কারণ' => 'losses',
         ];
+        // a statement / ledger looked at, or a follow-up on the last answer: the panel carries those
+        if (in_array($intent, ['পার্টি স্টেটমেন্ট দেখা', 'ফলো-আপ (আগের উত্তরের প্রেক্ষিতে)', 'আগের উত্তর ছোট/বড় করা'], true)) return ['client_command' => $q];
         $h = $map[$intent] ?? null;
         if (!$h) return null;
         $t = self::$h($q, $D);
@@ -346,6 +350,74 @@ final class Analyst
         $names = fn($xs) => implode(', ', array_map(fn($p) => $p['project_name'], array_slice(array_values($xs), 0, 4)));
         return self::t(sprintf('%d projects running%s. Over budget: %d%s. Past their end date: %d%s.', count($run), $co ? " at {$co['name']}" : '', count($over), $over ? ' (' . $names($over) . ')' : '', count($late), $late ? ' (' . $names($late) . ')' : ''),
             sprintf('%sচলমান project %sটা। বাজেট ছাড়িয়েছে %sটা%s; সময় পার %sটা%s।', $co ? "{$co['name']}-এ " : '', self::n(count($run)), self::n(count($over)), $over ? ' (' . $names($over) . ')' : '', self::n(count($late)), $late ? ' (' . $names($late) . ')' : ''));
+    }
+
+    /* ---------- contract flights: revenue against cost ---------- */
+    private static function flightProfit(string $q, array $D): ?string
+    {
+        $per = Slots::period($q); $when = self::when($per, 'on record', 'রেকর্ডের সব');
+        $F = array_values(array_filter($D['contract_flights'] ?? [], fn($f) => self::in($f['departure_at'], $per)));
+        if (preg_match('/\b([a-z]{2,3}-?\d{2,4})\b/i', $q, $m)) { $c = strtoupper(str_replace('-', '', $m[1])); $F = array_values(array_filter($F, fn($f) => str_replace('-', '', strtoupper((string) $f['flight_number'])) === $c)); }
+        if (!$F) return self::t("No contract flights $when.", "$when কোনো contract flight নেই।");
+        $rev = array_sum(array_map(fn($f) => (float) $f['revenue'], $F)); $cost = array_sum(array_map(fn($f) => (float) $f['cost_price'], $F));
+        usort($F, fn($a, $b) => ((float) $b['revenue'] - (float) $b['cost_price']) <=> ((float) $a['revenue'] - (float) $a['cost_price']));
+        $parts = array_map(fn($f) => $f['flight_number'] . ' ' . self::m((float) $f['revenue'] - (float) $f['cost_price']), array_slice($F, 0, 5));
+        $route = preg_match('/[\p{L}]+\s*-\s*[\p{L}]+/u', $q) ? self::t(' (the ERP keeps no route on contract flights, so this is all of them)', ' (contract flight-এ ERP route রাখে না, তাই সবগুলো মিলিয়ে)') : '';
+        return self::t(sprintf('Contract flights %s: revenue %s, cost %s, profit %s across %d flights%s. By flight: %s.', $when, self::m($rev), self::m($cost), self::m($rev - $cost), count($F), $route, implode('; ', $parts)),
+            sprintf('%s contract flight: আয় %s, খরচ %s, লাভ %s — %sটা flight%s। flight অনুযায়ী: %s।', $when, self::m($rev), self::m($cost), self::m($rev - $cost), self::n(count($F)), $route, implode('; ', $parts)));
+    }
+
+    /* ---------- ticketing: what we made on tickets ---------- */
+    private static function ticketProfit(string $q, array $D): ?string
+    {
+        $per = Slots::period($q) ?? [date('Y-m-01'), date('Y-m-d'), 'this month', 'এই মাসে'];
+        $cost = []; $vendor = []; foreach ($D['ticket_purchases'] ?? [] as $x) { $cost[$x['id']] = (float) ($x['total'] ?? 0); $vendor[$x['id']] = (string) ($x['airline'] ?: $x['vendor']); }
+        [$p] = self::partyOrSay($q, $D, ['supplier']);
+        $n = 0; $sale = 0.0; $c = 0.0;
+        foreach ($D['ticket_index'] ?? [] as $t) { if (!self::in($t['date'], $per) || in_array($t['status'], ['cancelled', 'void'], true) || (float) $t['sale_price'] <= 0) continue;
+            if ($p && (string) $t['vendor'] !== $p['name']) continue;
+            $n++; $sale += (float) $t['sale_price']; $c += $cost[$t['purchase_id']] ?? 0; }
+        $w = self::$bn ? Phrase::bnDigits($per[3]) : $per[2]; $who = $p ? $p['name'] . ' ' : '';
+        if (!$n) return self::t("No invoiced tickets {$who}{$per[2]}.", "$w {$who}কোনো invoice-করা ticket নেই।");
+        return self::t(sprintf('Tickets %s%s: %d sold for %s against %s cost — %s made (%s margin). Airline commission and ADMs are not in the ERP data.', $who, $per[2], $n, self::m($sale), self::m($c), self::m($sale - $c), round(100 * ($sale - $c) / max(1, $sale), 1) . '%'),
+            sprintf('%s %sticket: %sটা বিক্রি %s, খরচ %s — লাভ %s (margin %s%%)। airline commission আর ADM ERP-র data-তে নেই।', $w, $who, self::n($n), self::m($sale), self::m($c), self::m($sale - $c), self::n(round(100 * ($sale - $c) / max(1, $sale), 1))));
+    }
+
+    /* ---------- the travel business at a glance ---------- */
+    private static function travelSummary(string $q, array $D): ?string
+    {
+        $per = Slots::period($q) ?? [date('Y-m-01'), date('Y-m-d'), 'this month', 'এই মাসে'];
+        $tk = array_filter($D['ticket_index'] ?? [], fn($t) => self::in($t['date'], $per));
+        $can = count(array_filter($tk, fn($t) => in_array($t['status'], ['cancelled', 'void'], true)));
+        $ts = array_filter($D['ticket_sales'] ?? [], fn($s) => self::in($s['date'], $per));
+        $fl = array_filter($D['contract_flights'] ?? [], fn($f) => self::in($f['departure_at'], $per));
+        $vs = array_filter($D['visa_sales'] ?? [], fn($v) => self::in($v['date'], $per));
+        $sales = array_sum(array_map(fn($s) => (float) $s['total'], $ts)); $due = array_sum(array_map(fn($s) => (float) $s['due_amount'], $ts));
+        $w = self::$bn ? Phrase::bnDigits($per[3]) : $per[2];
+        return self::t(sprintf('Travel, %s: %d tickets (%d cancelled/void), ticket invoices %s of which %s still due; %d contract flights; %d visa invoices worth %s.', $per[2], count($tk), $can, self::m($sales), self::m($due), count($fl), count($vs), self::m(array_sum(array_map(fn($v) => (float) $v['total'], $vs)))),
+            sprintf('ট্রাভেল, %s: %sটা ticket (%sটা cancel/void), ticket invoice %s — তার %s এখনো due; %sটা contract flight; %sটা visa invoice, %s।', $w, self::n(count($tk)), self::n($can), self::m($sales), self::m($due), self::n(count($fl)), self::n(count($vs)), self::m(array_sum(array_map(fn($v) => (float) $v['total'], $vs)))));
+    }
+
+    /* ---------- where money was lost ---------- */
+    private static function losses(string $q, array $D): ?string
+    {
+        $per = Slots::period($q) ?? [date('Y-m-01'), date('Y-m-d'), 'this month', 'এই মাসে'];
+        $type = []; foreach ($D['accounts'] ?? [] as $a) $type[$a['id']] = strtolower((string) $a['type']);
+        $name = []; foreach ($D['companies'] ?? [] as $c) $name[$c['id']] = (string) $c['name'];
+        $pl = [];
+        foreach ($D['journal_entries'] ?? [] as $j) { if (!self::in($j['date'], $per)) continue; $k = $name[$j['company_id']] ?? 'Group';
+            foreach ((array) ($j['items'] ?? []) as $it) { $ty = $type[$it['account_id'] ?? 0] ?? '';
+                if (str_contains($ty, 'income') || str_contains($ty, 'revenue')) $pl[$k] = ($pl[$k] ?? 0) + (float) $it['credit'] - (float) $it['debit'];
+                elseif (str_contains($ty, 'expense') || str_contains($ty, 'cost')) $pl[$k] = ($pl[$k] ?? 0) - (float) $it['debit'] + (float) $it['credit']; } }
+        $loss = array_filter($pl, fn($v) => $v < 0); asort($loss);
+        $cost = []; foreach ($D['ticket_purchases'] ?? [] as $x) $cost[$x['id']] = (float) ($x['total'] ?? 0);
+        $neg = []; foreach ($D['ticket_index'] ?? [] as $t) if (self::in($t['date'], $per) && (float) $t['sale_price'] > 0 && $t['client'] && (float) $t['sale_price'] < ($cost[$t['purchase_id']] ?? 0)) $neg[(string) $t['client']] = ($neg[(string) $t['client']] ?? 0) + (float) $t['sale_price'] - $cost[$t['purchase_id']];
+        asort($neg);
+        $w = self::$bn ? Phrase::bnDigits($per[3]) : $per[2];
+        $a = $loss ? implode('; ', array_map(fn($k, $v) => "$k " . self::m($v), array_keys($loss), $loss)) : self::t('no section ran at a loss', 'কোনো সেকশনে লস নেই');
+        $b = $neg ? implode('; ', array_map(fn($k, $v) => "$k " . self::m($v), array_keys(array_slice($neg, 0, 4, true)), array_slice($neg, 0, 4, true))) : '';
+        // braces: a Bangla danda right after a variable is read by PHP as part of its name
+        return self::t("Losses, {$per[2]}: by section — {$a}." . ($b ? " Tickets sold below cost — {$b}." : ''), "{$w} লস: সেকশন অনুযায়ী — {$a}।" . ($b ? " cost-এর নিচে বিক্রি হওয়া ticket — {$b}।" : ''));
     }
 
     /* ---------- banks: one or all ---------- */
