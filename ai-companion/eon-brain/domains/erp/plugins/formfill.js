@@ -62,6 +62,14 @@ function slotsOf(raw) {
     const rx = new RegExp(`(\\d{1,2})\\s*(?:st|nd|rd|th|ই|শে|তারিখ)?\\s*${name}|${name}\\s*(\\d{1,2})`, 'i'); const mm = s.match(rx);
     if (mm) { const d = +(mm[1] || mm[2]); let y = today.getFullYear(); if (new Date(y, m - 1, d) < new Date(today.getFullYear(), today.getMonth() - 4, 1)) y++; out.date = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`; break; }
   }
+  const tm = s.match(/\b(\d{1,2}):(\d{2})\s*(am|pm)?/i) || s.match(/(সকাল|ভোর|দুপুর|বিকাল|বিকেল|সন্ধ্যা|রাত)\s*(\d{1,2})\s*টা/u);
+  if (tm) {
+    let h, mi = 0;
+    if (/:/.test(tm[0])) { h = +tm[1]; mi = +tm[2]; if (/pm/i.test(tm[3] || '') && h < 12) h += 12; if (/am/i.test(tm[3] || '') && h === 12) h = 0; }
+    else { h = +tm[2]; if (/দুপুর|বিকাল|বিকেল|সন্ধ্যা|রাত/u.test(tm[1]) && h < 12) h += 12; }
+    out.time = String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+  }
+  const fl = s.match(/\b([A-Z]{2}\s?-?\d{2,4})\b/); if (fl && !/^CF/i.test(fl[1])) out.flight_no = fl[1].replace(/[\s-]/g, '');
   if (!out.date && /আজ|today/i.test(s)) out.date = today.toISOString().slice(0, 10);
   if (!out.date && /আগামীকাল|tomorrow/i.test(s)) out.date = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
   // amounts: "৫২ হাজার", "1.5 lakh", "52000"; a second one is the cost / purchase when both are said
@@ -111,6 +119,28 @@ function chooseOption(sel, text) {
 /* Forms known exactly (read from the ERP's own Blade views): what each spoken detail is called there.
    The generic label matcher above covers every other form. */
 const KNOWN = [{
+  path: /contract-flights\/dashboard/,
+  async open(w) {
+    const b = [...w.document.querySelectorAll('button,a')].find((x) => /add flight/i.test(x.textContent));
+    if (b) { b.click(); await sleep(800); }
+  },
+  apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q);
+    const sel = (el, test, what) => { if (!el) return false; const o = [...el.options].find((x) => x.value && test(x.textContent.trim().toLowerCase())); if (o) { setValue(w, el, o.value); done.push(what + ': ' + o.textContent.trim()); return true; } return false; };
+    if (slots.flight_no && $('#create_airline_flight_no')) { setValue(w, $('#create_airline_flight_no'), slots.flight_no); done.push('Flight number: ' + slots.flight_no); }
+    if (slots.from && slots.to && $('#create_ticket_id')) {
+      const el = $('#create_ticket_id'), a = slots.from.toLowerCase(), b = slots.to.toLowerCase();
+      const fit = [...el.options].filter((o) => o.value && o.textContent.toLowerCase().includes(a) && o.textContent.toLowerCase().includes(b)).sort((x, y) => x.textContent.length - y.textContent.length);
+      if (fit[0]) { setValue(w, el, fit[0].value); done.push('Route: ' + fit[0].textContent.trim()); }
+    }
+    if (slots.date && $('#create_departure_at')) { const v = slots.date + 'T' + (slots.time || '00:00'); setValue(w, $('#create_departure_at'), v); done.push('Departure: ' + v.replace('T', ' ')); }
+    for (const [id, what] of [['create_vendor_id', 'Ticket vendor'], ['create_portal_id', 'Portal'], ['create_agent_id', 'Agent'], ['create_pricing_airline_id', 'Airline']]) {
+      const el = $('#' + id); if (!el || !el.options) continue;
+      sel(el, (t) => t.length > 2 && slots._raw.toLowerCase().includes(t), what);
+    }
+    return true;
+  },
+}, {
   path: /ticket-purchase\/create|ticket-purchase\/\d+\/edit/,
   apply(w, slots, done) {
     const d = w.document, $ = (q) => d.querySelector(q);
@@ -234,7 +264,10 @@ async function answer(q) {
     if (!href) return null;
   }
 
+  if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   const w = await openAndWait(href);
+  const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
+  if (k0 && k0.open) await k0.open(w);
   if (!w) return { speak: T(bn, `Opening ${label}.`, `${label} খুলছি।`), detail: [], navigate: href };
   const r = fill(w, slots);
   if (!r) return { speak: T(bn, `${label} is open, but it has no form I can fill.`, `${label} খুলেছে, কিন্তু ভরার মতো ফর্ম পাইনি।`), detail: [] };
