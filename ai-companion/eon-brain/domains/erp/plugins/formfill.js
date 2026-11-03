@@ -108,8 +108,42 @@ function chooseOption(sel, text) {
   const t = String(text).toLowerCase();
   return [...sel.options].find((o) => o.value && o.textContent.toLowerCase().includes(t)) || [...sel.options].find((o) => o.value && t.includes(o.textContent.trim().toLowerCase()) && o.textContent.trim().length > 2);
 }
+/* Forms known exactly (read from the ERP's own Blade views): what each spoken detail is called there.
+   The generic label matcher above covers every other form. */
+const KNOWN = [{
+  path: /ticket-purchase\/create|ticket-purchase\/\d+\/edit/,
+  apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q);
+    const sel = (el, test, what) => { if (!el) return false; const o = [...el.options].find((x) => x.value && test(x.textContent.trim().toLowerCase())); if (o) { setValue(w, el, o.value); done.push(`${what}: ${o.textContent.trim()}`); return true; } return false; };
+    if (slots.name) sel($('#passport_holder_id'), (t) => slots.name.toLowerCase().split(/\s+/).every((p) => t.includes(p)) || t.includes(slots.name.toLowerCase()), 'Passport Holder');
+    if (slots.pnr && $('[name=ticket_no]')) { setValue(w, $('[name=ticket_no]'), slots.pnr); done.push(`Ticket No (PNR): ${slots.pnr}`); }
+    if (slots.ticket_no && $('#name_ticket_no')) { setValue(w, $('#name_ticket_no'), slots.ticket_no); done.push(`Name Ticket No.: ${slots.ticket_no}`); }
+    if (slots.from && slots.to) sel($('#isProductSelected'), (t) => t.includes(slots.from.toLowerCase()) && t.includes(slots.to.toLowerCase()), 'Ticket (route)');
+    const price = slots.cost ?? slots.sale ?? slots.amount;   // on a purchase the price is what we pay
+    if (price != null && $('#selectsubtotal')) { setValue(w, $('#selectsubtotal'), String(price)); try { w.applyGrandTotal && w.applyGrandTotal($('#selectsubtotal')); } catch (e) {} done.push(`Price: ${price}`); }
+    for (const [k, nm] of [['vendor', 'isVendorSelected'], ['portal', 'isPortalSelected']]) {
+      const el = $('#' + nm); if (!el) continue;
+      const o = [...el.options].find((x) => x.value && x.textContent.trim().length > 2 && slots._raw.toLowerCase().includes(x.textContent.trim().toLowerCase())); if (o) { setValue(w, el, o.value); done.push(`${k}: ${o.textContent.trim()}`); }
+    }
+    // the travel leg (rendered by the page's own script once a ticket is chosen)
+    setTimeout(() => {
+      const f = d.querySelector('[name="legs[0][from_location]"]'), t = d.querySelector('[name="legs[0][to_location]"]'), td = d.querySelector('[name="legs[0][travel_date]"]');
+      if (f && slots.from) setValue(w, f, slots.from); if (t && slots.to) setValue(w, t, slots.to); if (td && slots.date) setValue(w, td, slots.date);
+    }, 1200);
+    if (slots.date) done.push(`Travel date: ${slots.date}`);
+    return true;
+  },
+}];
+
 function fill(w, slots) {
   const doc = w.document;
+  const known = KNOWN.find((k) => k.path.test(w.location.pathname));
+  if (known) {
+    const done = []; known.apply(w, slots, done);
+    const form = [...doc.querySelectorAll('form')].filter((f) => (f.getAttribute('method') || 'get').toLowerCase() === 'post').sort((a, b) => b.elements.length - a.elements.length)[0];
+    const missing = form ? [...form.querySelectorAll('input,select,textarea')].filter((e) => e.required && !e.value && e.type !== 'hidden').map((e) => labelOf(doc, e)).filter(Boolean) : [];
+    return { form, done, missing };
+  }
   const form = [...doc.querySelectorAll('form')].filter((f) => (f.getAttribute('method') || 'get').toLowerCase() === 'post').sort((a, b) => b.elements.length - a.elements.length)[0];
   if (!form) return null;
   const els = [...form.querySelectorAll('input,select,textarea')].filter((e) => !['hidden', 'submit', 'button', 'checkbox', 'radio', 'file'].includes((e.type || '').toLowerCase()) && !/_token|_method/.test(e.name || ''));
