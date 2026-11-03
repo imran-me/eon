@@ -75,7 +75,7 @@ final class Tts
     {
         $c = (array) (Config::get('tts') ?? []);
         if ($lang === 'bn') return (string) ($c['azure']['voice_bn'] ?? 'bn-BD-NabanitaNeural');
-        return (string) ($c['azure']['voice_en'] ?? 'en-US-AriaNeural');
+        return (string) ($c['azure']['voice_en'] ?? 'en-US-JennyNeural');
     }
 
     /**
@@ -161,7 +161,7 @@ final class Tts
         $prosody = $lang === 'bn' ? '<prosody rate="-6%" pitch="+1%">' : '<prosody rate="-5%" pitch="+2%">';
         $inner = $prosody . $body . '</prosody>';
         if ($lang !== 'bn' && preg_match('/^en-US-(Aria|Jenny|Guy|Davis|Jane|Jason|Nancy|Sara|Tony)Neural$/', $voice)) {
-            $inner = '<mstts:express-as style="friendly">' . $inner . '</mstts:express-as>';
+            $inner = '<mstts:express-as style="cheerful">' . $inner . '</mstts:express-as>';
         }
         $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"'
               . ' xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="' . $locale . '">'
