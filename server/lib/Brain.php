@@ -136,6 +136,16 @@ TXT;
            "অগ্রিম বেতন কীভাবে পোস্ট হয়" — is not a request for this month's
            figure, and the figure answerers would take it as one. Only a whole
            cue plus a how/why form plus a bookkeeping word gets this door. */
+        /* A question about the data's shape — "where are refunds stored", "what
+           statuses can a visa have", "ভিসার স্ট্যাটাস কী কী" — is answered from what the
+           database really holds (SchemaSense), not from a figure answerer that would
+           read "visa" and report this month's visa sales. */
+        if (class_exists('SchemaSense')) {
+            try {
+                $sc = SchemaSense::strong($q, $lang) ?? SchemaSense::columnQuestion($q, $lang);
+                if ($sc !== null) return self::fromSchema($sc);
+            } catch (Throwable $e) { Log::warn('schema sense failed', ['error' => $e->getMessage()]); }
+        }
         if (class_exists('AccountsBook')) {
             try {
                 $b = AccountsBook::strong($q, $lang);
@@ -163,6 +173,13 @@ TXT;
                 $b = AccountsBook::answer($q, $lang);
                 if ($b !== null) return self::fromBook($b);
             } catch (Throwable $e) { Log::warn('accounts book failed', ['error' => $e->getMessage()]); }
+        }
+        // still nothing: the question may name a table or a value the data holds
+        if ($weak !== null && class_exists('SchemaSense')) {
+            try {
+                $sc = SchemaSense::answer($q, $lang);
+                if ($sc !== null) return self::fromSchema($sc);
+            } catch (Throwable $e) { Log::warn('schema sense failed', ['error' => $e->getMessage()]); }
         }
         $answers = null;
         if (class_exists('Nlu') && class_exists('Answers')) {
@@ -262,6 +279,12 @@ TXT;
     }
 
     /** an account-book entry, in the shape every offline answer has */
+    private static function fromSchema(array $s): array
+    {
+        return ['mode' => self::MODE_OFFLINE, 'text' => $s['text'], 'speak' => self::voice($s['text'], $s['lang']),
+                'tools_used' => ['schema_sense'], 'intent' => $s['intent'], 'lang' => $s['lang'], 'usage' => null];
+    }
+
     private static function fromBook(array $b): array
     {
         return ['mode' => self::MODE_OFFLINE, 'text' => $b['text'], 'speak' => self::voice($b['text'], $b['lang']),
