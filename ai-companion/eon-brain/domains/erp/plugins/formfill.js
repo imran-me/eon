@@ -130,7 +130,9 @@ const KNOWN = [{
     if (slots.flight_no && $('#create_airline_flight_no')) { setValue(w, $('#create_airline_flight_no'), slots.flight_no); done.push('Flight number: ' + slots.flight_no); }
     if (slots.from && slots.to && $('#create_ticket_id')) {
       const el = $('#create_ticket_id'), a = slots.from.toLowerCase(), b = slots.to.toLowerCase();
-      const fit = [...el.options].filter((o) => o.value && o.textContent.toLowerCase().includes(a) && o.textContent.toLowerCase().includes(b)).sort((x, y) => x.textContent.length - y.textContent.length);
+      const fit = [...el.options].filter((o) => o.value && o.textContent.toLowerCase().includes(a) && o.textContent.toLowerCase().includes(b))
+        // the airline the flight number names (TK0713 → Turkish, (TK)) first, then the shortest route
+        .sort((x, y) => { const code = (slots.flight_no || '').slice(0, 2).toLowerCase(); const hx = code && x.textContent.toLowerCase().includes('(' + code + ')') ? 0 : 1, hy = code && y.textContent.toLowerCase().includes('(' + code + ')') ? 0 : 1; return hx - hy || x.textContent.length - y.textContent.length; });
       if (fit[0]) { setValue(w, el, fit[0].value); done.push('Route: ' + fit[0].textContent.trim()); }
     }
     if (slots.date && $('#create_departure_at')) { const v = slots.date + 'T' + (slots.time || '00:00'); setValue(w, $('#create_departure_at'), v); done.push('Departure: ' + v.replace('T', ' ')); }
