@@ -121,6 +121,24 @@ function chooseOption(sel, text) {
 const COUNTRY = { মালয়েশিয়া: 'malaysia', মালয়েশিয়া: 'malaysia', সৌদি: 'saudi', দুবাই: 'emirates', আমিরাত: 'emirates', ওমান: 'oman', কাতার: 'qatar', কুয়েত: 'kuwait', বাহরাইন: 'bahrain', থাইল্যান্ড: 'thailand', তুরস্ক: 'turkey', সাইপ্রাস: 'cyprus', সিঙ্গাপুর: 'singapore', ভারত: 'india', ইন্ডিয়া: 'india', চীন: 'china', জাপান: 'japan', ইতালি: 'italy', রোমানিয়া: 'romania', পোল্যান্ড: 'poland', মাল্টা: 'malta', সার্বিয়া: 'serbia', ক্রোয়েশিয়া: 'croatia', যুক্তরাজ্য: 'kingdom', লন্ডন: 'kingdom', আমেরিকা: 'america', কানাডা: 'canada', অস্ট্রেলিয়া: 'australia', মালদ্বীপ: 'maldives', নেপাল: 'nepal', ভিয়েতনাম: 'vietnam', ইন্দোনেশিয়া: 'indonesia', জর্ডান: 'jordan', মিশর: 'egypt' };
 const VCAT = [[/ভিজিট|visit/i, 'visit'], [/ওয়ার্ক|ওয়ার্ক|কাজের|work/i, 'work'], [/উমরাহ|umrah/i, 'umrah'], [/হজ|hajj/i, 'hajj'], [/স্টুডেন্ট|ছাত্র|student/i, 'student'], [/ট্যুরিস্ট|tourist/i, 'tourist'], [/বিজনেস|business/i, 'business'], [/ট্রানজিট|transit/i, 'transit']];
 const KNOWN = [{
+  // a contract file (manpower): the Add modal on the contract-files list
+  path: /\/contract-files\/?$/,
+  async open(w) { const b = w.document.querySelector('.create-btn'); if (b) { b.click(); await sleep(800); } },
+  apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q), raw = slots._raw.toLowerCase();
+    const sel = (el, test, what) => { if (!el || !el.options) return false; const o = [...el.options].find((x) => x.value && test(x.textContent.trim().toLowerCase())); if (o) { setValue(w, el, o.value); done.push(what + ': ' + o.textContent.trim()); return true; } return false; };
+    if (slots.name) sel($('#create_passport_holder_id'), (t) => slots.name.toLowerCase().split(/\s+/).every((p) => t.includes(p)), 'Applicant');
+    let c = null; for (const [bn, en] of Object.entries(COUNTRY)) if (slots._raw.includes(bn)) { c = en; break; }
+    if (!c) { const el = $('#create_country_id'); const o = el && el.options && [...el.options].find((x) => x.value && x.textContent.trim().length > 3 && raw.includes(x.textContent.trim().toLowerCase())); if (o) c = o.textContent.trim().toLowerCase(); }
+    if (c) sel($('#create_country_id'), (t) => t.includes(c), 'Country');
+    for (const [id, what] of [['create_client_id', 'Agent / Client'], ['create_vendor_id', 'Vendor'], ['create_portal_id', 'Portal'], ['create_contract_file_category_id', 'File category']])
+      sel($('#' + id), (t) => t.length > 2 && raw.includes(t), what);
+    if (slots.sale != null && $('#create_client_price')) { setValue(w, $('#create_client_price'), String(slots.sale)); done.push('Client charge: ' + slots.sale); }
+    if (slots.cost != null && $('#create_visa_rate')) { setValue(w, $('#create_visa_rate'), String(slots.cost)); done.push('Visa rate (cost): ' + slots.cost); }
+    if (slots.date && $('#create_submit_date')) { setValue(w, $('#create_submit_date'), slots.date); done.push('Submit date: ' + slots.date); }
+    return true;
+  },
+}, {
   path: /\/visa\/?$/,
   async open(w) { const b = w.document.querySelector('.create-btn'); if (b) { b.click(); await sleep(800); } },
   apply(w, slots, done) {
@@ -287,7 +305,8 @@ async function answer(q) {
     if (!href) return null;
   }
 
-  if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
+  if (wantCreate && /কন্ট্রাক্ট ফাইল|contract file|ফাইল খোলো|নতুন ফাইল|new file/i.test(s)) { href = N().url('/{role}/contract-files'); label = T(bn, 'New contract file', 'নতুন কন্ট্রাক্ট ফাইল'); }
+  else if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
   const w = await openAndWait(href);
   const k0 = w && KNOWN.find((k) => k.path.test(w.location.pathname));
