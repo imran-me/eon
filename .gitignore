@@ -68,3 +68,5 @@ tools/owner-report.json
 # never commit API keys
 server/storage/gemini.key
 *.key
+tools/owner-100k.json
+tools/owner-eval*.json

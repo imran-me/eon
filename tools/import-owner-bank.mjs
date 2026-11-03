@@ -15,7 +15,14 @@ const V = "'((?:[^']|'')*)'";
 const un = (x) => x.replace(/''/g, "'");
 const count = (rows, k) => Object.entries(rows.reduce((a, r) => (a[r[k]] = (a[r[k]] || 0) + 1, a), {})).sort((a, b) => b[1] - a[1]);
 
-if (/chatbot_accounts_questions/.test(s)) {
+if (/chatbot_questions_100k/.test(s)) {
+  const rx = new RegExp("\\('(Q\\d{6})'," + Array(14).fill(V).join(',') + '\\)', 'g');
+  const rows = []; let m;
+  while ((m = rx.exec(s))) rows.push({ id: m[1], business: un(m[2]), module: un(m[3]), section: un(m[4]), intent: un(m[5]), type: m[6], q: un(m[7]), lang: m[8], context: m[9], slots: un(m[10]), action: un(m[11]), response: un(m[12]), accounting: un(m[13]), difficulty: m[14], variant: m[15] });
+  writeFileSync(new URL('owner-100k.json', import.meta.url), JSON.stringify(rows));
+  console.log(rows.length, 'questions,', new Set(rows.map((r) => r.intent)).size, 'intents');
+  console.log('TYPE', count(rows, 'type')); console.log('MODULE', count(rows, 'module')); console.log('LANG', count(rows, 'lang')); console.log('VARIANT', count(rows, 'variant'));
+} else if (/chatbot_accounts_questions/.test(s)) {
   const rx = new RegExp("\\('(A\\d+)'," + Array(12).fill(V).join(',') + '\\)', 'g');
   const rows = []; let m;
   while ((m = rx.exec(s))) rows.push({ id: m[1], business: 'অ্যাকাউন্টস', module: un(m[2]), section: un(m[3]), intent: un(m[4]), type: un(m[5]), q: un(m[6]), lang: m[7], context: m[8], slots: un(m[9]), action: un(m[10]), response: un(m[11]), accounting: un(m[12]), difficulty: m[13] });

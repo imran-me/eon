@@ -53,13 +53,18 @@ final class Facts
         foreach ($ex as $m => $cats) { arsort($cats); $S['expenses_by_month_category'][$m] = array_map($r, array_slice($cats, 0, 12, true)) + ['TOTAL' => $r(array_sum($cats))]; }
         $S['expenses_pending_approval'] = ['count' => $pend[0], 'amount' => $r($pend[1])];
 
-        // parties (agents, clients, vendors): balance from their own transactions, recomputed in date order
-        $pb = [];
-        foreach ($D['party_transactions'] ?? [] as $p) { if (preg_match('/super ?admin|^admin$/i', (string) $p['party_name'])) continue;   // a system account, not a party
-            $k = (string) $p['party_name'] . ' (' . $p['party_type'] . ')'; $pb[$k] = ($pb[$k] ?? 0) + (float) $p['debit'] - (float) $p['credit']; }
-        uasort($pb, fn($a, $b) => abs($b) <=> abs($a));
-        $S['party_balances_debit_minus_credit'] = array_map($r, array_slice($pb, 0, 40, true));
-        $S['party_balance_note'] = 'positive = the party owes us (receivable); negative = we owe them or they paid in advance';
+        // agents and clients (the ERP's "customer" parties): debit = what we billed, credit = what they paid.
+        // Suppliers are left to the purchase dues below — their party ledger signs do not match the purchases.
+        $cb = [];
+        foreach ($D['party_transactions'] ?? [] as $p) {
+            if ($p['party_type'] !== 'customer' || preg_match('/super ?admin|^admin$/i', (string) $p['party_name'])) continue;   // a system account, not a party
+            $k = (string) $p['party_name']; $cb[$k] = ($cb[$k] ?? 0) + (float) $p['debit'] - (float) $p['credit'];
+        }
+        $owe = array_filter($cb, fn($v) => $v > 0.5); arsort($owe);
+        $adv = array_filter($cb, fn($v) => $v < -0.5); asort($adv);
+        $S['agents_clients_who_owe_us'] = array_map($r, array_slice($owe, 0, 30, true));
+        $S['agents_clients_who_paid_in_advance'] = array_map(fn($v) => $r(-$v), array_slice($adv, 0, 15, true));
+        $S['agent_note'] = 'agents/clients are the ERP customer parties (CYP, KUL… tags are agents). Vendors/suppliers and what we owe them are in ticket_vendors and contract_flights (vendor due).';
 
         // ticketing: sales by month, by client/agent; profit per client from sale vs purchase cost
         $cost = []; foreach ($D['ticket_purchases'] ?? [] as $p) $cost[$p['id']] = (float) ($p['total'] ?? 0);
