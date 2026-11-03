@@ -19,7 +19,7 @@ resetWarmth(); const a = all.map((t) => humanize(t));
 resetWarmth(); const b = all.map((t) => humanize(t));
 check('deterministic', JSON.stringify(a) === JSON.stringify(b));
 const rate = a.filter((x, i) => x !== all[i]).length / all.length;
-check('frequency band 30–65%', rate >= 0.3 && rate <= 0.65, rate.toFixed(2));
+check('frequency band 30–85%', rate >= 0.3 && rate <= 0.85, rate.toFixed(2));
 let prev = null;
 a.forEach((o, i) => {
   const t = all[i];

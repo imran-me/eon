@@ -27,7 +27,12 @@
    ============================================================ */
 
 const SR = typeof window !== 'undefined' ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
-const SS = typeof window !== 'undefined' ? window.speechSynthesis : null;
+// Docked in the workspace, EON is a frame beside the ERP. A browser lets a frame make sound only
+// once the user has clicked inside *it* — a click on the ERP side unlocks the top page, never
+// the sibling — so EON speaks through the top page when it is ours (same origin), which any
+// click anywhere has unlocked.
+const SPK = (() => { if (typeof window === 'undefined') return null; try { if (window.top !== window && window.top.Audio && window.top.location.origin === location.origin) return window.top; } catch (e) {} return window; })();
+const SS = SPK ? SPK.speechSynthesis : null;
 
 const state = { lang: 'en-US', listening: false, continuous: false, wake: false, rec: null, voices: [], speaking: false, status: 'idle', muted: false, rate: 1.0, pitch: 1.0, sayId: 0,
   tts: '/server/api/tts.php', serverVoice: 'auto', audio: null };   // 'auto' | 'always' | 'never'
@@ -71,14 +76,14 @@ function hasVoiceFor(lang) {
    never twice on one answer — the server's speak is already warm.
    ------------------------------------------------------------------ */
 const WARM = {
-  think: { en: ['Hmm, let me see…', 'Right, let me check…', 'Okay, here it is…', 'Let me look…', 'Alright…', 'So…'],
-           bn: ['হুম, দেখছি…', 'আচ্ছা, দেখি…', 'এই যে…', 'জি, দেখছি…', 'আচ্ছা…', 'হুম…'] },
-  ack:   { en: ['Got it.', 'Okay, done.', 'Sure.', 'Right away.', 'Alright.'],
-           bn: ['ঠিক আছে।', 'জি, অবশ্যই।', 'আচ্ছা।', 'জি।', 'হয়ে গেছে।'] },
-  soft:  { en: ['Hmm, one thing —', 'Okay, heads up —', 'Right, so —', 'Hmm…'],
-           bn: ['তবে একটা কথা —', 'হুম, একটু খেয়াল করুন —', 'আচ্ছা, একটা ব্যাপার —', 'তাই তো…'] },
-  close: { en: ['Anything else?', 'Want me to dig deeper?', 'Shall I look at anything else?'],
-           bn: ['আর কিছু লাগবে?', 'আর কিছু?', 'আরও দেখব?'] },
+  think: { en: ['Hmmm, let me see…', 'Ummm… let me check…', 'Ooh, okay, here it is…', 'Hmm… let me look…', 'Alright, alright…', 'Sooo…', 'Haan, okay…', 'Ummm, right…'],
+           bn: ['হুমমম, দেখছি…', 'উমমম… দাঁড়াও, দেখি…', 'আচ্ছা আচ্ছা, এই যে…', 'হুম… জি, দেখছি…', 'ওহ, আচ্ছা…', 'হুমম…', 'আহা, এই তো…', 'উম… দেখি তো…'] },
+  ack:   { en: ['Got it!', 'Okay, done!', 'Sure thing!', 'Right away!', 'Yay, done.'],
+           bn: ['ঠিক আছে!', 'জি, অবশ্যই!', 'আচ্ছা, হয়ে গেল!', 'এই তো, করে দিলাম!', 'হয়ে গেছে!'] },
+  soft:  { en: ['Hmmm, one thing —', 'Ummm, heads up —', 'Oh, so —', 'Hmm… hmm…', 'Haaa, well —'],
+           bn: ['হুমম, তবে একটা কথা —', 'উমম, একটু খেয়াল করো —', 'আচ্ছা, একটা ব্যাপার —', 'তাই তো…', 'হায় হায়, শোনো —'] },
+  close: { en: ['Anything else?', 'Want me to dig deeper?', 'What next, hmm?'],
+           bn: ['আর কিছু লাগবে?', 'আর কিছু?', 'আর কী জানতে চাও, হুম?'] },
 };
 const WARM_ALL = Object.values(WARM).flatMap((k) => [...k.en, ...k.bn]);
 const GATE_RX = /\b(say yes|shall i|should i|do you want me|confirm|cannot|can't|could not|unable|not allowed|refus|sign in|i do not know|i don't know|not sure)\b|হ্যাঁ বল|নিশ্চিত কর|করব কি|পোস্ট করব|পারছি না|পারব না|পারিনি|জানি না|সাইন ইন|অনুমতি নেই|[?？]\s*$/i;
@@ -109,8 +114,8 @@ export function humanize(text, lang) {
   if (kind === 'gate') return t;
   const h = seed(t), roll = h % 20, n = Math.floor(h / 20);
   const hasLead = /^[^.:।,—…]{1,32}[:,—]/.test(t);                       // "Good news:", "একটা বিষয় বলি,"
-  if (roll < 8 && !hasLead) return warmPick(WARM[kind][l], n, 'open') + ' ' + t;
-  if (roll < 11 && kind !== 'ack') return t + (/[।.!?…]$/.test(t) ? '' : (l === 'bn' ? '।' : '.')) + ' ' + warmPick(WARM.close[l], n, 'close');
+  if (roll < 13 && !hasLead) return warmPick(WARM[kind][l], n, 'open') + ' ' + t;
+  if (roll < 16 && kind !== 'ack') return t + (/[।.!?…]$/.test(t) ? '' : (l === 'bn' ? '।' : '.')) + ' ' + warmPick(WARM.close[l], n, 'close');
   return t;
 }
 export function resetWarmth() { warmLast.open = null; warmLast.close = null; }
@@ -149,7 +154,7 @@ function ttsUrl(text, lang) {
 function sayViaServer(text, lang, myId) {
   return new Promise((resolve) => {
     let a;
-    try { a = new Audio(ttsUrl(text, lang)); } catch (e) { resolve(false); return; }
+    try { a = new SPK.Audio(ttsUrl(text, lang)); } catch (e) { resolve(false); return; }
     a.crossOrigin = 'use-credentials';
     state.audio = a;
     const done = (ok) => {
@@ -272,7 +277,7 @@ export const EonVoice = {
       const next = () => {
         if (state.sayId !== myId) { resolve(false); return; }   // hushed / superseded — stop the chain
         if (i >= chunks.length) { state.speaking = false; if (state.continuous && state.rec === rec && rec) { try { rec.start(); state.listening = true; setStatus('listening'); } catch { setStatus('idle'); } } else setStatus('idle'); resolve(true); return; }
-        const u = new SpeechSynthesisUtterance(chunks[i++].trim());
+        const u = new SPK.SpeechSynthesisUtterance(chunks[i++].trim());
         u.lang = lang || state.lang;
         u.rate = rate || (state.rate !== 1.0 ? state.rate : pace.rate);
         u.pitch = pitch || (state.pitch !== 1.0 ? state.pitch : pace.pitch);

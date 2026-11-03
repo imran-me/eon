@@ -41,7 +41,7 @@ check('deterministic', $a === $b);
 // 2. frequency band: some warmth, never most of the time
 $changed = 0; foreach ($all as $k => $t) if ($a[$k] !== $t) $changed++;
 $rate = $changed / count($all);
-check('frequency band 30–65%', $rate >= 0.30 && $rate <= 0.65, sprintf('%.0f%%', $rate * 100));
+check('frequency band 30–85%', $rate >= 0.30 && $rate <= 0.85, sprintf('%.0f%%', $rate * 100));
 
 $fillers = Persona::all();
 $prevOpen = null;

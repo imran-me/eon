@@ -26,22 +26,22 @@ final class Persona
     /** opener kinds → [en, bn] lists */
     private const OPEN = [
         'think' => [
-            'en' => ['Hmm, let me see…', 'Right, let me check…', 'Okay, here it is…', 'Let me look…', 'Alright…', 'So…'],
-            'bn' => ['হুম, দেখছি…', 'আচ্ছা, দেখি…', 'এই যে…', 'জি, দেখছি…', 'আচ্ছা…', 'হুম…'],
+            'en' => ['Hmmm, let me see…', 'Ummm… let me check…', 'Ooh, okay, here it is…', 'Hmm… let me look…', 'Alright, alright…', 'Sooo…', 'Haan, okay…', 'Ummm, right…'],
+            'bn' => ['হুমমম, দেখছি…', 'উমমম… দাঁড়াও, দেখি…', 'আচ্ছা আচ্ছা, এই যে…', 'হুম… জি, দেখছি…', 'ওহ, আচ্ছা…', 'হুমম…', 'আহা, এই তো…', 'উম… দেখি তো…'],
         ],
         'ack' => [
-            'en' => ['Got it.', 'Okay, done.', 'Sure.', 'Right away.', 'Alright.'],
-            'bn' => ['ঠিক আছে।', 'জি, অবশ্যই।', 'আচ্ছা।', 'জি।', 'হয়ে গেছে।'],
+            'en' => ['Got it!', 'Okay, done!', 'Sure thing!', 'Right away!', 'Yay, done.'],
+            'bn' => ['ঠিক আছে!', 'জি, অবশ্যই!', 'আচ্ছা, হয়ে গেল!', 'এই তো, করে দিলাম!', 'হয়ে গেছে!'],
         ],
         'soft' => [
-            'en' => ['Hmm, one thing —', 'Okay, heads up —', 'Right, so —', 'Hmm…'],
-            'bn' => ['তবে একটা কথা —', 'হুম, একটু খেয়াল করুন —', 'আচ্ছা, একটা ব্যাপার —', 'তাই তো…'],
+            'en' => ['Hmmm, one thing —', 'Ummm, heads up —', 'Oh, so —', 'Hmm… hmm…', 'Haaa, well —'],
+            'bn' => ['হুমম, তবে একটা কথা —', 'উমম, একটু খেয়াল করো —', 'আচ্ছা, একটা ব্যাপার —', 'তাই তো…', 'হায় হায়, শোনো —'],
         ],
     ];
 
     private const CLOSE = [
-        'en' => ['Anything else?', 'Want me to dig deeper?', 'Shall I look at anything else?'],
-        'bn' => ['আর কিছু লাগবে?', 'আর কিছু?', 'আরও দেখব?'],
+        'en' => ['Anything else?', 'Want me to dig deeper?', 'What next, hmm?'],
+        'bn' => ['আর কিছু লাগবে?', 'আর কিছু?', 'আর কী জানতে চাও, হুম?'],
     ];
 
     /** a confirmation gate or a refusal — said crisply, no warmth added */
@@ -100,12 +100,12 @@ final class Persona
         // the answer already opens with its own lead-in ("Short version:",
         // "Good news:", "একটা বিষয় বলি,") — a second one would stack
         $hasLead = (bool) preg_match('/^[^.:।,—…]{1,32}[:,—]/u', $t);
-        if ($roll < 8 && !$hasLead) {                      // ~40%: an opener
+        if ($roll < 13 && !$hasLead) {                      // ~40%: an opener
             $list = self::OPEN[$kind][$lang];
             $f = self::pick($list, intdiv($h, 20), 'open');
             return $f . ' ' . $t;
         }
-        if ($roll < 11 && $kind !== 'ack') {               // ~15%: a closer, never after an order
+        if ($roll < 16 && $kind !== 'ack') {               // ~15%: a closer, never after an order
             $f = self::pick(self::CLOSE[$lang], intdiv($h, 20), 'close');
             $end = preg_match('/[।.!?…]$/u', $t) ? '' : ($lang === 'bn' ? '।' : '.');
             return $t . $end . ' ' . $f;
