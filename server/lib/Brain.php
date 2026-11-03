@@ -154,6 +154,14 @@ TXT;
                 if ($b !== null) return self::fromBook($b);
             } catch (Throwable $e) { Log::warn('accounts book failed', ['error' => $e->getMessage()]); }
         }
+        // straight operational questions (a named wallet's balance, salary still to pay, flights pending/due)
+        // go first: the general answerer took "salary dite hobe" for supplier payables
+        if (class_exists('Ops')) {
+            try {
+                $o = Ops::answer($q, $D);
+                if ($o !== null) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null];
+            } catch (Throwable $e) { Log::warn('ops failed', ['error' => $e->getMessage()]); }
+        }
         if (class_exists('Nlu') && class_exists('Answer')) {
             try {
                 $parse = Nlu::parse($q, $lang);
@@ -179,7 +187,8 @@ TXT;
         // still nothing: the question may name a table or a value the data holds
         if ($weak !== null && class_exists('SchemaSense')) {
             try {
-                $sc = SchemaSense::answer($q, $lang);
+                // only a question that is about the data's shape — "koyta flight baki" is about flights, not a table
+                $sc = SchemaSense::strong($q, $lang);
                 if ($sc !== null) return self::fromSchema($sc);
             } catch (Throwable $e) { Log::warn('schema sense failed', ['error' => $e->getMessage()]); }
         }
