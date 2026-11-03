@@ -15,6 +15,7 @@ import './navigator.js';     // knows the ERP itself: every screen, menu path, a
 import './entity.js';        // one person, one party, one thing: tasks, dues, assignments, errors
 import './act.js';           // EON does the work through the ERP's own forms (with a confirmation gate)
 import './statement.js';     // statements and ledgers: open, print, PDF, Excel — any party, any period
+import './expense.js';      // expenses said the way they are said, through the ERP's own expense form and the yes-gate
 import './ticket.js';        // ticket changes: reissue, reschedule, refund, void, cancel return — through the gate
 import './cflight.js';       // contract flight: offload and deport a passenger, open their flight
 import './cases.js';         // contract files and visas: open, where is it, move the stage — by any name on the case
