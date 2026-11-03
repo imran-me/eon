@@ -94,8 +94,8 @@ export function periodIn(s, today = new Date()) {
    ERP's users.id — the same id the statement URL takes. Names are matched
    word by word on a consonant skeleton so that রাব্বি reaches RABBI; two
    parties that match equally are asked about, never guessed between. */
-const STOP = /^(open|show|see|view|the|a|an|of|for|me|my|please|statement|statements|ledger|ledgers|pdf|excel|print|download|export|save|account|accounts|party|agent|vendor|client|customer|supplier|this|last|month|year|and|to|in|its|his|her|give|send|dekhao|kholo|koro|er|hisab|pull|take|bring|give|show|see|want|need|please|now|quickly|thanks|thank|umm|um|acha|accha|ok|okay|so|eon|can|could|you|me|i|to|up|file|sheet|ta|tar|er|ke|ki|dao|din|den|chai|lagbe|kholo|dekhao|dekhan|koro|ber|send|pathao|october|november|december|january|february|april|june|july|august|september|oct|nov|dec|jan|feb|apr|jun|jul|aug|sep|sept|mash|mas|goto|ei|last|this|previous|ager|month|year|pdf|excel|exel|xlsx|print|download|export|save|open|view|display)$/i;
-const STOP_BN = new Set(["দাও","দিন","খোলো","খুলুন","দেখাও","দেখান","দেখি","চাই","লাগবে","পাঠাও","প্রিন্ট","ডাউনলোড","পিডিএফ","এক্সেল","স্টেটমেন্ট","লেজার","লেজারটা","হিসাব","হিসেব","খতিয়ান","টা","টি","এর","মাসের","মাস","গত","এই","আচ্ছা","একটু","প্লিজ","দ্রুত","করো","করুন","ভেন্ডর","এজেন্ট","ক্লায়েন্ট","পার্টি","কোম্পানি","সব"]);
+const STOP = /^(do|did|refund|reissue|reschedule|void|ticket|tickets|invoice|taka|tk|change|for|of|a|an|open|show|see|view|the|a|an|of|for|me|my|please|statement|statements|ledger|ledgers|pdf|excel|print|download|export|save|account|accounts|party|agent|vendor|client|customer|supplier|this|last|month|year|and|to|in|its|his|her|give|send|dekhao|kholo|koro|er|hisab|pull|take|bring|give|show|see|want|need|please|now|quickly|thanks|thank|umm|um|acha|accha|ok|okay|so|eon|can|could|you|me|i|to|up|file|sheet|ta|tar|er|ke|ki|dao|din|den|chai|lagbe|kholo|dekhao|dekhan|koro|ber|send|pathao|october|november|december|january|february|april|june|july|august|september|oct|nov|dec|jan|feb|apr|jun|jul|aug|sep|sept|mash|mas|goto|ei|last|this|previous|ager|month|year|pdf|excel|exel|xlsx|print|download|export|save|open|view|display)$/i;
+const STOP_BN = new Set(['টাকা', 'টিকিট', 'টিকেট', 'টিকিটটা', 'রিফান্ড', 'রিইস্যু', 'রিশিডিউল', 'ভয়েড', 'ইনভয়েস', 'করে', "দাও","দিন","খোলো","খুলুন","দেখাও","দেখান","দেখি","চাই","লাগবে","পাঠাও","প্রিন্ট","ডাউনলোড","পিডিএফ","এক্সেল","স্টেটমেন্ট","লেজার","লেজারটা","হিসাব","হিসেব","খতিয়ান","টা","টি","এর","মাসের","মাস","গত","এই","আচ্ছা","একটু","প্লিজ","দ্রুত","করো","করুন","ভেন্ডর","এজেন্ট","ক্লায়েন্ট","পার্টি","কোম্পানি","সব"]);
 export function parties(D) {
   const by = new Map();
   for (const t of (D && D.party_transactions) || []) {
@@ -104,9 +104,11 @@ export function parties(D) {
   }
   return [...by.values()];
 }
-export function findParty(D, text) {
-  const list = parties(D);
-  if (!list.length) return null;
+export function findParty(D, text) { return matchName(parties(D), text); }
+
+/** the one record of `list` ({id, name}) a spoken sentence names — or {ambiguous} */
+export function matchName(list, text) {
+  if (!list || !list.length) return null;
   const words = String(text || '').replace(/[?.!,।:;'’"]/g, ' ').replace(/\b(\w+)'s\b/g, '$1').split(/\s+/).filter(Boolean);
   const wanted = [];
   for (const w of words) {

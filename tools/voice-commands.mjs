@@ -54,11 +54,13 @@ const P = join(HERE, '..', 'ai-companion', 'eon-brain', 'domains', 'erp', 'plugi
 const load = async (f) => (await import(pathToFileURL(join(P, f)).href)).default;
 const act = await import(pathToFileURL(join(P, 'act.js')).href);
 const PARTS = [['ticket', await load('ticket.js')], ['contract-flight', await load('cflight.js')], ['statement', await load('statement.js')]];
+const ticketMod = await import(pathToFileURL(join(P, 'ticket.js')).href);
 const statement = await import(pathToFileURL(join(P, 'statement.js')).href);
 const cflight = await import(pathToFileURL(join(P, 'cflight.js')).href);
 
 async function route(q) {
   act.cancel();
+  ticketMod.forget();
   for (const [id, m] of PARTS) {
     const r = await m.answer(q);
     if (r) return { id, r, plan: act.pendingPlan() };
@@ -82,6 +84,8 @@ const C = [];
 const add = (part, q, check, tag) => C.push({ part, q, check, tag });
 const href = (re) => (o) => o.r && re.test(o.r.navigate || '');
 const plan = (want) => (o) => o.plan && Object.entries(want).every(([k, v]) => String(o.plan.values[k]) === String(v));
+const ESSENTIAL = /bears|বহন|travel date|তারিখ|refund to the customer|ফেরত দেব/;
+const planOrAsk = (want) => (o) => plan(want)(o) || (!o.plan && o.r && ESSENTIAL.test(o.r.speak) && (() => { const c = ticketMod.conversation(); return c && Object.entries(want).every(([k, v]) => String(c.values[k]) === String(v)); })());
 const asks = (re) => (o) => o.r && !o.plan && re.test(o.r.speak);
 const none = (o) => o.id === null;
 const fill = ['', 'EON, ', 'umm ', 'please ', 'acha ', 'ok so ', 'একটু ', 'আচ্ছা '];
@@ -152,9 +156,9 @@ const refunds = [
   ['VK8VU3 রিশিডিউল ২০২৬-১১-২০', { kind: 'reschedule', new_travel_at: '2026-11-20' }],
   ['cancel the return on PNR VK8VU3', { kind: 'return_cancel' }], ['VK8VU3 রিটার্ন বাতিল করো', { kind: 'return_cancel' }],
 ];
-refunds.forEach(([q, want], i) => add('ticket', spin(fill, i) + q, plan(want), 'ticket change'));
-[['refund PNR VK8VU3', /refund amount/], ['VK8VU3 রিফান্ড করো', /ফেরতের পরিমাণ/], ['reschedule VK8VU3', /new travel date/],
- ['refund a ticket', /PNR or invoice/], ['একটা টিকিট রিফান্ড করো', /পিএনআর বা ইনভয়েস/],
+refunds.forEach(([q, want], i) => add('ticket', spin(fill, i) + q, planOrAsk(want), 'ticket change'));
+[['refund PNR VK8VU3', /refund to the customer/], ['VK8VU3 রিফান্ড করো', /ফেরত দেব/], ['reschedule VK8VU3', /new travel date/],
+ ['refund a ticket', /PNR/], ['একটা টিকিট রিফান্ড করো', /পিএনআর/],
  ['refund PNR GRP777 refund 5000', /2 passengers/], ['refund PNR ZZ99ZZ refund 5000', /no ticket sale/]]
   .forEach(([q, re]) => add('ticket', q, asks(re), 'asks'));
 add('ticket', 'refund PNR GRP777 for Rahima, refund 5000', plan({ kind: 'refund', refund: 5000 }), 'passenger named');
