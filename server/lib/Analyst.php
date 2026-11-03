@@ -91,6 +91,8 @@ final class Analyst
             'লাভ-ক্ষতি - কন্ট্রাক্ট ফ্লাইট' => 'flightProfit', 'টিকেটিং লাভ/কমিশন' => 'ticketProfit',
             'ট্রাভেল সামারি' => 'travelSummary', 'লসের কারণ' => 'losses',
             'রিশিডিউলের অ্যাকাউন্টস ইমপ্যাক্ট' => 'changes',
+            'ব্যাংক রিকনসিলিয়েশন' => 'reconcile', 'হাজিরা ও ছুটি' => 'attendance', 'চেক ম্যানেজমেন্ট' => 'cheques',
+            'আইটি ও এক্সপোর্ট-ইমপোর্ট অ্যাকাউন্টস' => 'sectionProfit', 'প্রপার্টি অ্যাকাউন্টস' => 'sectionProfit', 'কনস্ট্রাকশন/ইন্টেরিয়র অ্যাকাউন্টস' => 'sectionProfit',
         ];
         // a statement / ledger looked at, or a follow-up on the last answer: the panel carries those
         if (in_array($intent, ['পার্টি স্টেটমেন্ট দেখা', 'ফলো-আপ (আগের উত্তরের প্রেক্ষিতে)', 'আগের উত্তর ছোট/বড় করা'], true)) return ['client_command' => $q];
@@ -468,6 +470,60 @@ final class Analyst
         $pen = array_sum(array_map(fn($c) => (float) $c['penalty'], $C)); $fd = array_sum(array_map(fn($c) => (float) $c['fare_difference'], $C)); $fee = array_sum(array_map(fn($c) => (float) $c['service_fee'], $C)); $ref = array_sum(array_map(fn($c) => (float) $c['refund_amount'], $C));
         return self::t(sprintf('%s%ss %s: %d — penalty %s, fare difference %s, our service fee %s%s.', $who, $label, $when, count($C), self::m($pen), self::m($fd), self::m($fee), $ref > 0 ? ', refunded ' . self::m($ref) : ''),
             sprintf('%s %s%sটা %s — penalty %s, fare difference %s, আমাদের service fee %s%s।', $when, $who ? $who . '— ' : '', self::n(count($C)), $label, self::m($pen), self::m($fd), self::m($fee), $ref > 0 ? ', refund ' . self::m($ref) : ''));
+    }
+
+    /* ---------- bank reconciliation: the bank's own balance against its ledger account ---------- */
+    private static function reconcile(string $q, array $D): ?string
+    {
+        $led = []; foreach ($D['journal_entries'] ?? [] as $j) foreach ((array) ($j['items'] ?? []) as $it) { $a = (int) ($it['account_id'] ?? 0); $led[$a] = ($led[$a] ?? 0) + (float) $it['debit'] - (float) $it['credit']; }
+        $l = mb_strtolower($q); $rows = [];
+        foreach ($D['banks'] ?? [] as $b) {
+            $n = mb_strtolower((string) $b['name']);
+            $named = false; foreach (['bkash' => 'বিকাশ', 'city' => 'সিটি', 'brac' => 'ব্র্যাক', 'islami' => 'ইসলামী', 'dutch' => 'ডাচ', 'dhaka' => 'ঢাকা', 'sonali' => 'সোনালী', 'cash' => 'ক্যাশ'] as $en => $bn) if (str_contains($n, $en) && (str_contains($l, $en) || str_contains($q, $bn))) $named = true;
+            $gl = $led[(int) ($b['account_id'] ?? 0)] ?? 0.0; $diff = (float) $b['balance'] - $gl;
+            $rows[] = ['name' => $b['name'], 'bank' => (float) $b['balance'], 'gl' => $gl, 'diff' => $diff, 'named' => $named];
+        }
+        $pick = array_values(array_filter($rows, fn($r) => $r['named'])) ?: $rows;
+        $off = array_values(array_filter($pick, fn($r) => abs($r['diff']) > 1));
+        if (count($pick) === 1) { $r = $pick[0];
+            return abs($r['diff']) <= 1 ? self::t("{$r['name']} reconciles: bank {$r['bank']} equals its ledger account.", "{$r['name']} মিলে গেছে: ব্যাংকের হিসাব আর ledger একই — " . self::m($r['bank']) . '।')
+                : self::t(sprintf('%s does not reconcile: the bank record says %s, its ledger account %s — a gap of %s to explain.', $r['name'], self::m($r['bank']), self::m($r['gl']), self::m(abs($r['diff']))),
+                    sprintf('%s মিলছে না: ব্যাংকের রেকর্ডে %s, ledger account-এ %s — %s ফারাক, যেটার ব্যাখ্যা লাগবে।', $r['name'], self::m($r['bank']), self::m($r['gl']), self::m(abs($r['diff'])))); }
+        if (!$off) return self::t('All ' . count($pick) . ' bank accounts reconcile with their ledger accounts.', 'সব ' . self::n(count($pick)) . 'টা ব্যাংক account ledger-এর সাথে মিলে গেছে।');
+        usort($off, fn($a, $b) => abs($b['diff']) <=> abs($a['diff']));
+        $parts = array_map(fn($r) => $r['name'] . ' ' . self::m($r['diff']), array_slice($off, 0, 5));
+        return self::t(sprintf('%d of %d bank accounts do not match their ledger: %s (bank minus ledger).', count($off), count($pick), implode('; ', $parts)),
+            sprintf('%sটা ব্যাংক account-এর মধ্যে %sটা ledger-এর সাথে মিলছে না: %s (ব্যাংক − ledger)।', self::n(count($pick)), self::n(count($off)), implode('; ', $parts)));
+    }
+
+    /* ---------- attendance and leave, today (or the day said), by department ---------- */
+    private static function attendance(string $q, array $D): ?string
+    {
+        $per = Slots::period($q); $day = $per ? $per[1] : date('Y-m-d');
+        $emp = []; foreach ($D['employees'] ?? [] as $e) $emp[(int) $e['id']] = $e;
+        $co = Slots::company($q, $D);
+        $A = array_values(array_filter($D['attendances'] ?? [], fn($a) => (string) $a['date'] === $day && (!$co || (int) ($a['company_id'] ?? 0) === (int) $co['id'])));
+        $L = array_values(array_filter($D['leaves'] ?? [], fn($v) => $v['start_date'] <= $day && $v['end_date'] >= $day && strtolower((string) $v['status']) === 'approved'));
+        $late = count(array_filter($A, fn($a) => (int) ($a['late_minutes'] ?? 0) > 0));
+        $byDep = []; foreach ($A as $a) { $dep = (string) ($emp[(int) $a['user_id']]['department'] ?? '—'); $byDep[$dep] = ($byDep[$dep] ?? 0) + 1; } arsort($byDep);
+        $parts = []; foreach (array_slice($byDep, 0, 5, true) as $k => $c) $parts[] = "$k " . self::n($c);
+        $d = Phrase::day($day, self::$bn ? 'bn' : 'en');
+        if (!$A && !$L) return self::t("No attendance recorded for $d.", "$d কোনো হাজিরা রেকর্ড হয়নি।");
+        return self::t(sprintf('%s: %d checked in (%d late), %d on approved leave.%s', $d, count($A), $late, count($L), $parts ? ' By department: ' . implode('; ', $parts) . '.' : ''),
+            sprintf('%s: %sজন উপস্থিত (%sজন দেরিতে), %sজন অনুমোদিত ছুটিতে।%s', $d, self::n(count($A)), self::n($late), self::n(count($L)), $parts ? ' ডিপার্টমেন্ট অনুযায়ী: ' . implode('; ', $parts) . '।' : ''));
+    }
+
+    /* ---------- cheques: party payments made or taken by cheque ---------- */
+    private static function cheques(string $q, array $D): ?string
+    {
+        $per = Slots::period($q);
+        $C = array_values(array_filter($D['party_transactions'] ?? [], fn($p) => strtolower((string) ($p['payment_method'] ?? '')) === 'cheque' && self::in($p['date'], $per)));
+        if (preg_match('/\b(\d{5,})\b/', $q, $m)) { $hit = array_values(array_filter($C, fn($p) => str_contains((string) ($p['reference_no'] ?? ''), $m[1])));
+            if (!$hit) return self::t("No cheque {$m[1]} is recorded in the party ledgers.", "party ledger-এ {$m[1]} নম্বরের কোনো চেক রেকর্ড নেই।");
+            $p = $hit[0]; return self::t(sprintf('Cheque %s: %s, %s, %s on %s.', $m[1], $p['party_name'], self::m((float) $p['debit'] + (float) $p['credit']), (float) $p['credit'] > 0 ? 'received' : 'paid', $p['date']), sprintf('চেক %s: %s, %s, %s — %s।', $m[1], $p['party_name'], self::m((float) $p['debit'] + (float) $p['credit']), (float) $p['credit'] > 0 ? 'জমা হয়েছে' : 'দেওয়া হয়েছে', Phrase::bnDigits((string) $p['date']))); }
+        $in = array_sum(array_map(fn($p) => (float) $p['credit'], $C)); $out = array_sum(array_map(fn($p) => (float) $p['debit'], $C));
+        $when = self::when($per, 'on record', 'রেকর্ডে মোট');
+        return self::t(sprintf('Cheques %s: %d — %s received, %s paid.', $when, count($C), self::m($in), self::m($out)), sprintf('%s চেক %sটা — জমা %s, দেওয়া %s।', $when, self::n(count($C)), self::m($in), self::m($out)));
     }
 
     /* ---------- banks: one or all ---------- */
