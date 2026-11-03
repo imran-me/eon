@@ -156,7 +156,7 @@ const KNOWN = [{
     if (key && $('#tsTicketSearch')) {
       // choosing the agent reloads the unsold tickets — keep searching until the list has arrived
       let rows = [];
-      for (let i = 0; i < 15; i++) {
+      for (let i = 0; i < 25; i++) {
         setValue(w, $('#tsTicketSearch'), key); try { w.tsFilterTickets && w.tsFilterTickets(key); } catch (e) {}
         await sleep(400);
         rows = [...d.querySelectorAll('#tsTicketsBody tr')].filter((r) => r.querySelector('input[type=checkbox]'));
