@@ -247,8 +247,14 @@ async function ask(q, { voice = false } = {}) {
      describe the screen instead, which is not what was asked. So the local brain gets
      first refusal, and we use its answer whenever it carries somewhere to go. */
   let local = null;
+  /* Gemini on the server reads every full sentence first (owner's decision, 2026-11-04): the
+     local rules caught "এই লেজার টা প্রিন্ট করে দিতে পারবে" on the word ledger and dumped the
+     journal. They still go first for a short reply inside a conversation ("হ্যাঁ", "2", a date)
+     and are the whole brain when the server cannot be reached. */
+  const shortReply = q.trim().split(/\s+/).length <= 3;
+  const serverFirst = !shortReply && e.serverOk && e.authed;
   try {
-    local = window.EonDomains ? await window.EonDomains.answer(q, { company: co() }) : null;
+    local = (window.EonDomains && !serverFirst) ? await window.EonDomains.answer(q, { company: co() }) : null;
     const goes = local && (local.navigate || (local.actions || []).some((x) => x.kind === 'erp-open' && x.href));
     if (goes) {
       out = {
@@ -267,9 +273,22 @@ async function ask(q, { voice = false } = {}) {
   // waited for it before the local brain replied. health.php has already said whether
   // this browser is authenticated — believe it and go straight to the brain.
   if (!out && e.serverOk && e.authed) {
-    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts }) }); state.conv = r.conversation_id || state.conv; out = { weak: !!r.weak, nav: r.navigate_query || null, navPath: r.navigate_path || null, planned: r.planned || null, text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
+    try { const facts = { kpis: EonErp.kpis(), decisions: EonErp.decisions().slice(0, 8).map((d) => ({ layer: d.layer, severity: d.severity, title: d.title, recommend: d.recommend })) }; const r = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: q, conversation_id: state.conv, company: co(), voice, lang: curLang(), facts, recent: state.messages.filter((m) => m.role === 'me' || m.role === 'eon').slice(-7, -1).map((m) => (m.role === 'me' ? 'boss: ' : 'EON: ') + String(m.text || '').slice(0, 300)) }) }); state.conv = r.conversation_id || state.conv; out = { weak: !!r.weak, cmd: r.client_command || null, nav: r.navigate_query || null, navPath: r.navigate_path || null, planned: r.planned || null, text: r.text, speak: r.speak || r.text, trace: `${r.mode === 'llm' ? 'language model · ' + (r.model || '') : 'server offline brain'} · tools: ${(r.tools_used || []).join(', ') || '—'} · ${r.ms}ms${r.note ? ' · ' + r.note : ''}` }; }
     catch (err) { console.warn('server ask failed', err); out = null; }
     // Gemini understood a screen: the navigator finds it in the ERP's own map and moves the ERP frame
+    if (out && out.cmd && window.EonDomains) {
+      try {
+        const a = await window.EonDomains.answer(out.cmd, { company: co() });
+        if (a && a.speak) {
+          out = { text: a.speak, speak: a.speak, detail: Array.isArray(a.detail) ? a.detail.join('\n') : (a.detail || ''), actions: a.actions || [], view: a.view, data: a.data, trace: 'Gemini understood: “' + out.cmd + '” · ' + (a.domain || 'action') };
+          const href = a.navigate || (a.actions || []).map((x) => x.href).find(Boolean);
+          if (href && window.EonNavigator) window.EonNavigator.go(href);
+        } else {
+          const r2 = await api('ask.php', { method: 'POST', body: JSON.stringify({ question: out.cmd, conversation_id: state.conv, company: co(), voice, lang: curLang() }) });
+          out = r2 && r2.text && !r2.weak ? { text: r2.text, speak: r2.speak || r2.text, navPath: r2.navigate_path || null, nav: r2.navigate_query || null, trace: 'Gemini understood: “' + out.cmd + '” · server' } : null;
+        }
+      } catch (err) { console.warn('[EON] command', err); out = null; }
+    }
     if (out && out.nav && window.EonNavigator) {
       try { const N = window.EonNavigator; await N.ready(); const h = (N.find(out.nav, 1) || [])[0]; if (h && h.uri) { const u = N.url(h.uri); N.go(u); out.text = out.speak = (curLang() === 'bn-BD' || langOf(q) === 'bn' ? (h.label || out.nav) + ' খুলছি।' : 'Opening ' + (h.label || out.nav) + '.'); out.actions = [{ label: h.label || out.nav, kind: 'erp-open', href: u }]; } } catch (e) { console.warn('[EON] nav', e); }
     }
@@ -281,6 +300,7 @@ async function ask(q, { voice = false } = {}) {
      the answer happened to carry somewhere to go. That is how "which table holds salaries"
      came back as the payroll figures and a Bangla question came back in English — the
      domain had answered both correctly and qa.js answered instead. */
+  if ((!out || out.weak) && !local && window.EonDomains && serverFirst) { try { const l2 = await window.EonDomains.answer(q, { company: co() }); if (l2 && l2.speak) { local = l2; out = null; const href = l2.navigate || (l2.actions || []).map((x) => x.href).find(Boolean); if (href && window.EonNavigator && l2.navigate) window.EonNavigator.go(href); } } catch (err) {} }
   if (!out && local && local.speak) {
     out = {
       text: local.speak, speak: local.speak,

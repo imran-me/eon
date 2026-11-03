@@ -41,6 +41,7 @@ if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insigh
 if (is_file(EON_ROOT . '/lib/Reason.php')) require_once EON_ROOT . '/lib/Reason.php';    // why, as opposed to what  // aging, runway, forecast, anomalies, comparisons
 if (is_file(EON_ROOT . '/lib/Persona.php')) require_once EON_ROOT . '/lib/Persona.php';  // the warmth a person adds when speaking
 if (is_file(EON_ROOT . '/lib/Gemini.php')) require_once EON_ROOT . '/lib/Gemini.php';  // understanding any wording (key in storage/gemini.key)
+if (is_file(EON_ROOT . '/lib/Facts.php')) require_once EON_ROOT . '/lib/Facts.php';  // the ERP boiled down for Gemini to reason over
 if (is_file(EON_ROOT . '/lib/Ops.php')) require_once EON_ROOT . '/lib/Ops.php';  // straight operational questions
 if (is_file(EON_ROOT . '/lib/Natural.php')) require_once EON_ROOT . '/lib/Natural.php';  // Bangla the way an office speaks it
 if (is_file(EON_ROOT . '/lib/Speech.php')) require_once EON_ROOT . '/lib/Speech.php';   // written answers turned into spoken words

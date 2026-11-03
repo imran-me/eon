@@ -134,7 +134,14 @@ TXT;
                 $cq = trim((string) ($p['question'] ?? ''));
                 if ($cq === '') return null;
                 $o = self::askOffline($cq, $D, $company, $tools, $lg);
-                if (!empty($o['weak'])) return null;
+                if (!empty($o['weak'])) {
+                    // no exact rule for it: Gemini reasons over the fact sheet, numbers from the ERP only
+                    if (class_exists('Facts')) {
+                        $a = Gemini::analyze($cq . ' (the boss said: ' . ($p['said'] ?? '') . ')', $lg, Facts::sheet($D));
+                        if ($a !== null) return ['mode' => self::MODE_OFFLINE, 'text' => $a, 'speak' => self::voice($a, $lg), 'tools_used' => ['facts'], 'intent' => 'analyze', 'lang' => $lg, 'planned' => $cq, 'usage' => null];
+                    }
+                    return null;
+                }
                 $o['planned'] = $cq;
                 return $o;
             case 'navigate':
@@ -142,6 +149,10 @@ TXT;
                 if ($sc === '') return null;
                 $t = $bn ? "{$sc} খুলছি।" : "Opening {$sc}.";
                 return ['mode' => self::MODE_OFFLINE, 'text' => $t, 'speak' => self::voice($t, $lg), 'tools_used' => [], 'intent' => 'navigate', 'lang' => $lg, 'navigate_query' => $sc, 'usage' => null];
+            case 'do':
+                $cmd = trim((string) ($p['command'] ?? ''));
+                if ($cmd === '') return null;
+                return ['mode' => self::MODE_OFFLINE, 'text' => '', 'speak' => '', 'tools_used' => [], 'intent' => 'do', 'lang' => $lg, 'client_command' => $cmd, 'usage' => null];
             case 'clarify':
                 $t = trim((string) ($p['question'] ?? ''));
                 if ($t === '') return null;
@@ -165,6 +176,7 @@ TXT;
             self::$planning = true;
             try {
                 $p = Gemini::plan($q, $lg);
+                if ($p) $p['said'] = $q;
                 if ($p && ($p['route'] ?? '') !== 'ask') { $r = self::fromPlan($p, $D, $company, $tools, $lg); if ($r !== null) return $r; }
                 if ($p && ($p['route'] ?? '') === 'ask') {
                     // the boss's own words first (exact rules know them), then Gemini's reading of them
