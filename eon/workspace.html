@@ -129,7 +129,7 @@
     erp.src = safe(start) || '/';
 
     /* ---------- the divider ---------- */
-    const W_KEY = 'eon_ws_width_v2';
+    const W_KEY = 'eon_ws_width_v3';
     const grip = $('grip');
     const setW = (px, persist = true) => {
       const w = Math.max(320, Math.min(Math.round(window.innerWidth * 0.75), px));
@@ -139,7 +139,7 @@
       grip.setAttribute('aria-valuetext', `EON panel ${w} pixels wide`);
       if (persist) { try { localStorage.setItem(W_KEY, String(w)); } catch {} }
     };
-    setW(parseInt(localStorage.getItem(W_KEY) || '', 10) || Math.round(window.innerWidth * 0.72));
+    setW(parseInt(localStorage.getItem(W_KEY) || '', 10) || Math.round(window.innerWidth * 0.28));
 
     let dragging = false;
     const stopDragging = () => { dragging = false; document.body.classList.remove('dragging'); grip.classList.remove('dragging'); };
@@ -154,7 +154,7 @@
       else if (e.key === 'Home') { e.preventDefault(); setW(320); }
       else if (e.key === 'End') { e.preventDefault(); setW(window.innerWidth * 0.75); }
     });
-    grip.addEventListener('dblclick', () => setW(Math.round(window.innerWidth * 0.72)));
+    grip.addEventListener('dblclick', () => setW(Math.round(window.innerWidth * 0.28)));
     window.addEventListener('resize', () => {
       const current = parseInt(split.style.getPropertyValue('--panel-w'), 10) || 420;
       setW(current, false);
