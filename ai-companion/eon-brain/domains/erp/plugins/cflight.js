@@ -26,6 +26,7 @@
 import { url } from './navigator.js';
 import { propose, latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 import { csrf } from './ticket.js';
+import { normalize } from './voicefix.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
 const BN = /[ঀ-৿]/;
@@ -36,15 +37,15 @@ const EVENTS = [
   { key: 'boarding_denied', re: /\bboarding\s*(?:offload|denied)\b|\bdenied boarding\b|বোর্ডিং\s*(?:অফলোড|অফ\s*লোড)/i, en: 'boarding offload', bn: 'বোর্ডিং অফলোড' },
   { key: 'immigration_offload', re: /\boff-?load(?:ed)?\b|অফলোড|অফ\s*লোড/i, en: 'immigration offload', bn: 'ইমিগ্রেশন অফলোড' },
 ];
-const FAULT_AGENT = /\b(agent'?s?|passenger'?s?)\s+(fault|side)\b|\bbill the agent\b|\bagent (pays|bears)\b|এজেন্টের\s*(দোষ|দায়|দায়)|যাত্রীর\s*(দোষ|দায়|দায়)|এজেন্ট\s*(দেবে|দিবে|বহন)/i;
-const FAULT_COMPANY = /\b(our|company'?s?)\s+(fault|side)\b|\bwe (bear|pay)\b|\bwe'll bear\b|আমাদের\s*(দোষ|দায়|দায়)|আমরা\s*(বহন|দেব|দিব)/i;
+const FAULT_AGENT = /\bagent\s*(?:er)?\s*(dosh|dos|fault|dai|day)\b|\b(dosh|fault)\s+agent\b|দোষ\s*এজেন্টের|এজেন্ট\s*দায়ী|\b(agent'?s?|passenger'?s?)\s+(fault|side)\b|\bbill the agent\b|\bagent (pays|bears)\b|এজেন্টের\s*(দোষ|দায়|দায়)|যাত্রীর\s*(দোষ|দায়|দায়)|এজেন্ট\s*(দেবে|দিবে|বহন)/i;
+const FAULT_COMPANY = /\b(amader|office|company)\s*(?:er)?\s*(dosh|dos|fault|vul|bhul)\b|\bamra\s*(dibo|debo|bear korbo)\b|দোষ\s*আমাদের|আমাদের\s*ভুল|অফিস\s*(দেবে|দিবে|বহন)|\b(our|company'?s?)\s+(fault|side)\b|\bwe (bear|pay)\b|\bwe'll bear\b|আমাদের\s*(দোষ|দায়|দায়)|আমরা\s*(বহন|দেব|দিব)/i;
 const NEXT = [
   ['rebook', /\bre-?book\b|রিবুক/i],
   ['close', /\bclose\b|\bcase close\b|ক্লোজ|কেস\s*বন্ধ/i],
   ['hold', /\bhold\b|হোল্ড/i],
 ];
 const HAS_AMOUNT = /\d{3,}/;
-const OPEN = /\b(open|show|where is|take me|find)\b|(দেখাও|খোলো|খুলুন|কোথায়|কোথায়)/i;
+const OPEN = /\b(open|show|where is|take me|find|dekhao|dekhan|kholo|koi|kothay)\b|(দেখাও|খোলো|খুলুন|কোথায়|কোথায়)/i;
 const FLIGHTISH = /\bflight\b|ফ্লাইট/i;
 
 /* ---------- which passenger ---------- */
@@ -85,14 +86,14 @@ const flightPage = (p) => url(`/{role}/contract-flights/${p.contract_flight_id}/
 async function answer(q) {
   const s0 = String(q || '').trim();
   if (!s0) return null;
-  const s = latinDigits(s0);
+  const s = latinDigits(normalize(s0));
   const bn = BN.test(s0);
   const T = (en, b) => (bn ? b : en);
   const ev = EVENTS.find((e) => e.re.test(s));
   const opening = !ev && OPEN.test(s) && FLIGHTISH.test(s);
   if (!ev && !opening) return null;
   // "how many were offloaded this month" is a question about a figure
-  if (ev && /\b(how many|how much|count|list|which|who were|kotojon)\b|কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
+  if (ev && /\b(how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
 
   const D = D0();
   const p = D ? findPassenger(D, s) : null;

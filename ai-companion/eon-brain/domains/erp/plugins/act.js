@@ -592,6 +592,8 @@ async function carryOut(plan) {
   return Object.assign({}, done, { detail: [].concat(done.detail || [], [why]) });
 }
 export function pendingPlan() { return pending; }
+/** drop whatever is waiting for a yes — the same as the boss saying "no" */
+export function cancel() { pending = null; }
 
 export async function confirm() {
   if (!pending) return { speak: 'There is nothing waiting for a yes.', detail: [] };

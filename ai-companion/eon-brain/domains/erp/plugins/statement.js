@@ -25,6 +25,7 @@
    a figure and belongs to the answerers below this one.
    ============================================================ */
 import { url } from './navigator.js';
+import { normalize } from './voicefix.js';
 import { latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
@@ -32,7 +33,7 @@ const BN = /[ঀ-৿]/;
 const NB = '(?![ঀ-৿])';   // \b never fires after a Bangla letter
 
 /* ---------- what is being asked for ---------- */
-const VERB = new RegExp(`\\b(open|show|see|view|display|bring up|pull up|go to|take me|print|pdf|excel|xlsx|spreadsheet|download|export|save|dekhao|dekhan|kholo|khulun|print koro|download koro)\\b|(দেখাও|দেখান|দেখি|খোলো|খুলুন|খোল|প্রিন্ট|ডাউনলোড|পিডিএফ|এক্সেল|নামাও|সেভ)${NB}`, 'i');
+const VERB = new RegExp(`\\b(open|show|see|view|display|bring up|pull up|go to|take me|print|pdf|excel|xlsx|spreadsheet|download|export|save|dekhao|dekhan|kholo|khulun|print koro|download koro|dao|din|den|pathao|chai|lagbe|ber koro)\\b|(দেখাও|দেখান|দেখি|খোলো|খুলুন|খোল|প্রিন্ট|ডাউনলোড|পিডিএফ|এক্সেল|নামাও|সেভ|দাও|দিন|পাঠাও|চাই|লাগবে|বের করো)${NB}`, 'i');
 const LEDGERISH = new RegExp(`\\b(statement|ledger|ledgers|khatiyan|khotian|hisab)\\b|(স্টেটমেন্ট|লেজার|খতিয়ান|খতিয়ান|হিসাব|হিসেব)`, 'i');
 const COMPANY_LEDGER = new RegExp(`\\bcompany(?:'s)?\\s+ledger\\b|(কোম্পানি|কোম্পানির)\\s*(লেজার|খতিয়ান|খতিয়ান)`, 'i');
 const KIND = [
@@ -40,6 +41,8 @@ const KIND = [
   { key: 'vendors', re: new RegExp(`\\b(vendors?|suppliers?)\\b|(ভেন্ডর|সাপ্লায়ার|সাপ্লায়ার)`, 'i'), en: 'Vendor Ledger', bn: 'ভেন্ডর লেজার' },
   { key: 'clients', re: new RegExp(`\\b(clients?|customers?)\\b|(ক্লায়েন্ট|ক্লায়েন্ট|কাস্টমার)`, 'i'), en: 'Client Ledger', bn: 'ক্লায়েন্ট লেজার' },
 ];
+/* a question about the figure — "rabbi ledger balance", "রাব্বির কত বাকি" — is not an order */
+const ASKING = /\b(how|what|why|when|is|does|did|balance|owe|owes|due|baki|koto|kot|ki)\b|কত|বাকি|কেন|কি\s|কী/i;
 const ALL_PARTIES = new RegExp(`\\b(all|every)\\s+(parties|party balances)\\b|(সব|সকল)\\s*(পার্টি)`, 'i');
 const CASH_FLOW = new RegExp(`\\bcash\\s*-?\\s*flow\\b|(ক্যাশ\\s*ফ্লো|নগদ\\s*প্রবাহ)`, 'i');
 const GENERAL_LEDGER = new RegExp(`\\b(general ledger|gl)\\b|(জেনারেল\\s*লেজার|সাধারণ\\s*খতিয়ান)`, 'i');
@@ -71,15 +74,15 @@ export function periodIn(s, today = new Date()) {
   const iso = low.match(/(\d{4}-\d{2}-\d{2})\D+(\d{4}-\d{2}-\d{2})/);
   if (iso) return { from: iso[1], to: iso[2], label: `${iso[1]} – ${iso[2]}` };
   const y = today.getFullYear(), m = today.getMonth() + 1;
-  if (/\bthis month\b|এই মাস/.test(low)) return { ...monthRange(y, m), label: 'this month', label_bn: 'এই মাস' };
-  if (/\blast month\b|গত মাস/.test(low)) { const d = new Date(y, m - 2, 1); return { ...monthRange(d.getFullYear(), d.getMonth() + 1), label: 'last month', label_bn: 'গত মাস' }; }
+  if (/\b(this month|ei mash|ei mas)\b|এই মাস|চলতি মাস/.test(low)) return { ...monthRange(y, m), label: 'this month', label_bn: 'এই মাস' };
+  if (/\b(last month|previous month|goto mash|gotomash|goto mas|ager mash)\b|গত মাস|আগের মাস/.test(low)) { const d = new Date(y, m - 2, 1); return { ...monthRange(d.getFullYear(), d.getMonth() + 1), label: 'last month', label_bn: 'গত মাস' }; }
   if (/\bthis year\b|এ বছর|এই বছর/.test(low)) return { from: `${y}-01-01`, to: ymd(today), label: 'this year', label_bn: 'এ বছর' };
   let mi = -1;
   EN_MONTHS.forEach((name, i) => {
     if (name === 'may' || name === 'march') { if (new RegExp(`\\b(in|for|of)\\s+${name}\\b|\\b${name}\\s+\\d{4}\\b`).test(low)) mi = i; return; }
     if (new RegExp(`\\b(${name}|${name.slice(0, 3)})\\b`).test(low)) mi = i;
   });
-  if (mi < 0) BN_MONTHS.forEach((names, i) => { if (names.some((n) => new RegExp(`(^|[^ঀ-৿])${n}${NB}`).test(s))) mi = i; });
+  if (mi < 0) BN_MONTHS.forEach((names, i) => { if (names.some((n) => new RegExp(`(^|[^ঀ-৿])${n}(?:ের|এর|ে|র)?${NB}`).test(s))) mi = i; });
   if (mi < 0) return null;
   const yr = (low.match(/\b(20\d\d)\b/) || [])[1];
   const year = yr ? +yr : (mi + 1 > m ? y - 1 : y);   // "October" said in March means last October
@@ -91,7 +94,8 @@ export function periodIn(s, today = new Date()) {
    ERP's users.id — the same id the statement URL takes. Names are matched
    word by word on a consonant skeleton so that রাব্বি reaches RABBI; two
    parties that match equally are asked about, never guessed between. */
-const STOP = /^(open|show|see|view|the|a|an|of|for|me|my|please|statement|statements|ledger|ledgers|pdf|excel|print|download|export|save|account|accounts|party|agent|vendor|client|customer|supplier|this|last|month|year|and|to|in|its|his|her|give|send|dekhao|kholo|koro|er|hisab)$/i;
+const STOP = /^(open|show|see|view|the|a|an|of|for|me|my|please|statement|statements|ledger|ledgers|pdf|excel|print|download|export|save|account|accounts|party|agent|vendor|client|customer|supplier|this|last|month|year|and|to|in|its|his|her|give|send|dekhao|kholo|koro|er|hisab|pull|take|bring|give|show|see|want|need|please|now|quickly|thanks|thank|umm|um|acha|accha|ok|okay|so|eon|can|could|you|me|i|to|up|file|sheet|ta|tar|er|ke|ki|dao|din|den|chai|lagbe|kholo|dekhao|dekhan|koro|ber|send|pathao|october|november|december|january|february|april|june|july|august|september|oct|nov|dec|jan|feb|apr|jun|jul|aug|sep|sept|mash|mas|goto|ei|last|this|previous|ager|month|year|pdf|excel|exel|xlsx|print|download|export|save|open|view|display)$/i;
+const STOP_BN = new Set(["দাও","দিন","খোলো","খুলুন","দেখাও","দেখান","দেখি","চাই","লাগবে","পাঠাও","প্রিন্ট","ডাউনলোড","পিডিএফ","এক্সেল","স্টেটমেন্ট","লেজার","লেজারটা","হিসাব","হিসেব","খতিয়ান","টা","টি","এর","মাসের","মাস","গত","এই","আচ্ছা","একটু","প্লিজ","দ্রুত","করো","করুন","ভেন্ডর","এজেন্ট","ক্লায়েন্ট","পার্টি","কোম্পানি","সব"]);
 export function parties(D) {
   const by = new Map();
   for (const t of (D && D.party_transactions) || []) {
@@ -106,7 +110,7 @@ export function findParty(D, text) {
   const words = String(text || '').replace(/[?.!,।:;'’"]/g, ' ').replace(/\b(\w+)'s\b/g, '$1').split(/\s+/).filter(Boolean);
   const wanted = [];
   for (const w of words) {
-    if (STOP.test(w)) continue;
+    if (STOP.test(w) || STOP_BN.has(w)) continue;
     // রাব্বির — the genitive র is grammar, not the name
     const sks = BN.test(w) ? [banglaSkeleton(w), banglaSkeleton(w.replace(CASE_ENDING, '')), banglaSkeleton(w.replace(/র$/, ''))] : [latinSkeleton(w)];
     /* RABBI reduces to "rb": two letters is short, but it came from a real word.
@@ -117,7 +121,7 @@ export function findParty(D, text) {
   if (!wanted.length) return null;
   const low = String(text || '').toLowerCase();
   const scored = list.map((p) => {
-    const parts = p.name.split(/\s+/).map(latinSkeleton).filter((x) => x.length >= 2);
+    const parts = p.name.replace(/\([^)]*\)/g, ' ').split(/\s+/).filter((x) => !/^(mr|mrs|md|mst|miss|ms)\.?$/i.test(x)).map(latinSkeleton).filter((x) => x.length >= 2);
     const exact = low.includes(p.name.toLowerCase()) ? 10 : 0;
     // whole name words only — a skeleton never matches a fragment of one
     return { p, hits: exact + wanted.filter((sk) => parts.includes(sk)).length };
@@ -141,8 +145,13 @@ function reply(bn, en, bnText, href, label, labelBn, extra = []) {
 }
 
 function answer(q) {
-  const s = String(q || '').trim();
-  if (!s || !VERB.test(s)) return null;
+  const s = normalize(String(q || '').trim());
+  if (!s) return null;
+  /* the financial reports are statements too, and a company is also a party —
+     "income statement for Epal Travels" is the P&L, not EPAL TRAVELS' ledger */
+  if (/\b(income|financial|profit|p\s*&\s*l|p\s*and\s*l|bank|trial|balance sheet|tb)\s*(statement|balance|sheet)?\b.*\b(statement|sheet|balance)\b|\b(income|financial|bank)\s+statement|balance\s*sheet|trial\s*balance|আয়\s*বিবরণী|আয়\s*বিবরণী|লাভ\s*ক্ষতি|ব্যালান্স\s*শিট|ব্যাংক\s*স্টেটমেন্ট/i.test(s)) return null;
+  const verbless = !VERB.test(s);
+  if (verbless && (!LEDGERISH.test(s) || ASKING.test(s))) return null;
   const bn = BN.test(s);
   const fmt = formatOf(s);
   const per = periodIn(s);
@@ -191,6 +200,7 @@ function answer(q) {
     };
   }
 
+  if (verbless && !party) return null;
   if (party) {
     const name = party.name;
     if (fmt === 'excel') {

@@ -26,6 +26,7 @@
    ============================================================ */
 import { url } from './navigator.js';
 import { propose } from './act.js';
+import { normalize } from './voicefix.js';
 
 const BN = /[ঀ-৿]/;
 const NB = '(?![ঀ-৿])';
@@ -43,14 +44,14 @@ const TICKETISH = /\b(ticket|pnr|invoice|inv\d+)\b|টিকিট|টিকে�
 /* ---------- reading the order ---------- */
 const AMOUNT = (words) => new RegExp(`(?:${words})\\s*(?:of|is|=|:|tk|taka|৳)?\\s*(?:tk|৳)?\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)`, 'i');
 const FIELDS = [
-  ['refund', AMOUNT('refund amount|refund|ফেরত|রিফান্ড')],
-  ['penalty', AMOUNT('penalty|fine|পেনাল্টি|জরিমানা')],
+  ['refund', AMOUNT('refund amount|refund|ferot|ferat|feret|ফেরত|রিফান্ড')],
+  ['penalty', AMOUNT('penalty|fine|jorimana|পেনাল্টি|জরিমানা')],
   ['service_fee', AMOUNT('service fee|service charge|fee|সার্ভিস ফি|সার্ভিস চার্জ')],
   ['fare_difference', AMOUNT('fare difference|fare diff|difference|ভাড়ার পার্থক্য|ভাড়া পার্থক্য|ডিফারেন্স')],
   ['agent_reversal', AMOUNT('agent reversal|reverse|agent price')],
 ];
-const BEARER_CUSTOMER = /\b(customer|agent|client)\s+(bears?|pays?|will pay)\b|(কাস্টমার|এজেন্ট|ক্লায়েন্ট)\s*(দেবে|দিবে|বহন)/i;
-const BEARER_COMPANY = /\b(we|company|office)\s+(bear|bears|pay|pays|will pay)\b|(আমরা|কোম্পানি|অফিস)\s*(দেব|দিব|বহন)/i;
+const BEARER_CUSTOMER = /\b(customer|agent|client)\s+(bears?|pays?|will pay)\b|\b(customer|agent|client)\s*(?:e|er)?\s*(dibe|debe|dey|bear korbe)\b|(কাস্টমার|এজেন্ট|ক্লায়েন্ট)\s*(দেবে|দিবে|বহন)/i;
+const BEARER_COMPANY = /\b(we|company|office)\s+(bear|bears|pay|pays|will pay)\b|\b(amra|office|company)\s*(dibo|debo|bear korbo|dibe)\b|(আমরা|কোম্পানি|অফিস)\s*(দেব|দিব|বহন)/i;
 
 export function readOrder(q) {
   const s = latinDigits(q);
@@ -108,7 +109,7 @@ const LABELS = {
 };
 
 async function answer(q) {
-  const s = String(q || '').trim();
+  const s = normalize(String(q || '').trim());
   if (!s) return null;
   const o = readOrder(s);
   if (!o || (!TICKETISH.test(s) && !o.pnr && !o.invoice)) return null;
