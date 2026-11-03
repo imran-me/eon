@@ -70,11 +70,13 @@ function slotsOf(raw) {
     out.time = String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
   }
   const fl = s.match(/\b([A-Z]{2}\s?-?\d{2,4})\b/); if (fl && !/^CF/i.test(fl[1])) out.flight_no = fl[1].replace(/[\s-]/g, '');
-  if (!out.date && /আজ|today/i.test(s)) out.date = today.toISOString().slice(0, 10);
-  if (!out.date && /আগামীকাল|tomorrow/i.test(s)) out.date = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+  const localDay = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  if (!out.date && /আজ|today/i.test(s)) out.date = localDay(today);
+  if (!out.date && /আগামীকাল|tomorrow/i.test(s)) out.date = localDay(new Date(Date.now() + 864e5));
   // amounts: "৫২ হাজার", "1.5 lakh", "52000"; a second one is the cost / purchase when both are said
   // passport and phone digits are not money
-  const sm = [out.passport, out.phone, out.ticket_no].filter(Boolean).reduce((t, x) => t.split(x).join(' '), s);
+  const sm = [out.passport, out.phone, out.ticket_no].filter(Boolean).reduce((t, x) => t.split(x).join(' '), s)
+    .replace(/(\d+(?:\.\d+)?)\s*(?:লাখ|লক্ষ|lakh|lac)\s+(\d+)\s*(?:হাজার|hajar|thousand)/gi, (m, a, b) => String(Math.round(parseFloat(a) * 1e5 + parseFloat(b) * 1e3)) + ' টাকা');
   const am = [...sm.matchAll(/(\d+(?:\.\d+)?)\s*(হাজার|hajar|thousand|k\b|লাখ|লক্ষ|lakh|lac)?\s*(টাকা|taka|tk)?/gi)]
     .map((m) => ({ v: Math.round(parseFloat(m[1]) * (/হাজার|hajar|thousand|k/i.test(m[2] || '') ? 1e3 : /লাখ|লক্ষ|lakh|lac/i.test(m[2] || '') ? 1e5 : 1)), unit: m[2] || m[3], at: m.index, ctx: sm.slice(Math.max(0, m.index - 14), m.index) }))
     .filter((a) => a.v >= 100 && (a.unit || a.v >= 1000) && String(a.v) !== (out.phone || '') && !(out.date && out.date.endsWith(String(a.v).padStart(2, '0'))));
@@ -88,7 +90,7 @@ function slotsOf(raw) {
   // a person's name: "X-এর জন্য", "for X", "passenger X"
   // vowel signs are letters too (\p{M}); an English name stops at a city, a keyword or a number
   const nm = s.match(/(?:যাত্রী|passenger|নাম|name)\s*[:\-]?\s*([\p{L}\p{M}.\s]{3,40}?)(?=,|।|$|\s+(?:এর|জন্য|PNR|পিএনআর))/u) || s.match(/([\p{L}\p{M}.]+(?:\s+[\p{L}\p{M}.]+){0,4}?)\s*-?\s*(?:এর|য়ের|ের)\s+জন্য/u) || s.match(/\bfor\s+((?:(?!dhaka|from|to\b|on\b|pnr|price|passport|phone|at\b)[A-Za-z.]+\s*){1,4})/i);
-  if (nm) out.name = nm[1].replace(/(এর|ের|য়ের)$/u, '').trim();
+  if (nm) out.name = nm[1].replace(/(এর|ের|য়ের)$/u, '').replace(/^.*?(খোলো|খুলুন|করো|করুন|দাও|দিন|বানাও|এন্ট্রি|entry|নতুন|new|open|create|add|অ্যাপ্লাই|apply)\s+/iu, '').trim();
   return out;
 }
 
@@ -131,8 +133,9 @@ const KNOWN = [{
     let c = null; for (const [bn, en] of Object.entries(COUNTRY)) if (slots._raw.includes(bn)) { c = en; break; }
     if (!c) { const el = $('#create_country_id'); const o = el && el.options && [...el.options].find((x) => x.value && x.textContent.trim().length > 3 && raw.includes(x.textContent.trim().toLowerCase())); if (o) c = o.textContent.trim().toLowerCase(); }
     if (c) sel($('#create_country_id'), (t) => t.includes(c), 'Country');
-    for (const [id, what] of [['create_client_id', 'Agent / Client'], ['create_vendor_id', 'Vendor'], ['create_portal_id', 'Portal'], ['create_contract_file_category_id', 'File category']])
-      sel($('#' + id), (t) => t.length > 2 && raw.includes(t), what);
+    const saidAs = (t) => { const i = raw.indexOf(t); const before = i > 0 ? raw.slice(Math.max(0, i - 14), i) : ''; return /ভেন্ডর|vendor|সাপ্লায়ার/u.test(before) ? 'vendor' : /এজেন্ট|agent|ক্লায়েন্ট|client/u.test(before) ? 'client' : null; };
+    for (const [id, what, role] of [['create_client_id', 'Agent / Client', 'client'], ['create_vendor_id', 'Vendor', 'vendor'], ['create_portal_id', 'Portal', null], ['create_contract_file_category_id', 'File category', null]])
+      sel($('#' + id), (t) => t.length > 2 && raw.includes(t) && (!role || (saidAs(t) || role) === role), what);
     if (slots.sale != null && $('#create_client_price')) { setValue(w, $('#create_client_price'), String(slots.sale)); done.push('Client charge: ' + slots.sale); }
     if (slots.cost != null && $('#create_visa_rate')) { setValue(w, $('#create_visa_rate'), String(slots.cost)); done.push('Visa rate (cost): ' + slots.cost); }
     if (slots.date && $('#create_submit_date')) { setValue(w, $('#create_submit_date'), slots.date); done.push('Submit date: ' + slots.date); }
