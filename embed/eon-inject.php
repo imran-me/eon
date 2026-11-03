@@ -23,6 +23,15 @@ if (PHP_SAPI === 'cli') return;
 if (defined('EON_INJECT_LOADED')) return;
 define('EON_INJECT_LOADED', true);
 
+/* ---------- the summit copy has no login screen: /login signs in as super-admin ---------- */
+// (eon.gulfrabit.com is a demo copy of the ERP; eon/enter.php explains, EON_DEMO_LOGIN=0 turns it off)
+if (getenv('EON_DEMO_LOGIN') !== '0' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && preg_match('~^/login/?(\?|$)~', (string) ($_SERVER['REQUEST_URI'] ?? ''))
+    && is_file(dirname(__DIR__) . '/eon/enter.php')) {
+    header('Location: /eon/enter.php', true, 302);
+    exit;
+}
+
 /* ---------- where EON lives ---------- */
 function eon_inject_src(): string
 {

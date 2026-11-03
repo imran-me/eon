@@ -11,7 +11,7 @@
       var q = location.search;
       var framed = false; try { framed = window.top !== window.self; } catch (e) { framed = true; }
       if (framed || /[?&](dock|panel|embed)=/.test(q)) return;
-      location.replace('workspace.html?to=' + encodeURIComponent('/super-admin/dashboard') + (location.hash || ''));
+      location.replace('enter.php?to=' + encodeURIComponent('/super-admin/dashboard') + (location.hash || ''));
     })();
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
