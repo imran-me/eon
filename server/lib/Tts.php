@@ -154,9 +154,19 @@ final class Tts
 
         $voice = self::voiceFor($lang);
         $locale = $lang === 'bn' ? 'bn-BD' : 'en-US';
-        $ssml = '<speak version="1.0" xml:lang="' . $locale . '">'
+        // warm, unhurried: a touch slower, a breath at every ellipsis and dash,
+        // and the "friendly" speaking style where the voice has one (Aria, Jenny,
+        // Guy, Davis…; Nabanita has none, so Bangla gets prosody alone)
+        $body = class_exists('Persona') ? Persona::ssml($text) : htmlspecialchars($text, ENT_QUOTES | ENT_XML1);
+        $prosody = $lang === 'bn' ? '<prosody rate="-6%" pitch="+1%">' : '<prosody rate="-5%" pitch="+2%">';
+        $inner = $prosody . $body . '</prosody>';
+        if ($lang !== 'bn' && preg_match('/^en-US-(Aria|Jenny|Guy|Davis|Jane|Jason|Nancy|Sara|Tony)Neural$/', $voice)) {
+            $inner = '<mstts:express-as style="friendly">' . $inner . '</mstts:express-as>';
+        }
+        $ssml = '<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis"'
+              . ' xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="' . $locale . '">'
               . '<voice name="' . htmlspecialchars($voice, ENT_QUOTES | ENT_XML1) . '">'
-              . '<prosody rate="-4%">' . htmlspecialchars($text, ENT_QUOTES | ENT_XML1) . '</prosody>'
+              . $inner
               . '</voice></speak>';
 
         return self::post(

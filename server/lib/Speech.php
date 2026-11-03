@@ -322,6 +322,16 @@ final class Speech
      */
     public static function shorten(string $t, int $cap = 420): string
     {
+        $out = self::trimTo($t, $cap);
+        // the last step on every spoken path: the warmth a person adds (Persona)
+        if (class_exists('Persona')) {
+            try { return Persona::humanize($out); } catch (Throwable $e) { return $out; }
+        }
+        return $out;
+    }
+
+    private static function trimTo(string $t, int $cap): string
+    {
         if (mb_strlen($t) <= $cap) return $t;
         $parts = preg_split('/(?<=[।.!?])\s+/u', $t, -1, PREG_SPLIT_NO_EMPTY) ?: [$t];
         if (count($parts) <= 2) return $t;
