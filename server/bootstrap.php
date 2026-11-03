@@ -35,6 +35,7 @@ if (is_file(EON_ROOT . '/lib/Loc.php')) require_once EON_ROOT . '/lib/Loc.php'; 
 if (is_file(EON_ROOT . '/lib/Kb.php')) require_once EON_ROOT . '/lib/Kb.php';       // the ERP's screens and rules, in both languages
 if (is_file(EON_ROOT . '/lib/KbCorpus.php')) require_once EON_ROOT . '/lib/KbCorpus.php'; // what an ERP means in 24 trades — retrieval over eon_kb
 if (is_file(EON_ROOT . '/lib/Think.php')) require_once EON_ROOT . '/lib/Think.php';    // and the argument built out of it, rather than the record read aloud
+if (is_file(EON_ROOT . '/lib/AccountsBook.php')) require_once EON_ROOT . '/lib/AccountsBook.php'; // how this ERP keeps its books, entry by entry
 if (is_file(EON_ROOT . '/lib/Insight.php')) require_once EON_ROOT . '/lib/Insight.php';
 if (is_file(EON_ROOT . '/lib/Reason.php')) require_once EON_ROOT . '/lib/Reason.php';    // why, as opposed to what  // aging, runway, forecast, anomalies, comparisons
 if (is_file(EON_ROOT . '/lib/Speech.php')) require_once EON_ROOT . '/lib/Speech.php';   // written answers turned into spoken words

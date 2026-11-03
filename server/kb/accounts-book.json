@@ -1,0 +1,503 @@
+{
+  "name": "EON account book",
+  "version": 1,
+  "built": "2026-11-03",
+  "about": "How the Epal ERP keeps its books, entry by entry. Every 'epal' entry traces to a file in the ERP source (epal_erp_soft-main) or to the journal legs actually present in the production dump u203838805_erp (32). 'general' entries are textbook bookkeeping in the Bangladesh context and say so. No tax rate is stated anywhere in this file: the ERP carries VAT Payable (2260), Income Tax Payable (2270) and Withholding Tax Payable (2280) as accounts but no rate table, so rates are the accountant's to supply.",
+  "entries": [
+    {
+      "id": "double-entry-epal",
+      "topic": "Double entry as the Epal ERP applies it",
+      "scope": "epal",
+      "cues": {
+        "en": ["double entry", "debit and credit", "how does the ledger work", "how are books kept", "what is a journal entry", "debit credit rule", "journal and ledger"],
+        "bn": ["দুতরফা দাখিলা", "ডেবিট ক্রেডিট", "জার্নাল এন্ট্রি কী", "হিসাব কীভাবে রাখা হয়", "খতিয়ান কীভাবে কাজ করে", "ডেবিট আর ক্রেডিট"],
+        "bl": ["debit credit ki", "double entry ki", "journal entry ki", "hisab kivabe rakha hoy"]
+      },
+      "answer_en": "Every money event in the ERP is written twice: one journal entry (journal_entries) with two or more lines (journal_items), each line a debit or a credit on one chart account, and the debits must equal the credits. The entry carries a source (ticket_sale, ticket_purchase, expense, salary, bank_transfer and about fifty more) and the id of the record that caused it, so every line can be traced back to its screen. Assets and expenses grow on the debit side; liabilities, equity and income grow on the credit side. A party (agent, vendor, customer, employee) is not an account of its own: it rides on the line as party_type and party_id, which is how one Customer Receivable account (1311) can still say who owes what. Corrections are added, never edited away: a reversal is a new entry with the legs swapped.",
+      "answer_bn": "ইআরপিতে টাকার প্রতিটি ঘটনা দুবার লেখা হয়: একটি জার্নাল এন্ট্রি, তার ভেতরে দুই বা তার বেশি লাইন — প্রতিটি লাইন হিসাবের তালিকার একটি খাতে ডেবিট অথবা ক্রেডিট, আর মোট ডেবিট ও মোট ক্রেডিট সমান হতেই হবে। প্রতিটি এন্ট্রিতে লেখা থাকে কোথা থেকে এসেছে — টিকিট বিক্রি, টিকিট কেনা, খরচ, বেতন, ব্যাংক ট্রান্সফার ইত্যাদি প্রায় পঞ্চাশ রকম উৎস — আর কোন রেকর্ডের জন্য, তাই প্রতিটি লাইন তার স্ক্রিন পর্যন্ত খুঁজে পাওয়া যায়। সম্পদ ও খরচ বাড়ে ডেবিটে; দায়, মালিকানা ও আয় বাড়ে ক্রেডিটে। এজেন্ট, ভেন্ডর বা কর্মী আলাদা খাত নয় — লাইনের গায়ে পার্টির পরিচয় লেখা থাকে, তাই একটি গ্রাহক পাওনা খাত (১৩১১) থেকেই বলা যায় কে কত দেবে। ভুল শুধরানো হয় নতুন এন্ট্রি যোগ করে, পুরোনোটা মুছে নয়: উল্টো এন্ট্রিতে ডেবিট-ক্রেডিট অদলবদল হয়।",
+      "source": ["app/Models/JournalEntry.php", "app/Models/JournalItem.php", "app/Traits/PostsBalancedJournal.php", "app/Services/AdvancePostingService.php::reverse"],
+      "legs": [],
+      "where": {"screen": "Accounts › Journals", "route": "role.journals.index"}
+    },
+    {
+      "id": "chart-of-accounts",
+      "topic": "The chart of accounts and how it is numbered",
+      "scope": "epal",
+      "cues": {
+        "en": ["chart of accounts", "account codes", "how are accounts numbered", "account code range", "which account is", "what does code mean", "account heads"],
+        "bn": ["হিসাবের তালিকা", "খাতের কোড", "অ্যাকাউন্ট কোড", "চার্ট অব অ্যাকাউন্টস", "খাতগুলো কীভাবে সাজানো"],
+        "bl": ["chart of account", "account code ki", "khat er code"]
+      },
+      "answer_en": "The chart is numbered by range and the statements are cut by those ranges (config/account_reports.php): 1xxx assets (1010-1099 cash and wallets, 1100-1299 banks and portal/GDS wallets, 1300s receivables, 1400s inventory, 1450s advances and prepayments), 2xxx liabilities (2100s payables, 2200s employee payables, 2300s customer advances, 2400s short and 2500s long borrowings), 3xxx equity (3110 owner investment, 3210 drawings, 3310 retained earnings, 3400 opening balance equity), 4xxx revenue, 5xxx cost of sales, 6xxx-7xxx operating expense, 8xxx non-operating income and finance cost, 9xxx tax and control. The production chart holds 467 accounts. Posting accounts shared by every company must have no company of their own; the ERP checks every configured code with php artisan accounts:check.",
+      "answer_bn": "হিসাবের তালিকা কোডের পরিসর ধরে সাজানো, আর আর্থিক বিবরণীও সেই পরিসর ধরেই কাটা হয়: ১ হাজারের ঘর সম্পদ (১০১০–১০৯৯ নগদ ও মোবাইল ওয়ালেট, ১১০০–১২৯৯ ব্যাংক ও পোর্টালের ওয়ালেট, ১৩০০-এর ঘর পাওনা, ১৪০০-এর ঘর মজুদ, ১৪৫০-এর ঘর অগ্রিম ও আগাম খরচ), ২ হাজারের ঘর দায় (২১০০ সরবরাহকারীর দেনা, ২২০০ কর্মীর দেনা, ২৩০০ গ্রাহকের অগ্রিম, ২৪০০ স্বল্পমেয়াদি ও ২৫০০ দীর্ঘমেয়াদি ঋণ), ৩ হাজারের ঘর মালিকানা (৩১১০ মালিকের বিনিয়োগ, ৩২১০ উত্তোলন, ৩৩১০ সংরক্ষিত মুনাফা, ৩৪০০ প্রারম্ভিক জের মালিকানা), ৪ হাজার আয়, ৫ হাজার বিক্রয় ব্যয়, ৬ ও ৭ হাজার পরিচালন খরচ, ৮ হাজার অপরিচালন আয় ও অর্থ ব্যয়, ৯ হাজার কর ও নিয়ন্ত্রণ খাত। চালু তালিকায় খাত আছে ৪৬৭টি। যে খাতে সব কোম্পানি পোস্ট করে, সেটি কোনো একটি কোম্পানির নামে থাকতে পারে না।",
+      "source": ["config/account_reports.php", "config/accounts.php", "accounts table in u203838805_erp (32)"],
+      "legs": [],
+      "where": {"screen": "Accounts › Chart of Accounts", "route": "role.accounts.index"}
+    },
+    {
+      "id": "ticket-sale",
+      "topic": "Air ticket sale — the journal",
+      "scope": "epal",
+      "cues": {
+        "en": ["ticket sale entry", "how is a ticket sale posted", "ticket sale journal", "journal for ticket sale", "selling a ticket accounting", "ticket sold to agent entry"],
+        "bn": ["টিকিট বিক্রির এন্ট্রি", "টিকিট বিক্রি কীভাবে পোস্ট হয়", "টিকিট বিক্রির জার্নাল", "টিকিট বিক্রির হিসাব"],
+        "bl": ["ticket bikrir entry", "ticket sale er journal", "ticket bikri kivabe post hoy"]
+      },
+      "answer_en": "A ticket sale books the price as income the moment it is invoiced: Dr 1311 Customer Receivable (with the agent or customer on the line) / Cr 4110 Air Ticket Sales. The same amount goes on the party's statement as a debit row, so the agent owes it until paid. What the airline or portal charged us is a separate entry from the purchase side (5110), so the margin on a ticket is 4110 minus 5110. Baggage sold on top posts the same way (Dr 1311 / Cr 4110). In the production books this is the shape of all 157 ticket_sale lines.",
+      "answer_bn": "টিকিট বিক্রির ইনভয়েস হওয়ামাত্র দামটা আয় হিসেবে বসে: ডেবিট ১৩১১ গ্রাহক পাওনা (লাইনে এজেন্ট বা গ্রাহকের নাম), ক্রেডিট ৪১১০ এয়ার টিকিট বিক্রি। একই অঙ্ক পার্টির স্টেটমেন্টে ডেবিট সারি হয়ে বসে, তাই টাকা না দেওয়া পর্যন্ত এজেন্টের কাছে পাওনা থাকে। এয়ারলাইন বা পোর্টাল আমাদের কাছ থেকে যা নিয়েছে, সেটা কেনার দিকের আলাদা এন্ট্রি (৫১১০), তাই একটি টিকিটের লাভ মানে ৪১১০ বিয়োগ ৫১১০। সঙ্গে বিক্রি করা ব্যাগেজও একইভাবে বসে। চালু খাতায় টিকিট বিক্রির ১৫৭টি লাইনের সবগুলো এই আকারের।",
+      "source": ["app/Http/Controllers/Dashboard/TicketSaleController.php", "app/Traits/PostsSaleJournal.php", "config/accounts.php:ticket_sales_revenue", "journal_items source=ticket_sale"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Cr", "code": "4110", "name": "Air Ticket Sales"}],
+      "where": {"screen": "Ticketing › Ticket Sales", "route": "role.ticket-sales.index"}
+    },
+    {
+      "id": "ticket-purchase",
+      "topic": "Air ticket purchase and the airline commission",
+      "scope": "epal",
+      "cues": {
+        "en": ["ticket purchase entry", "how is a ticket purchase posted", "ticket purchase journal", "journal for a ticket purchase", "buying a ticket accounting", "ticket cost entry", "iata commission entry", "airline commission posting"],
+        "bn": ["টিকিট কেনার এন্ট্রি", "টিকিট কেনা কীভাবে পোস্ট হয়", "টিকিট কেনার জার্নাল", "টিকিটের খরচ", "এয়ারলাইন কমিশন"],
+        "bl": ["ticket kenar entry", "ticket purchase er journal", "airline commission kivabe"]
+      },
+      "answer_en": "Buying a ticket is a cost of sale owed to whoever issued it: Dr 5110 Air Ticket Purchase Cost / Cr 2111 Supplier Payable (or Cr 2150 IATA / BSP Payable when we issued through BSP, or the portal's wallet account when it was paid from a portal balance). The seller is billed the net. The airline's commission is posted on its own line since 2026-10-07: Dr 5110 / Cr 4171 IATA Air Ticket Commission, so cost is shown gross and the commission as income; an edit posts only the difference.",
+      "answer_bn": "টিকিট কেনা হলো বিক্রয় ব্যয়, আর টাকা পাওনা হয় যে ইস্যু করেছে তার: ডেবিট ৫১১০ এয়ার টিকিট কেনার খরচ, ক্রেডিট ২১১১ সরবরাহকারীর দেনা (বিএসপি দিয়ে ইস্যু হলে ক্রেডিট ২১৫০ আয়াটা/বিএসপি দেনা, আর পোর্টালের জমা থেকে কাটা হলে সেই পোর্টালের ওয়ালেট খাত)। বিক্রেতাকে বিল করা হয় কমিশন বাদে নিট অঙ্কে। এয়ারলাইনের কমিশন ২০২৬-এর অক্টোবর থেকে আলাদা লাইনে বসে: ডেবিট ৫১১০, ক্রেডিট ৪১৭১ আয়াটা টিকিট কমিশন — ফলে খরচ পুরো অঙ্কে দেখায় আর কমিশন দেখায় আয় হিসেবে; সংশোধন করলে শুধু পার্থক্যটুকু পোস্ট হয়।",
+      "source": ["app/Http/Controllers/Dashboard/TicketPurchaseController.php", "app/Models/TicketPurchase.php::syncCommissionJournal", "app/Traits/PostsPurchaseJournal.php", "journal_items source=ticket_purchase"],
+      "legs": [{"side": "Dr", "code": "5110", "name": "Air Ticket Purchase Cost"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable (or 2150 IATA / BSP Payable, or a portal wallet)"}, {"side": "Dr", "code": "5110", "name": "commission gross-up"}, {"side": "Cr", "code": "4171", "name": "IATA Air Ticket Commission"}],
+      "where": {"screen": "Ticketing › Ticket Purchase", "route": "role.ticket-purchase.create"}
+    },
+    {
+      "id": "ticket-refund-void",
+      "topic": "Ticket refund and void",
+      "scope": "epal",
+      "cues": {
+        "en": ["ticket refund entry", "how is a refund posted", "ticket refund posted", "void ticket entry", "refund accounting", "ticket void journal", "what happens when a ticket is refunded"],
+        "bn": ["টিকিট রিফান্ডের এন্ট্রি", "রিফান্ড কীভাবে পোস্ট হয়", "টিকিট ভয়েড", "রিফান্ডের হিসাব", "টিকিট বাতিল হলে হিসাব"],
+        "bl": ["refund er entry", "ticket refund kivabe post hoy", "void er hisab"]
+      },
+      "answer_en": "A refund or void never edits the original rows; it adds new ones (Ticket Orders › Change). The vendor side: Dr 2111 Supplier Payable (or the portal account) / Cr 5110 for the amount the airline gives back; whatever the airline keeps simply stays in 5110 as cost. If the ticket was sold to an agent, his price is taken back: Dr 4110 Air Ticket Sales / Cr 1311 Customer Receivable, with a credit row on his statement. A void with no refund typed takes the full cost back. A ticket that belongs to a contract-flight passenger goes through the contract flight's own refund instead, so it is never posted twice.",
+      "answer_bn": "রিফান্ড বা ভয়েডে মূল সারি কখনো বদলায় না; নতুন সারি যোগ হয় (টিকিট অর্ডার › চেঞ্জ)। ভেন্ডরের দিকে: এয়ারলাইন যা ফেরত দেয় তার জন্য ডেবিট ২১১১ সরবরাহকারীর দেনা (বা পোর্টালের খাত), ক্রেডিট ৫১১০; এয়ারলাইন যা রেখে দেয় তা খরচ হিসেবে ৫১১০-এই থেকে যায়। টিকিটটি এজেন্টের কাছে বিক্রি হয়ে থাকলে তার দাম ফিরিয়ে নেওয়া হয়: ডেবিট ৪১১০ টিকিট বিক্রি, ক্রেডিট ১৩১১ গ্রাহক পাওনা, আর তার স্টেটমেন্টে একটি ক্রেডিট সারি। ফেরতের অঙ্ক না লিখে ভয়েড করলে পুরো খরচই ফেরত ধরা হয়। কন্ট্রাক্ট ফ্লাইটের যাত্রীর টিকিট হলে রিফান্ড হয় ফ্লাইটের নিজের পথে, যাতে একই জিনিস দুবার না বসে।",
+      "source": ["app/Http/Controllers/Dashboard/TicketChangeController.php (class docblock)", "TicketPurchaseController::postCancellationReversal", "journal_items source=ticket_purchase_cancel, ticket_sale_reversal"],
+      "legs": [{"side": "Dr", "code": "2111", "name": "Supplier Payable (or portal account)"}, {"side": "Cr", "code": "5110", "name": "Air Ticket Purchase Cost"}, {"side": "Dr", "code": "4110", "name": "Air Ticket Sales (agent price taken back)"}, {"side": "Cr", "code": "1311", "name": "Customer Receivable - General"}],
+      "where": {"screen": "Ticketing › Ticket Orders › Change", "route": "role.ticket-changes.store"}
+    },
+    {
+      "id": "ticket-reissue",
+      "topic": "Ticket reissue and reschedule — who pays the penalty",
+      "scope": "epal",
+      "cues": {
+        "en": ["reissue entry", "reschedule entry", "how is a reissue posted", "date change penalty", "reissue penalty accounting", "fare difference entry", "who pays the reissue"],
+        "bn": ["রিইস্যুর এন্ট্রি", "রিশিডিউলের এন্ট্রি", "তারিখ বদলের জরিমানা", "রিইস্যু কীভাবে পোস্ট হয়", "ভাড়ার পার্থক্য"],
+        "bl": ["reissue er entry", "reschedule er hisab", "date change penalty kivabe"]
+      },
+      "answer_en": "The airline's penalty plus any fare difference is owed to the ticket's seller whoever bears it in the end: Dr 5110 / Cr 2111 Supplier Payable (from a portal: Cr the portal account). Then one of two things. If the customer pays, one line goes on his statement for penalty, fare difference and our service fee together: Dr 1311 / Cr 4110 (contract-flight changes credit 4181/4183 instead). If we bear it, nothing more is posted, because the cost already sits in 5110 — that is the company's loss. The departure date moves with it.",
+      "answer_bn": "এয়ারলাইনের জরিমানা আর ভাড়ার পার্থক্য টিকিটের বিক্রেতার কাছে দেনা হয়, শেষে যে-ই বহন করুক: ডেবিট ৫১১০, ক্রেডিট ২১১১ সরবরাহকারীর দেনা (পোর্টাল থেকে হলে ক্রেডিট সেই পোর্টালের খাত)। তারপর দুটোর একটা। গ্রাহক দিলে তার স্টেটমেন্টে একটি সারি বসে — জরিমানা, ভাড়ার পার্থক্য আর আমাদের সার্ভিস ফি একসাথে: ডেবিট ১৩১১, ক্রেডিট ৪১১০ (কন্ট্রাক্ট ফ্লাইটে ক্রেডিট ৪১৮১/৪১৮৩)। আমরা বহন করলে আর কিছু পোস্ট হয় না, কারণ খরচটা আগেই ৫১১০-এ বসে আছে — ওটাই কোম্পানির ক্ষতি। যাত্রার তারিখও সঙ্গে সঙ্গে সরে যায়।",
+      "source": ["app/Http/Controllers/Dashboard/TicketChangeController.php (class docblock)", "journal_items source=ticket_change_charge, ticket_change_penalty, ticket_change_fee"],
+      "legs": [{"side": "Dr", "code": "5110", "name": "Air Ticket Purchase Cost"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable"}, {"side": "Dr", "code": "1311", "name": "Customer Receivable (only if the customer pays)"}, {"side": "Cr", "code": "4110", "name": "Air Ticket Sales"}],
+      "where": {"screen": "Ticketing › Ticket Orders › Change", "route": "role.ticket-changes.store"}
+    },
+    {
+      "id": "contract-flight-passenger",
+      "topic": "Contract flight — the agent's package and the flight's costs",
+      "scope": "epal",
+      "cues": {
+        "en": ["contract flight entry", "how is a contract flight posted", "agent price posting", "contract flight accounting", "contract flight journal", "package price entry"],
+        "bn": ["কন্ট্রাক্ট ফ্লাইটের এন্ট্রি", "কন্ট্রাক্ট ফ্লাইট কীভাবে পোস্ট হয়", "এজেন্টের প্যাকেজের হিসাব", "কন্ট্রাক্ট ফ্লাইটের জার্নাল"],
+        "bl": ["contract flight er entry", "contract flight er hisab", "agent price kivabe post hoy"]
+      },
+      "answer_en": "The passenger is the unit. His agent price is a receivable — what we charge the agent for handling him, not a commission we pay — so it posts as Dr 1311 Customer Receivable / Cr 4150 Contract Flight & File Revenue, with a debit row on the agent's Party Statement. Each service cost (ticket, visa, medical and the rest) posts as Dr 5150 Contract Flight & File Cost / Cr 2111 Supplier Payable to the vendor who supplied it. Profit per passenger is 4150 minus 5150; the Flight Accounts page reads it from these same rows and never writes.",
+      "answer_bn": "এখানে হিসাবের একক হলো যাত্রী। তার এজেন্ট-দাম একটি পাওনা — যাত্রী সামলানোর জন্য আমরা এজেন্টের কাছে যা নিই, এজেন্টকে দেওয়া কমিশন নয় — তাই বসে ডেবিট ১৩১১ গ্রাহক পাওনা, ক্রেডিট ৪১৫০ কন্ট্রাক্ট ফ্লাইট ও ফাইলের আয়, আর এজেন্টের পার্টি স্টেটমেন্টে একটি ডেবিট সারি। প্রতিটি সেবার খরচ (টিকিট, ভিসা, মেডিকেল ইত্যাদি) বসে ডেবিট ৫১৫০ কন্ট্রাক্ট ফ্লাইট ও ফাইলের খরচ, ক্রেডিট ২১১১ সরবরাহকারীর দেনা — যে ভেন্ডর সেবা দিয়েছে তার নামে। যাত্রীপ্রতি লাভ মানে ৪১৫০ বিয়োগ ৫১৫০; ফ্লাইট অ্যাকাউন্টস পাতা এই সারিগুলো থেকেই পড়ে, নিজে কিছু লেখে না।",
+      "source": ["app/Traits/ReconcilesContractFlightAgent.php", "app/Http/Controllers/Dashboard/ContractFlightAccountsController.php", "journal_items source=contract_flight_passenger_agent (706 lines), contract_flight_service_cost (447 lines)"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Cr", "code": "4150", "name": "Contract Flight & File Revenue"}, {"side": "Dr", "code": "5150", "name": "Contract Flight & File Cost"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable"}],
+      "where": {"screen": "Contract Flight › Flights & Passengers / Flight Accounts", "route": "role.contract-flights.accounts"}
+    },
+    {
+      "id": "contract-flight-cancel-deport-offload",
+      "topic": "Contract flight — cancellation, deportation and offload",
+      "scope": "epal",
+      "cues": {
+        "en": ["deported passenger entry", "offload accounting", "passenger cancelled entry", "what happens when a passenger is deported", "deport who pays", "offloaded passenger charge", "cancellation reversal"],
+        "bn": ["ডিপোর্ট হলে হিসাব", "অফলোড হলে হিসাব", "যাত্রী বাতিল হলে এন্ট্রি", "ডিপোর্টের খরচ কে দেবে", "অফলোডের চার্জ"],
+        "bl": ["deport hole hisab", "offload hole ki hoy", "passenger cancel hole entry"]
+      },
+      "answer_en": "Nothing is deleted or zeroed. A cancel adds a reversal row beside the package (contract_flight_passenger_agent_reversal): a credit on the agent's statement and Dr 4150 / Cr 1311 in the journal; putting him back on a flight adds a debit row that charges him again. Only these flags void the agent's charge: cancelled, flight cancelled, off flight, and 'Deported — we bear it'. Plain 'Deported' means the agent pays, so his charge stands. Rescheduled and transit do not void it, because he still travels on our arrangement. Boarding denied and immigration offload are tracked on the offload KPI; they do not by themselves reverse the charge. What a change costs us goes to the Company Ledger: Dr 5171/5172/5173 (penalty, fare difference, change fee we bear); what we bill back is Cr 4181/4182/4183.",
+      "answer_bn": "কিছুই মোছা বা শূন্য করা হয় না। বাতিল হলে প্যাকেজের পাশে একটি উল্টো সারি যোগ হয়: এজেন্টের স্টেটমেন্টে ক্রেডিট, আর জার্নালে ডেবিট ৪১৫০, ক্রেডিট ১৩১১; আবার ফ্লাইটে তুললে নতুন ডেবিট সারি তাকে আবার চার্জ করে। এজেন্টের চার্জ বাতিল হয় শুধু এই অবস্থাগুলোতে: যাত্রী বাতিল, ফ্লাইট বাতিল, ফ্লাইট থেকে নামানো, আর ‘ডিপোর্ট — আমরা বহন করব’। শুধু ‘ডিপোর্ট’ মানে এজেন্ট দেবে, তাই চার্জ থাকে। রিশিডিউল বা ট্রানজিটে চার্জ বাতিল হয় না, কারণ যাত্রী আমাদের ব্যবস্থাতেই যাচ্ছে। বোর্ডিংয়ে আটকানো আর ইমিগ্রেশন অফলোড অফলোডের হিসাবে গোনা হয়; শুধু সেই কারণে চার্জ উল্টায় না। পরিবর্তনে আমাদের যা খরচ হয় তা কোম্পানি লেজারে যায়: ডেবিট ৫১৭১/৫১৭২/৫১৭৩ (আমাদের বহন করা জরিমানা, ভাড়ার পার্থক্য, চেঞ্জ ফি); এজেন্টের কাছ থেকে যা আদায় করি তা ক্রেডিট ৪১৮১/৪১৮২/৪১৮৩।",
+      "source": ["app/Models/ContractFlightPassenger.php (EXCEPTION_FLAGS, AGENT_CHARGE_VOIDING_FLAGS, AGENT_REVERSAL_TYPE)", "app/Traits/ReconcilesContractFlightAgent.php", "app/Services/CompanyLedger.php"],
+      "legs": [{"side": "Dr", "code": "4150", "name": "Contract Flight & File Revenue (reversal)"}, {"side": "Cr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Dr", "code": "5171", "name": "Airline Cancellation Penalty (Company Borne)"}, {"side": "Cr", "code": "4181", "name": "Cancellation Penalty Recovered"}],
+      "where": {"screen": "Contract Flight › Flights & Passengers (passenger card) and Party Statement › Company", "route": "role.party-statement.company"}
+    },
+    {
+      "id": "company-ledger",
+      "topic": "The Company Ledger — what changes cost us and earned us",
+      "scope": "epal",
+      "cues": {
+        "en": ["company ledger", "company borne losses", "penalty recovered", "what did changes cost us", "company ledger profit"],
+        "bn": ["কোম্পানি লেজার", "কোম্পানির বহন করা ক্ষতি", "জরিমানা আদায়", "পরিবর্তনে কত ক্ষতি হলো"],
+        "bl": ["company ledger ki", "company borne loss"]
+      },
+      "answer_en": "The Company Ledger (Party Statement › Company) is not a party; it reads the journal on two account groups. Debits are what we paid out — 5170 Company Borne Losses: 5171 airline cancellation penalty, 5172 fare difference absorbed, 5173 rebooking and change fees. Credits are what came back or what we earned — 4180 Recoveries: 4181 penalty recovered, 4182 fare difference recovered, 4183 our change charge. Its profit is credits minus debits: a recovered penalty cancels its own cost, and the fee is the profit. Ticket baggage cost and charge are read in as well.",
+      "answer_bn": "কোম্পানি লেজার (পার্টি স্টেটমেন্ট › কোম্পানি) কোনো পার্টি নয়; এটি দুটি খাতগুচ্ছের জার্নাল পড়ে। ডেবিট মানে আমরা যা গুনেছি — ৫১৭০ কোম্পানির বহন করা ক্ষতি: ৫১৭১ এয়ারলাইনের বাতিল-জরিমানা, ৫১৭২ ভাড়ার পার্থক্য, ৫১৭৩ রিবুকিং ও চেঞ্জ ফি। ক্রেডিট মানে যা ফেরত এসেছে বা আয় হয়েছে — ৪১৮০ আদায়: ৪১৮১ জরিমানা আদায়, ৪১৮২ ভাড়ার পার্থক্য আদায়, ৪১৮৩ আমাদের চেঞ্জ চার্জ। লাভ মানে ক্রেডিট বিয়োগ ডেবিট: আদায় হওয়া জরিমানা নিজের খরচ কাটাকাটি করে, আর ফি-টাই লাভ। টিকিটের ব্যাগেজের খরচ ও চার্জও এখানে ধরা হয়।",
+      "source": ["app/Services/CompanyLedger.php", "config/accounts.php: company_borne_group, company_recoveries_group"],
+      "legs": [{"side": "Dr", "code": "5170", "name": "Company Borne Losses (5171-5173)"}, {"side": "Cr", "code": "4180", "name": "Recoveries (4181-4183)"}],
+      "where": {"screen": "Party Statement › Company", "route": "role.party-statement.company"}
+    },
+    {
+      "id": "contract-file",
+      "topic": "Contract file — client charge and vendor cost",
+      "scope": "epal",
+      "cues": {
+        "en": ["contract file entry", "how is a contract file posted", "contract file accounting", "contract file journal", "file sale entry"],
+        "bn": ["কন্ট্রাক্ট ফাইলের এন্ট্রি", "কন্ট্রাক্ট ফাইল কীভাবে পোস্ট হয়", "কন্ট্রাক্ট ফাইলের হিসাব"],
+        "bl": ["contract file er entry", "contract file er hisab"]
+      },
+      "answer_en": "A contract file books both sides on the same pair of accounts as contract flight, because the chart merged them: the client charge is Dr 1311 Customer Receivable / Cr 4150 Contract Flight & File Revenue, and the vendor cost is Dr 5150 Contract Flight & File Cost / Cr 2111 Supplier Payable. A changed price is not edited in place: an adjustment entry posts the difference (contract_file_client_adjustment reverses Dr 4150 / Cr 1311; contract_file_vendor_adjustment reverses Dr 2111 / Cr 5150).",
+      "answer_bn": "কন্ট্রাক্ট ফাইলের দুই দিকই কন্ট্রাক্ট ফ্লাইটের একই খাতজোড়ায় বসে, কারণ হিসাবের তালিকায় দুটো একসাথে করা হয়েছে: ক্লায়েন্টের চার্জ ডেবিট ১৩১১ গ্রাহক পাওনা, ক্রেডিট ৪১৫০ কন্ট্রাক্ট ফ্লাইট ও ফাইলের আয়; ভেন্ডরের খরচ ডেবিট ৫১৫০, ক্রেডিট ২১১১ সরবরাহকারীর দেনা। দাম বদলালে পুরোনো সারি বদলানো হয় না: একটি সমন্বয় এন্ট্রি পার্থক্যটুকু বসায় — ক্লায়েন্টের দিকে ডেবিট ৪১৫০, ক্রেডিট ১৩১১; ভেন্ডরের দিকে ডেবিট ২১১১, ক্রেডিট ৫১৫০।",
+      "source": ["config/accounts.php: file_sales_revenue = 4150, contract_file_cost = 5150", "app/Traits/ChangesContractFileMoney.php", "journal_items source=contract_file, contract_file_client, contract_file_*_adjustment"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Cr", "code": "4150", "name": "Contract Flight & File Revenue"}, {"side": "Dr", "code": "5150", "name": "Contract Flight & File Cost"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable"}],
+      "where": {"screen": "Contract File › Accounts", "route": "role.contract-files.accounts"}
+    },
+    {
+      "id": "visa",
+      "topic": "Visa sale and visa processing cost",
+      "scope": "epal",
+      "cues": {
+        "en": ["visa sale entry", "visa processing entry", "how is a visa posted", "visa accounting", "visa journal", "visa cost entry"],
+        "bn": ["ভিসা বিক্রির এন্ট্রি", "ভিসা প্রসেসিংয়ের এন্ট্রি", "ভিসা কীভাবে পোস্ট হয়", "ভিসার হিসাব"],
+        "bl": ["visa sale er entry", "visa processing er hisab", "visa kivabe post hoy"]
+      },
+      "answer_en": "Selling a visa service: Dr 1311 Customer Receivable / Cr 4120 Visa Service Income — or, when the client pays on the spot, Dr the cash or bank account directly. Processing it: Dr 5120 Visa Processing Cost / Cr 2111 Supplier Payable to the processing vendor; paying the vendor from Visa › Pay Vendor then clears 2111 against a bank or cash account. Visa margin is 4120 minus 5120. A client who pays by monthly instalments is still booked in full at the sale; the financing desk's 'lent' book only tracks the instalments and posts nothing, so the balance is never counted twice.",
+      "answer_bn": "ভিসা সেবা বিক্রি: ডেবিট ১৩১১ গ্রাহক পাওনা, ক্রেডিট ৪১২০ ভিসা সেবার আয় — ক্লায়েন্ট সঙ্গে সঙ্গে টাকা দিলে সরাসরি নগদ বা ব্যাংক খাতে ডেবিট। প্রসেসিং: ডেবিট ৫১২০ ভিসা প্রসেসিং খরচ, ক্রেডিট ২১১১ সরবরাহকারীর দেনা; ভিসা › পে ভেন্ডর থেকে টাকা দিলে সেই দেনা ব্যাংক বা নগদের বিপরীতে মেটে। ভিসার লাভ মানে ৪১২০ বিয়োগ ৫১২০। কিস্তিতে টাকা দেওয়া ক্লায়েন্টের পুরো অঙ্কও বিক্রির দিনেই বসে; ফাইন্যান্সিং ডেস্কের ধার-খাতা শুধু কিস্তির হিসাব রাখে, কিছু পোস্ট করে না, তাই পাওনা দুবার গোনা হয় না।",
+      "source": ["app/Http/Controllers/Dashboard/VisaSaleController.php", "app/Http/Controllers/VisaProcessingController.php::payVendor", "app/Services/FinancingPostingService.php (LENT posts nothing)", "journal_items source=visa_sale, visa_process"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Cr", "code": "4120", "name": "Visa Service Income"}, {"side": "Dr", "code": "5120", "name": "Visa Processing Cost"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable"}],
+      "where": {"screen": "Visa › Visa Sales / Visa Processing / Visa Accounts", "route": "role.visa-accounts.index"}
+    },
+    {
+      "id": "party-types-ledgers",
+      "topic": "Which ledger each party lives in",
+      "scope": "epal",
+      "cues": {
+        "en": ["which ledger", "where is the agent ledger", "vendor ledger", "agent ledger", "customer ledger", "party ledger", "where does an agent balance live", "employee ledger"],
+        "bn": ["কোন লেজারে", "এজেন্টের লেজার", "ভেন্ডরের লেজার", "পার্টির লেজার", "কর্মীর লেজার", "গ্রাহকের খতিয়ান"],
+        "bl": ["agent er ledger", "vendor er ledger", "party ledger kothay"]
+      },
+      "answer_en": "There are two books side by side. The general ledger is per account: all agents and customers share 1311 Customer Receivable and 2310 Advance from Customers; all vendors share 2111 Supplier Payable and 1456 Advance to Supplier; the party is told apart by party_id on each line. The Party Statement is per party: the transactions table, one running ledger per agent, vendor or customer, where a debit means they owe us more and a credit means less. Agents are deliberately on the customer side, because an agent owes us for his passengers. Employees have their own ledger (Payroll › Employee Ledger) carrying salary earned and paid; the GL side of that is 2210 Salaries Payable.",
+      "answer_bn": "পাশাপাশি দুটি খাতা। সাধারণ খতিয়ান খাতভিত্তিক: সব এজেন্ট ও গ্রাহক একই ১৩১১ গ্রাহক পাওনা আর ২৩১০ গ্রাহকের অগ্রিম খাতে; সব ভেন্ডর একই ২১১১ সরবরাহকারীর দেনা আর ১৪৫৬ সরবরাহকারীকে অগ্রিম খাতে; কে কোনজন, তা বোঝা যায় প্রতিটি লাইনের পার্টি পরিচয় থেকে। পার্টি স্টেটমেন্ট পার্টিভিত্তিক: প্রতিটি এজেন্ট, ভেন্ডর বা গ্রাহকের নিজস্ব চলতি খাতা, যেখানে ডেবিট মানে সে আমাদের কাছে বেশি দেনা আর ক্রেডিট মানে কম। এজেন্টকে ইচ্ছে করেই গ্রাহকের দিকে রাখা হয়েছে, কারণ যাত্রীদের জন্য সে-ই আমাদের টাকা দেয়। কর্মীদের নিজস্ব লেজার আছে (পে-রোল › এমপ্লয়ি লেজার), তাতে অর্জিত ও পরিশোধিত বেতন; সাধারণ খতিয়ানে এর জোড়া হলো ২২১০ বকেয়া বেতন।",
+      "source": ["app/Http/Controllers/Dashboard/PartyStatementController.php (resolveUserType comment)", "app/Traits/ResolvesPartyType.php", "app/Models/Transaction.php", "app/Http/Controllers/EmployeeLedgerController.php"],
+      "legs": [],
+      "where": {"screen": "Party Statement (agents / vendors / clients tabs)", "route": "role.party-statement.index"}
+    },
+    {
+      "id": "party-statement-read",
+      "topic": "How to read a Party Statement",
+      "scope": "epal",
+      "cues": {
+        "en": ["party statement", "how to read the party statement", "what does the balance on a statement mean", "statement credit balance", "statement debit balance", "agent statement meaning"],
+        "bn": ["পার্টি স্টেটমেন্ট", "পার্টি স্টেটমেন্ট কীভাবে পড়ব", "স্টেটমেন্টের ব্যালান্স মানে", "ক্রেডিট ব্যালান্স মানে"],
+        "bl": ["party statement kivabe pori", "statement er balance mane"]
+      },
+      "answer_en": "Each row is one event — invoice, payment, advance, refund, discount, reversal — dated by payment_date. Debit raises what the party owes us, credit lowers it, and the running balance is debit minus credit. A positive balance on an agent or customer means he owes us; a negative (credit) balance means we are holding his money as an advance. For a vendor the reading is the mirror: a credit balance is what we owe him. The running balance on screen is summed from debit and credit (PartyLedgerService), not taken from the stored balance column, which is written in insert order and drifts when anything is back-dated. Unpaid invoices are listed separately, and a payment only reduces an invoice when it was allocated to it.",
+      "answer_bn": "প্রতিটি সারি একটি ঘটনা — ইনভয়েস, পেমেন্ট, অগ্রিম, রিফান্ড, ডিসকাউন্ট বা উল্টো এন্ট্রি — লেনদেনের তারিখ ধরে সাজানো। ডেবিট পার্টির দেনা বাড়ায়, ক্রেডিট কমায়, আর চলতি ব্যালান্স মানে ডেবিট বিয়োগ ক্রেডিট। এজেন্ট বা গ্রাহকের ব্যালান্স ধনাত্মক হলে সে আমাদের কাছে দেনা; ঋণাত্মক (ক্রেডিট) হলে তার টাকা আমাদের কাছে অগ্রিম হিসেবে জমা। ভেন্ডরের বেলায় উল্টো: ক্রেডিট ব্যালান্স মানে আমরা তাকে দেব। পর্দার চলতি ব্যালান্স ডেবিট-ক্রেডিট যোগ করে হিসাব করা হয়, জমা রাখা ব্যালান্স কলাম থেকে নয় — সেই কলাম এন্ট্রির ক্রমে লেখা, তাই পেছনের তারিখে কিছু বসলে ভুল হয়ে যায়। অপরিশোধিত ইনভয়েস আলাদা তালিকায় থাকে, আর কোনো পেমেন্ট শুধু তখনই ইনভয়েস কমায় যখন সেটা ওই ইনভয়েসের সঙ্গে মেলানো হয়েছে।",
+      "source": ["app/Services/PartyLedgerService.php", "app/Http/Controllers/Dashboard/PartyStatementController.php", "app/Services/PartyInvoiceAllocation.php"],
+      "legs": [],
+      "where": {"screen": "Party Statement", "route": "role.party-statement.index"}
+    },
+    {
+      "id": "party-payment-advance",
+      "topic": "Receiving or paying a party — allocated payment versus advance",
+      "scope": "epal",
+      "cues": {
+        "en": ["receive payment from agent", "how is a payment posted", "payment entry", "customer advance", "advance from customer", "unallocated payment", "advance to supplier", "pay a vendor entry", "collection entry"],
+        "bn": ["এজেন্টের কাছ থেকে টাকা নেওয়া", "পেমেন্ট কীভাবে পোস্ট হয়", "গ্রাহকের অগ্রিম", "অগ্রিম টাকা", "সরবরাহকারীকে অগ্রিম", "ভেন্ডরকে টাকা দেওয়ার এন্ট্রি", "আদায়ের এন্ট্রি"],
+        "bl": ["payment er entry", "advance er hisab", "agent theke taka nile entry", "vendor ke taka dile entry"]
+      },
+      "answer_en": "Party Statement › Payment asks how the money is allocated, and that decides the account. Allocated to invoices: from an agent or customer Dr bank / Cr 1311 Customer Receivable; to a vendor Dr 2111 Supplier Payable / Cr bank — and the invoices' due falls. Left unallocated: it is an advance, not a settlement — from an agent or customer Dr bank / Cr 2310 Advance from Customers; to a vendor Dr 1456 Advance to Supplier / Cr bank — and no invoice moves. Returning an advance is Dr 2310 / Cr bank, capped at the credit the party actually holds; a service refund is Dr 1311 / Cr bank. The bank must be able to cover any money going out.",
+      "answer_bn": "পার্টি স্টেটমেন্ট › পেমেন্টে জিজ্ঞেস করা হয় টাকাটা কোন ইনভয়েসে মেলানো হবে, আর সেটাই খাত ঠিক করে। ইনভয়েসের সঙ্গে মেলালে: এজেন্ট বা গ্রাহকের কাছ থেকে ডেবিট ব্যাংক, ক্রেডিট ১৩১১ গ্রাহক পাওনা; ভেন্ডরকে দিলে ডেবিট ২১১১ সরবরাহকারীর দেনা, ক্রেডিট ব্যাংক — আর ইনভয়েসের বকেয়া কমে। না মেলালে সেটা অগ্রিম, পরিশোধ নয়: এজেন্ট বা গ্রাহকের কাছ থেকে ডেবিট ব্যাংক, ক্রেডিট ২৩১০ গ্রাহকের অগ্রিম; ভেন্ডরকে দিলে ডেবিট ১৪৫৬ সরবরাহকারীকে অগ্রিম, ক্রেডিট ব্যাংক — কোনো ইনভয়েস নড়ে না। অগ্রিম ফেরত দিলে ডেবিট ২৩১০, ক্রেডিট ব্যাংক, তবে পার্টির জমার বেশি নয়; সার্ভিস রিফান্ড হলে ডেবিট ১৩১১, ক্রেডিট ব্যাংক। টাকা বের হওয়ার আগে ব্যাংকে যথেষ্ট জমা থাকতে হয়।",
+      "source": ["app/Http/Controllers/Dashboard/PartyStatementController.php (payment: allocation_mode, contraCode)", "config/accounts.php: customer_advance 2310, supplier_advance 1456", "app/Models/Bank.php::assertCanCover"],
+      "legs": [{"side": "Dr", "code": "bank", "name": "the receiving bank or cash account"}, {"side": "Cr", "code": "1311", "name": "Customer Receivable (allocated) — or 2310 Advance from Customers (unallocated)"}],
+      "where": {"screen": "Party Statement › Payment", "route": "role.party-statement.payment"}
+    },
+    {
+      "id": "receivable-payable",
+      "topic": "Receivable and payable in this ERP",
+      "scope": "epal",
+      "cues": {
+        "en": ["what is receivable", "what is payable", "receivable vs payable", "how is receivable calculated", "how is payable calculated", "accounts receivable meaning", "aging report"],
+        "bn": ["পাওনা কী", "দেনা কী", "পাওনা আর দেনার পার্থক্য", "পাওনা কীভাবে হিসাব হয়", "দেনা কীভাবে হিসাব হয়", "এজিং রিপোর্ট"],
+        "bl": ["paona ki", "dena ki", "receivable ki", "payable ki"]
+      },
+      "answer_en": "Receivable is what agents and customers owe us: the debit balance of 1311 Customer Receivable (with 1312-1319 per business line), raised by every sale and invoice and cleared by allocated receipts. Payable is what we owe vendors: the credit balance of 2111 Supplier Payable (and 2150 IATA / BSP Payable), raised by every purchase and service cost and cleared by allocated payments. Advances sit in other accounts — 2310 on the customer side, 1456 on the vendor side — so the honest position of a party is its receivable net of its advance. Reports › AR Aging and AP Aging age the open invoices; the Party Statement gives one party's net.",
+      "answer_bn": "পাওনা মানে এজেন্ট ও গ্রাহকরা আমাদের যা দেবে: ১৩১১ গ্রাহক পাওনা খাতের ডেবিট জের (ব্যবসাভেদে ১৩১২–১৩১৯), প্রতিটি বিক্রি ও ইনভয়েসে বাড়ে আর মেলানো আদায়ে কমে। দেনা মানে আমরা ভেন্ডরদের যা দেব: ২১১১ সরবরাহকারীর দেনার ক্রেডিট জের (আর ২১৫০ আয়াটা/বিএসপি দেনা), প্রতিটি কেনা ও সেবার খরচে বাড়ে আর মেলানো পরিশোধে কমে। অগ্রিম থাকে অন্য খাতে — গ্রাহকের দিকে ২৩১০, ভেন্ডরের দিকে ১৪৫৬ — তাই একটি পার্টির আসল অবস্থান মানে তার পাওনা থেকে অগ্রিম বাদ দিয়ে। রিপোর্ট › এআর এজিং ও এপি এজিং খোলা ইনভয়েসের বয়স দেখায়; পার্টি স্টেটমেন্ট দেখায় একজনের নিট।",
+      "source": ["config/accounts.php", "app/Services/Reports/AgingReport.php", "config/account_reports.php (bs receivables 1300-1399, payables 2100-2199)"],
+      "legs": [],
+      "where": {"screen": "Reports › AR Aging / AP Aging", "route": "role.report.ar-aging"}
+    },
+    {
+      "id": "trap-advances-not-applied",
+      "topic": "Data trap — advances not applied to invoices",
+      "scope": "epal",
+      "cues": {
+        "en": ["why does the invoice still show due", "paid but still due", "advance not applied", "why is receivable so high", "receivable and advance both high", "why gross receivable differs from ledger"],
+        "bn": ["টাকা দিয়েছে তবু বকেয়া কেন", "ইনভয়েসে এখনো বকেয়া কেন", "অগ্রিম মেলানো হয়নি", "পাওনা এত বেশি কেন"],
+        "bl": ["taka dise tobu due keno", "advance milano hoyni", "receivable eto beshi keno"]
+      },
+      "answer_en": "A receipt left unallocated is booked to 2310 Advance from Customers and touches no invoice, so the invoice keeps reading 'due' while the money is already in the bank. In the current production books 1311 Customer Receivable carries a debit of about ৳1.33 crore while 2310 Advance from Customers carries a credit of about ৳2.14 crore — the customer side holds more unapplied money than open receivable. The vendor side mirrors it: 1456 Advance to Supplier about ৳1.90 crore debit against 2111 Supplier Payable about ৳3.22 crore credit. The fix is allocation, not a new entry: apply each advance to its invoices in Party Statement › Payment, and never chase a party on gross invoices without netting his advance.",
+      "answer_bn": "না মেলানো আদায় ২৩১০ গ্রাহকের অগ্রিমে বসে, কোনো ইনভয়েস ছোঁয় না — তাই টাকা ব্যাংকে চলে এলেও ইনভয়েসে ‘বকেয়া’ লেখা থাকে। চালু খাতায় ১৩১১ গ্রাহক পাওনার ডেবিট প্রায় ১ কোটি ৩৩ লাখ টাকা, আর ২৩১০ গ্রাহকের অগ্রিমের ক্রেডিট প্রায় ২ কোটি ১৪ লাখ টাকা — খোলা পাওনার চেয়ে না-মেলানো জমাই বেশি। ভেন্ডরের দিকেও একই ছবি: ১৪৫৬ সরবরাহকারীকে অগ্রিম প্রায় ১ কোটি ৯০ লাখ টাকা ডেবিট, ২১১১ সরবরাহকারীর দেনা প্রায় ৩ কোটি ২২ লাখ টাকা ক্রেডিট। সমাধান নতুন এন্ট্রি নয়, মেলানো: পার্টি স্টেটমেন্ট › পেমেন্টে প্রতিটি অগ্রিম তার ইনভয়েসের সঙ্গে মেলান, আর অগ্রিম বাদ না দিয়ে কারও কাছে পুরো ইনভয়েসের টাকা চাইবেন না।",
+      "source": ["PartyStatementController (unallocated → customer_advance / supplier_advance)", "journal_items balances by account in u203838805_erp (32), last entry 2026-11-30", "CLAUDE.md audit item 2"],
+      "legs": [],
+      "where": {"screen": "Party Statement › Payment (allocate) / Unpaid Invoices", "route": "role.party-statement.unpaid-invoices"}
+    },
+    {
+      "id": "trap-stored-balance",
+      "topic": "Data trap — the stored balance column on party transactions",
+      "scope": "epal",
+      "cues": {
+        "en": ["statement balance wrong", "running balance wrong", "balance column does not match", "why do two balances differ", "back dated entry balance"],
+        "bn": ["স্টেটমেন্টের ব্যালান্স ভুল", "চলতি ব্যালান্স মিলছে না", "দুই রকম ব্যালান্স কেন", "পেছনের তারিখের এন্ট্রি"],
+        "bl": ["statement er balance vul", "balance milche na keno"]
+      },
+      "answer_en": "transactions.balance and old_balance are written once at insert, chained off the party's highest id, but statements are read by payment_date. The moment anything is back-dated — a late opening balance, an edited sale, a re-posted payment — the stored chain is wrong. The ERP's Party Statement now recomputes the balance from debit and credit, so the screen is right; anything that reads the balance column directly (an old export, a raw query) is not. EON recomputes too and flags where the ERP disagrees with itself.",
+      "answer_bn": "পার্টির লেনদেনের ব্যালান্স কলাম এন্ট্রির মুহূর্তে একবার লেখা হয়, পার্টির শেষ সারির পিঠে পিঠে — কিন্তু স্টেটমেন্ট পড়া হয় লেনদেনের তারিখ ধরে। পেছনের তারিখে কিছু বসলেই — দেরিতে প্রারম্ভিক জের, সংশোধিত বিক্রি, আবার বসানো পেমেন্ট — জমা রাখা শিকলটা ভুল হয়ে যায়। ইআরপির পার্টি স্টেটমেন্ট এখন ডেবিট-ক্রেডিট থেকে নতুন করে হিসাব করে, তাই পর্দার অঙ্ক ঠিক; কিন্তু যা সরাসরি ওই কলাম পড়ে — পুরোনো এক্সপোর্ট বা সরাসরি কুয়েরি — তা ঠিক নয়। ইওনও নতুন করে হিসাব করে, আর ইআরপি নিজের সঙ্গে না মিললে তা জানায়।",
+      "source": ["app/Services/PartyLedgerService.php (class docblock)", "CLAUDE.md audit item 3"],
+      "legs": [],
+      "where": {"screen": "Party Statement", "route": "role.party-statement.index"}
+    },
+    {
+      "id": "trap-unbalanced-journal",
+      "topic": "Data trap — a one-legged journal and an unbalanced trial balance",
+      "scope": "epal",
+      "cues": {
+        "en": ["trial balance does not balance", "why is the trial balance off", "unbalanced journal", "debits not equal credits", "trial balance difference"],
+        "bn": ["ট্রায়াল ব্যালান্স মিলছে না", "রেওয়ামিল মিলছে না", "ডেবিট ক্রেডিট সমান নয়", "ট্রায়াল ব্যালান্সে পার্থক্য কেন"],
+        "bl": ["trial balance milche na", "debit credit soman na keno"]
+      },
+      "answer_en": "In the current production books total debits are ৳4,000 more than total credits, and the whole gap is one entry: journal 2255, dated 2026-09-18, reference VISA-036, source visa_process, which has a debit of ৳4,000 to 5120 Visa Processing Cost and no credit line at all. Every other entry balances. The vendor it was owed to is missing from 2111 Supplier Payable by the same amount. It needs the accountant to add the credit leg (or reverse and re-post it from the visa screen); EON will not invent the vendor.",
+      "answer_bn": "চালু খাতায় মোট ডেবিট মোট ক্রেডিটের চেয়ে ৪,০০০ টাকা বেশি, আর পুরো পার্থক্যটা একটি এন্ট্রির: জার্নাল ২২৫৫, তারিখ ১৮ সেপ্টেম্বর ২০২৬, রেফারেন্স ভিসা-০৩৬, উৎস ভিসা প্রসেসিং — তাতে ৫১২০ ভিসা প্রসেসিং খরচে ৪,০০০ টাকা ডেবিট আছে, কোনো ক্রেডিট লাইন নেই। বাকি সব এন্ট্রি মেলে। যে ভেন্ডরের পাওনা ছিল, ২১১১ সরবরাহকারীর দেনা থেকে ঠিক ততটাই বাদ পড়েছে। হিসাবরক্ষককে ক্রেডিট লাইনটি যোগ করতে হবে (অথবা ভিসার স্ক্রিন থেকে উল্টে আবার পোস্ট করতে হবে); ভেন্ডর কে, ইওন তা আন্দাজ করবে না।",
+      "source": ["journal_items of journal_entries.id = 2255 in u203838805_erp (32)"],
+      "legs": [{"side": "Dr", "code": "5120", "name": "Visa Processing Cost ৳4,000"}, {"side": "Cr", "code": "—", "name": "missing"}],
+      "where": {"screen": "Reports › Trial Balance; Accounts › Journals (entry 2255)", "route": "role.report.trial-balance"}
+    },
+    {
+      "id": "trap-chart-misfiled",
+      "topic": "Data trap — accounts filed in the wrong range or type",
+      "scope": "epal",
+      "cues": {
+        "en": ["wrong account type", "bank under revenue code", "misfiled account", "chart of accounts problem", "odd account codes"],
+        "bn": ["ভুল খাতের ধরন", "ভুল জায়গায় খাত", "হিসাবের তালিকায় সমস্যা"],
+        "bl": ["vul account type", "chart e somossa"]
+      },
+      "answer_en": "The statements are cut by code range, and the production chart has accounts whose code says one thing and whose type says another: bank accounts typed asset but numbered in the revenue and cost ranges (4412 ISLAMI BANK PLC, 4477 Dutch-Bangla Bank Limited, 4615 Islam Bank PLC, 5190 Islam Bank PLC, 7396 DUTCH BANGLA (Emi Agro), 3856 BKASH (MARCHENT)), 2026 Office Cash typed asset inside the liability range, 8101 Tea & Snacks numbered under 8100 Non-Operating Income, so it reads as a non-operating cost instead of an office expense, and codes outside the four-digit scheme (100, 101, 111, 0025, 0237, ACC-36, XXXX). The ERP puts an account of the right type that no range claims in a visible 'Other' line, so totals still add up, but these will not sit under Cash on the balance sheet until they are renumbered. Run php artisan accounts:check after any renumber.",
+      "answer_bn": "আর্থিক বিবরণী কোডের পরিসর ধরে কাটা, অথচ চালু তালিকায় কিছু খাতের কোড বলে এক কথা আর ধরন বলে আরেক: ব্যাংক খাত, ধরন সম্পদ, কিন্তু নম্বর আয় ও খরচের পরিসরে (৪৪১২, ৪৪৭৭, ৪৬১৫, ৫১৯০, ৭৩৯৬, ৩৮৫৬); ২০২৬ অফিস ক্যাশ, ধরন সম্পদ, কিন্তু দায়ের পরিসরে; ৮১০১ চা-নাশতা, নম্বর অপরিচালন আয়ের ঘরে, তাই অফিস খরচ না হয়ে অপরিচালন খরচ হিসেবে পড়ে; আর চার অঙ্কের নিয়মের বাইরের কোড (১০০, ১০১, ১১১, ০০২৫, ০২৩৭ ইত্যাদি)। ইআরপি এমন খাতকে একটি আলাদা ‘অন্যান্য’ লাইনে দেখায়, তাই মোট মেলে, কিন্তু নতুন নম্বর না দেওয়া পর্যন্ত এগুলো ব্যালান্স শিটে নগদের ঘরে বসবে না। নম্বর বদলানোর পর ইআরপির খাত-যাচাই কমান্ডটি চালাতে হয়।",
+      "source": ["accounts table in u203838805_erp (32)", "config/account_reports.php header ('Other' line)", "config/accounts.php header (accounts:check)"],
+      "legs": [],
+      "where": {"screen": "Accounts › Chart of Accounts", "route": "role.accounts.index"}
+    },
+    {
+      "id": "trap-unjournalised-sales",
+      "topic": "Data trap — sales invoiced on the desks but not journalised",
+      "scope": "epal",
+      "cues": {
+        "en": ["sales not in the ledger", "why is revenue lower than sales", "desk sales vs ledger", "unjournalised sales", "sales booked vs income"],
+        "bn": ["বিক্রি খাতায় নেই", "আয় বিক্রির চেয়ে কম কেন", "ডেস্কের বিক্রি আর খাতার আয়"],
+        "bl": ["sales ledger e nai", "income sales er theke kom keno"]
+      },
+      "answer_en": "The August 2026 audit found the desks had invoiced ৳9.1 lakh while the ledger carried ৳3.8 lakh (42%) — ৳5.3 lakh of sales with no journal. So EON reports both the sales booked on the desks and the income in the P&L, and names the gap rather than under-reporting the business. This figure is from that audit; it has not been re-measured on the current dump.",
+      "answer_bn": "২০২৬-এর আগস্টের নিরীক্ষায় দেখা গিয়েছিল ডেস্কগুলো ৯.১ লাখ টাকার ইনভয়েস করেছে, অথচ খাতায় উঠেছে ৩.৮ লাখ টাকা (৪২ শতাংশ) — ৫.৩ লাখ টাকার বিক্রির কোনো জার্নাল নেই। তাই ইওন ডেস্কের বিক্রি আর লাভ-ক্ষতির আয় দুটোই বলে, আর ব্যবসাকে কম না দেখিয়ে পার্থক্যটার নাম ধরে বলে। অঙ্কটা সেই নিরীক্ষার; চালু ডাম্পে নতুন করে মাপা হয়নি।",
+      "source": ["CLAUDE.md audit item 1", "server/lib/Analytics.php::salesBooked"],
+      "legs": [],
+      "where": {"screen": "Reports › Profit & Loss beside the sales desks", "route": "role.report.profit-loss"}
+    },
+    {
+      "id": "opening-balance",
+      "topic": "Opening balances",
+      "scope": "epal",
+      "cues": {
+        "en": ["opening balance entry", "how to enter opening balance", "opening balance equity", "what is account 3400", "opening balance for a party", "opening balance for a bank"],
+        "bn": ["প্রারম্ভিক জের", "ওপেনিং ব্যালান্স কীভাবে দেব", "ওপেনিং ব্যালান্সের এন্ট্রি", "৩৪০০ খাত কী"],
+        "bl": ["opening balance kivabe dibo", "opening balance er entry"]
+      },
+      "answer_en": "Every opening balance is posted against 3400 Opening Balance Equity, so a figure carried in from before the ERP never pretends to be this year's income or cost. A party who owed us: Dr 1311 / Cr 3400. A vendor we owed: Dr 3400 / Cr 2111. A bank's opening: Dr the bank / Cr 3400. An employee owed salary from before: Dr 3400 / Cr 2210. A loan brought in: Dr 3400 / Cr the loan liability. Party openings are entered in Party Statement › Opening Balance; loan openings on the financing desk. 3400 currently holds about ৳33.1 lakh credit.",
+      "answer_bn": "প্রতিটি প্রারম্ভিক জের বসে ৩৪০০ প্রারম্ভিক জের মালিকানার বিপরীতে, যাতে ইআরপির আগের অঙ্ক এ বছরের আয় বা খরচ বলে ভান না করে। পার্টি আমাদের কাছে দেনা থাকলে: ডেবিট ১৩১১, ক্রেডিট ৩৪০০। ভেন্ডরকে আমরা দেনা থাকলে: ডেবিট ৩৪০০, ক্রেডিট ২১১১। ব্যাংকের শুরুর জমা: ডেবিট সেই ব্যাংক, ক্রেডিট ৩৪০০। কর্মীর আগের বকেয়া বেতন: ডেবিট ৩৪০০, ক্রেডিট ২২১০। আগের ঋণ: ডেবিট ৩৪০০, ক্রেডিট ঋণের দায়। পার্টির জের দেওয়া হয় পার্টি স্টেটমেন্ট › ওপেনিং ব্যালান্সে; ঋণের জের ফাইন্যান্সিং ডেস্কে। এখন ৩৪০০-তে প্রায় ৩৩.১ লাখ টাকা ক্রেডিট।",
+      "source": ["PartyStatementController (opening balance: receivable/payable vs opening_balance_equity)", "app/Services/FinancingPostingService.php (opening: Dr 3400 / Cr loan)", "journal_items source=opening_balance, bank, employee_ledger"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable (party owes us)"}, {"side": "Cr", "code": "3400", "name": "Opening Balance Equity"}],
+      "where": {"screen": "Party Statement › Opening Balance", "route": "role.party-statement.opening-balance"}
+    },
+    {
+      "id": "payroll",
+      "topic": "Salary — accrual and payment",
+      "scope": "epal",
+      "cues": {
+        "en": ["salary entry", "how is salary posted", "payroll journal", "salary payable", "salary accounting", "paying salary entry", "salaries payable meaning"],
+        "bn": ["বেতনের এন্ট্রি", "বেতন কীভাবে পোস্ট হয়", "বেতনের জার্নাল", "বকেয়া বেতন", "বেতন দেওয়ার এন্ট্রি"],
+        "bl": ["beton er entry", "salary kivabe post hoy", "salary payable ki"]
+      },
+      "answer_en": "Salary is posted in two steps. When it is earned: Dr 6110 Salary Expense / Cr 2210 Salaries Payable — the cost lands in the month and the debt to the employee stands. When it is paid (the payment schedule's Record Payment, or the employee payment desk): Dr 2210 / Cr the bank or cash it left from, plus Dr 8510 Bank Charges if the bank charged a fee. If a salary is created already paid, the journal debits 6110 and credits the bank directly. Salary never goes to 2111 Supplier Payable — that account belongs to vendors. The employee ledger carries the same salary earned and paid, per person.",
+      "answer_bn": "বেতন দুই ধাপে বসে। অর্জনের সময়: ডেবিট ৬১১০ বেতন খরচ, ক্রেডিট ২২১০ বকেয়া বেতন — খরচ সেই মাসে পড়ে আর কর্মীর কাছে দেনা দাঁড়ায়। পরিশোধের সময় (পেমেন্ট শিডিউলের রেকর্ড পেমেন্ট, বা কর্মী-পেমেন্ট ডেস্ক): ডেবিট ২২১০, ক্রেডিট যে ব্যাংক বা নগদ থেকে গেছে, আর ব্যাংক ফি কাটলে ডেবিট ৮৫১০ ব্যাংক চার্জ। শুরুতেই পরিশোধিত হিসেবে বেতন বানালে জার্নাল সরাসরি ৬১১০ ডেবিট আর ব্যাংক ক্রেডিট করে। বেতন কখনো ২১১১ সরবরাহকারীর দেনায় যায় না — ওটা ভেন্ডরের খাত। কর্মীর নিজের লেজারেও একই অর্জিত ও পরিশোধিত বেতন, জনপ্রতি।",
+      "source": ["app/Traits/PostsSalaryJournal.php", "app/Services/EmployeePaymentService.php", "journal_items source=salary, salary_payment, employee_payment"],
+      "legs": [{"side": "Dr", "code": "6110", "name": "Salary Expense"}, {"side": "Cr", "code": "2210", "name": "Salaries Payable"}, {"side": "Dr", "code": "2210", "name": "Salaries Payable (on payment)"}, {"side": "Cr", "code": "bank", "name": "the paying bank or cash"}],
+      "where": {"screen": "Payroll › Employee Salaries; Payment Schedules › Record Payment", "route": "role.payment-schedules.mark-paid"}
+    },
+    {
+      "id": "advance-salary",
+      "topic": "Advance salary — release and recovery",
+      "scope": "epal",
+      "cues": {
+        "en": ["advance salary entry", "salary advance accounting", "how is an advance salary posted", "advance recovery", "salary advance account", "advance against salary"],
+        "bn": ["অগ্রিম বেতনের এন্ট্রি", "বেতন অগ্রিম", "অগ্রিম বেতন কীভাবে পোস্ট হয়", "অগ্রিম কাটা", "অগ্রিম বেতনের হিসাব"],
+        "bl": ["advance salary er entry", "advance beton kivabe post hoy", "advance kata"]
+      },
+      "answer_en": "An advance is money the employee owes back out of future salary, so it is an asset, not an expense: 1458 Salary Advance. Releasing it (approve, pick the bank and the account): Dr 1458 / Cr the bank or cash, and the bank must be able to cover it. When payroll deducts it: Dr 6110 Salary Expense / Cr 1458, as its own entry (advance_recovery), because every salary journal posts the net salary and the withheld part is exactly what is missing from expense. Reversing a wrongly released advance is Dr bank / Cr 1458, allowed only before payroll has deducted any of it. The employee ledger is left alone so the advance is not counted twice. Advances approved before this existed have no release entry and get no recovery entry either.",
+      "answer_bn": "অগ্রিম মানে কর্মী ভবিষ্যতের বেতন থেকে যা ফেরত দেবে, তাই এটি সম্পদ, খরচ নয়: ১৪৫৮ বেতন অগ্রিম। ছাড়ার সময় (অনুমোদন, ব্যাংক ও খাত বাছাই): ডেবিট ১৪৫৮, ক্রেডিট ব্যাংক বা নগদ — আর ব্যাংকে যথেষ্ট টাকা থাকতে হবে। পে-রোলে কাটার সময়: ডেবিট ৬১১০ বেতন খরচ, ক্রেডিট ১৪৫৮ — আলাদা এন্ট্রি হিসেবে, কারণ বেতনের প্রতিটি জার্নাল নিট বেতন বসায়, আর কেটে রাখা অংশটুকুই খরচ থেকে বাদ পড়ে থাকে। ভুল করে ছাড়া অগ্রিম উল্টাতে ডেবিট ব্যাংক, ক্রেডিট ১৪৫৮ — শুধু পে-রোল কিছু কাটার আগে। কর্মীর লেজার ছোঁয়া হয় না, যাতে অগ্রিম দুবার না গোনা হয়। এই নিয়মের আগে অনুমোদিত অগ্রিমের ছাড়ার এন্ট্রি নেই, তাই সেগুলোর কাটার এন্ট্রিও হয় না।",
+      "source": ["app/Services/AdvancePostingService.php (class docblock, release, reverse)", "config/accounts.php: salary_advance 1458", "journal_items source=advance_salary, advance_recovery, advance_salary_reversal"],
+      "legs": [{"side": "Dr", "code": "1458", "name": "Salary Advance"}, {"side": "Cr", "code": "bank", "name": "the paying bank or cash"}, {"side": "Dr", "code": "6110", "name": "Salary Expense (recovery)"}, {"side": "Cr", "code": "1458", "name": "Salary Advance"}],
+      "where": {"screen": "Payroll › Advance Salaries › Release", "route": "role.advance-salaries.release"}
+    },
+    {
+      "id": "petty-cash",
+      "topic": "Petty cash — the pot, the float and the expense",
+      "scope": "epal",
+      "cues": {
+        "en": ["petty cash entry", "how does petty cash work", "petty cash float", "petty cash accounting", "issue petty cash", "petty cash pot"],
+        "bn": ["পেটি ক্যাশের এন্ট্রি", "পেটি ক্যাশ কীভাবে চলে", "খুচরা নগদ", "পেটি ক্যাশ ফ্লোট", "পেটি ক্যাশ দেওয়া"],
+        "bl": ["petty cash er entry", "petty cash kivabe chole", "petty cash float ki"]
+      },
+      "answer_en": "Three events. Topping up the pot: 1011 Petty Cash - Group (Common) is a deliberately small pot in front of 1013 Office Cash, refilled by Dr 1011 / Cr 1013 when it runs low. Issuing cash to a custodian is not an expense — the money is still ours, only in someone's pocket: Dr 1015 Petty Cash Float (party: the custodian) / Cr 1011 or a bank. Spending it becomes an expense only when a receipt says what it was for, through the ordinary expense flow: Dr the expense account / Cr the float or pot. One pot and one float serve the whole group; which company a payment belongs to is the journal entry's company, and who holds what is the party on the line.",
+      "answer_bn": "তিনটি ঘটনা। পাত্র ভরা: ১০১১ পেটি ক্যাশ (গ্রুপ) ইচ্ছে করেই ছোট একটি পাত্র, ১০১৩ অফিস ক্যাশের সামনে বসানো; কমে এলে ভরা হয় ডেবিট ১০১১, ক্রেডিট ১০১৩। কাউকে নগদ দেওয়া খরচ নয় — টাকা তখনও কোম্পানির, শুধু কারও পকেটে: ডেবিট ১০১৫ পেটি ক্যাশ ফ্লোট (লাইনে যার হাতে দেওয়া হলো), ক্রেডিট ১০১১ বা ব্যাংক। খরচ হয় শুধু তখন, যখন রসিদে লেখা থাকে কীসে খরচ হলো, সাধারণ খরচের পথে: ডেবিট খরচের খাত, ক্রেডিট ফ্লোট বা পাত্র। পুরো গ্রুপের জন্য একটিই পাত্র আর একটিই ফ্লোট; কোন কোম্পানির খরচ তা বলে জার্নাল এন্ট্রির কোম্পানি, আর কার হাতে কত তা বলে লাইনের পার্টি।",
+      "source": ["app/Services/PettyCashService.php (class docblock, issue)", "config/accounts.php: petty_cash_pool 1011, petty_cash_float 1015, office_cash 1013", "journal_items source=petty_cash, expense, bank_transfer"],
+      "legs": [{"side": "Dr", "code": "1015", "name": "Petty Cash Float (custodian)"}, {"side": "Cr", "code": "1011", "name": "Petty Cash - Group (Common) or a bank"}],
+      "where": {"screen": "Accounts › Petty Cash", "route": "role.petty-cash.index"}
+    },
+    {
+      "id": "expense-reimbursement",
+      "topic": "Expenses and staff reimbursement",
+      "scope": "epal",
+      "cues": {
+        "en": ["expense entry", "how is an expense posted", "reimbursement entry", "employee spent own money", "expense journal", "staff reimbursement accounting"],
+        "bn": ["খরচের এন্ট্রি", "খরচ কীভাবে পোস্ট হয়", "কর্মী নিজের টাকায় খরচ করলে", "খরচ ফেরতের এন্ট্রি", "রিইমবার্সমেন্ট"],
+        "bl": ["khoroch er entry", "expense kivabe post hoy", "reimbursement er hisab"]
+      },
+      "answer_en": "An approved expense debits the account its category names (6510 tea and refreshments, 6610 local conveyance and so on; 7400 Miscellaneous when the category names none) and credits where the money came from — 1011 the petty cash pot, 1013 Office Cash, or a bank. When an employee paid out of his own pocket the credit is 2240 Employee Expense Reimbursement Payable instead, with him as the party: the company now owes him. Paying him back is Dr 2240 / Cr bank or cash. 2240 sits under employee payables on purpose, never 2113 Expense Payable, so supplier ageing stays clean. An expense paid from another company's bank is tracked on the Liability book, which posts nothing.",
+      "answer_bn": "অনুমোদিত খরচ ডেবিট হয় তার ক্যাটাগরি যে খাতের নাম দেয় তাতে (৬৫১০ চা-নাশতা, ৬৬১০ স্থানীয় যাতায়াত ইত্যাদি; ক্যাটাগরিতে খাত না থাকলে ৭৪০০ বিবিধ খরচ), আর ক্রেডিট হয় টাকা যেখান থেকে গেছে — ১০১১ পেটি ক্যাশ, ১০১৩ অফিস ক্যাশ বা ব্যাংক। কর্মী নিজের পকেট থেকে দিলে ক্রেডিট হয় ২২৪০ কর্মীর খরচ-ফেরত দেনা, লাইনে তার নাম: কোম্পানি এখন তার কাছে দেনা। ফেরত দিলে ডেবিট ২২৪০, ক্রেডিট ব্যাংক বা নগদ। ২২৪০ ইচ্ছে করেই কর্মীর দেনার ঘরে, সরবরাহকারীর ঘরে নয়, যাতে ভেন্ডরের এজিং পরিষ্কার থাকে। অন্য কোম্পানির ব্যাংক থেকে দেওয়া খরচ লায়াবিলিটি খাতায় শুধু লেখা থাকে, কিছু পোস্ট হয় না।",
+      "source": ["app/Http/Controllers/ExpenseController.php", "app/Services/EmployeeReimbursementService.php", "config/accounts.php: general_expense 7400, employee_reimbursement_payable 2240", "app/Services/InterCompanyLiabilityService.php", "journal_items source=expense"],
+      "legs": [{"side": "Dr", "code": "6xxx", "name": "the category's expense account"}, {"side": "Cr", "code": "1011", "name": "petty cash pot / 1013 Office Cash / bank — or 2240 if the employee paid"}],
+      "where": {"screen": "Expenses; Employee Reimbursements", "route": "role.expenses.index"}
+    },
+    {
+      "id": "bank-transfer",
+      "topic": "Bank transfers and bank transactions",
+      "scope": "epal",
+      "cues": {
+        "en": ["bank transfer entry", "how is a bank transfer posted", "moving money between banks", "bank charges entry", "bank transaction entry", "cash deposit entry", "cash withdrawal entry"],
+        "bn": ["ব্যাংক ট্রান্সফারের এন্ট্রি", "এক ব্যাংক থেকে অন্য ব্যাংকে", "ব্যাংক চার্জের এন্ট্রি", "নগদ জমার এন্ট্রি", "নগদ তোলার এন্ট্রি"],
+        "bl": ["bank transfer er entry", "bank charge er entry", "cash joma dile entry"]
+      },
+      "answer_en": "A transfer moves money between two of our own accounts, so nothing is earned or spent: Dr the receiving bank or cash / Cr the sending one, plus Dr 8510 Bank Charges for any fee. Depositing office cash is Dr bank / Cr 1013; withdrawing is the reverse; refilling petty cash is Dr 1011 / Cr 1013. Both bank register rows and the journal are written by one service, so the register and the ledger cannot disagree, and the sending account must be able to cover it. Settling an inter-company debt by bank uses the same path. Bank receipts and payments raised from Manage Banks post to 1311/2310 (money in from a party) or 2110/2111 (money out to a vendor) against the bank.",
+      "answer_bn": "ট্রান্সফার মানে আমাদেরই দুই খাতের মধ্যে টাকা সরানো, তাই কোনো আয় বা খরচ হয় না: ডেবিট যে ব্যাংক বা নগদে এল, ক্রেডিট যেখান থেকে গেল, আর ফি থাকলে ডেবিট ৮৫১০ ব্যাংক চার্জ। অফিসের নগদ ব্যাংকে জমা দিলে ডেবিট ব্যাংক, ক্রেডিট ১০১৩; তুললে উল্টো; পেটি ক্যাশ ভরলে ডেবিট ১০১১, ক্রেডিট ১০১৩। দুই ব্যাংকের রেজিস্টার আর জার্নাল একই জায়গা থেকে লেখা হয়, তাই দুটো আলাদা কথা বলতে পারে না, আর পাঠানো খাতে যথেষ্ট টাকা থাকতে হয়। কোম্পানিগুলোর মধ্যে দেনা ব্যাংকে মেটানোও একই পথে। ব্যাংক পরিচালনা থেকে তোলা আদায় ও পরিশোধ ব্যাংকের বিপরীতে ১৩১১/২৩১০ (পার্টির কাছ থেকে আসা) বা ২১১০/২১১১ (ভেন্ডরকে যাওয়া) খাতে বসে।",
+      "source": ["app/Services/BankTransferService.php", "app/Http/Controllers/Dashboard/BankControllerV2.php", "journal_items source=bank_transfer, bank_transaction"],
+      "legs": [{"side": "Dr", "code": "bank", "name": "receiving bank or cash"}, {"side": "Cr", "code": "bank", "name": "sending bank or cash"}, {"side": "Dr", "code": "8510", "name": "Bank Charges (if any)"}],
+      "where": {"screen": "Banks › Bank Transfers", "route": "role.bank_transfers.index"}
+    },
+    {
+      "id": "owner-capital-drawings-loans",
+      "topic": "Owner money and loans — investment, drawings, borrowing",
+      "scope": "epal",
+      "cues": {
+        "en": ["owner drawings entry", "owner investment entry", "drawings vs expense", "loan entry", "how is a loan posted", "loan instalment entry", "interest expense entry", "director paid a bill"],
+        "bn": ["মালিকের উত্তোলন", "মালিকের বিনিয়োগ", "ঋণের এন্ট্রি", "ঋণের কিস্তি", "কিস্তির এন্ট্রি", "সুদের খরচ", "পরিচালক নিজের টাকায় বিল দিলে"],
+        "bl": ["drawings er entry", "loan er entry", "kisti er hisab", "owner investment entry"]
+      },
+      "answer_en": "Owner money in: Dr bank / Cr 3110 Owner Investment. Owner money out for himself: Dr 3210 Drawings / Cr bank — it reduces equity and must never reduce profit. A director paying a company bill from his own pocket is neither: it is 1351 Director's Current Account, cleared when he is reimbursed. A loan in the company's name: Dr bank for what landed, Dr 8530 Loan Processing Fee for what the lender kept, Cr the liability (2410 short-term, 2510 bank, 2520 party, 2560 vehicle) for the full sanctioned amount; each instalment is split into principal (Dr the liability) and interest (Dr 8520 Interest Expense). A loan in a person's own name puts no liability on the company and allows no interest: an instalment the company pays for it goes whole to 3210 Drawings — the ERP refuses to post interest on it.",
+      "answer_bn": "মালিকের টাকা ঢুকলে: ডেবিট ব্যাংক, ক্রেডিট ৩১১০ মালিকের বিনিয়োগ। মালিক নিজের জন্য তুললে: ডেবিট ৩২১০ উত্তোলন, ক্রেডিট ব্যাংক — এতে মালিকানা কমে, লাভ কখনো কমে না। পরিচালক নিজের পকেট থেকে কোম্পানির বিল দিলে সেটা এর কোনোটাই নয়: ১৩৫১ পরিচালকের চলতি খাত, তাকে ফেরত দিলে মেটে। কোম্পানির নামে ঋণ: যা হাতে এল তা ডেবিট ব্যাংক, ঋণদাতা যা কেটে রাখল তা ডেবিট ৮৫৩০ ঋণ প্রসেসিং ফি, আর অনুমোদিত পুরো অঙ্ক ক্রেডিট ঋণের দায়ে (২৪১০ স্বল্পমেয়াদি, ২৫১০ ব্যাংক, ২৫২০ পার্টি, ২৫৬০ গাড়ি); প্রতিটি কিস্তি ভাগ হয় আসল (ডেবিট দায়) আর সুদে (ডেবিট ৮৫২০ সুদ খরচ)। কোনো ব্যক্তির নামে ঋণ কোম্পানির দায় নয়, তাতে সুদ দাবি করা যায় না: কোম্পানি তার কিস্তি দিলে পুরোটা ৩২১০ উত্তোলনে যায় — ইআরপি এতে সুদ বসাতেই দেয় না।",
+      "source": ["app/Services/FinancingPostingService.php (class docblock, assertNoInterestOnPersonalDebt)", "config/accounts.php: owner_drawings, director_current_account, loan accounts", "journal_items source=financing_capital"],
+      "legs": [{"side": "Dr", "code": "3210", "name": "Drawings Mohsin"}, {"side": "Cr", "code": "bank", "name": "the bank it left"}, {"side": "Dr", "code": "bank", "name": "owner investment in"}, {"side": "Cr", "code": "3110", "name": "Owner Investment"}],
+      "where": {"screen": "Financing (capital, borrowed, lent books)", "route": "role.financing.index"}
+    },
+    {
+      "id": "party-discount",
+      "topic": "Discounts given to a party",
+      "scope": "epal",
+      "cues": {
+        "en": ["discount entry", "how is a discount posted", "party discount", "sales discount account", "giving discount to agent"],
+        "bn": ["ডিসকাউন্টের এন্ট্রি", "ছাড় কীভাবে পোস্ট হয়", "এজেন্টকে ছাড়", "বিক্রয় ছাড়"],
+        "bl": ["discount er entry", "agent ke discount dile"]
+      },
+      "answer_en": "A discount is contra-revenue, never a cash expense: Dr 4195 Sales Discounts & Allowances / Cr 1311 Customer Receivable, with a credit row on the party's statement. It reduces what the party owes and shows as a debit inside revenue, so the P&L's income is net of it. Reversing one posts the opposite (Dr 1311 / Cr 4195); nothing is deleted. Enter it in Party Statement › Discounts, per invoice or overall.",
+      "answer_bn": "ছাড় হলো আয়ের বিপরীত খাত, নগদ খরচ নয়: ডেবিট ৪১৯৫ বিক্রয় ছাড়, ক্রেডিট ১৩১১ গ্রাহক পাওনা, আর পার্টির স্টেটমেন্টে একটি ক্রেডিট সারি। এতে পার্টির দেনা কমে, আর আয়ের ঘরে ডেবিট হিসেবে দেখায় — তাই লাভ-ক্ষতির আয় ছাড় বাদ দিয়েই। উল্টাতে বিপরীত এন্ট্রি বসে (ডেবিট ১৩১১, ক্রেডিট ৪১৯৫); কিছু মোছা হয় না। পার্টি স্টেটমেন্ট › ডিসকাউন্টে দেওয়া যায়, ইনভয়েস ধরে বা সব মিলিয়ে।",
+      "source": ["app/Services/PartyDiscountService.php", "config/accounts.php: sales_discount 4195", "journal_items source=party_discount, party_discount_reversal"],
+      "legs": [{"side": "Dr", "code": "4195", "name": "Sales Discounts & Allowances"}, {"side": "Cr", "code": "1311", "name": "Customer Receivable - General"}],
+      "where": {"screen": "Party Statement › Discounts", "route": "role.party-statement.discounts"}
+    },
+    {
+      "id": "custom-invoice",
+      "topic": "Custom party invoice",
+      "scope": "epal",
+      "cues": {
+        "en": ["custom invoice entry", "party invoice", "raise an invoice", "manual invoice journal", "how is an invoice posted"],
+        "bn": ["কাস্টম ইনভয়েস", "পার্টি ইনভয়েস", "ইনভয়েস কীভাবে পোস্ট হয়", "হাতে ইনভয়েস বানানো"],
+        "bl": ["custom invoice er entry", "invoice kivabe post hoy"]
+      },
+      "answer_en": "Party Statement › Invoice raises a numbered invoice (CINV-year-number) and posts it at once: Dr 1311 Customer Receivable for the total, with the party on the line / Cr the income account each line names — and each must be an active income account belonging to that company (or shared). The party's statement gets a debit row for the same amount, and the invoice starts fully due until a payment is allocated to it.",
+      "answer_bn": "পার্টি স্টেটমেন্ট › ইনভয়েস থেকে একটি নম্বরযুক্ত ইনভয়েস বানানো হয় আর সঙ্গে সঙ্গে পোস্ট হয়: মোট অঙ্কে ডেবিট ১৩১১ গ্রাহক পাওনা, লাইনে পার্টির নাম; ক্রেডিট প্রতিটি লাইন যে আয়ের খাতের নাম দেয় তাতে — আর সেটা অবশ্যই ওই কোম্পানির (বা সবার) চালু আয়ের খাত হতে হবে। পার্টির স্টেটমেন্টে একই অঙ্কের ডেবিট সারি বসে, আর কোনো পেমেন্ট মেলানো না হওয়া পর্যন্ত ইনভয়েসটি পুরোটাই বকেয়া থাকে।",
+      "source": ["app/Services/PartyInvoicePostingService.php"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable - General"}, {"side": "Cr", "code": "4xxx", "name": "the income account each line names"}],
+      "where": {"screen": "Party Statement › Invoice", "route": "role.party-statement.invoice"}
+    },
+    {
+      "id": "payment-schedule",
+      "topic": "Payment schedules",
+      "scope": "epal",
+      "cues": {
+        "en": ["payment schedule entry", "how does a payment schedule post", "schedule mark paid", "payment schedule accounting"],
+        "bn": ["পেমেন্ট শিডিউলের এন্ট্রি", "পেমেন্ট শিডিউল কীভাবে পোস্ট হয়", "শিডিউল পরিশোধ"],
+        "bl": ["payment schedule er entry", "schedule paid korle"]
+      },
+      "answer_en": "A payment schedule is a promise with a date. A generic receivable schedule posts Dr 1311 Customer Receivable / Cr 4610 Product Sales; a generic payable schedule posts Dr 7400 Miscellaneous Expenses / Cr 2111 Supplier Payable. Marking it paid settles it against the bank: receivable Dr bank / Cr 1311, payable Dr 2111 / Cr bank (schedule_payment_settlement), and the bank account is required. Salary schedules settle 2210 Salaries Payable instead. Because a generic schedule books to 4610 and 7400, a travel-business amount raised here does not land in 4110/5110 — check the account before raising one for a ticket.",
+      "answer_bn": "পেমেন্ট শিডিউল হলো তারিখসহ একটি প্রতিশ্রুতি। সাধারণ পাওনার শিডিউল বসে ডেবিট ১৩১১ গ্রাহক পাওনা, ক্রেডিট ৪৬১০ পণ্য বিক্রি; সাধারণ দেনার শিডিউল বসে ডেবিট ৭৪০০ বিবিধ খরচ, ক্রেডিট ২১১১ সরবরাহকারীর দেনা। পরিশোধিত চিহ্ন দিলে ব্যাংকের বিপরীতে মেটে: পাওনা হলে ডেবিট ব্যাংক, ক্রেডিট ১৩১১; দেনা হলে ডেবিট ২১১১, ক্রেডিট ব্যাংক — আর ব্যাংক খাত বাছাই বাধ্যতামূলক। বেতনের শিডিউল মেটায় ২২১০ বকেয়া বেতন। সাধারণ শিডিউল ৪৬১০ আর ৭৪০০-তে বসে বলে টিকিট ব্যবসার কোনো অঙ্ক এখানে তুললে তা ৪১১০/৫১১০-এ যায় না — টিকিটের জন্য তোলার আগে খাতটা দেখে নিন।",
+      "source": ["app/Http/Controllers/Dashboard/PaymentScheduleController.php (lines ~386-391, ~566-575)", "journal_items source=payment_schedule, schedule_payment_settlement"],
+      "legs": [{"side": "Dr", "code": "1311", "name": "Customer Receivable (receivable schedule)"}, {"side": "Cr", "code": "4610", "name": "Product Sales"}, {"side": "Dr", "code": "7400", "name": "Miscellaneous Expenses (payable schedule)"}, {"side": "Cr", "code": "2111", "name": "Supplier Payable"}],
+      "where": {"screen": "Payment Schedules", "route": "role.payment-schedules.index"}
+    },
+    {
+      "id": "reports-read",
+      "topic": "Reading the trial balance, profit and loss, balance sheet and cash flow",
+      "scope": "epal",
+      "cues": {
+        "en": ["how to read the trial balance", "how is profit and loss calculated", "how to read the balance sheet", "what is in the p&l", "how is the balance sheet built", "cash flow statement", "how is net profit calculated", "general ledger report"],
+        "bn": ["ট্রায়াল ব্যালান্স কীভাবে পড়ব", "লাভ-ক্ষতি কীভাবে হিসাব হয়", "ব্যালান্স শিট কীভাবে পড়ব", "নগদ প্রবাহ বিবরণী", "নিট লাভ কীভাবে হিসাব হয়", "রেওয়ামিল"],
+        "bl": ["trial balance kivabe pori", "profit loss kivabe hisab hoy", "balance sheet kivabe pori"]
+      },
+      "answer_en": "All four are read straight from the journals, one company or the whole group, and write nothing. Trial balance: every account's debit and credit total; it must balance, and when it does not, an entry is one-legged. Profit and loss: operating income (4000-4999) minus cost of goods sold (5000-5999) is gross profit; minus operating expense (6000-7999), plus non-operating income and minus non-operating expense (8000-8999), minus tax and control (9000-9999) is net profit. Balance sheet: cash (1010-1299), receivables (1300s), inventory, advances; payables, employee payables, customer advances, borrowings; capital, drawings, reserves, opening balance equity — and the current year's profit. Cash flow: the movement in the cash ranges, explained by the change in each non-cash group (operating, investing, financing). An inactive account that still has a balance is shown, and an account no range claims lands in a visible 'Other' line, so totals are always the sum of every account.",
+      "answer_bn": "চারটিই সরাসরি জার্নাল থেকে পড়া হয় — একটি কোম্পানির বা পুরো গ্রুপের — আর কিছু লেখে না। ট্রায়াল ব্যালান্স: প্রতিটি খাতের মোট ডেবিট ও ক্রেডিট; মিলতেই হবে, না মিললে কোনো এন্ট্রির এক পা নেই। লাভ-ক্ষতি: পরিচালন আয় (৪০০০–৪৯৯৯) বিয়োগ বিক্রয় ব্যয় (৫০০০–৫৯৯৯) মানে মোট লাভ; তা থেকে পরিচালন খরচ (৬০০০–৭৯৯৯) বাদ, অপরিচালন আয় যোগ ও অপরিচালন খরচ বাদ (৮০০০–৮৯৯৯), কর ও নিয়ন্ত্রণ খাত (৯০০০–৯৯৯৯) বাদ দিলে নিট লাভ। ব্যালান্স শিট: নগদ (১০১০–১২৯৯), পাওনা, মজুদ, অগ্রিম; দেনা, কর্মীর দেনা, গ্রাহকের অগ্রিম, ঋণ; মূলধন, উত্তোলন, সংরক্ষিত মুনাফা, প্রারম্ভিক জের — আর চলতি বছরের লাভ। নগদ প্রবাহ: নগদের খাতগুলোর নড়াচড়া, প্রতিটি অ-নগদ ঘরের পরিবর্তন দিয়ে ব্যাখ্যা করা (পরিচালন, বিনিয়োগ, অর্থায়ন)। বন্ধ খাতেও জের থাকলে দেখানো হয়, আর কোনো পরিসরে না পড়া খাত আলাদা ‘অন্যান্য’ লাইনে বসে, তাই মোট সবসময় সব খাতের যোগফল।",
+      "source": ["app/Services/Reports/StatementBuilder.php", "config/account_reports.php", "app/Http/Controllers/Report/ReportController.php"],
+      "legs": [],
+      "where": {"screen": "Reports › Trial Balance / Profit & Loss / Balance Sheet / Cash Flow", "route": "role.report.profit-loss"}
+    },
+    {
+      "id": "correct-a-journal",
+      "topic": "Correcting a posted entry",
+      "scope": "epal",
+      "cues": {
+        "en": ["how to correct a journal", "wrong entry correction", "correct a wrong entry", "delete a journal", "edit a posted entry", "reverse an entry", "fix a wrong posting"],
+        "bn": ["ভুল এন্ট্রি কীভাবে ঠিক করব", "জার্নাল মুছব কীভাবে", "পোস্ট করা এন্ট্রি বদলানো", "এন্ট্রি উল্টানো"],
+        "bl": ["vul entry thik korbo kivabe", "journal delete kivabe", "entry reverse"]
+      },
+      "answer_en": "A posted entry is reversed and replaced, not edited or deleted: Accounts › Journals › Reverse & Replace adds an entry with every leg swapped and a new correct one beside it, so the trail shows what was wrong and when it was fixed. A single wrong account on one line can be reclassified (journals › items › reclassify). From the bank register an entry's amount, date, remarks or a transfer can be corrected, and a reversal can be posted, each as its own audited event. Operational screens follow the same rule — a cancelled passenger, a refunded ticket, a reversed advance or discount each adds rows rather than removing them.",
+      "answer_bn": "পোস্ট করা এন্ট্রি বদলানো বা মোছা হয় না, উল্টে দিয়ে নতুন বসানো হয়: অ্যাকাউন্টস › জার্নাল › রিভার্স ও রিপ্লেস একটি এন্ট্রি যোগ করে যার প্রতিটি পা অদলবদল, আর পাশে একটি নতুন সঠিক এন্ট্রি — তাই খাতায় দেখা যায় কী ভুল ছিল আর কবে ঠিক হলো। একটি লাইনে শুধু খাত ভুল হলে সেটার খাত বদলানো যায়। ব্যাংক রেজিস্টার থেকে এন্ট্রির অঙ্ক, তারিখ, মন্তব্য বা ট্রান্সফার সংশোধন করা যায়, আর উল্টো এন্ট্রি দেওয়া যায় — প্রতিটি আলাদা ঘটনা হিসেবে লেখা থাকে। কাজের স্ক্রিনগুলোও একই নিয়মে চলে — যাত্রী বাতিল, টিকিট রিফান্ড, অগ্রিম বা ছাড় উল্টানো — সব সারি যোগ করে, মোছে না।",
+      "source": ["routes/web.php: role.journals.reverse-replace, role.journals.items.reclassify, role.banks.journal.*", "app/Models/JournalEntryDateEdit.php", "app/Services/AdvancePostingService.php::reverse"],
+      "legs": [],
+      "where": {"screen": "Accounts › Journals › Reverse & Replace", "route": "role.journals.reverse-replace"}
+    },
+    {
+      "id": "tax-accounts",
+      "topic": "VAT, income tax and withholding in the chart",
+      "scope": "epal",
+      "cues": {
+        "en": ["vat account", "tax payable account", "withholding tax account", "tds vds account", "where is vat posted", "income tax payable"],
+        "bn": ["ভ্যাটের খাত", "করের খাত", "উৎসে কর", "ভ্যাট কোথায় বসে", "আয়কর দেনা"],
+        "bl": ["vat er khat", "tax payable khat", "tds vds kothay"]
+      },
+      "answer_en": "The chart carries the accounts — 2260 VAT Payable, 2270 Income Tax Payable, 2280 Withholding Tax (TDS/VDS) Payable, 7320 Tax Penalty & Interest, 7351 Current Year Income Tax Expense — and the ERP's own rule is that tax deducted from someone else's money (interest paid to a director, for example) is government money being held: it goes to 2280, never to 2270 and never to expense. The ERP holds no tax rate table and computes no return, so the percentage to apply is the accountant's to supply; EON will not state one.",
+      "answer_bn": "হিসাবের তালিকায় খাতগুলো আছে — ২২৬০ ভ্যাট দেনা, ২২৭০ আয়কর দেনা, ২২৮০ উৎসে কর দেনা, ৭৩২০ করের জরিমানা ও সুদ, ৭৩৫১ চলতি বছরের আয়কর খরচ — আর ইআরপির নিজের নিয়ম হলো অন্যের টাকা থেকে কেটে রাখা কর (যেমন পরিচালককে দেওয়া সুদ থেকে) সরকারের টাকা, আমাদের কাছে গচ্ছিত: সেটা যায় ২২৮০-তে, কখনো ২২৭০-এ বা খরচে নয়। ইআরপিতে করের হারের কোনো তালিকা নেই, রিটার্নও বানায় না, তাই কত শতাংশ কাটতে হবে তা হিসাবরক্ষক ঠিক করবেন; ইওন কোনো হার বলবে না।",
+      "source": ["config/accounts.php: tax_payable 2270, withholding_tax_payable 2280", "accounts table in u203838805_erp (32)"],
+      "legs": [],
+      "where": {"screen": "Accounts › Chart of Accounts", "route": "role.accounts.index"}
+    }
+  ]
+}

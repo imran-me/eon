@@ -132,6 +132,16 @@ TXT;
            hundred-thousand-record corpus. The apology outranked the knowledge,
            which is the navigator defect one floor lower down. */
         $weak = null;
+        /* A bookkeeping question asked as one — "how is a ticket sale posted",
+           "অগ্রিম বেতন কীভাবে পোস্ট হয়" — is not a request for this month's
+           figure, and the figure answerers would take it as one. Only a whole
+           cue plus a how/why form plus a bookkeeping word gets this door. */
+        if (class_exists('AccountsBook')) {
+            try {
+                $b = AccountsBook::strong($q, $lang);
+                if ($b !== null) return self::fromBook($b);
+            } catch (Throwable $e) { Log::warn('accounts book failed', ['error' => $e->getMessage()]); }
+        }
         if (class_exists('Nlu') && class_exists('Answer')) {
             try {
                 $parse = Nlu::parse($q, $lang);
@@ -144,6 +154,15 @@ TXT;
                     $weak = $out;
                 }
             } catch (Throwable $e) { Log::warn('Answer failed, trying Answers', ['error' => $e->getMessage()]); }
+        }
+        /* `Answer` only deflected: the account book knows this ERP's own
+           postings, which is a better floor than an apology or a trade-wide
+           corpus answer about some other business. */
+        if ($weak !== null && class_exists('AccountsBook')) {
+            try {
+                $b = AccountsBook::answer($q, $lang);
+                if ($b !== null) return self::fromBook($b);
+            } catch (Throwable $e) { Log::warn('accounts book failed', ['error' => $e->getMessage()]); }
         }
         $answers = null;
         if (class_exists('Nlu') && class_exists('Answers')) {
@@ -240,6 +259,15 @@ TXT;
         if ($text === null && !$withFallback) return ['mode' => self::MODE_OFFLINE, 'text' => '', 'speak' => '', 'tools_used' => $used, 'usage' => null];
         if ($text === null) { $b = $A->kpis(); $text = "I did not match that to a report yet (offline mode). Right now: cash " . $k((float) $b['cash']) . ', receivables overdue ' . $k((float) $b['receivables_overdue']) . ", {$b['absent_today']} absent today, {$b['tasks_overdue']} tasks overdue. Ask me about cash, receivables, payables, profit, budget, attendance, payroll, pipeline, tasks, projects, approvals, or a person by name."; }
         return ['mode' => self::MODE_OFFLINE, 'text' => $text, 'speak' => self::voice($text), 'tools_used' => $used, 'usage' => null];
+    }
+
+    /** an account-book entry, in the shape every offline answer has */
+    private static function fromBook(array $b): array
+    {
+        return ['mode' => self::MODE_OFFLINE, 'text' => $b['text'], 'speak' => self::voice($b['text'], $b['lang']),
+                'tools_used' => ['accounts_book'], 'intent' => 'book_' . $b['id'], 'lang' => $b['lang'],
+                'book' => ['id' => $b['id'], 'scope' => $b['scope'], 'score' => $b['score'], 'source' => $b['source']],
+                'usage' => null];
     }
 
     /** What EON says, as opposed to what it writes: money and percentages become
