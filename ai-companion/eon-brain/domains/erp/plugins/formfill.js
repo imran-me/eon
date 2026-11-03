@@ -151,9 +151,14 @@ const KNOWN = [{
     // the ticket by PNR / passenger: search it with the page's own filter, tick it, price it
     const key = slots.pnr || slots.ticket_no || slots.name;
     if (key && $('#tsTicketSearch')) {
-      setValue(w, $('#tsTicketSearch'), key); try { w.tsFilterTickets && w.tsFilterTickets(key); } catch (e) {}
-      await sleep(400);
-      const rows = [...d.querySelectorAll('#tsTicketsBody tr')].filter((r) => r.querySelector('input[type=checkbox]'));
+      // choosing the agent reloads the unsold tickets — keep searching until the list has arrived
+      let rows = [];
+      for (let i = 0; i < 15; i++) {
+        setValue(w, $('#tsTicketSearch'), key); try { w.tsFilterTickets && w.tsFilterTickets(key); } catch (e) {}
+        await sleep(400);
+        rows = [...d.querySelectorAll('#tsTicketsBody tr')].filter((r) => r.querySelector('input[type=checkbox]'));
+        if (rows.length) break;
+      }
       if (rows.length === 1 || (rows.length && slots.pnr)) {
         const r = rows.find((x) => slots.pnr && x.textContent.includes(slots.pnr)) || rows[0];
         const cb = r.querySelector('input[type=checkbox]'); if (cb && !cb.checked) cb.click();
