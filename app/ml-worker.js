@@ -14,11 +14,16 @@ const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1/+esm';
 const KJS = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/+esm';
 const MODELS = { tts: 'onnx-community/Kokoro-82M-v1.0-ONNX', embed: 'Xenova/multilingual-e5-small', asr: 'Xenova/whisper-small' };
 
+// heat: two threads, not every core — slower by a beat, but the laptop stays cool through a long day
+let tuned = null;
+const tune = () => tuned || (tuned = import(TJS).then((T) => { T.env.backends.onnx.wasm.numThreads = 2; return T; }));
+
 const ready = {};
 function get(kind) {
   if (ready[kind]) return ready[kind];
-  if (kind === 'tts') ready.tts = import(KJS).then(({ KokoroTTS }) => KokoroTTS.from_pretrained(MODELS.tts, { dtype: 'q8', device: 'wasm' }));
-  else ready[kind] = import(TJS).then((T) => T.pipeline(kind === 'embed' ? 'feature-extraction' : 'automatic-speech-recognition', MODELS[kind], { dtype: 'q8' }));
+  const T0 = tune();
+  if (kind === 'tts') ready.tts = T0.then(() => import(KJS)).then(({ KokoroTTS }) => KokoroTTS.from_pretrained(MODELS.tts, { dtype: 'q8', device: 'wasm' }));
+  else ready[kind] = T0.then((T) => T.pipeline(kind === 'embed' ? 'feature-extraction' : 'automatic-speech-recognition', MODELS[kind], { dtype: 'q8' }));
   ready[kind].catch(() => { delete ready[kind]; });
   return ready[kind];
 }
