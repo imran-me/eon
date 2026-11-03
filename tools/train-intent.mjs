@@ -34,7 +34,26 @@ export function features(q) {
 }
 
 const rows = JSON.parse(readFileSync(new URL('tools/owner-100k.json', ROOT), 'utf8'));
-const train = rows.filter((_, i) => i % 10 !== 0), test = rows.filter((_, i) => i % 10 === 0);
+let train = rows.filter((_, i) => i % 10 !== 0); const test = rows.filter((_, i) => i % 10 === 0);
+
+/* --augment: each training question is also seen spoken loosely — words dropped, fillers added,
+   punctuation gone, key words in the other script (লাভ/lav/profit) — so the model learns the
+   meaning rather than the owner's templates. The held-out test stays untouched. */
+if (process.argv.includes('--augment')) {
+  const SWAP = [['লাভ', ['lav', 'profit', 'প্রফিট']], ['খরচ', ['khoroch', 'expense', 'এক্সপেন্স']], ['টিকেট', ['ticket', 'টিকিট']], ['ফ্লাইট', ['flight']], ['এজেন্ট', ['agent']],
+    ['বকেয়া', ['baki', 'due', 'ডিউ']], ['পাওনা', ['pawna', 'due']], ['টাকা', ['taka']], ['কত', ['koto', 'how much']], ['কয়টা', ['koyta', 'how many']], ['দেখাও', ['dekhao', 'show']],
+    ['লেজার', ['ledger']], ['স্টেটমেন্ট', ['statement']], ['বেতন', ['salary', 'beton', 'স্যালারি']], ['ব্যাংক', ['bank']], ['এই মাসে', ['ei mase', 'this month']], ['গত মাসে', ['goto mase', 'last month']], ['আজকে', ['ajke', 'today']]];
+  const FILL = ['ভাই ', 'আচ্ছা ', 'umm ', 'শোনো ', 'একটু ', 'hmm ', 'আরে ', 'EON '];
+  let s = 11; const rnd = () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const rough = (q) => {
+    let t = q.replace(/[?？।,!]/g, ' ');
+    for (const [bn, alts] of SWAP) if (t.includes(bn) && rnd() < 0.35) t = t.split(bn).join(alts[Math.floor(rnd() * alts.length)]);
+    const w = t.split(/\s+/).filter(Boolean); const keep = w.filter((x) => w.length < 4 || rnd() > 0.12);
+    return (rnd() < 0.4 ? FILL[Math.floor(rnd() * FILL.length)] : '') + keep.join(' ');
+  };
+  train = train.concat(train.map((r) => ({ q: rough(r.q), intent: r.intent })));
+  console.log('augmented training set:', train.length);
+}
 const intents = [...new Set(rows.map((r) => r.intent))];
 const X = train.map((r) => features(r.q)), Y = train.map((r) => intents.indexOf(r.intent));
 

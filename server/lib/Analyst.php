@@ -45,6 +45,14 @@ final class Analyst
         return null;
     }
 
+    /** which handler an intent reaches ('action' for the panel's) — twin intents that share one are the same answer */
+    public static function handlerOf(string $intent): ?string
+    {
+        if (in_array($intent, self::ACTIONS, true) || in_array($intent, ['পার্টি স্টেটমেন্ট দেখা', 'ফলো-আপ (আগের উত্তরের প্রেক্ষিতে)', 'আগের উত্তর ছোট/বড় করা'], true)) return 'action';
+        $r = new ReflectionClass(self::class); $src = (string) file_get_contents((string) $r->getFileName());
+        return preg_match("/'" . preg_quote($intent, '/') . "' => '(\\w+)'/u", $src, $m) ? $m[1] : null;
+    }
+
     public static function handle(string $intent, string $q, array $D, bool $bn): ?array
     {
         self::$bn = $bn;
