@@ -90,6 +90,19 @@ final class Facts
             $ag[$a]['stages'][$p['stage']] = ($ag[$a]['stages'][$p['stage']] ?? 0) + 1; }
         foreach ($ag as $a => $v) { $v['charged'] = $r($v['charged']); $v['due'] = $r($v['due']); $S['contract_flight_agents'][$a] = $v; }
 
+        // money in: what agents and clients paid us, by month (their credits)
+        $col = []; foreach ($D['party_transactions'] ?? [] as $p) if ($p['party_type'] === 'customer' && (float) $p['credit'] > 0 && $inM($p['date']) && !preg_match('/super ?admin/i', (string) $p['party_name'])) $col[$ym($p['date'])] = ($col[$ym($p['date'])] ?? 0) + (float) $p['credit'];
+        ksort($col); $S['collections_by_month'] = array_map($r, $col);
+        // tickets by airline and month; visa sales by month
+        $al = []; foreach ($D['ticket_purchases'] ?? [] as $p) if ($inM($p['date'])) { $k = $ym($p['date']) . ' ' . ($p['airline'] ?: '—'); $al[$k] = ($al[$k] ?? 0) + 1; }
+        arsort($al); $S['tickets_by_month_airline'] = array_slice($al, 0, 40, true);
+        $vsm = []; foreach ($D['visa_sales'] ?? [] as $v) if ($inM($v['date'])) { $m = $ym($v['date']); $vsm[$m]['invoices'] = ($vsm[$m]['invoices'] ?? 0) + 1; $vsm[$m]['sales'] = ($vsm[$m]['sales'] ?? 0) + (float) $v['total']; $vsm[$m]['due'] = ($vsm[$m]['due'] ?? 0) + (float) $v['due_amount']; }
+        foreach ($vsm as $m => $v) $S['visa_sales_by_month'][$m] = array_map($r, $v);
+        // contract files opened, by month and in the last 7 days
+        $cfm = []; $cf7 = 0; $d7 = date('Y-m-d', strtotime('-7 days'));
+        foreach ($D['contract_files'] ?? [] as $f) { $d0 = (string) ($f['submit_date'] ?? ''); if ($d0 === '') continue; if ($inM($d0)) $cfm[$ym($d0)] = ($cfm[$ym($d0)] ?? 0) + 1; if ($d0 >= $d7) $cf7++; }
+        ksort($cfm); $S['contract_files_opened_by_month'] = $cfm; $S['contract_files_opened_last_7_days'] = $cf7;
+
         // visas and contract files
         $vs = []; foreach ($D['visa_processes'] ?? [] as $v) { $k = ($v['country'] ?: '—') . ' / ' . ($v['status'] ?: '—'); $vs[$k] = ($vs[$k] ?? 0) + 1; }
         $S['visa_processes_by_country_status'] = $vs;
