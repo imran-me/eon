@@ -124,6 +124,29 @@ function chooseOption(sel, text) {
 const COUNTRY = { মালয়েশিয়া: 'malaysia', মালয়েশিয়া: 'malaysia', সৌদি: 'saudi', দুবাই: 'emirates', আমিরাত: 'emirates', ওমান: 'oman', কাতার: 'qatar', কুয়েত: 'kuwait', বাহরাইন: 'bahrain', থাইল্যান্ড: 'thailand', তুরস্ক: 'turkey', সাইপ্রাস: 'cyprus', সিঙ্গাপুর: 'singapore', ভারত: 'india', ইন্ডিয়া: 'india', চীন: 'china', জাপান: 'japan', ইতালি: 'italy', রোমানিয়া: 'romania', পোল্যান্ড: 'poland', মাল্টা: 'malta', সার্বিয়া: 'serbia', ক্রোয়েশিয়া: 'croatia', যুক্তরাজ্য: 'kingdom', লন্ডন: 'kingdom', আমেরিকা: 'america', কানাডা: 'canada', অস্ট্রেলিয়া: 'australia', মালদ্বীপ: 'maldives', নেপাল: 'nepal', ভিয়েতনাম: 'vietnam', ইন্দোনেশিয়া: 'indonesia', জর্ডান: 'jordan', মিশর: 'egypt' };
 const VCAT = [[/ভিজিট|visit/i, 'visit'], [/ওয়ার্ক|ওয়ার্ক|কাজের|work/i, 'work'], [/উমরাহ|umrah/i, 'umrah'], [/হজ|hajj/i, 'hajj'], [/স্টুডেন্ট|ছাত্র|student/i, 'student'], [/ট্যুরিস্ট|tourist/i, 'tourist'], [/বিজনেস|business/i, 'business'], [/ট্রানজিট|transit/i, 'transit']];
 const KNOWN = [{
+  // an advance salary: the create modal on Advance Salaries
+  path: /\/advance-salaries\/?$/,
+  async open(w) { const b = w.document.querySelector('.create-new-btn'); if (b) { b.click(); await sleep(800); } },
+  apply(w, slots, done) {
+    const d = w.document, $ = (q) => d.querySelector(q);
+    const el = $('#create_user_id');
+    if (el && el.options) {
+      // the employee by sound in either script (ইমরান = Imran); two of the same name are left for the boss to pick
+      const words = slots._raw.split(/[\s,।]+/).filter(Boolean).map((x) => x.replace(CASE_ENDING, '').replace(/(কে|এর|ের|র)$/u, ''));
+      const keys = words.map((x) => (/[ঀ-৿]/.test(x) ? banglaSkeleton(x) : latinSkeleton(x)).replace(/z/g, 'j').replace(/q/g, 'k')).filter((k) => k.length >= 3);
+      const hits = [...el.options].filter((o) => o.value && o.textContent.split(/\s+/).some((p) => keys.includes(latinSkeleton(p).replace(/z/g, 'j').replace(/q/g, 'k'))));
+      if (hits.length === 1) { setValue(w, el, hits[0].value); done.push('Employee: ' + hits[0].textContent.trim()); }
+      else if (hits.length > 1) done.push('Which one: ' + hits.map((o) => o.textContent.trim()).join(' / '));
+    }
+    const amt = slots.amount ?? slots.sale ?? slots.cost;
+    if (amt != null && $('#create_amount')) { setValue(w, $('#create_amount'), String(amt)); done.push('Amount: ' + amt); }
+    const today = new Date(); const ymd = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+    if ($('#create_month') && !$('#create_month').value) { setValue(w, $('#create_month'), slots.date || ymd); done.push('Date: ' + (slots.date || ymd)); }
+    const why = slots._raw.match(/(?:কারণ|জন্য|because|for)\s*[:\-]?\s*([^,।]{4,60})$/i);
+    if (why && $('#create_reason')) { setValue(w, $('#create_reason'), why[1].trim()); done.push('Reason: ' + why[1].trim()); }
+    return true;
+  },
+}, {
   // a ticket SALE: tickets sold to an agent / customer — the Create Sale modal on Ticket Sales
   path: /\/ticket-sales\/?$/,
   async open(w) {
@@ -339,7 +362,8 @@ async function answer(q) {
   }
 
   const wantSale = /(টিকেট|টিকিট|ticket|pnr|পিএনআর)/i.test(s) && /(বিক্রি করো|বিক্রি করে দাও|বেচো|sell|sale entry|সেল এন্ট্রি|ইনভয়েস বানাও|invoice (it|them|করো))/i.test(s);
-  const wantEdit = !wantSale && EDIT.test(s), wantCreate = wantSale || (!wantEdit && CREATE.test(s) && SUBJECT.test(s));
+  const wantAdvance = /অ্যাডভান্স|এডভান্স|advance/i.test(s) && /দাও|দিন|দিছি|দিয়েছি|give|entry|এন্ট্রি|নতুন|add/i.test(s) && !/রিকোয়েস্ট|request|অ্যাপ্রুভ|approve/i.test(s);
+  const wantEdit = !wantSale && !wantAdvance && EDIT.test(s), wantCreate = wantSale || wantAdvance || (!wantEdit && CREATE.test(s) && SUBJECT.test(s));
   if (!wantEdit && !wantCreate) return null;
   const slots = Object.assign(slotsOf(raw), { _raw: raw });
   try { await N().ready(); } catch (e) {}   // the ERP map loads lazily — a search before it arrives finds nothing
@@ -364,7 +388,8 @@ async function answer(q) {
     if (!href) return null;
   }
 
-  if (wantSale) { href = N().url('/{role}/ticket-sales'); label = T(bn, 'Create Sale', 'টিকেট বিক্রি'); }
+  if (/অ্যাডভান্স|এডভান্স|advance/i.test(s) && /দাও|দিন|দিছি|দিয়েছি|give|entry|এন্ট্রি|নতুন|add/i.test(s) && !/রিকোয়েস্ট|request|অ্যাপ্রুভ|approve/i.test(s)) { href = N().url('/{role}/advance-salaries'); label = T(bn, 'Advance salary', 'অ্যাডভান্স বেতন'); }
+  else if (wantSale) { href = N().url('/{role}/ticket-sales'); label = T(bn, 'Create Sale', 'টিকেট বিক্রি'); }
   else if (wantCreate && /কন্ট্রাক্ট ফাইল|contract file|ফাইল খোলো|নতুন ফাইল|new file/i.test(s)) { href = N().url('/{role}/contract-files'); label = T(bn, 'New contract file', 'নতুন কন্ট্রাক্ট ফাইল'); }
   else if (wantCreate && /ভিসা|visa/i.test(s)) { href = N().url('/{role}/visa/create'); label = T(bn, 'New visa', 'নতুন ভিসা'); }
   else if (wantCreate && /ফ্লাইট|flight/i.test(s) && !/টিকেট|ticket/i.test(s)) { href = N().url('/{role}/contract-flights/dashboard'); label = T(bn, 'Add Flight', 'নতুন ফ্লাইট'); }
