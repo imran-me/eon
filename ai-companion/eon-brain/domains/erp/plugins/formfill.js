@@ -18,6 +18,7 @@
    ============================================================ */
 import { speaksBangla, normalize } from './voicefix.js';
 import { recall, remember } from './context.js';
+import { latinSkeleton, banglaSkeleton, CASE_ENDING } from './act.js';
 
 const N = () => (typeof window !== 'undefined' ? window.EonNavigator : null);
 const T = (bn, en, b) => (bn ? b : en);
@@ -132,7 +133,14 @@ const KNOWN = [{
   async apply(w, slots, done) {
     const d = w.document, $ = (q) => d.querySelector(q);
     // the agent: EON's party matcher reaches the ERP's Latin name from Bangla ("সালমান ট্যুরস" → SALMAN TOURS & TRAVELS)
-    const S = window.EonStatement; const p = S && S.findParty ? S.findParty(slots._raw) : null;
+    const S = window.EonStatement; let p = S && S.findParty ? S.findParty(slots._raw) : null;
+    /* several candidates ("৫২ হাজার" sounds like Haji / HAJEE): keep the one whose FIRST name word is
+       actually said — সালমান is Salman — and for a sale an agent/customer before a supplier */
+    if (p && p.ambiguous) {
+      const words = slots._raw.split(/[\s,।]+/).filter(Boolean);
+      const said = (nm) => { const first = String(nm).replace(/^(mr|md|mrs|ms)\.?\s+/i, '').split(/\s+/)[0]; const k = latinSkeleton(first); return k.length >= 2 && words.some((w) => (/[ঀ-৿]/.test(w) ? banglaSkeleton(w.replace(CASE_ENDING, '')) : latinSkeleton(w)) === k); };
+      p = p.ambiguous.filter((c) => said(c.name)).sort((a, b) => (a.type === 'customer' ? 0 : 1) - (b.type === 'customer' ? 0 : 1))[0] || null;
+    }
     const want = p && p.name ? String(p.name).toLowerCase() : null;
     for (const id of ['ts_create_agent_picker', 'ts_create_customer_picker']) {
       const el = $('#' + id); if (!el || !el.options) continue;
