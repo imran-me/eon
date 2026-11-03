@@ -68,7 +68,15 @@ final class Query
         foreach (self::ENTITY as $k => $rx) if (preg_match($rx, $l)) { $f['entity'] = $f['entity'] ?? $k; }
         // "X অনুযায়ী / by X": the grouping is the entity named next to it
         if (preg_match(self::GROUP, $l)) foreach (self::ENTITY as $k => $rx) if (preg_match($rx, $l) && $k !== 'ticket') { $f['by'] = $k; break; }
-        if (preg_match(self::TREND, $l)) { $f['op'] = 'trend'; $f['by'] = 'month'; }
+        // "কেন / why": compare with the period before and find what drove the change
+        if ($f['measure'] && preg_match('/কেন|কী কারণে|কি কারণে|কারণ কী|কারণ কি|\bwhy\b|\breason\b|\bkeno\b/u', $l)) { $f['op'] = 'why';
+            // "গত মাসের চেয়ে / than last month": this month is the subject, last month the baseline
+            if (preg_match('/(গত মাসের|গত মাস|last month)\s*(চেয়ে|চেয়ে|তুলনায়|তুলনায়|থেকে)|than last month|compared to last month/u', $l)) $f['period'] = Slots::period('এই মাসে');
+            $f['period'] = $f['period'] ?? Slots::period('এই মাসে'); $f['period2'] = self::previous($f['period']); $why = true;
+            // what the question assumes happened — checked against what did
+            $f['assumed'] = preg_match('/বাড়ল|বাড়লো|বেড়েছে|বেড়েছে|বাড়ছে|বেশি|rise|rose|up\b|increase|grew|more/u', $l) ? 'up' : (preg_match('/কমল|কমলো|কমেছে|কমছে|কম\b|পড়ে গেছে|fell|drop|down\b|decrease|less|lower/u', $l) ? 'down' : null); }
+        if (!empty($why)) { /* the operation is settled */ }
+        elseif (preg_match(self::TREND, $l)) { $f['op'] = 'trend'; $f['by'] = 'month'; }
         elseif (preg_match(self::COMPARE, $l)) $f['op'] = 'compare';
         elseif (preg_match(self::RANK_LOW, $l)) $f['op'] = 'bottom';
         elseif (preg_match(self::RANK_TOP, $l)) $f['op'] = 'top';
@@ -187,6 +195,27 @@ final class Query
         $sum = fn($xs) => array_sum(array_map(fn($r) => $r['v'], $xs));
         $fmt = fn($v) => $measure === 'count' ? self::n($v) . self::t('', 'টা') : ($measure === 'seats' ? self::n($v) : self::m($v));
 
+        if ($f['op'] === 'why' && $f['period2']) {
+            // what moved: the same rows in both periods, split by the dimension that explains the measure
+            $B = array_values(array_filter($rows, fn($r) => $keep($r, $f['period2'])));
+            $a = $sum($A); $b = $sum($B); $d = $a - $b;
+            $dim = null; foreach (['agent', 'category', 'section', 'vendor', 'airline', 'flight'] as $k) foreach (array_slice($A ?: $B, 0, 50) as $r) if (!empty($r[$k]) && $r[$k] !== '—') { $dim = $k; break 2; }
+            $g = [];
+            if ($dim) { foreach ($A as $r) if (!empty($r[$dim])) $g[$r[$dim]] = ($g[$r[$dim]] ?? 0) + $r['v']; foreach ($B as $r) if (!empty($r[$dim])) $g[$r[$dim]] = ($g[$r[$dim]] ?? 0) - $r['v']; }
+            arsort($g); $up = array_filter(array_slice($g, 0, 3, true), fn($v) => $v > 0.5);
+            asort($g); $down = array_filter(array_slice($g, 0, 3, true), fn($v) => $v < -0.5);
+            $list = fn($xs) => implode('; ', array_map(fn($k, $v) => "$k " . ($v >= 0 ? '+' : '−') . $fmt(abs($v)), array_keys($xs), $xs));
+            $w2 = self::$bn ? $f['period2'][3] : $f['period2'][2];
+            $dimW = self::t(['agent' => 'agent', 'category' => 'category', 'section' => 'section', 'vendor' => 'vendor', 'airline' => 'airline', 'flight' => 'flight'][$dim] ?? '', ['agent' => 'এজেন্ট', 'category' => 'খাত', 'section' => 'সেকশন', 'vendor' => 'ভেন্ডর', 'airline' => 'এয়ারলাইন', 'flight' => 'ফ্লাইট'][$dim] ?? '');
+            $head = self::t(sprintf('%s is %s %s against %s %s — %s by %s.', ucfirst($label), $fmt($a), $when, $fmt($b), $w2, $d >= 0 ? 'up' : 'down', $fmt(abs($d))),
+                sprintf('%s %s %s, %s ছিল %s — %s %s।', $when, $label, $fmt($a), $w2, $fmt($b), $d >= 0 ? 'বেড়েছে' : 'কমেছে', $fmt(abs($d))));
+            // the question assumed a rise (or a fall) that did not happen: say so first, gently
+            if (!empty($f['assumed']) && (($f['assumed'] === 'up') !== ($d >= 0))) $head = self::t($d >= 0 ? 'Actually it went up, not down. ' : 'Actually it went down, not up. ', $d >= 0 ? 'আসলে কমেনি, বেড়েছে। ' : 'আসলে বাড়েনি, কমেছে। ') . $head;
+            if (!$dim || (!$up && !$down)) return $head;
+            $why = self::t(' What drove it, by ' . $dimW . ': ' . ($up ? 'up — ' . $list($up) . '. ' : '') . ($down ? 'down — ' . $list($down) . '.' : ''),
+                ' কারণ, ' . $dimW . ' অনুযায়ী: ' . ($up ? 'বেড়েছে — ' . $list($up) . '। ' : '') . ($down ? 'কমেছে — ' . $list($down) . '।' : ''));
+            return $head . $why;
+        }
         if ($f['op'] === 'compare' && $f['period2']) {
             $B = array_values(array_filter($rows, fn($r) => $keep($r, $f['period2'])));
             $a = $sum($A); $b = $sum($B); $d = $a - $b; $pc = $b != 0 ? round(100 * $d / abs($b), 1) : null;

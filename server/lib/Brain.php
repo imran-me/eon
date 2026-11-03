@@ -187,7 +187,7 @@ TXT;
                     $last = Query::recall(Query::$conv);
                     $fr = $last ? Query::followUp($q, $last, $D) : null;
                     $fr = $fr ?? Query::parse($q, $D);
-                    $compose = ($fr !== null) && ($last !== null && $fr !== Query::parse($q, $D) || in_array($fr['op'], ['compare', 'trend', 'top', 'bottom'], true) || $fr['by']);
+                    $compose = ($fr !== null) && ($last !== null && $fr !== Query::parse($q, $D) || in_array($fr['op'], ['compare', 'trend', 'top', 'bottom', 'why'], true) || $fr['by']);
                     if ($compose && ($qa = Query::answer($fr, $D, $bnQ0))) {
                         Query::remember(Query::$conv, $fr);
                         return ['mode' => self::MODE_OFFLINE, 'text' => $qa, 'speak' => self::voice($qa, $bnQ0 ? 'bn' : 'en'), 'tools_used' => ['query'], 'intent' => 'query:' . ($fr['measure'] ?? 'count') . '/' . $fr['op'] . ($fr['by'] ? '/by-' . $fr['by'] : ''), 'lang' => $bnQ0 ? 'bn' : 'en', 'usage' => null];
