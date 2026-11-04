@@ -125,13 +125,13 @@ final class Ops
         $keys = [];
         foreach (preg_split('/[\s,?।!]+/u', $l) ?: [] as $w) {
             $w = preg_replace('/(দের|য়ের|এর|ের|কে|র|der|er|ke|r)$/u', '', $w) ?? $w;
-            $k = preg_replace("/(.)\1+/", "$1", Grammar::skeleton($w));   // হোসেন (sn) = Hossain (ssn)
+            $k = preg_replace('/(.)\1+/', '$1', Grammar::skeleton($w));   // হোসেন (sn) = Hossain (ssn)
             if (mb_strlen($k) >= 2 && !preg_match("/^(mstr|mr|md|er)$/", $k)) $keys[$k] = true;
         }
         $score = [];
         foreach ($emps as $e) {
             $parts = array_filter(preg_split('/\s+/', (string) $e['name']) ?: [], fn($p) => !preg_match('/^(mr|mrs|ms|md|mohammad|mohammed)\.?$/i', $p));
-            $n = 0; foreach ($parts as $p) if (isset($keys[preg_replace("/(.)\1+/", "$1", Grammar::skeleton($p))])) $n++;
+            $n = 0; foreach ($parts as $p) if (isset($keys[preg_replace('/(.)\1+/', '$1', Grammar::skeleton($p))])) $n++;
             if ($n > 0) $score[$e['id']] = [$n, count($parts) - $n, $e];
         }
         if (!$score) return null;
