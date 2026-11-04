@@ -94,7 +94,7 @@ async function answer(q) {
   const opening = !ev && OPEN.test(s) && FLIGHTISH.test(s);
   if (!ev && !opening) return null;
   // "how many were offloaded this month" is a question about a figure
-  if (ev && /\b(how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
+  if (ev && /\b(what are|what were|show|all|offloaded flights?|deported flights?|how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কোন কোন|কোনগুলো|সব |কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
 
   const D = D0();
   let p = D ? findPassenger(D, s) : null;

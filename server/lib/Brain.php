@@ -185,7 +185,7 @@ TXT;
         if (!self::$planning && class_exists('IntentModel') && class_exists('Analyst')) {
             try {
                 // the exact shapes Ops knows (a wallet's balance, salary still to pay, flight money due) beat any guess
-                if (class_exists('Ops') && ($o = Ops::answer($q, $D))) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null] + (isset($o['navigate_path']) ? ['navigate_path' => $o['navigate_path']] : []);
+                if (class_exists('Ops') && ($o = Ops::answer($q, $D))) return ['mode' => self::MODE_OFFLINE, 'text' => $o['text'], 'speak' => self::voice($o['text'], $o['lang']), 'tools_used' => [], 'intent' => $o['intent'], 'lang' => $o['lang'], 'usage' => null] + (Ops::$choices ? ['choices' => Ops::$choices] : []) + (isset($o['navigate_path']) ? ['navigate_path' => $o['navigate_path']] : []);
                 /* the composition engine (Query): a follow-up to the last answer, or a question that compares,
                    ranks, trends or breaks down — combinations no single intent was written for */
                 if (class_exists('Query')) {

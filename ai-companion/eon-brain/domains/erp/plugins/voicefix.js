@@ -20,7 +20,7 @@
 
 /* ---------- speech-recognition repairs ---------- */
 const REPAIR = [
-  [/\b(?:led\s*jar|lead\s*jar|ledgar|lejar|lezar|lazer|ledjer|lejer)\b/gi, 'ledger'],
+  [/\b(?:led\s*jar|lead\s*jar|ledgar|lejar|lezar|lazer|ledjer|lejer|laser|leisure)\b/gi, 'ledger'],
   [/\b(?:state\s*ment|statment|stetment|statemant|stement|statemnt)s?\b/gi, 'statement'],
   [/\b(?:re[\s-]*fund|refand|rifund|refun)\b/gi, 'refund'],
   [/\b(?:re[\s-]+issue|reissu|rissue|re-?ishu|reishu)\b/gi, 'reissue'],

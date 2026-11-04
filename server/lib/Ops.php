@@ -18,6 +18,8 @@ declare(strict_types=1);
 
 final class Ops
 {
+    /** the options to offer as buttons when a question named more than one person */
+    public static ?array $choices = null;
     private const BANGLISH = '/\b(ache|achhe|koto|kto|taka|dite|hobe|baki|koyta|koita|dewa|deya|hoyeche|hoise|hoyse|mase|mashe|kothay|dekhao|amar|amader|sobai|sobaike|shobai|ki|keno|kar|koro|niye|jao)\b/i';
 
     public static function answer(string $q, array $D, ?string $lang = null): ?array
@@ -118,18 +120,27 @@ final class Ops
         if (!preg_match('/\b(paid|pay|dewa|deya|diyeche|dise|hoyeche|hoise|hoyse|peyeche|got|received)\b|দেওয়া|দেয়া|দিয়েছ|দিয়েছ|পেয়েছ|পেয়েছ|হয়েছে|হয়েছে|হয়েছে|পরিশোধ/u', $l)) return null;
         if (!class_exists('Grammar')) return null;
         $emps = array_values(array_filter($D['employees'] ?? [], fn($e) => ($e['status'] ?? 'active') === 'active' && (float) ($e['salary'] ?? 0) > 0));
-        $hits = [];
+        /* every name word said counts: "মিস্টার ইমরান হোসেন" is Mr. Imran Hossain, not every Imran;
+           a tie goes to the name with the fewest words left unsaid (Imran Hossain over Imran Hossain Shafi) */
+        $keys = [];
         foreach (preg_split('/[\s,?।!]+/u', $l) ?: [] as $w) {
             $w = preg_replace('/(দের|য়ের|এর|ের|কে|র|der|er|ke|r)$/u', '', $w) ?? $w;
             $k = Grammar::skeleton($w);
-            if (mb_strlen($k) < 3) continue;
-            foreach ($emps as $e) foreach (preg_split('/\s+/', (string) $e['name']) ?: [] as $part)
-                if (Grammar::skeleton($part) === $k) { $hits[$e['id']] = $e; break; }
-            if ($hits) break;
+            if (mb_strlen($k) >= 3) $keys[$k] = true;
         }
-        if (!$hits) return null;
+        $score = [];
+        foreach ($emps as $e) {
+            $parts = array_filter(preg_split('/\s+/', (string) $e['name']) ?: [], fn($p) => !preg_match('/^(mr|mrs|ms|md|mohammad|mohammed)\.?$/i', $p));
+            $n = 0; foreach ($parts as $p) if (isset($keys[Grammar::skeleton($p)])) $n++;
+            if ($n > 0) $score[$e['id']] = [$n, count($parts) - $n, $e];
+        }
+        if (!$score) return null;
+        uasort($score, fn($a, $b) => ($b[0] <=> $a[0]) ?: ($a[1] <=> $b[1]));
+        $top = array_values($score)[0];
+        $hits = array_map(fn($x) => $x[2], array_filter($score, fn($x) => $x[0] === $top[0] && $x[1] === $top[1]));
         if (count($hits) > 1) {
             $names = array_map(fn($e) => (string) $e['name'], array_values($hits));
+            self::$choices = array_map(fn($n) => $bn ? "{$n}-এর স্যালারি দেওয়া হয়েছে?" : "Has {$n} been paid salary?", $names);
             return $bn ? 'কার কথা বলছেন — ' . implode(', নাকি ', $names) . '?' : 'Which one — ' . implode(', or ', $names) . '?';
         }
         $e = array_values($hits)[0];

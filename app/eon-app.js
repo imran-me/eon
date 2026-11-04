@@ -316,7 +316,7 @@ async function ask(q, { voice = false } = {}) {
     out = { text: r.speak, speak: r.speak, detail: Array.isArray(r.detail) ? r.detail.join('\n') : (r.detail || ''), actions: r.actions || [], trace: `client brain · ${r.domain || r.view || 'rule'} · ${Date.now() - t0}ms`, view: r.view, data: r.data };
     if (r.view === 'draft' && r.data && r.data.body) { out.detail = ''; out.draft = r.data.body; out.draftTitle = r.data.title; }
   }
-  state.messages.pop(); const reply = Object.assign({ role: 'eon' }, out); state.messages.push(reply); rememberOffer(reply); paintChat();
+  state.messages.pop(); const reply = Object.assign({ role: 'eon' }, out); state.messages.push(reply); if (Array.isArray(reply.choices) && reply.choices.length) state.choices = reply.choices; rememberOffer(reply); paintChat();
   speakAnswer(out.speak, { voice });
 }
 /* EON only half-understood: find the question it knows that means the same (app/semantic.js),
