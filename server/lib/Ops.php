@@ -137,7 +137,7 @@ final class Ops
         if (!$score) return null;
         uasort($score, fn($a, $b) => ($b[0] <=> $a[0]) ?: ($a[1] <=> $b[1]));
         $top = array_values($score)[0];
-        $hits = array_map(fn($x) => $x[2], array_filter($score, fn($x) => $x[0] === $top[0] && $x[1] === $top[1]));
+        $hits = array_map(fn($x) => $x[2], array_filter($score, fn($x) => $x[0] === $top[0] && ($top[0] < 2 || $x[1] === $top[1])));   // one shared word ("Imran") always asks
         if (count($hits) > 1) {
             $names = array_map(fn($e) => (string) $e['name'], array_values($hits));
             self::$choices = array_map(fn($n) => $bn ? "{$n}-এর স্যালারি দেওয়া হয়েছে?" : "Has {$n} been paid salary?", $names);

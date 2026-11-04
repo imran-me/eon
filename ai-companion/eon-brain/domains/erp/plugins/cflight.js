@@ -94,7 +94,11 @@ async function answer(q) {
   const opening = !ev && OPEN.test(s) && FLIGHTISH.test(s);
   if (!ev && !opening) return null;
   // "how many were offloaded this month" is a question about a figure
-  if (ev && /\b(what are|what were|show|all|offloaded flights?|deported flights?|how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কোন কোন|কোনগুলো|সব |কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) return null;
+  if (ev && /\b(what are|what were|show|all|offloaded flights?|deported flights?|how many|how much|count|list|which|who were|kotojon|koto jon|koyjon|koijon|kojon|koto|list)\b|কোন কোন|কোনগুলো|সব |কতজন|কয়জন|কয়জন|কারা|তালিকা/i.test(s)) {
+    // a question about who was offloaded / deported: the dashboard lists them under Offloaded / Deported
+    const href = url('/{role}/contract-flights/dashboard');
+    return { speak: T('Offloaded and deported passengers are listed under Offloaded / Deported on the flight dashboard — opening it.', 'অফলোড আর ডিপোর্ট হওয়া যাত্রীরা ফ্লাইট ড্যাশবোর্ডের Offloaded / Deported অংশে আছে — খুলছি।'), detail: [], navigate: href, actions: [{ label: T('Flight dashboard', 'ফ্লাইট ড্যাশবোর্ড'), kind: 'erp-open', href }] };
+  }
 
   const D = D0();
   let p = D ? findPassenger(D, s) : null;

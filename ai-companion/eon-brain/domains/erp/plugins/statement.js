@@ -145,7 +145,10 @@ export function matchName(list, text) {
     const nameWords = p.name.toLowerCase().replace(/\([^)]*\)/g, ' ').split(/[^a-z]+/).filter((x) => x.length >= 3);
     const spelled = spoken.filter((w) => nameWords.includes(w)).length * 0.5;
     // whole name words only — a skeleton never matches a fragment of one
-    return { p, hits: exact + spelled + wanted.filter((sk) => parts.includes(sk)).length };
+    // the tag in brackets said aloud ("Imran CYP") picks MR IMRAN (CYP) over MR IMRAN HOSSAIN
+    const tag = (p.name.match(/\(([^)]+)\)/) || [])[1];
+    const tagged = tag && spoken.includes(tag.toLowerCase().trim()) ? 1 : 0;
+    return { p, hits: exact + spelled + wanted.filter((sk) => parts.includes(sk)).length + tagged };
   }).filter((x) => x.hits > 0).sort((a, b) => b.hits - a.hits);
   if (!scored.length) return nearMiss(list, words);
   if (scored.length > 1 && scored[1].hits === scored[0].hits) return { ambiguous: scored.filter((x) => x.hits === scored[0].hits).slice(0, 5).map((x) => x.p) };
