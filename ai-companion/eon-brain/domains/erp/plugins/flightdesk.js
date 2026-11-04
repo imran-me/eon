@@ -12,6 +12,7 @@
    ============================================================ */
 import { speaksBangla, normalize } from './voicefix.js';
 import { remember, recall } from './context.js';
+import { latinSkeleton, banglaSkeleton } from './act.js';
 
 const N = () => (typeof window !== 'undefined' ? window.EonNavigator : null);
 const D0 = () => (typeof window !== 'undefined' && window.EonErp && window.EonErp.dataset ? window.EonErp.dataset() : null);
@@ -40,6 +41,17 @@ const TODAY = /\b(ajk?e?r?|today|aj)\b|আজ/i;
 const YEST = /\b(kalke|kal|yesterday|gotokal)\b|গতকাল|কাল(?![ঀ-৿])|কালকে/i;
 const THIS_MONTH = /\b(ei mase|e mase|this month|ai mo?nth|ei month)\b|এই মাসে|এ মাসে/i;
 const PENDING = /\b(baki|pending|left|upcoming|remaining)\b|বাকি|সামনে/i;
+
+const FLAG_BN = { deported: 'ডিপোর্ট', immigration_offload: 'অফলোড', rescheduled: 'রিশিডিউল' };
+const STAGES = [
+  ['information_entered', /information|info|তথ্য|ইনফরমেশন/i, 'Information Entered', 'তথ্য এন্ট্রি'],
+  ['documents_ready', /documents?\s*ready|ডকুমেন্ট\s*রেডি|কাগজ\s*রেডি/i, 'Documents Ready', 'ডকুমেন্ট রেডি'],
+  ['documents_verified', /verified|ভেরিফাই|যাচাই/i, 'Documents Verified', 'ডকুমেন্ট যাচাই'],
+  ['route_confirmed', /route\s*confirm|রুট\s*কনফার্ম/i, 'Route Confirmed', 'রুট কনফার্ম'],
+  ['ticket_issued', /ticket\s*issued|টিকেট\s*ইস্যু|টিকিট\s*ইস্যু/i, 'Ticket Issued', 'টিকেট ইস্যু'],
+  ['case_closed', /closed|ক্লোজড|বন্ধ/i, 'Case Closed', 'কেস ক্লোজড'],
+];
+const stageName = (k, bn) => { const x = STAGES.find((z) => z[0] === k); return x ? (bn ? x[3] : x[2]) : String(k || '—').replace(/_/g, ' '); };
 
 function screens() {
   return [
@@ -88,24 +100,45 @@ async function answer(q) {
     for (const [rx, href, en, b] of screens()) if (rx.test(s)) return open(href, bn, `Opening ${en}.`, `${b} খুলছি।`);
   }
 
-  // 2) one flight by number: print or open it
-  const fn = flightNo(s);
-  if (fn) {
-    const f = F.find((x) => String(x.flight_number).toUpperCase() === fn);
-    if (!f) return { speak: T(`I don't find ${fn} among the contract flights.`, `কন্ট্রাক্ট ফ্লাইটে ${fn} পাইনি।`), detail: [] };
-    const pax = P.filter((p) => +p.contract_flight_id === +f.id);
-    if (PROFIT.test(s)) { const pr = num(f.revenue) - num(f.cost_price);
-      return { speak: T(`${fn}: revenue ${tk(num(f.revenue))}, cost ${tk(num(f.cost_price))} — ${pr >= 0 ? 'profit' : 'loss'} ${tk(Math.abs(pr))}, ${pax.length} passengers.`, `${fn}: আয় ${tk(num(f.revenue), true)}, খরচ ${tk(num(f.cost_price), true)} — ${pr >= 0 ? 'লাভ' : 'লোকসান'} ${tk(Math.abs(pr), true)}, যাত্রী ${bnN(pax.length, true)} জন।`), detail: [] }; }
-    const path = `/{role}/contract-flights/${f.id}`;
-    const r = open(path, bn, `${fn} (${dayOf(f.departure_at)}, ${pax.length} passengers) — ${PRINT.test(s) ? 'opening it to print' : 'opening it'}.`, `${fn} (${dayOf(f.departure_at)}, যাত্রী ${bnN(pax.length, true)} জন) — ${PRINT.test(s) ? 'প্রিন্টের জন্য খুলছি' : 'খুলছি'}।`);
-    if (PRINT.test(s)) printAfterLoad(`/contract-flights/${f.id}`);
-    remember({ flight: f });
-    return r;
-  }
-
   const isFlight = FLIGHT.test(s), isAgent = AGENT.test(s);
-  const today = ymd(new Date()), yd = ymd(new Date(Date.now() - 864e5));
+  const today = ymd(new Date()), yd = ymd(new Date(Date.now() - 864e5)), tm = ymd(new Date(Date.now() + 864e5));
   const mon = today.slice(0, 7);
+  const paxOf = (f) => P.filter((p) => +p.contract_flight_id === +f.id);
+  const live = (p) => !['deported', 'immigration_offload'].includes(p.exception_flag);
+
+  // 2) one flight: by number, "the next flight", or "that flight" — details, passengers, money, open, print, pay the vendor
+  let fn = flightNo(s), f1 = fn ? F.find((x) => String(x.flight_number).toUpperCase() === fn) : null;
+  if (!fn && isFlight && /\b(next|porer|agami)\b|পরের|আগামী|নেক্সট/i.test(s) && !HOWMANY.test(s)) f1 = F.filter((x) => dayOf(x.departure_at) >= today).sort((a, b) => String(a.departure_at).localeCompare(String(b.departure_at)))[0] || null;
+  if (!fn && !f1 && isFlight && /\b(oi|ei|that|this|same)\b|ওই|এই ফ্লাইট|সেই|ওটা/i.test(s) && !HOWMANY.test(s)) f1 = recall('flight');
+  if (fn && !f1) return { speak: T(`I don't find ${fn} among the contract flights.`, `কন্ট্রাক্ট ফ্লাইটে ${fn} পাইনি।`), detail: [] };
+  if (f1) {
+    const f = f1, no = f.flight_number, pax = paxOf(f), on = pax.filter(live);
+    remember({ flight: f });
+    const pr = num(f.revenue) - num(f.cost_price);
+    const agentDue = pax.reduce((a, p) => a + Math.max(0, num(p.agent_price) - num(p.agent_paid_amount)), 0);
+    if (/\b(pay|payment|dao|dite|shodh|porishodh)\b|পে করো|পেমেন্ট|পরিশোধ|টাকা দাও|টাকা দিয়ে দাও/i.test(s) && /vendor|ভেন্ডর|ভেন্ডার/i.test(s)) {
+      const r = open('/{role}/contract-flights/dashboard', bn, `${no}: the vendor${f.vendor ? ' (' + f.vendor + ')' : ''} is owed ${tk(num(f.due_amount))}. Opening the flight dashboard — press Pay Vendor on that flight's row, then fill the amount and account and save.`, `${no}: ভেন্ডর${f.vendor ? ' (' + f.vendor + ')' : ''}-কে দিতে হবে ${tk(num(f.due_amount), true)}। ফ্লাইট ড্যাশবোর্ড খুলছি — ওই ফ্লাইটের সারিতে Pay Vendor চাপুন, টাকা আর অ্যাকাউন্ট দিয়ে সেভ করুন।`);
+      return r;
+    }
+    if (/passenger|যাত্রী|প্যাসেঞ্জার|jatri|kara|কারা|list|লিস্ট|তালিকা|names?|নাম/i.test(s) && !PRINT.test(s)) {
+      const lines = pax.map((p) => `${p.name}${p.agent ? ' (' + p.agent + ')' : ''}${p.exception_flag ? ' — ' + (bn ? (FLAG_BN[p.exception_flag] || p.exception_flag) : p.exception_flag.replace('_', ' ')) : ''}`);
+      return { speak: T(`${no} has ${pax.length} passengers: ${lines.slice(0, 10).join('; ')}${pax.length > 10 ? '…' : ''}.`, `${no}-এ ${bnN(pax.length, true)} জন যাত্রী: ${lines.slice(0, 10).join('; ')}${pax.length > 10 ? '…' : ''}।`), detail: [], actions: [{ label: T('Open flight', 'ফ্লাইট খুলুন'), kind: 'erp-open', href: N().url(`/{role}/contract-flights/${f.id}/passengers`) }] };
+    }
+    if (PROFIT.test(s) || DUE.test(s) || /\b(hisab|money|taka|cost|khoroch|revenue|ay)\b|হিসাব|টাকা|খরচ|আয়/i.test(s)) {
+      return { speak: T(`${no}: revenue ${tk(num(f.revenue))}, cost ${tk(num(f.cost_price))} — ${pr >= 0 ? 'profit' : 'loss'} ${tk(Math.abs(pr))}. Vendor still owed ${tk(num(f.due_amount))}; agents still owe ${tk(agentDue)}.`, `${no}: আয় ${tk(num(f.revenue), true)}, খরচ ${tk(num(f.cost_price), true)} — ${pr >= 0 ? 'লাভ' : 'লোকসান'} ${tk(Math.abs(pr), true)}। ভেন্ডরকে এখনো দিতে হবে ${tk(num(f.due_amount), true)}; এজেন্টদের কাছে পাওনা ${tk(agentDue, true)}।`), detail: [] };
+    }
+    if (PRINT.test(s) || GO.test(s)) {
+      const r = open(PRINT.test(s) ? `/{role}/contract-flights/${f.id}/invoice` : `/{role}/contract-flights/${f.id}/passengers`, bn, `${no} (${dayOf(f.departure_at)}, ${pax.length} passengers) — ${PRINT.test(s) ? 'opening it to print' : 'opening it'}.`, `${no} (${dayOf(f.departure_at)}, যাত্রী ${bnN(pax.length, true)} জন) — ${PRINT.test(s) ? 'প্রিন্টের জন্য খুলছি' : 'খুলছি'}।`);
+      if (PRINT.test(s)) printAfterLoad(`/contract-flights/${f.id}/invoice`);
+      return r;
+    }
+    // the whole picture of one flight
+    const when = String(f.departure_at || '').slice(0, 16);
+    const extra = [f.airline_flight_no, f.category, f.route].filter(Boolean).join(' · ');
+    return { speak: T(`${no}${extra ? ' (' + extra + ')' : ''} departs ${when}, status ${f.status}. ${on.length} of ${pax.length} passengers still on it, ${num(f.seats_sold)}/${num(f.total_seats)} seats sold. Revenue ${tk(num(f.revenue))}, cost ${tk(num(f.cost_price))}, ${pr >= 0 ? 'profit' : 'loss'} ${tk(Math.abs(pr))}; vendor due ${tk(num(f.due_amount))}, agents owe ${tk(agentDue)}.`,
+      `${no}${extra ? ' (' + extra + ')' : ''} ছাড়বে ${when}, স্ট্যাটাস ${f.status}। ${bnN(pax.length, true)} জনের মধ্যে ${bnN(on.length, true)} জন এখনো ফ্লাইটে, সিট বিক্রি ${bnN(num(f.seats_sold), true)}/${bnN(num(f.total_seats), true)}। আয় ${tk(num(f.revenue), true)}, খরচ ${tk(num(f.cost_price), true)}, ${pr >= 0 ? 'লাভ' : 'লোকসান'} ${tk(Math.abs(pr), true)}; ভেন্ডর বাকি ${tk(num(f.due_amount), true)}, এজেন্টদের কাছে পাওনা ${tk(agentDue, true)}।`),
+      detail: [], actions: [{ label: T('Open flight', 'ফ্লাইট খুলুন'), kind: 'erp-open', href: N().url(`/{role}/contract-flights/${f.id}/passengers`) }] };
+  }
 
   // 3) deported / offloaded on a day
   if (/deport|ডিপোর্ট|offload|অফলোড/i.test(s) && (HOWMANY.test(s) || YEST.test(s) || TODAY.test(s) || /\b(ke ke|kara|who)\b|কারা/i.test(s))) {
@@ -151,6 +184,83 @@ async function answer(q) {
     rows.sort((a, b) => b.pax - a.pax);
     return { speak: T(`${rows.length} agents sent passengers on flights ${when}: ${rows.slice(0, 6).map((r) => `${r.name} ${r.pax}`).join('; ')}.`, `${when} ${bnN(rows.length, true)} জন এজেন্ট ফ্লাইটে যাত্রী দিয়েছে: ${rows.slice(0, 6).map((r) => `${r.name} ${bnN(r.pax, true)} জন`).join('; ')}।`), detail: [] };
   }
+
+  // 6b) one passenger by name: which flight, what stage, which agent, what is owed — or open their trail
+  if (/\b(kothay|where|kon flight|which flight|status|stage|obostha|ki obostha)\b|কোথায়|কোন ফ্লাইটে|অবস্থা|স্টেজ|স্ট্যাটাস|ট্রেইল|trail/i.test(s) || (GO.test(s) && /passenger|যাত্রী|প্যাসেঞ্জার/i.test(s))) {
+    const words = raw.split(/[\s,?।]+/).map((w) => w.replace(/(এর|ের|র|কে|er|ke)$/iu, '')).filter((w) => w.length >= 3);
+    const key = (w) => (/[ঀ-৿]/.test(w) ? banglaSkeleton(w) : latinSkeleton(w));
+    const keys = new Set(words.map(key).filter((k) => k.length >= 3));
+    const scored = P.map((p) => ({ p, n: String(p.name || '').split(/\s+/).filter((x) => !/^(mr|md|mst|mrs|ms)\.?$/i.test(x)).filter((x) => keys.has(latinSkeleton(x))).length })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
+    if (scored.length) {
+      const top = scored.filter((x) => x.n === scored[0].n).map((x) => x.p);
+      if (top.length > 1 && new Set(top.map((p) => p.passport_holder_id)).size > 1) return { speak: T(`Which one — ${top.slice(0, 5).map((p) => `${p.name} (${p.flight_number})`).join(', ')}?`, `কোনজন — ${top.slice(0, 5).map((p) => `${p.name} (${p.flight_number})`).join(', নাকি ')}?`), detail: [], choices: top.slice(0, 5).map((p) => `${p.name} ${p.flight_number} ${bn ? 'কোথায়' : 'where'}`) };
+      const p = top.sort((a, b) => String(b.departure_at).localeCompare(String(a.departure_at)))[0];
+      remember({ passenger: p });
+      const due = Math.max(0, num(p.agent_price) - num(p.agent_paid_amount));
+      const href = N().url(`/{role}/contract-flight-passengers/${p.id}/trail`);
+      if (GO.test(s) || /trail|ট্রেইল/i.test(s)) N().go(href);
+      const flag = p.exception_flag ? (bn ? ` — ${FLAG_BN[p.exception_flag] || p.exception_flag}` : ` — ${p.exception_flag.replace('_', ' ')}`) : '';
+      return { speak: T(`${p.name} is on ${p.flight_number} (${String(p.departure_at).slice(0, 16)}), stage ${stageName(p.stage)}${flag}. Agent ${p.agent || '—'}; price ${tk(num(p.agent_price))}, ${due > 0 ? tk(due) + ' still due' : 'fully paid'}.`, `${p.name} আছে ${p.flight_number}-এ (${String(p.departure_at).slice(0, 16)}), স্টেজ ${stageName(p.stage, true)}${flag}। এজেন্ট ${p.agent || '—'}; দাম ${tk(num(p.agent_price), true)}, ${due > 0 ? tk(due, true) + ' এখনো বাকি' : 'পুরো পরিশোধ'}।`), detail: [], navigate: (GO.test(s) || /trail|ট্রেইল/i.test(s)) ? href : undefined, actions: [{ label: T('Open passenger', 'যাত্রী খুলুন'), kind: 'erp-open', href }] };
+    }
+  }
+
+  // 6c) passengers by stage
+  if (/\b(stage|stages|step)\b|স্টেজ|ধাপ/i.test(s) || (HOWMANY.test(s) && STAGES.some((x) => x[1].test(s)))) {
+    const st = STAGES.find((x) => x[1].test(s));
+    const act = P.filter(live);
+    if (st) { const rows = act.filter((p) => p.stage === st[0]);
+      return { speak: T(`${rows.length} passengers at ${st[2]}${rows.length ? ': ' + rows.slice(0, 8).map((p) => `${p.name} (${p.flight_number})`).join('; ') : ''}.`, `${st[3]} ধাপে ${bnN(rows.length, true)} জন${rows.length ? ': ' + rows.slice(0, 8).map((p) => `${p.name} (${p.flight_number})`).join('; ') : ''}।`), detail: [] }; }
+    const by = {}; for (const p of act) by[p.stage] = (by[p.stage] || 0) + 1;
+    return { speak: T(`Passengers by stage: ${Object.entries(by).map(([k, v]) => `${stageName(k)} ${v}`).join('; ')}.`, `ধাপ অনুযায়ী যাত্রী: ${Object.entries(by).map(([k, v]) => `${stageName(k, true)} ${bnN(v, true)}`).join('; ')}।`), detail: [], actions: [{ label: T('Passenger board', 'প্যাসেঞ্জার বোর্ড'), kind: 'erp-open', href: N().url('/{role}/contract-flight-board') }] };
+  }
+
+  // 6d) rescheduled
+  if (/reschedul|রিশিডিউল|রিসিডিউল/i.test(s) && (HOWMANY.test(s) || /\b(ke ke|kara|who|list)\b|কারা|তালিকা/i.test(s))) {
+    const rows = P.filter((p) => p.exception_flag === 'rescheduled' && (!THIS_MONTH.test(s) || dayOf(p.departure_at).slice(0, 7) === mon));
+    return { speak: T(`${rows.length} passengers rescheduled${THIS_MONTH.test(s) ? ' this month' : ''}: ${rows.slice(0, 8).map((p) => `${p.name} (now ${p.flight_number})`).join('; ')}.`, `${THIS_MONTH.test(s) ? 'এই মাসে ' : ''}${bnN(rows.length, true)} জন রিশিডিউল হয়েছে: ${rows.slice(0, 8).map((p) => `${p.name} (এখন ${p.flight_number})`).join('; ')}।`), detail: [] };
+  }
+
+  // 6e) flights by day: tomorrow, a date, this week, this month, departed, overdue
+  if (isFlight && !isAgent && !PROFIT.test(s) && (YEST.test(s) || /\b(tomorrow|agamikal|kalke|this week|ei soptah|departed|overdue|chere geche|update)\b|আগামীকাল|এই সপ্তাহে|ছেড়ে গেছে|উড়ে গেছে|ওভারডিউ|আপডেট|\d{1,2}\s*(nov|dec|oct|নভেম্বর|ডিসেম্বর|অক্টোবর)/i.test(s) || THIS_MONTH.test(s))) {
+    let list, what;
+    const dm = s.match(/(\d{1,2})\s*(nov|dec|oct|sep|নভেম্বর|ডিসেম্বর|অক্টোবর|সেপ্টেম্বর)/i);
+    if (/overdue|update|ওভারডিউ|আপডেট/i.test(s)) { list = F.filter((f) => dayOf(f.departure_at) < today && f.status === 'open'); what = T('past their date and still open (need update)', 'তারিখ পার হয়েছে কিন্তু এখনো ওপেন (আপডেট দরকার)'); }
+    else if (/departed|chere geche|ছেড়ে গেছে|উড়ে গেছে/i.test(s)) { list = F.filter((f) => f.status === 'departed'); what = T('departed', 'ছেড়ে গেছে'); }
+    else if (dm) { const M = { nov: 11, dec: 12, oct: 10, sep: 9, 'নভেম্বর': 11, 'ডিসেম্বর': 12, 'অক্টোবর': 10, 'সেপ্টেম্বর': 9 }[dm[2].toLowerCase()]; const d = `${today.slice(0, 4)}-${String(M).padStart(2, '0')}-${String(dm[1]).padStart(2, '0')}`; list = F.filter((f) => dayOf(f.departure_at) === d); what = T(`on ${d}`, `${d} তারিখে`); }
+    else if (/\b(tomorrow|agamikal)\b|আগামীকাল/i.test(s) || (/kalke|কালকে|কাল/.test(s) && !/hoyeche|geche|হয়েছে|গেছে|ছিল/.test(s))) { list = F.filter((f) => dayOf(f.departure_at) === tm); what = T('tomorrow', 'আগামীকাল'); }
+    else if (YEST.test(s)) { list = F.filter((f) => dayOf(f.departure_at) === yd); what = T('yesterday', 'গতকাল'); }
+    else if (/this week|ei soptah|এই সপ্তাহে/i.test(s)) { const end = ymd(new Date(Date.now() + 7 * 864e5)); list = F.filter((f) => dayOf(f.departure_at) >= today && dayOf(f.departure_at) <= end); what = T('in the next 7 days', 'সামনের ৭ দিনে'); }
+    else { list = F.filter((f) => dayOf(f.departure_at).slice(0, 7) === mon); what = T('this month', 'এই মাসে'); }
+    const lines = list.slice(0, 8).map((f) => `${f.flight_number} ${String(f.departure_at).slice(0, 16)} — ${paxOf(f).filter(live).length} ${T('pax', 'জন')}`);
+    if (list.length === 1) remember({ flight: list[0] });
+    return { speak: list.length ? T(`${list.length} flight${list.length > 1 ? 's' : ''} ${what}: ${lines.join('; ')}.`, `${what} ${bnN(list.length, true)}টা ফ্লাইট: ${lines.join('; ')}।`) : T(`No flight ${what}.`, `${what} কোনো ফ্লাইট নেই।`), detail: [], actions: [{ label: T('Flight dashboard', 'ফ্লাইট ড্যাশবোর্ড'), kind: 'erp-open', href: N().url('/{role}/contract-flights/dashboard') }] };
+  }
+
+  // 6f) flight money: what we owe vendors, what agents owe on flights, this month's flight profit, by category
+  if (isFlight && !isAgent && (/vendor|ভেন্ডর|ভেন্ডার/i.test(s) && (DUE.test(s) || /dite hobe|দিতে হবে|pay/i.test(s)))) {
+    const rows = F.filter((f) => num(f.due_amount) > 0).sort((a, b) => num(b.due_amount) - num(a.due_amount));
+    const tot = rows.reduce((a, f) => a + num(f.due_amount), 0);
+    return { speak: rows.length ? T(`We owe flight vendors ${tk(tot)} on ${rows.length} flights: ${rows.slice(0, 6).map((f) => `${f.flight_number}${f.vendor ? ' (' + f.vendor + ')' : ''} ${tk(num(f.due_amount))}`).join('; ')}.`, `ফ্লাইটের ভেন্ডরদের দিতে হবে ${tk(tot, true)}, ${bnN(rows.length, true)}টা ফ্লাইটে: ${rows.slice(0, 6).map((f) => `${f.flight_number}${f.vendor ? ' (' + f.vendor + ')' : ''} ${tk(num(f.due_amount), true)}`).join('; ')}।`) : T('Nothing is owed to any flight vendor.', 'কোনো ফ্লাইট ভেন্ডরের কাছে দেনা নেই।'), detail: [] };
+  }
+  if (isFlight && PROFIT.test(s) && /categor|ক্যাটাগরি|ধরন/i.test(s)) {
+    const g = {}; for (const f of F) { const k = f.category || '—'; g[k] = (g[k] || 0) + num(f.revenue) - num(f.cost_price); }
+    const rows = Object.entries(g).sort((a, b) => b[1] - a[1]);
+    return { speak: T(`Flight profit by category: ${rows.map(([k, v]) => `${k} ${v < 0 ? '−' : ''}${tk(Math.abs(v))}`).join('; ')}.`, `ক্যাটাগরি অনুযায়ী ফ্লাইটের লাভ: ${rows.map(([k, v]) => `${k} ${v < 0 ? '−' : ''}${tk(Math.abs(v), true)}`).join('; ')}।`), detail: [] };
+  }
+  if (isFlight && !isAgent && PROFIT.test(s) && !WHICH.test(s)) {
+    const sc = THIS_MONTH.test(s) ? F.filter((f) => dayOf(f.departure_at).slice(0, 7) === mon) : F;
+    const rev = sc.reduce((a, f) => a + num(f.revenue), 0), cost = sc.reduce((a, f) => a + num(f.cost_price), 0);
+    const when = THIS_MONTH.test(s) ? T('this month', 'এই মাসে') : T('on record', 'রেকর্ডে');
+    return { speak: T(`Contract flights ${when}: ${sc.length} flights, revenue ${tk(rev)}, cost ${tk(cost)} — ${rev - cost >= 0 ? 'profit' : 'loss'} ${tk(Math.abs(rev - cost))}.`, `${when} কন্ট্রাক্ট ফ্লাইট: ${bnN(sc.length, true)}টা ফ্লাইট, আয় ${tk(rev, true)}, খরচ ${tk(cost, true)} — ${rev - cost >= 0 ? 'লাভ' : 'লোকসান'} ${tk(Math.abs(rev - cost), true)}।`), detail: [] };
+  }
+  if (isFlight && isAgent && DUE.test(s)) {
+    const g = new Map(); for (const p of P) { const d = Math.max(0, num(p.agent_price) - num(p.agent_paid_amount)); if (d > 0) g.set(p.agent || '—', (g.get(p.agent || '—') || 0) + d); }
+    const rows = [...g.entries()].sort((a, b) => b[1] - a[1]); const tot = rows.reduce((a, x) => a + x[1], 0);
+    return { speak: T(`Agents owe ${tk(tot)} on flight seats: ${rows.slice(0, 6).map(([k, v]) => `${k} ${tk(v)}`).join('; ')}.`, `ফ্লাইট সিট বাবদ এজেন্টদের কাছে পাওনা ${tk(tot, true)}: ${rows.slice(0, 6).map(([k, v]) => `${k} ${tk(v, true)}`).join('; ')}।`), detail: [] };
+  }
+
+  // 6g) the messages screen ("send a message to the passengers")
+  if (/message|মেসেজ|sms|এসএমএস/i.test(s) && (isFlight || /passenger|যাত্রী/i.test(s))) return open('/{role}/contract-flights/messages', bn, 'Opening Flight Messages — pick the flight and the passengers there, then send.', 'ফ্লাইট মেসেজ খুলছি — ওখানে ফ্লাইট আর যাত্রী বেছে পাঠান।');
 
   // 7) one agent: what they owe, how many services, where we lost
   if (!(DUE.test(s) || SERVICE.test(s) || (PROFIT.test(s) && /service|সার্ভিস|সেবা|kon|কোন/i.test(s)))) return null;

@@ -258,7 +258,7 @@ async function ask(q, { voice = false } = {}) {
     let desk = null;
     if (window.EonFlightDesk) { try { const fd = await window.EonFlightDesk.answer(q); if (fd && fd.speak) desk = local = fd; } catch (err) { console.warn('[EON] flight desk', err); } }
     if (!local) local = (window.EonDomains && !serverFirst) ? await window.EonDomains.answer(q, { company: co() }) : null;
-    if (desk && !desk.navigate) out = { text: local.speak, speak: local.speak, detail: '', actions: [], trace: `client brain · flight desk · ${Date.now() - t0}ms` };
+    if (desk && !desk.navigate) out = { text: local.speak, speak: local.speak, detail: '', actions: desk.actions || [], choices: desk.choices, trace: `client brain · flight desk · ${Date.now() - t0}ms` };
     const goes = local && (local.navigate || (local.actions || []).some((x) => x.kind === 'erp-open' && x.href));
     if (goes) {
       out = {
