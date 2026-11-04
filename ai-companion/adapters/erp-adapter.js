@@ -110,6 +110,9 @@
 
   const dataDoc = docRef('opptrack', 'data');
   async function publish(D) {
+    // the demo company never replaces the real ERP: a second load whose health check timed out
+    // used to fall back to the demo and overwrite live figures mid-conversation
+    try { const cur = window.EonErp && window.EonErp.dataset && window.EonErp.dataset(); if (cur && cur.meta && cur.meta.source === 'erp' && D.meta && D.meta.source !== 'erp') return; } catch {}
     ENV.source = D.meta.source; ENV.checkedAt = new Date().toISOString();
     // the panel first: a slow or stalled memory write must never keep EON "waking up"
     if (window.EonErp && window.EonErp.setDataset) window.EonErp.setDataset(D);
@@ -119,7 +122,10 @@
     try { if (window.EonBrain && window.EonBrain.meditate) window.EonBrain.meditate(); } catch {}
   }
 
-  async function loadDataset() {
+  // one load at a time: a reload asked for while one is running joins it
+  let loading = null;
+  function loadDataset() { if (!loading) loading = loadOnce().finally(() => { loading = null; }); return loading; }
+  async function loadOnce() {
     // 1) the server, if it answers
     if (!CFG.demo) {
       try {
