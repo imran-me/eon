@@ -79,7 +79,10 @@ function printAfterLoad(tail) {
 }
 
 /** cost of one seat on a flight, so a passenger's profit can be said */
-const seatCost = (f) => (f && num(f.total_seats) > 0 ? num(f.cost_price) / num(f.total_seats) : 0);
+// a flight's cost shared by the seats — or by the passengers actually on it when the ERP records fewer
+// seats than people (CF-060: 1 seat, 3 passengers), or each would carry the whole flight's cost
+let PAX_ON = new Map();
+const seatCost = (f) => { if (!f) return 0; const n = Math.max(num(f.total_seats), PAX_ON.get(+f.id) || 0); return n > 0 ? num(f.cost_price) / n : 0; };
 
 function flightNo(s) { const m = s.match(/\bCF[\s-]?0*(\d{1,4})\b/i); return m ? 'CF-' + m[1].padStart(3, '0') : null; }
 
@@ -91,6 +94,7 @@ async function answer(q) {
   const D = D0(); if (!D) return null;
   const F = D.contract_flights || [], P = D.contract_flight_passengers || [];
   const byId = new Map(F.map((f) => [+f.id, f]));
+  PAX_ON = new Map(); for (const p of P) PAX_ON.set(+p.contract_flight_id, (PAX_ON.get(+p.contract_flight_id) || 0) + 1);
 
   // a swear word is frustration, not a name to look up
   if (/^(বাল|ধুর|ধ্যাৎ|fuck|shit|damn|bal)(?![ঀ-৿a-z])/i.test(s)) return { speak: T('Sorry — tell me again what to open or find.', 'দুঃখিত — আবার বলুন, কী খুলব বা কী জানতে চান?'), detail: [] };
