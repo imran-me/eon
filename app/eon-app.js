@@ -460,6 +460,12 @@ function boot() {
   $('#btnSpeakBrief').onclick = () => { let b = EonErp.brief(); if (!b) { toast('EON is still reading the company…'); return; } if (curLang() === 'bn-BD' && window.EonBangla && window.EonBangla.brief) b = Object.assign({}, b, window.EonBangla.brief(b)); if (V) V.say(b.speak, { lang: curLang() }); if (state.section !== 'brief') location.hash = '#brief'; };
   window.addEventListener('eon:env', paintEnv); window.addEventListener('eon:erp-data', () => { paintEnv(); paintCompanies(); render(); });
   EonErp.ready.then(() => { paintEnv(); paintCompanies(); route(); });
+  /* never sit on "waking up": the server answers questions without the dataset, so after a few
+     seconds open Ask anyway and fetch the dataset again in the background */
+  setTimeout(() => { if (EonErp.dataset && EonErp.dataset()) return;
+    try { if (window.EonErpAdapter && window.EonErpAdapter.reload) window.EonErpAdapter.reload(); } catch (e) {}
+    if (!location.hash) location.hash = '#ask';
+    try { route(); } catch (e) { console.warn('[EON] early render', e); } }, 4000);
   setTimeout(paintEnv, 1500); setTimeout(paintEnv, 5000);
   // docked beside the ERP: chips instead of the sidebar, conversation first
   if (window.EON_DOCK) {
