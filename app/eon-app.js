@@ -373,7 +373,7 @@ function wire() {
   const m2 = $('#btnMic2'); if (m2) m2.onclick = () => toggleMic();
   const cm = $('#convMode'); if (cm) cm.onclick = () => { state.voiceMode = !state.voiceMode; cm.setAttribute('aria-pressed', String(state.voiceMode)); cm.classList.toggle('is-on', state.voiceMode); const label = cm.querySelector('.mode-label'); if (label) label.textContent = `Conversation ${state.voiceMode ? 'On' : 'Off'}`; if (state.voiceMode) { window.EonVoice.wakeWord(true); window.EonVoice.listen({ continuous: true }); toast('Conversation mode on — say “EON, …”'); } else { window.EonVoice.stop(); toast('Conversation mode off.'); } };
   const lc = $('#langChip'); if (lc) lc.onclick = () => { setLang(state.lang === 'auto' ? 'bn-BD' : state.lang === 'bn-BD' ? 'en-US' : 'auto'); };
-  const ac = $('#apiChip'); if (ac) ac.onclick = () => { let on = false; try { on = localStorage.getItem('eon_api_first') !== '1'; localStorage.setItem('eon_api_first', on ? '1' : '0'); } catch (e) {} render(); toast(on ? 'API on — Gemini reads first, EON's own brain after.' : 'API off — EON's own brain answers first.'); };
+  const ac = $('#apiChip'); if (ac) ac.onclick = () => { let on = false; try { on = localStorage.getItem('eon_api_first') !== '1'; localStorage.setItem('eon_api_first', on ? '1' : '0'); } catch (e) {} render(); toast(on ? 'API on — Gemini reads first, then EON.' : 'API off — EON answers first.'); };
   const mc = $('#muteChip'); if (mc) mc.onclick = () => { const on = localStorage.getItem('eon_mute') !== '1'; localStorage.setItem('eon_mute', on ? '1' : '0'); window.EonVoice.mute(on); render(); };
 }
 function toggleMic() {
