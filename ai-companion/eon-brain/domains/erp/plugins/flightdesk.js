@@ -263,7 +263,7 @@ async function answer(q) {
   if (/message|মেসেজ|sms|এসএমএস/i.test(s) && (isFlight || /passenger|যাত্রী/i.test(s))) return open('/{role}/contract-flights/messages', bn, 'Opening Flight Messages — pick the flight and the passengers there, then send.', 'ফ্লাইট মেসেজ খুলছি — ওখানে ফ্লাইট আর যাত্রী বেছে পাঠান।');
 
   // 7) one agent: what they owe, how many services, where we lost — a ranking ("which agents owe the most") is the server's
-  if (/(which|kon|most|top|beshi|sobcheye)|কোন|সবচেয়ে|বেশি|টপ/i.test(s) && !/service|সার্ভিস|সেবা/i.test(s)) return null;
+  if (/\b(which|kon|most|top|beshi|sobcheye)\b|কোন|সবচেয়ে|বেশি|টপ/i.test(s) && !/service|সার্ভিস|সেবা/i.test(s)) return null;
   if (!(DUE.test(s) || SERVICE.test(s) || (PROFIT.test(s) && /service|সার্ভিস|সেবা|kon|কোন/i.test(s)))) return null;
   let party = null;
   try { party = window.EonStatement && window.EonStatement.findParty ? window.EonStatement.findParty(raw) : null; } catch (e) {}

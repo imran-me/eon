@@ -291,7 +291,7 @@ TXT;
            postings, which is a better floor than an apology or a trade-wide
            corpus answer about some other business. */
         // only a sentence that ASKS something the book could answer — "contract flight any other" got overtime rules
-        $asksBook = (bool) preg_match('/(how|why|what|explain|mean|means|meaning|rule|rules|posted|post|posting|entry|entries|debit|credit|journal|account|accounts|ledger|kivabe|keno|mane|niyom)|কিভাবে|কীভাবে|কেন|কী|কি |মানে|নিয়ম|ডেবিট|ক্রেডিট|এন্ট্রি|জার্নাল|হিসাব|লেজার/iu', $q);
+        $asksBook = (bool) preg_match('/\b(how|why|what|explain|mean|means|meaning|rule|rules|posted|post|posting|entry|entries|debit|credit|journal|account|accounts|ledger|kivabe|keno|mane|niyom)\b|কিভাবে|কীভাবে|কেন|কী|কি |মানে|নিয়ম|ডেবিট|ক্রেডিট|এন্ট্রি|জার্নাল|হিসাব|লেজার/iu', $q);
         if ($weak !== null && $asksBook && class_exists('AccountsBook')) {
             try {
                 $b = AccountsBook::answer($q, $lang);
