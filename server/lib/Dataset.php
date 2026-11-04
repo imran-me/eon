@@ -35,6 +35,20 @@ final class Dataset
     {
         $key = 'dataset-' . ($company ?? 'all');
         if (!$fresh && ($c = self::cacheGet($key)) !== null) return $c;
+        /* an expired copy (under a day old) is served at once and rebuilt after the response has
+           gone, so the panel never waits ~15 s on a rebuild */
+        $f = self::cacheFile($key);
+        if (!$fresh && is_file($f) && filemtime($f) > time() - 86400 && Config::dbEnabled()
+            && (function_exists('litespeed_finish_request') || function_exists('fastcgi_finish_request'))
+            && is_array($c = json_decode((string) file_get_contents($f), true))) {
+            @touch($f);   // one rebuild at a time: the next caller sees a fresh file
+            register_shutdown_function(static function () use ($key, $company) {
+                function_exists('litespeed_finish_request') ? litespeed_finish_request() : fastcgi_finish_request();
+                @set_time_limit(120);
+                try { if (Db::available()) self::cachePut($key, Erp::build($company)); } catch (Throwable $e) {}
+            });
+            return $c;
+        }
         if (Config::dbEnabled() && Db::available()) {
             $d = Erp::build($company);
             self::cachePut($key, $d);
