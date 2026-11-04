@@ -70,7 +70,7 @@ TXT;
         if ($lang) $clientFacts['lang'] = $lang;
         if (Config::llmEnabled()) { try { $out = self::askLlm($question, $conv['id'], $D, $company, $voice, $tools, $clientFacts); } catch (Throwable $e) { Log::error('llm failed: ' . $e->getMessage()); $out = null; $llmError = $e->getMessage(); } }
         if (class_exists('Query')) Query::$conv = $conversationId;   // follow-ups find the last question of this conversation
-        if (!$out) { $out = self::askOffline($question, $D, $company, $tools, $lang); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = 'no ANTHROPIC_API_KEY configured — rule-based answer'; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
+        if (!$out) { $out = self::askOffline($question, $D, $company, $tools, $lang); if (isset($llmError)) $out['llm_error'] = $llmError; elseif (!Config::llmKeyPresent()) $out['note'] = "EON's own brain"; elseif (!class_exists('Anthropic\\Client')) $out['note'] = 'anthropic-ai/sdk not installed (run composer install in server/) — rule-based answer'; }
         Memory::addMessage($conv['id'], 'assistant', $out['text'], ['mode' => $out['mode'], 'tools' => $out['tools_used'] ?? []]);
         $out['conversation_id'] = $conv['id'];
         // every Bangla answer leaves in the Bangla an office speaks (Natural, app/bn-natural.json)

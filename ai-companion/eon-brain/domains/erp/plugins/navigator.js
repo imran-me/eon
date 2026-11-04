@@ -273,6 +273,7 @@ const PINNED = [
   [/\battendances?\b(?!.*setting)/, 'role.attendances.index'],
   [/\bgeneral ledger\b|\bgl\b/, 'role.report.general-ledger'],
   [/\bcash ?flow\b/, 'role.report.cash-flow'],
+  [/\b(employee salar|salary manage|payroll)/, 'role.employee-salaries.index'],
   [/\badvance salar/, 'role.advance-salaries.index'],
   [/\bairlines?\b/, 'role.airlines.index'],
   [/\bairports?\b/, 'role.airport.index'],
