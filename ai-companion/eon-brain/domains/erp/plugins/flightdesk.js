@@ -160,15 +160,22 @@ async function answer(q) {
   const vs = (D.visa_sales || []).filter((x) => +x.client_id === id);
   const cf = (D.contract_file_sales || []).filter((x) => +x.client_id === id);
   const px = P.filter((p) => +p.agent_id === id);
-  const due = ts.reduce((a, x) => a + num(x.due_amount), 0) + vs.reduce((a, x) => a + num(x.due_amount), 0) + cf.reduce((a, x) => a + num(x.due_amount), 0) + px.reduce((a, p) => a + Math.max(0, num(p.agent_price) - num(p.agent_paid_amount)), 0);
+  // what they owe is their ledger (debit − credit), the same figure the server's agent dues use
+  const led = (D.party_transactions || []).filter((t) => String(t.party_name).toUpperCase() === String(party.name).toUpperCase());
+  const ledger = led.reduce((a, t) => a + num(t.debit) - num(t.credit), 0);
+  const invDue = ts.reduce((a, x) => a + num(x.due_amount), 0) + vs.reduce((a, x) => a + num(x.due_amount), 0) + cf.reduce((a, x) => a + num(x.due_amount), 0) + px.reduce((a, p) => a + Math.max(0, num(p.agent_price) - num(p.agent_paid_amount)), 0);
+  const due = led.length ? ledger : invDue;
   const name = party.name;
   if (DUE.test(s) && !SERVICE.test(s)) {
     const parts = [[T('tickets', 'টিকেট'), ts.reduce((a, x) => a + num(x.due_amount), 0)], [T('visas', 'ভিসা'), vs.reduce((a, x) => a + num(x.due_amount), 0)], [T('contract files', 'কন্ট্রাক্ট ফাইল'), cf.reduce((a, x) => a + num(x.due_amount), 0)], [T('flights', 'ফ্লাইট'), px.reduce((a, p) => a + Math.max(0, num(p.agent_price) - num(p.agent_paid_amount)), 0)]].filter((x) => x[1] > 0);
-    return { speak: T(`${name} owes ${tk(due)}${parts.length ? ' — ' + parts.map((x) => `${x[0]} ${tk(x[1])}`).join(', ') : ''}.`, `${name}-এর কাছে পাওনা ${tk(due, true)}${parts.length ? ' — ' + parts.map((x) => `${x[0]} ${tk(x[1], true)}`).join(', ') : ''}।`), detail: [] };
+    const u = N().url('/{role}/party-statement') + '?party_id=' + id;
+    const word = due >= 0 ? T('owes us', 'এর কাছে পাওনা') : T('is in credit by', 'এর আমাদের কাছে জমা');
+    const bits = parts.length ? T(' Open invoices: ', ' খোলা ইনভয়েস: ') + parts.map((x) => `${x[0]} ${tk(x[1], bn)}`).join(', ') + (bn ? '।' : '.') : '';
+    return { speak: T(`${name} ${word} ${tk(Math.abs(due))} by the ledger.${bits}`, `লেজার অনুযায়ী ${name}-${word} ${tk(Math.abs(due), true)}।${bits}`), detail: [], actions: [{ label: T('Open ledger', 'লেজার খুলুন'), kind: 'erp-open', href: u }] };
   }
   if (SERVICE.test(s) && !PROFIT.test(s)) {
     const n = ts.length + vs.length + cf.length + px.length;
-    return { speak: T(`${name} has taken ${n} services: ${ts.length} ticket sales, ${vs.length} visa sales, ${cf.length} contract files, ${px.length} flight seats. Still owing ${tk(due)}.`, `${name} মোট ${bnN(n, true)}টা সার্ভিস নিয়েছে: টিকেট ${bnN(ts.length, true)}টা, ভিসা ${bnN(vs.length, true)}টা, কন্ট্রাক্ট ফাইল ${bnN(cf.length, true)}টা, ফ্লাইট সিট ${bnN(px.length, true)}টা। এখনো পাওনা ${tk(due, true)}।`), detail: [] };
+    return { speak: T(`${name} has taken ${n} services: ${ts.length} ticket sales, ${vs.length} visa sales, ${cf.length} contract files, ${px.length} flight seats. Ledger balance ${tk(due)}.`, `${name} মোট ${bnN(n, true)}টা সার্ভিস নিয়েছে: টিকেট ${bnN(ts.length, true)}টা, ভিসা ${bnN(vs.length, true)}টা, কন্ট্রাক্ট ফাইল ${bnN(cf.length, true)}টা, ফ্লাইট সিট ${bnN(px.length, true)}টা। লেজারে ব্যালেন্স ${tk(due, true)}।`), detail: [] };
   }
   // where we lost money with this agent: flight seats (price − seat cost) and contract files (price − vendor cost)
   const items = [
