@@ -109,7 +109,7 @@ async function answer(q) {
   // 2) one flight: by number, "the next flight", or "that flight" — details, passengers, money, open, print, pay the vendor
   let fn = flightNo(s), f1 = fn ? F.find((x) => String(x.flight_number).toUpperCase() === fn) : null;
   if (!fn && isFlight && /\b(next|porer|agami)\b|পরের|আগামী|নেক্সট/i.test(s) && !HOWMANY.test(s)) f1 = F.filter((x) => dayOf(x.departure_at) >= today).sort((a, b) => String(a.departure_at).localeCompare(String(b.departure_at)))[0] || null;
-  if (!fn && !f1 && isFlight && /\b(oi|ei|that|this|same)\b|ওই|এই ফ্লাইট|সেই|ওটা/i.test(s) && !HOWMANY.test(s)) f1 = recall('flight');
+  if (!fn && !f1 && isFlight && /\b(oi|that|same)\s+flight|\b(this|ei)\s+flight\b(?!s)|ওই ফ্লাইট|এই ফ্লাইট(?!গুলো)|সেই ফ্লাইট|ওটা/i.test(s) && !THIS_MONTH.test(s) && !HOWMANY.test(s)) f1 = recall('flight');
   if (fn && !f1) return { speak: T(`I don't find ${fn} among the contract flights.`, `কন্ট্রাক্ট ফ্লাইটে ${fn} পাইনি।`), detail: [] };
   if (f1) {
     const f = f1, no = f.flight_number, pax = paxOf(f), on = pax.filter(live);
@@ -120,7 +120,7 @@ async function answer(q) {
       const r = open('/{role}/contract-flights/dashboard', bn, `${no}: the vendor${f.vendor ? ' (' + f.vendor + ')' : ''} is owed ${tk(num(f.due_amount))}. Opening the flight dashboard — press Pay Vendor on that flight's row, then fill the amount and account and save.`, `${no}: ভেন্ডর${f.vendor ? ' (' + f.vendor + ')' : ''}-কে দিতে হবে ${tk(num(f.due_amount), true)}। ফ্লাইট ড্যাশবোর্ড খুলছি — ওই ফ্লাইটের সারিতে Pay Vendor চাপুন, টাকা আর অ্যাকাউন্ট দিয়ে সেভ করুন।`);
       return r;
     }
-    if (/passenger|যাত্রী|প্যাসেঞ্জার|jatri|kara|কারা|list|লিস্ট|তালিকা|names?|নাম/i.test(s) && !PRINT.test(s)) {
+    if (/passenger|যাত্রী|প্যাসেঞ্জার|jatri|kara|কারা|ke ke|কে কে|who is on|who's on|who are on|list|লিস্ট|তালিকা|names?|নাম/i.test(s) && !PRINT.test(s)) {
       const lines = pax.map((p) => `${p.name}${p.agent ? ' (' + p.agent + ')' : ''}${p.exception_flag ? ' — ' + (bn ? (FLAG_BN[p.exception_flag] || p.exception_flag) : p.exception_flag.replace('_', ' ')) : ''}`);
       return { speak: T(`${no} has ${pax.length} passengers: ${lines.slice(0, 10).join('; ')}${pax.length > 10 ? '…' : ''}.`, `${no}-এ ${bnN(pax.length, true)} জন যাত্রী: ${lines.slice(0, 10).join('; ')}${pax.length > 10 ? '…' : ''}।`), detail: [], actions: [{ label: T('Open flight', 'ফ্লাইট খুলুন'), kind: 'erp-open', href: N().url(`/{role}/contract-flights/${f.id}/passengers`) }] };
     }
@@ -262,7 +262,8 @@ async function answer(q) {
   // 6g) the messages screen ("send a message to the passengers")
   if (/message|মেসেজ|sms|এসএমএস/i.test(s) && (isFlight || /passenger|যাত্রী/i.test(s))) return open('/{role}/contract-flights/messages', bn, 'Opening Flight Messages — pick the flight and the passengers there, then send.', 'ফ্লাইট মেসেজ খুলছি — ওখানে ফ্লাইট আর যাত্রী বেছে পাঠান।');
 
-  // 7) one agent: what they owe, how many services, where we lost
+  // 7) one agent: what they owe, how many services, where we lost — a ranking ("which agents owe the most") is the server's
+  if (/(which|kon|most|top|beshi|sobcheye)|কোন|সবচেয়ে|বেশি|টপ/i.test(s) && !/service|সার্ভিস|সেবা/i.test(s)) return null;
   if (!(DUE.test(s) || SERVICE.test(s) || (PROFIT.test(s) && /service|সার্ভিস|সেবা|kon|কোন/i.test(s)))) return null;
   let party = null;
   try { party = window.EonStatement && window.EonStatement.findParty ? window.EonStatement.findParty(raw) : null; } catch (e) {}

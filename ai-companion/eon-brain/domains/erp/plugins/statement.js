@@ -230,7 +230,9 @@ function answer(q) {
       `${printing ? 'কোম্পানি লেজারের প্রিন্ট শিট খুলছি' : 'কোম্পানি লেজার খুলছি'}${printing ? perBn : ''}।`, href, 'Company Ledger', 'কোম্পানি লেজার', extra);
   }
   const last = recall('order');
-  const followUp = last && last.part === 'statement' && recall('party') && !COMPANY_LEDGER.test(s)
+  // a named report ("গত মাসের ট্রায়াল ব্যালেন্স", "balance sheet in excel", a bank's statement) is never a follow-up to the last party
+  const namesReport = /trial|ট্রায়াল|balance\s*sheet|ব্যালেন্স\s*শিট|ব্যালান্স\s*শিট|income\s*statement|profit\s*(and|&)?\s*loss|লাভ\s*ক্ষতি|bank|ব্যাংক|ব্যাঙ্ক|bkash|বিকাশ|cash\s*flow|ক্যাশ\s*ফ্লো|expense|খরচ|payroll|বেতন/i.test(s);
+  const followUp = !namesReport && last && last.part === 'statement' && recall('party') && !COMPANY_LEDGER.test(s)
     && (POINTS_BACK.test(s) || bareFollowUp(s)) && (fmt !== 'open' || per || POINTS_BACK.test(s));
   if (!LEDGERISH.test(s) && !ALL_PARTIES.test(s) && !followUp) return null;
 
