@@ -43,12 +43,14 @@ const PENDING = /\b(baki|pending|left|upcoming|remaining)\b|বাকি|সা�
 
 function screens() {
   return [
-    [/flights?\s*(&|and|o|এবং|আর)?\s*passengers?|ফ্লাইট\s*(ও|এবং|আর)?\s*প্যাসেঞ্জার/i, '/{role}/contract-flights', 'Flights & Passengers', 'ফ্লাইট ও প্যাসেঞ্জার'],
-    [/passenger\s*board|প্যাসেঞ্জার\s*বোর্ড/i, '/{role}/contract-flight-board', 'Passenger Board', 'প্যাসেঞ্জার বোর্ড'],
-    [/flight\s*accounts?|ফ্লাইট\s*(একাউন্ট|অ্যাকাউন্ট|হিসাব)/i, '/{role}/contract-flights/accounts', 'Flight Accounts', 'ফ্লাইট অ্যাকাউন্টস'],
-    [/flight\s*dash\s*board|ফ্লাইট\s*ড্যাশবোর্ড|ফ্লাইট\s*ড্যাশ/i, '/{role}/contract-flights/dashboard', 'Flight Dashboard', 'ফ্লাইট ড্যাশবোর্ড'],
-    [/agent\s*(ledger|statement)s?|এজেন্ট\s*(লেজার|স্টেটমেন্ট)/i, '/{role}/party-statement/agents', 'Agent Ledger', 'এজেন্ট লেজার'],
-    [/client\s*(ledger|statement)s?|ক্লায়েন্ট\s*(লেজার|স্টেটমেন্ট)/i, '/{role}/party-statement/clients', 'Client Ledger', 'ক্লায়েন্ট লেজার'],
+    [new RegExp("flights?\\s*(&|and|n|o|ar|এন্ড|অ্যান্ড|এণ্ড|ও|আর|এবং)?\\s*passengers?|ফ্লাইট\\s*(&|and|n|o|ar|এন্ড|অ্যান্ড|এণ্ড|ও|আর|এবং)?\\s*প্যাসেঞ্জার|ফ্লাইট\\s*(&|and|n|o|ar|এন্ড|অ্যান্ড|এণ্ড|ও|আর|এবং)?\\s*যাত্রী", 'i'), '/{role}/contract-flights', 'Flights & Passengers', 'ফ্লাইট ও প্যাসেঞ্জার'],
+    [new RegExp("passenger\\s*board|প্যাসেঞ্জার\\s*বোর্ড|যাত্রী\\s*বোর্ড", 'i'), '/{role}/contract-flight-board', 'Passenger Board', 'প্যাসেঞ্জার বোর্ড'],
+    [new RegExp("flight\\s*accounts?|ফ্লাইট\\s*(একাউন্টস?|অ্যাকাউন্টস?|হিসাব)", 'i'), '/{role}/contract-flights/accounts', 'Flight Accounts', 'ফ্লাইট অ্যাকাউন্টস'],
+    [new RegExp("flight\\s*messages?|ফ্লাইট\\s*মেসেজ", 'i'), '/{role}/contract-flights/messages', 'Flight Messages', 'ফ্লাইট মেসেজ'],
+    [new RegExp("flight\\s*categor|ফ্লাইট\\s*ক্যাটাগরি", 'i'), '/{role}/flight-categories', 'Flight Category', 'ফ্লাইট ক্যাটাগরি'],
+    [new RegExp("flight\\s*dash\\s*board|ফ্লাইট\\s*(ড্যাশবোর্ড|ড্যাশ\\s*বোর্ড|ডেশবোর্ড|ড্যাসবোর্ড)|contract\\s*flights?$|কন্ট্রাক্ট\\s*ফ্লাইট", 'i'), '/{role}/contract-flights/dashboard', 'Flight Dashboard', 'ফ্লাইট ড্যাশবোর্ড'],
+    [new RegExp("agent\\s*(ledger|statement)s?|এজেন্ট\\s*(লেজার|স্টেটমেন্ট)", 'i'), '/{role}/party-statement/agents', 'Agent Ledger', 'এজেন্ট লেজার'],
+    [new RegExp("client\\s*(ledger|statement)s?|ক্লায়েন্ট\\s*(লেজার|স্টেটমেন্ট)", 'i'), '/{role}/party-statement/clients', 'Client Ledger', 'ক্লায়েন্ট লেজার'],
   ];
 }
 
@@ -78,8 +80,11 @@ async function answer(q) {
   const F = D.contract_flights || [], P = D.contract_flight_passengers || [];
   const byId = new Map(F.map((f) => [+f.id, f]));
 
-  // 1) go to a screen of the flight desk or the agent ledger
-  if (GO.test(s) && !PROFIT.test(s) && !HOWMANY.test(s) && !DUE.test(s)) {
+  // a swear word is frustration, not a name to look up
+  if (/^(বাল|ধুর|ধ্যাৎ|fuck|shit|damn|bal)(?![ঀ-৿a-z])/i.test(s)) return { speak: T('Sorry — tell me again what to open or find.', 'দুঃখিত — আবার বলুন, কী খুলব বা কী জানতে চান?'), detail: [] };
+
+  // 1) go to a screen of the flight desk or the agent ledger — a screen's name said alone is enough
+  if ((GO.test(s) || s.split(/\s+/).length <= 5) && !PROFIT.test(s) && !HOWMANY.test(s) && !DUE.test(s)) {
     for (const [rx, href, en, b] of screens()) if (rx.test(s)) return open(href, bn, `Opening ${en}.`, `${b} খুলছি।`);
   }
 
