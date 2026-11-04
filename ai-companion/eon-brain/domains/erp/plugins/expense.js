@@ -114,7 +114,7 @@ async function answer(q) {
   }
   if (!ENTRY.test(s) || !amountIn(s)) return null;
   let form;
-  try { form = await discover('/' + (location.pathname.split('/').filter(Boolean)[0] || 'super-admin') + '/expenses/create'); }
+  try { form = await discover(window.EonNavigator ? window.EonNavigator.url('/{role}/expenses/create').replace(location.origin, '') : '/super-admin/expenses/create'); }
   catch (e) { return { speak: e && e.signIn ? 'Sign in to the ERP first, then say it again.' : 'I could not open the expense form: ' + (e.message || e), detail: [] }; }
   convo = { at: Date.now(), bn: speaksBangla(raw), form };
   read(convo, s, form);

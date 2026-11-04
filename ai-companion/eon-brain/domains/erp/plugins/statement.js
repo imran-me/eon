@@ -189,6 +189,8 @@ function reply(bn, en, bnText, href, label, labelBn, extra = []) {
 function answer(q) {
   const s = normalize(String(q || '').trim());
   if (!s) return null;
+  // an order to someone ("ইমরানকে টাস্ক দাও: লেজার চেক করো") mentions a ledger; it is not asking for one
+  if (/টাস্ক|task|কাজ দাও|নোটিশ|notice|মেসেজ|message/i.test(s)) return null;
   /* the financial reports are statements too, and a company is also a party —
      "income statement for Epal Travels" is the P&L, not EPAL TRAVELS' ledger */
   if (/\b(income|financial|profit|p\s*&\s*l|p\s*and\s*l|bank|trial|balance sheet|tb)\s*(statement|balance|sheet)?\b.*\b(statement|sheet|balance)\b|\b(income|financial|bank)\s+statement|balance\s*sheet|trial\s*balance|আয়\s*বিবরণী|আয়\s*বিবরণী|লাভ\s*ক্ষতি|ব্যালান্স\s*শিট|ব্যাংক\s*স্টেটমেন্ট/i.test(s)) return null;
