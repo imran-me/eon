@@ -111,9 +111,10 @@
   const dataDoc = docRef('opptrack', 'data');
   async function publish(D) {
     ENV.source = D.meta.source; ENV.checkedAt = new Date().toISOString();
-    await dataDoc.set({ store: toStore(D), updatedAt: new Date().toISOString(), source: D.meta.source });
+    // the panel first: a slow or stalled memory write must never keep EON "waking up"
     if (window.EonErp && window.EonErp.setDataset) window.EonErp.setDataset(D);
     else window.__EON_ERP_PENDING = D;                       // index.js picks it up when it loads
+    Promise.resolve().then(() => dataDoc.set({ store: toStore(D), updatedAt: new Date().toISOString(), source: D.meta.source })).catch(() => {});
     try { window.dispatchEvent(new CustomEvent('eon:env', { detail: ENV })); } catch {}
     try { if (window.EonBrain && window.EonBrain.meditate) window.EonBrain.meditate(); } catch {}
   }
