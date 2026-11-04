@@ -125,6 +125,8 @@ TXT;
         and the original English-only regex chain underneath that, so the API
         answers even if a layer above it throws. */
     private static bool $planning = false;
+    /** the panel's API switch: on → Gemini reads the question before EON's own brain */
+    public static bool $apiFirst = false;
 
     /** carry out what Gemini understood — every figure still comes from the offline brain */
     private static function fromPlan(array $p, array $D, ?int $company, Tools $tools, string $lg): ?array
@@ -175,7 +177,9 @@ TXT;
         /* EON's own trained model first (tools/train-intent.mjs, on the owner's 100,000 labelled
            questions): when it is sure what is asked and an exact handler exists, the answer is
            computed from the ERP here — no Google, no quota, milliseconds. Unsure, or no handler:
-           Gemini below, then the rules. */
+           Gemini below, then the rules. With the panel's API switch on, Gemini goes first and
+           this runs after it. */
+        $ownBrain = static function () use ($q, $D) {
         if (!self::$planning && class_exists('IntentModel') && class_exists('Analyst')) {
             try {
                 // the exact shapes Ops knows (a wallet's balance, salary still to pay, flight money due) beat any guess
@@ -205,6 +209,9 @@ TXT;
                 }
             } catch (Throwable $e) { Log::warn('intent model failed', ['error' => $e->getMessage()]); }
         }
+        return null;
+        };
+        if (!self::$apiFirst && ($r0 = $ownBrain())) return $r0;
 
         /* Gemini first (owner's decision, 2026-11-04): it reads every question, whatever the
            wording, and says what is wanted — a screen, a question back, or the question in the
@@ -229,6 +236,7 @@ TXT;
             } catch (Throwable $e) { Log::warn('gemini plan failed', ['error' => $e->getMessage()]); }
             finally { self::$planning = false; }
         }
+        if (self::$apiFirst && ($r0 = $ownBrain())) return $r0;
         /* A weak answer from `Answer` is kept, not returned. `Answer::compose`
            always produces text — its own fallback if nothing matched — so this
            gate used to be `text !== ''` and was therefore always true. Every

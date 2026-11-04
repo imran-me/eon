@@ -11,6 +11,7 @@ Http::run(function () {
     if (mb_strlen($q) > 4000) $q = mb_substr($q, 0, 4000);
     $company = (isset($b['company']) && $b['company'] !== '' && $b['company'] !== null) ? (int) $b['company'] : null;
     // the last few turns, so "this ledger" / "ওটা" can be resolved by the planner
+    Brain::$apiFirst = !empty($b['api_first']);
     if (class_exists('Gemini') && is_array($b['recent'] ?? null)) Gemini::$recent = array_slice(array_map(fn($m) => mb_substr((string) $m, 0, 300), $b['recent']), -6);
     $t0 = microtime(true);
     $out = Brain::ask($q, isset($b['conversation_id']) ? (string) $b['conversation_id'] : null, $company, (bool) ($b['voice'] ?? false), is_array($b['facts'] ?? null) ? $b['facts'] : [], isset($b['lang']) ? (string) $b['lang'] : null);
