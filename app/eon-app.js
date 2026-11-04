@@ -254,7 +254,11 @@ async function ask(q, { voice = false } = {}) {
   const shortReply = q.trim().split(/\s+/).length <= 3;
   const serverFirst = !shortReply && e.serverOk && e.authed;
   try {
-    local = (window.EonDomains && !serverFirst) ? await window.EonDomains.answer(q, { company: co() }) : null;
+    // the flight desk and the agent's figures are exact and local: asked before the server
+    let desk = null;
+    if (window.EonFlightDesk) { try { const fd = await window.EonFlightDesk.answer(q); if (fd && fd.speak) desk = local = fd; } catch (err) { console.warn('[EON] flight desk', err); } }
+    if (!local) local = (window.EonDomains && !serverFirst) ? await window.EonDomains.answer(q, { company: co() }) : null;
+    if (desk && !desk.navigate) out = { text: local.speak, speak: local.speak, detail: '', actions: [], trace: `client brain · flight desk · ${Date.now() - t0}ms` };
     const goes = local && (local.navigate || (local.actions || []).some((x) => x.kind === 'erp-open' && x.href));
     if (goes) {
       out = {

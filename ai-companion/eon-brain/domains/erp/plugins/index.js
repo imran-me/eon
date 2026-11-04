@@ -23,3 +23,4 @@ import './ticket.js';        // ticket changes: reissue, reschedule, refund, voi
 import './cflight.js';       // contract flight: offload and deport a passenger, open their flight
 import './cases.js';         // contract files and visas: open, where is it, move the stage — by any name on the case
 import './understand.js';    // verb + subject + who, in Bangla and English, and half commands are held
+import './flightdesk.js';
