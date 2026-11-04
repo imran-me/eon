@@ -15,6 +15,6 @@ Http::run(function () {
     if (class_exists('Gemini') && is_array($b['recent'] ?? null)) Gemini::$recent = array_slice(array_map(fn($m) => mb_substr((string) $m, 0, 300), $b['recent']), -6);
     $t0 = microtime(true);
     $out = Brain::ask($q, isset($b['conversation_id']) ? (string) $b['conversation_id'] : null, $company, (bool) ($b['voice'] ?? false), is_array($b['facts'] ?? null) ? $b['facts'] : [], isset($b['lang']) ? (string) $b['lang'] : null);
-    $out['ok'] = true; $out['ms'] = (int) round((microtime(true) - $t0) * 1000); $out['source'] = Dataset::source();
+    $out['ok'] = true; $out['ms'] = (int) round((microtime(true) - $t0) * 1000); $out['source'] = Dataset::source(); $out['order'] = Brain::$apiFirst ? 'api-first' : 'own-first'; $out['gemini'] = class_exists('Gemini') && Gemini::enabled() ? Brain::$gemini : 'off';
     Http::json($out);
 });

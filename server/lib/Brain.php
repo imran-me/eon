@@ -127,6 +127,8 @@ TXT;
     private static bool $planning = false;
     /** the panel's API switch: on → Gemini reads the question before EON's own brain */
     public static bool $apiFirst = false;
+    /** what Gemini did with this question (off / no-reply / its route), reported back to the panel */
+    public static string $gemini = 'not-asked';
 
     /** carry out what Gemini understood — every figure still comes from the offline brain */
     private static function fromPlan(array $p, array $D, ?int $company, Tools $tools, string $lg): ?array
@@ -222,7 +224,7 @@ TXT;
             $lg = (preg_match('/\p{Bengali}/u', $q) || preg_match_all('/\b(ache|koto|taka|dite|hobe|baki|koyta|dewa|hoyeche|mase|kothay|dekhao|amar|amader|niye|jao|kholo|koro|ki|keno)\b/i', $q) >= 1) ? 'bn' : 'en';
             self::$planning = true;
             try {
-                $p = Gemini::plan($q, $lg);
+                $p = Gemini::plan($q, $lg); self::$gemini = $p ? ($p['route'] ?? 'read') : 'no-reply';
                 if ($p) $p['said'] = $q;
                 if ($p && ($p['route'] ?? '') !== 'ask') { $r = self::fromPlan($p, $D, $company, $tools, $lg); if ($r !== null) return $r; }
                 if ($p && ($p['route'] ?? '') === 'ask') {
